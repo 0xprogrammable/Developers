@@ -61,4 +61,43 @@ describe("documentation contract", () => {
     }
     assert.deepEqual(failures, []);
   });
+
+  test("publishes an openable index for the advertised schema base URL", async () => {
+    const wellKnown = JSON.parse(
+      await readFile(
+        path.join(REPOSITORY_ROOT, "public/.well-known/programmable.json"),
+        "utf8",
+      ),
+    );
+    const schemaIndex = JSON.parse(
+      await readFile(
+        path.join(REPOSITORY_ROOT, "schema-index-v1.json"),
+        "utf8",
+      ),
+    );
+    const vercel = JSON.parse(
+      await readFile(path.join(REPOSITORY_ROOT, "vercel.json"), "utf8"),
+    );
+
+    assert.equal(schemaIndex.baseUrl, wellKnown.schemasBaseUrl);
+    assert.deepEqual(
+      schemaIndex.schemas.map(({ name }) => name),
+      [
+        "common",
+        "launch-feed",
+        "launch",
+        "manifest",
+        "problem",
+        "status",
+        "token-list",
+      ],
+    );
+    assert.ok(
+      vercel.rewrites.some(
+        ({ source, destination }) =>
+          source === "/schemas/v1" &&
+          destination === "/schemas/v1/index.json",
+      ),
+    );
+  });
 });

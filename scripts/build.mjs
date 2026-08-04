@@ -7,6 +7,7 @@ const publicRoot = resolve(repositoryRoot, "public");
 
 const trees = ["abis", "deployments", "openapi", "schemas"];
 const files = ["llms.txt", "llms-full.txt"];
+const schemaIndexSource = resolve(repositoryRoot, "schema-index-v1.json");
 
 await mkdir(publicRoot, { recursive: true });
 
@@ -23,5 +24,9 @@ for (const file of files) {
     force: true,
   });
 }
+
+await cp(schemaIndexSource, resolve(publicRoot, "schemas/v1/index.json"), {
+  force: true,
+});
 
 console.log("Static developer resources copied to public/.");
