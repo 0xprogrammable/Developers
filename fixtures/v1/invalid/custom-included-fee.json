@@ -1,0 +1,12 @@
+{
+  "baseFixture": "../launches/custom-no-market-prelaunch.json",
+  "mutations": [
+    {
+      "operation": "set",
+      "path": "/fees/0/chargeMode",
+      "value": "included"
+    }
+  ],
+  "expectedLayer": "semantic",
+  "expectedCode": "CUSTOM_PUBLIC_FEE_MODE"
+}

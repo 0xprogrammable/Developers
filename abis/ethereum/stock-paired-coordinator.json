@@ -1,0 +1,16 @@
+[
+  {
+    "type": "event",
+    "name": "StockPairedEthTokenLaunched",
+    "anonymous": false,
+    "inputs": [
+      { "name": "creator", "type": "address", "indexed": true },
+      { "name": "token", "type": "address", "indexed": true },
+      { "name": "quoteAsset", "type": "address", "indexed": true },
+      { "name": "initialBuyEthAmount", "type": "uint256", "indexed": false },
+      { "name": "initialBuyQuoteAmount", "type": "uint256", "indexed": false },
+      { "name": "initialBuyTokenAmount", "type": "uint256", "indexed": false },
+      { "name": "launchHash", "type": "bytes32", "indexed": false }
+    ]
+  }
+]

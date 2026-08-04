@@ -1,0 +1,75 @@
+name: Integration issue
+description: Report a reproducible feed, schema, fixture, or onchain-verification problem.
+title: "[Integration]: "
+labels:
+  - integration
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include private keys, access tokens, unpublished exploits, or personal data. Report vulnerabilities through the private route in `SECURITY.md`.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Launch Feed
+        - Deployment manifest
+        - JSON Schema
+        - OpenAPI
+        - Onchain verification
+        - Fixture or example
+        - Conformance tooling
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the API/schema version or exact repository commit.
+      placeholder: v1 or 0123456789abcdef...
+    validations:
+      required: true
+
+  - type: input
+    id: identity
+    attributes:
+      label: Chain and record identity
+      description: If relevant, provide chain ID plus launch ID, token address, or transaction hash.
+      placeholder: chainId 1, launchId 0x...
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest deterministic request or validation command and its response.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets, credentials, personal data, and sensitive exploit details.
+          required: true
+        - label: I distinguished provisional, finalized, and prelaunch/sample data in this report.
+          required: true

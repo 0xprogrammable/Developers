@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "eip155:1:0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa:4",
+  "category": "classic",
+  "chainId": 1,
+  "token": {
+    "address": "0x1212121212121212121212121212121212121212",
+    "identityStatus": "partial",
+    "name": null,
+    "symbol": null,
+    "decimals": null,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": null,
+      "imageUrl": null,
+      "links": null,
+      "trustStatus": "unavailable"
+    }
+  },
+  "launch": {
+    "status": "live",
+    "origin": "first-party",
+    "modelId": "classic",
+    "modelVersion": "3",
+    "publicSubmission": false,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": "0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
+    "blockNumber": "25650020",
+    "blockHash": "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb",
+    "logIndex": 4,
+    "timestamp": null,
+    "finality": "confirmed"
+  },
+  "verification": {
+    "sourceId": "launcher-event:ethereum-classic-v3",
+    "launcherAddress": "0x2222222222222222222222222222222222222222",
+    "registryAddress": null,
+    "provenanceStatus": "verified",
+    "sourceUrl": "https://etherscan.io/tx/0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa"
+  },
+  "capabilities": [
+    {
+      "id": "uniswap-v4-pool",
+      "version": "1",
+      "status": "active",
+      "parameters": {}
+    }
+  ],
+  "markets": [
+    {
+      "marketId": "uniswap-v4:0xfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfc",
+      "kind": "uniswap-v4",
+      "status": "active",
+      "baseTokenAddress": "0x1212121212121212121212121212121212121212",
+      "quoteTokenAddress": null,
+      "protocol": "uniswap-v4",
+      "poolId": "0xfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfcfc",
+      "poolAddress": null,
+      "hookAddress": "0x5555555555555555555555555555555555555555",
+      "support": {
+        "discovery": "available",
+        "charting": "unknown",
+        "quote": "unknown",
+        "simulation": "unknown",
+        "execution": "unknown"
+      },
+      "adapter": null,
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    }
+  ],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "included",
+      "basis": "swap-volume",
+      "assetAddress": null,
+      "verificationStatus": "verified"
+    }
+  ],
+  "extensions": {
+    "example/identity-note": "The recognized launcher event remains discoverable when token metadata or block timestamp enrichment fails."
+  }
+}

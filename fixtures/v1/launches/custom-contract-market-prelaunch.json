@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "prelaunch:custom-contract-market-fixture",
+  "category": "custom",
+  "chainId": 1,
+  "token": {
+    "address": "0x9999999999999999999999999999999999999999",
+    "identityStatus": "complete",
+    "name": "Contract Market Fixture",
+    "symbol": "CURVE",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "A planned contract-priced market fixture.",
+      "imageUrl": null,
+      "links": {
+        "github": "https://github.com/example/custom-contract-market"
+      },
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "prelaunch",
+    "origin": "public-submission",
+    "modelId": "open-custom",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null
+  },
+  "verification": {
+    "sourceId": "fixture/custom-contract-market",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": "https://github.com/example/custom-contract-market"
+  },
+  "capabilities": [
+    {
+      "id": "contract-priced-market",
+      "version": "1",
+      "status": "conditional",
+      "parameters": {
+        "programmable/curve": "exponential",
+        "programmable/sell-action": "burn"
+      }
+    }
+  ],
+  "markets": [
+    {
+      "marketId": "contract-market:fixture",
+      "kind": "contract-priced-market",
+      "status": "planned",
+      "baseTokenAddress": "0x9999999999999999999999999999999999999999",
+      "quoteTokenAddress": null,
+      "protocol": null,
+      "poolId": null,
+      "poolAddress": null,
+      "hookAddress": null,
+      "support": {
+        "discovery": "available",
+        "charting": "unknown",
+        "quote": "unknown",
+        "simulation": "unknown",
+        "execution": "unknown"
+      },
+      "adapter": {
+        "kind": "contract-market-observation",
+        "version": "1",
+        "adapterId": "programmable/contract-market-observation",
+        "verificationStatus": "prelaunch"
+      },
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    }
+  ],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "added-on-top",
+      "basis": "official-market-volume",
+      "assetAddress": null,
+      "verificationStatus": "prelaunch"
+    }
+  ],
+  "extensions": {}
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "type": "event",
+    "name": "MemeTokenLaunched",
+    "anonymous": false,
+    "inputs": [
+      { "name": "creator", "type": "address", "indexed": true },
+      { "name": "token", "type": "address", "indexed": true },
+      { "name": "poolId", "type": "bytes32", "indexed": true },
+      { "name": "feeHook", "type": "address", "indexed": false },
+      { "name": "positionRecipient", "type": "address", "indexed": false },
+      { "name": "positionTokenId", "type": "uint256", "indexed": false },
+      { "name": "totalSwapFeeBps", "type": "uint16", "indexed": false },
+      { "name": "launchHash", "type": "bytes32", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "MemeLiquidityConfigured",
+    "anonymous": false,
+    "inputs": [
+      { "name": "token", "type": "address", "indexed": true },
+      { "name": "totalSupply", "type": "uint256", "indexed": false },
+      { "name": "tokenLiquidityAmount", "type": "uint256", "indexed": false },
+      { "name": "lockedTokenDust", "type": "uint256", "indexed": false },
+      { "name": "initialTick", "type": "int24", "indexed": false },
+      { "name": "tickLower", "type": "int24", "indexed": false },
+      { "name": "tickUpper", "type": "int24", "indexed": false },
+      { "name": "lpFeePips", "type": "uint24", "indexed": false },
+      { "name": "launchHash", "type": "bytes32", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "MemeCreatorInitialBuy",
+    "anonymous": false,
+    "inputs": [
+      { "name": "creator", "type": "address", "indexed": true },
+      { "name": "token", "type": "address", "indexed": true },
+      { "name": "poolId", "type": "bytes32", "indexed": true },
+      { "name": "nativeAmount", "type": "uint256", "indexed": false },
+      { "name": "tokenAmount", "type": "uint256", "indexed": false },
+      { "name": "launchHash", "type": "bytes32", "indexed": false }
+    ]
+  }
+]

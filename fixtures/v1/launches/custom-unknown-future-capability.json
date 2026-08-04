@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "prelaunch:future-capability-fixture",
+  "category": "custom",
+  "chainId": 1,
+  "token": {
+    "address": "0x1010101010101010101010101010101010101010",
+    "identityStatus": "complete",
+    "name": "Future Capability Fixture",
+    "symbol": "FUTURE",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "The terminal must retain this launch even when its capability is unknown.",
+      "imageUrl": null,
+      "links": null,
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "prelaunch",
+    "origin": "public-submission",
+    "modelId": "open-custom",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null
+  },
+  "verification": {
+    "sourceId": "fixture/future-capability",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": "https://github.com/example/future-capability"
+  },
+  "capabilities": [
+    {
+      "id": "quantum-map-reward-market-v99",
+      "version": "99",
+      "status": "conditional",
+      "parameters": {
+        "future.example/display-label": "Unknown future mechanic"
+      }
+    }
+  ],
+  "markets": [
+    {
+      "marketId": "future-market:fixture",
+      "kind": "future-market-kind-v99",
+      "status": "planned",
+      "baseTokenAddress": "0x1010101010101010101010101010101010101010",
+      "quoteTokenAddress": null,
+      "protocol": null,
+      "poolId": null,
+      "poolAddress": null,
+      "hookAddress": null,
+      "support": {
+        "discovery": "available",
+        "charting": "unknown",
+        "quote": "unknown",
+        "simulation": "unknown",
+        "execution": "unknown"
+      },
+      "adapter": null,
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    }
+  ],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "added-on-top",
+      "basis": "official-market-volume",
+      "assetAddress": null,
+      "verificationStatus": "prelaunch"
+    }
+  ],
+  "extensions": {
+    "future.example/terminal-fallback": "unsupported-market"
+  }
+}

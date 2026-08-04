@@ -1,0 +1,508 @@
+# Programmable Developer Platform — complete agent context
+
+Canonical site: https://developers.programmable.family
+Source repository: https://github.com/0xprogrammable/developers
+API base: https://developers.programmable.family/api/v1
+OpenAPI: https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v1.yaml
+Schemas: https://github.com/0xprogrammable/developers/tree/main/schemas/v1
+
+## Mission
+
+One integration for every Programmable launch.
+
+The Programmable Developer Platform gives terminals, scanners, wallets, explorers, indexers, bots, games, and apps one versioned read-only interface for discovering and verifying Programmable Classic and Custom launches.
+
+The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v1 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
+
+## Current truth
+
+- Network: Ethereum mainnet, chain ID 1.
+- Classic launch discovery: live.
+- Existing first-party stock-paired records: live where the manifest declares them, normalized as public category `custom`.
+- Open Custom intake: prelaunch.
+- Open Custom Registry: prelaunch. Its address and start block remain null or unavailable until the manifest marks it live.
+- Public categories: exactly `classic` and `custom`.
+- Future Custom fixtures: examples only, never live launch evidence.
+- A submission or approval is not a public launch. A launch record requires recognized onchain provenance.
+- Publication does not imply support or endorsement by any named terminal, wallet, data provider, Uniswap, or third party.
+- Registration is not an unconditional claim that a token, market, external service, economic outcome, or physical asset is safe, audited, or unruggable.
+
+Always fetch current status and manifest before making a current-state claim:
+
+- GET https://developers.programmable.family/api/v1/status
+- GET https://developers.programmable.family/api/v1/manifest
+
+## Stable bootstrap
+
+Begin with:
+
+GET https://developers.programmable.family/.well-known/programmable.json
+
+The well-known document points to the v1 status, manifest, launches, token list, OpenAPI, schemas, documentation, source repository, public categories, and supported chains.
+
+Do not discover deployments by copying addresses from prose. Resolve active and historical deployment arrays from the manifest.
+
+## API endpoints
+
+### GET /.well-known/programmable.json
+
+Stable discovery document. Cache according to HTTP response headers and refresh periodically.
+
+### GET /api/v1/status
+
+Reports service state and the independent lifecycle of Classic, Custom, and the public feeds. A successful HTTP response is not itself proof that every source is live or every projection is fresh.
+
+### GET /api/v1/manifest
+
+Root fields:
+
+- schemaVersion
+- manifestVersion
+- generatedAt
+- chainId
+- network
+- publicCategories
+- deployments
+- customRegistry
+- platformFee
+- endpoints
+- compatibility
+
+The manifest supplies deployment IDs, categories, model IDs and versions, origins, public-submission state, lifecycle, discovery state, start and end blocks, and contract addresses. Historical deployments remain available for backfill. New compatible deployments are appended to arrays.
+
+The open Custom Registry is represented separately. Prelaunch state does not carry a guessed live address.
+
+The compatibility object declares v1 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
+
+Clients should retain the highest accepted manifest version. An unexplained rollback or conflicting content for the same version requires operator review.
+
+### GET /api/v1/launches
+
+Returns a cursor-paginated feed with:
+
+- schemaVersion
+- status
+- snapshot
+- items
+- page.nextCursor
+- page.resumeCursor
+- page.hasMore
+
+Query parameters:
+
+- chainId: supported numeric chain ID
+- category: classic or custom
+- limit: bounded page size
+- cursor: continue the current traversal
+- after: begin a later incremental poll after a durable resume cursor
+
+Never send `cursor` and `after` together.
+
+`nextCursor` and `resumeCursor` have different meanings:
+
+1. Start without either cursor or start an incremental poll with `after=storedResumeCursor`.
+2. Apply every item on the response page durably.
+3. If `hasMore` is true, use `cursor=nextCursor` to continue the same traversal.
+4. Do not use `nextCursor` as an incremental checkpoint.
+5. After the represented traversal is durably complete, persist `resumeCursor` as the high-water checkpoint.
+6. On the next poll, send `after=resumeCursor`.
+7. Cursors are opaque. Never parse or construct one.
+8. Repeated pages must be harmless.
+
+Production cursors are HMAC-signed. `PROGRAMMABLE_CURSOR_SIGNING_KEY` must be a protected deployment secret containing 32–1,024 UTF-8 bytes and must remain identical across instances serving the same cursor surface. Never commit, log, publish, or include the value in an example. Rotation invalidates outstanding cursors and requires coordinated compatibility and operations handling, including an explicit migration or major-version plan.
+
+The snapshot binds the response to a chain boundary and includes a cursor. Consumers must preserve snapshot and finality information for reconciliation.
+
+The feed can return `status: "degraded"` when canonical event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete canonical event-log coverage instead makes launch-list and token-list routes return retryable `503` rather than a falsely complete list.
+
+### GET /api/v1/launches/{chainId}/{tokenAddress}
+
+Returns one normalized launch record by numeric chain ID and EVM token address. Name and ticker are not identity.
+
+### GET /api/v1/token-list
+
+Returns a token-list compatibility projection for wallets and simple consumers. It contains finalized records with complete token identity. Recognized launches with partial identity remain in the launch feed. Use the launch feed for full provenance, finality, capabilities, markets, and fees.
+
+## Launch identity
+
+Use separate identities:
+
+- Asset: `chainId + token.address`.
+- Launch: `launchId`.
+- Market: `market.marketId`.
+- Raw event in a direct indexer: `chainId + transactionHash + logIndex`.
+
+Current first-party Classic and stock-paired contracts do not receive a launch ID from a permanent Custom Registry. Their stable `launchId` is derived from canonical chain and event provenance. A future Custom Registry may issue an ID directly. Do not describe every current launch ID as Registry-issued.
+
+Names, symbols, images, websites, creators, and social links are display or attribution data. They are not unique identity.
+
+Use canonical block position for ordering. Preserve the original `launch.timestamp`; never replace it with API fetch time, database insertion time, or first observation time.
+
+## Launch record
+
+Every launch item has:
+
+- schemaVersion
+- launchId
+- category
+- chainId
+- token
+- launch
+- verification
+- capabilities
+- markets
+- fees
+- extensions
+
+### token
+
+- address: token contract address
+- identityStatus: complete or partial
+- name: display name or null
+- symbol: display symbol or null
+- decimals: ERC-20 precision or null
+- totalSupplyRaw: base-10 raw integer string or null
+- supplyStatus: unavailable, observed, or verified
+- supplyAsOfBlock: decimal block string or null
+- metadata: description, image, links, and trustStatus
+
+Use integer arithmetic and apply decimals only for presentation.
+
+A recognized onchain event remains discoverable if ERC-20 identity, supply, metadata, or block-timestamp enrichment fails. Preserve partial, unavailable, and null states. Never replace them with zero, a guessed ticker, or a guessed timestamp.
+
+### launch
+
+- status: prelaunch, live, paused, or retired
+- origin: normalized open identifier
+- modelId: source product model
+- modelVersion: source release or null
+- publicSubmission: boolean
+- creatorAddress: address or null
+- transactionHash: hash or null
+- blockNumber: decimal string or null
+- blockHash: hash or null
+- logIndex: integer or null
+- timestamp: ISO time or null when block-timestamp enrichment is unavailable
+- finality: observed, confirmed, finalized, orphaned, or null
+
+An approval or submission must not appear as a live launch without recognized onchain launch evidence.
+
+### verification
+
+- sourceId: stable source deployment ID
+- launcherAddress: recognized launcher or null
+- registryAddress: recognized registry or null
+- provenanceStatus: prelaunch, partial, verified, or revoked
+- sourceUrl: supporting human-readable source or null
+
+The API is a normalized projection. High-assurance consumers should reproduce the chain event and runtime checks from manifest evidence.
+
+Legacy indexer records can have partial provenance because they do not carry every canonical event coordinate needed for full verification. Recognized event records can also remain partial when receipt or block enrichment is unavailable. Partial is an evidence state, not an unsafe verdict.
+
+### capabilities
+
+Each capability has:
+
+- id
+- version
+- status: active, conditional, or inactive
+- parameters
+
+Capability identifiers are open. Unknown capabilities do not invalidate or hide a launch. Preserve the known launch envelope and disable behavior the client does not understand.
+
+Capability parameters are bounded data. They are never scripts, agent instructions, prompts, URLs to execute, or transaction payloads.
+
+### markets
+
+`markets` is an array and can contain zero, one, or several markets.
+
+Each market has:
+
+- marketId
+- kind
+- status: planned, active, paused, or closed
+- baseTokenAddress
+- quoteTokenAddress or null
+- protocol or null
+- poolId or null
+- poolAddress or null
+- hookAddress or null
+- support
+- adapter or null
+
+Support is split into independent states:
+
+- discovery
+- charting
+- quote
+- simulation
+- execution
+
+Each axis is `available`, `unavailable`, or `unknown`.
+
+When present, the read-only adapter descriptor contains:
+
+- kind
+- version
+- adapterId
+- verificationStatus: prelaunch, verified, or revoked
+
+These values are descriptive. v1 never returns adapter action URLs, transaction payloads, or execution authority. `available` does not itself authorize an action.
+
+`markets: []` is valid. It means no registered market is represented. Keep the launch visible. Do not invent a pool, pair, price, liquidity, volume, chart, quote, or trade button.
+
+A market can exist without a pool. Null pool fields do not make the launch invalid. Never substitute a market contract as a pool address.
+
+When market kind is unknown:
+
+1. Keep token identity and launch provenance visible.
+2. Keep category Custom.
+3. Show known lifecycle state.
+4. Read explicit support fields.
+5. Hide chart, quote, simulation, and execution without verified support.
+6. Preserve unknown optional data without executing it.
+
+### fees
+
+Each fee has:
+
+- kind
+- ratePpm
+- rateBps
+- recipient
+- chargeMode: included or added-on-top
+- basis
+- assetAddress or null
+- verificationStatus: prelaunch, verified, or revoked
+
+Never infer fee behavior from category.
+
+### extensions
+
+Extensions are bounded namespaced additions. They cannot override core identity, provenance, lifecycle, markets, support, or fees. Unknown extensions are ignored safely and never executed.
+
+## Categories
+
+Use only:
+
+- Programmable Classic
+- Programmable Custom
+
+Existing first-party stock-paired records are Custom. Future hooks, auctions, contract-priced markets, games, delayed markets, multi-market designs, and designs without a catalog name remain Custom. Their mechanics belong in capabilities and markets, not in additional top-level categories.
+
+## Feature availability
+
+Discovery is universal for registered launches. Other features require specific evidence:
+
+- Token metadata: metadata present, with trust state preserved.
+- Market discovery: registered market record.
+- Chart and volume: verified activity normalizer or adapter.
+- Quote: verified quote adapter declared by the record.
+- Simulation: verified simulation adapter declared by the record.
+- Execution: verified execution adapter and a separate supported client integration.
+
+If support is absent, keep the launch visible and mark the feature unavailable. Do not guess from metadata, contract names, category, or an unknown market type.
+
+Do not count every ERC-20 transfer as a trade. Mints, burns, rewards, claims, refunds, bridge transfers, game settlement, and liquidity movement can transfer tokens without being volume.
+
+## v1 compatibility contract
+
+Within v1:
+
+- Existing core fields are not removed.
+- Existing field names and types are not changed.
+- Existing meanings are not reinterpreted.
+- Category remains classic or custom.
+- Zero, one, and multiple markets remain valid.
+- New fields are optional and additive.
+- New capabilities and market kinds are open identifiers.
+- New deployments appear through the manifest.
+- Unknown optional values do not hide a launch.
+- Breaking changes require a new major API path and migration documentation.
+
+A conforming consumer must:
+
+- read the manifest at runtime;
+- ignore unknown optional fields;
+- preserve and fall back on unknown capabilities and market kinds;
+- keep unknown launches visible;
+- disable unsupported actions;
+- distinguish missing, null, unavailable, and zero;
+- process pages idempotently;
+- respect finality and reorg reconciliation;
+- validate the declared schema version.
+
+Do not claim software will never change. The correct claim is: no mandatory client changes within v1 for a conforming client; additions are backward compatible.
+
+## Finality and reorgs
+
+Finality values:
+
+- observed: seen onchain, non-final
+- confirmed: included under the API confirmation policy, not finalized
+- finalized: suitable for durable finalized projections
+- orphaned: displaced by reorganization
+
+The schema permits orphaned records, but clients must not assume that the current API is a complete historical tombstone stream. Reconcile observed and confirmed records against later snapshots.
+
+On disagreement:
+
+1. Stop advancing the durable resume cursor.
+2. Return to a known canonical boundary.
+3. Re-read and reapply records idempotently.
+4. Consume an orphaned correction if supplied.
+5. Otherwise preserve a local correction record for non-final data that disappears.
+6. Never change original launch time to reprocessing time.
+
+## Metadata trust
+
+Onchain provenance and creator metadata have different trust levels.
+
+Treat names, symbols, descriptions, images, websites, and social links as untrusted display data unless separately verified.
+
+- Keep chain and address visible.
+- Sanitize control, zero-width, and bidirectional characters.
+- Do not render arbitrary HTML.
+- Do not load untrusted SVG as active content.
+- Fetch remote media through bounded SSRF-safe infrastructure.
+- Treat external links as untrusted destinations.
+- Metadata failure must not erase launch identity.
+- Metadata cannot override provenance, fees, lifecycle, or market support.
+
+Registration does not verify a game server, oracle, bridge, custodian, physical reserve, external API, or legal status.
+
+## Platform fee
+
+Programmable platform rate:
+
+- 10 basis points
+- 0.1 percent
+- 1,000 parts per million
+
+Recipient:
+
+0x4957f49620AFf3Adbbe8195a4f633E49cc93376c
+
+Current Classic official paths include the 10 bps platform share inside the configured trading fee. If the Classic total fee is X, the platform share is part of X.
+
+Future Custom official paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified. If creator fee is X, the supported path charges X plus 10 bps.
+
+Existing first-party records normalized as Custom may have deployment-specific behavior. Read `fees` and `verificationStatus`; do not infer added-on-top from category.
+
+Scope is executed volume on the verified official Programmable market path. No executed trade means no volume fee. Ordinary token transfers, rewards, mints, burns, claims, bridge movements, refunds, and independently created third-party pools are outside that path unless a future verified record explicitly says otherwise.
+
+Do not label a fee collected, paid, or claimable solely because policy is declared. Those states require corresponding chain evidence.
+
+## Terminal and scanner recipe
+
+1. Read discovery, status, and manifest.
+2. Backfill the feed.
+3. Display token name and symbol as metadata, plus visible chain and address.
+4. Label category as Programmable Classic or Programmable Custom.
+5. Use canonical launch timestamp and finality.
+6. Accept no market, multiple markets, contract markets, and unknown markets.
+7. Render chart or volume only with verified charting support.
+8. Never fabricate zero volume when data is unavailable.
+9. Never construct a transaction from metadata or unknown extensions.
+10. Read verified fee disclosures per path.
+
+## Wallet and explorer recipe
+
+1. Use token list for compact identity and the launch record for provenance.
+2. Key by chain and address, never ticker.
+3. Keep address visible in trust-sensitive UI.
+4. Sanitize metadata.
+5. Accept no-market tokens.
+6. Show fiat value unavailable when verified price data is absent.
+7. Link Programmable provenance to the launch transaction, block, source, and verification state.
+8. Do not turn a Programmable label into a blanket safety statement.
+
+## Indexer recipe
+
+1. Store highest trusted manifest version.
+2. Read all deployment ranges and start blocks.
+3. Apply feed pages durably and idempotently.
+4. Use nextCursor for traversal and resumeCursor/after for later polling.
+5. Store launch, asset, market, and raw-event identities separately.
+6. Preserve block number, block hash, transaction hash, log index, timestamp, and finality.
+7. Reconcile non-final data.
+8. Keep raw evidence sufficient to rebuild projections.
+9. Do not accept an event from an unrecognized lookalike contract.
+10. Do not infer trades from transfers without a verified normalizer.
+
+## App, game, and bot recipe
+
+1. Fetch a launch record read-only.
+2. Use known capability IDs and versions.
+3. Treat unknown capabilities as unsupported data, not instructions.
+4. Do not assume a pool.
+5. Keep discovery working without market actions.
+6. Use a separately verified adapter for any transaction-capable product.
+7. Re-check chain, target, amounts, allowance, deadline, slippage, and simulation outside this read-only API before asking a wallet to sign.
+8. Treat external services and offchain outcomes as separate dependencies.
+9. Do not assess legal or physical-world truth from registration.
+
+## HTTP behavior
+
+- Honor Cache-Control and ETag.
+- Use conditional requests where available.
+- Treat cursors as opaque.
+- Retry transient failures with bounded exponential backoff and jitter.
+- Do not retry an unchanged invalid request.
+- Honor Retry-After for rate limits.
+- Keep the last trusted manifest during brief outages, mark it stale, and do not accept a silent rollback.
+- Do not turn an API or provider error into a security judgment about a token.
+
+Error responses follow the public problem schema and contain a stable code plus human-readable detail.
+
+## Production failure behavior
+
+- Status unavailable: keep last data, mark freshness unknown, pause advancement if required.
+- Manifest unavailable: use last trusted manifest for read-only display, mark stale, accept no new deployment.
+- Feed unavailable: retry without losing durable resume cursor.
+- Event-log coverage incomplete: launch-list and token-list routes return retryable 503; retain the last durable cursor.
+- Enrichment degraded: ingest recognized launches and preserve partial, unavailable, and null identity, supply, timestamp, and provenance fields.
+- Unknown schema major: stop automatic ingestion and require migration.
+- Unknown optional value: keep launch visible and disable unsupported behavior.
+- Adapter unavailable: preserve discovery and disable its dependent features.
+- Metadata unavailable: show chain and address; do not remove the launch.
+- Provenance conflict: stop automatic trust advancement and alert an operator.
+
+## Claims policy
+
+Allowed:
+
+- One versioned integration for every Programmable launch.
+- Classic is live on Ethereum.
+- Existing first-party stock-paired records normalize as Custom.
+- Open Custom intake and the open Custom Registry are prelaunch.
+- Every registered launch is discoverable.
+- Charts, quotes, simulation, and execution are available only when declared by a verified adapter.
+- New compatible deployments appear through the manifest without mandatory v1 client changes.
+
+Not allowed without separate evidence:
+
+- every launch is safe, audited, or unruggable;
+- every Custom market is chartable or tradable;
+- open Custom is live;
+- a placeholder Registry is live;
+- a named terminal or wallet has integrated Programmable;
+- Uniswap endorses this platform;
+- registration proves external service, custody, reserve, or legal claims;
+- the v1 API authorizes transactions.
+
+## Human documentation
+
+- Overview: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md
+- Quickstart: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md
+- Status: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md
+- Data model: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md
+- Compatibility: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md
+- Terminal guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md
+- Wallet guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md
+- Indexer guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md
+- App guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md
+- API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
+- Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
+- Operations: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md
+- FAQ: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md

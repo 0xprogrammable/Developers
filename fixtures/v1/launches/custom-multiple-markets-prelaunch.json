@@ -1,0 +1,185 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "prelaunch:multiple-markets-fixture",
+  "category": "custom",
+  "chainId": 1,
+  "token": {
+    "address": "0x1515151515151515151515151515151515151515",
+    "identityStatus": "complete",
+    "name": "Multiple Markets Fixture",
+    "symbol": "MULTI",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "A prelaunch fixture with scheduled, paused, and unfamiliar market mechanisms.",
+      "imageUrl": null,
+      "links": null,
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "prelaunch",
+    "origin": "public-submission",
+    "modelId": "open-custom",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null
+  },
+  "verification": {
+    "sourceId": "fixture/multiple-markets",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": "https://github.com/example/multiple-markets"
+  },
+  "capabilities": [
+    {
+      "id": "multiple-markets",
+      "version": "1",
+      "status": "conditional",
+      "parameters": {
+        "marketCount": 3
+      }
+    },
+    {
+      "id": "delayed-market-activation",
+      "version": "1",
+      "status": "conditional",
+      "parameters": {
+        "activationCondition": "scheduled"
+      }
+    }
+  ],
+  "markets": [
+    {
+      "marketId": "planned-v4:fixture",
+      "kind": "uniswap-v4",
+      "status": "planned",
+      "baseTokenAddress": "0x1515151515151515151515151515151515151515",
+      "quoteTokenAddress": null,
+      "protocol": "uniswap-v4",
+      "poolId": null,
+      "poolAddress": null,
+      "hookAddress": null,
+      "support": {
+        "discovery": "available",
+        "charting": "unavailable",
+        "quote": "unavailable",
+        "simulation": "unavailable",
+        "execution": "unavailable"
+      },
+      "adapter": null,
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    },
+    {
+      "marketId": "paused-contract-market:fixture",
+      "kind": "contract-priced-market",
+      "status": "paused",
+      "baseTokenAddress": "0x1515151515151515151515151515151515151515",
+      "quoteTokenAddress": "0x4444444444444444444444444444444444444444",
+      "protocol": null,
+      "poolId": null,
+      "poolAddress": null,
+      "hookAddress": null,
+      "support": {
+        "discovery": "available",
+        "charting": "unknown",
+        "quote": "unavailable",
+        "simulation": "unavailable",
+        "execution": "unavailable"
+      },
+      "adapter": {
+        "kind": "contract-market-observation",
+        "version": "1",
+        "adapterId": "programmable/contract-market-observation",
+        "verificationStatus": "prelaunch"
+      },
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    },
+    {
+      "marketId": "geospatial-game-market:fixture",
+      "kind": "geospatial-game-market",
+      "status": "planned",
+      "baseTokenAddress": "0x1515151515151515151515151515151515151515",
+      "quoteTokenAddress": null,
+      "protocol": null,
+      "poolId": null,
+      "poolAddress": null,
+      "hookAddress": null,
+      "support": {
+        "discovery": "available",
+        "charting": "unknown",
+        "quote": "unknown",
+        "simulation": "unknown",
+        "execution": "unknown"
+      },
+      "adapter": null,
+      "metrics": {
+        "price": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "liquidity": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "volume24h": {
+          "value": null,
+          "status": "unavailable"
+        },
+        "updatedAt": null
+      }
+    }
+  ],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "added-on-top",
+      "basis": "official-market-volume",
+      "assetAddress": null,
+      "verificationStatus": "prelaunch"
+    }
+  ],
+  "extensions": {
+    "example/scenario": "One token can expose multiple independent market states without creating new public categories."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "baseFixture": "../launches/classic-v4-pool.json",
+  "mutations": [
+    {
+      "operation": "set",
+      "path": "/token/totalSupplyRaw",
+      "value": 1e+30
+    }
+  ],
+  "expectedLayer": "schema",
+  "expectedCode": "oneOf"
+}

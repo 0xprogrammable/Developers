@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Canonical launch feeds, schemas and integration guidance for Programmable Classic and Custom launches."
+    />
+    <meta name="theme-color" content="#fffdfc" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Programmable Developers" />
+    <meta
+      property="og:description"
+      content="One versioned interface for every Programmable launch."
+    />
+    <meta
+      property="og:image"
+      content="https://developers.programmable.family/assets/brand/programmable-developers-og.png"
+    />
+    <meta property="og:url" content="https://developers.programmable.family/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://developers.programmable.family/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      href="/assets/fonts/instrument-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+    <title>Programmable Developers</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/" aria-label="Programmable Developers home">
+          <img
+            class="brand-mark"
+            src="/assets/brand/programmable-loop-mark.png"
+            alt=""
+            width="36"
+            height="36"
+          />
+          <span class="brand-name">Programmable</span>
+          <span class="brand-divider" aria-hidden="true">/</span>
+          <span class="brand-section">Developers</span>
+        </a>
+
+        <nav class="desktop-nav" aria-label="Primary navigation">
+          <a href="#quickstart">Quickstart</a>
+          <a href="#integration-contract">Integration contract</a>
+          <a href="#build">Build</a>
+          <a href="#status">Status</a>
+        </nav>
+
+        <div class="header-actions">
+          <a
+            class="github-link"
+            href="https://github.com/0xprogrammable/developers"
+            rel="noreferrer"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+              <path
+                fill="currentColor"
+                d="M12 1.4A10.7 10.7 0 0 0 8.6 22c.5.1.7-.2.7-.5v-1.9c-3 .7-3.7-1.3-3.7-1.3-.5-1.2-1.2-1.6-1.2-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.4-.3-5-1.2-5-5.3 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 3 1.1a10.5 10.5 0 0 1 5.5 0c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.6.1 2.9.7.8 1.1 1.8 1.1 3 0 4.1-2.5 5-5 5.3.4.3.8 1 .8 2v3c0 .3.2.6.8.5A10.7 10.7 0 0 0 12 1.4Z"
+              />
+            </svg>
+            <span>GitHub</span>
+          </a>
+
+          <details class="mobile-menu">
+            <summary aria-label="Open navigation">
+              <span></span><span></span>
+            </summary>
+            <nav aria-label="Mobile navigation">
+              <a href="#quickstart">Quickstart</a>
+              <a href="#integration-contract">Integration contract</a>
+              <a href="#build">Build</a>
+              <a href="#status">Status</a>
+              <a href="https://github.com/0xprogrammable/developers">GitHub</a>
+            </nav>
+          </details>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="status-badges" aria-label="Current product status">
+            <span class="status-badge status-badge-live">
+              <span class="status-dot" aria-hidden="true"></span>
+              Classic live on Ethereum
+            </span>
+            <span class="status-badge status-badge-prelaunch">
+              Open Custom registry&nbsp;· prelaunch
+            </span>
+          </div>
+
+          <p class="eyebrow">Programmable developer interface</p>
+          <h1 id="hero-title">One integration for every Programmable launch.</h1>
+          <p class="hero-lede">
+            Discover, verify and build on Programmable Classic and Custom launches through one
+            versioned interface.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#quickstart">
+              Start the 5-minute quickstart
+              <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+                <path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" />
+              </svg>
+            </a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/0xprogrammable/developers/blob/main/docs/reference/http-api.md"
+            >
+              View the API
+            </a>
+          </div>
+
+          <div class="live-line" aria-live="polite">
+            <span class="live-line-label">Live interface</span>
+            <span id="hero-api-status">Checking current status…</span>
+          </div>
+        </div>
+
+        <div class="inspector" aria-labelledby="inspector-title">
+          <div class="inspector-heading">
+            <div>
+              <p class="code-kicker">Stable launch envelope</p>
+              <h2 id="inspector-title">One record, every launch</h2>
+            </div>
+            <span class="sample-label">Simulated sample</span>
+          </div>
+
+          <div class="inspector-tabs" role="tablist" aria-label="Sample launch type">
+            <button
+              id="tab-classic"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="sample-panel"
+              data-sample="classic"
+            >
+              Classic
+            </button>
+            <button
+              id="tab-custom-pool"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sample-panel"
+              tabindex="-1"
+              data-sample="customPool"
+            >
+              Custom pool
+            </button>
+            <button
+              id="tab-custom-no-pool"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sample-panel"
+              tabindex="-1"
+              data-sample="customNoPool"
+            >
+              No pool
+            </button>
+            <button
+              id="tab-contract-market"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="sample-panel"
+              tabindex="-1"
+              data-sample="contractMarket"
+            >
+              Contract market
+            </button>
+          </div>
+
+          <div
+            id="sample-panel"
+            class="code-window"
+            role="tabpanel"
+            aria-labelledby="tab-classic"
+            tabindex="0"
+          >
+            <div class="code-window-bar">
+              <span id="sample-caption">Classic · normalized record</span>
+              <button class="copy-button" type="button" data-copy-target="sample-json">
+                <svg aria-hidden="true" viewBox="0 0 16 16" width="15" height="15">
+                  <rect x="5" y="5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" />
+                  <path d="M3.5 10.5h-1V2.8c0-.7.6-1.3 1.3-1.3h7.7v1" fill="none" stroke="currentColor" />
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+            <pre><code id="sample-json"></code></pre>
+          </div>
+          <p class="inspector-note">
+            The envelope stays stable. v1 is read-only; support fields describe availability and do
+            not contain action URLs.
+          </p>
+        </div>
+      </section>
+
+      <section id="quickstart" class="section section-rule" aria-labelledby="quickstart-title">
+        <div class="section-heading">
+          <p class="section-index">01 / Quickstart</p>
+          <div>
+            <h2 id="quickstart-title">From endpoint to launch feed in five minutes.</h2>
+            <p>
+              Start with the canonical interface. Do not hardcode launcher or registry addresses in
+              your product.
+            </p>
+          </div>
+        </div>
+
+        <div class="quickstart-layout">
+          <ol class="steps">
+            <li>
+              <span class="step-number">1</span>
+              <div>
+                <h3>Read the manifest</h3>
+                <p>Resolve supported chains, deployments and the current schema from one source.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">2</span>
+              <div>
+                <h3>Ingest launches</h3>
+                <p>Store the stable launch ID and follow the feed cursor without creating duplicates.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">3</span>
+              <div>
+                <h3>Respect capabilities</h3>
+                <p>
+                  Every registered launch is discoverable. Enable charts, quotes or execution only
+                  when a verified adapter declares support.
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          <div class="endpoint-panel">
+          <div class="endpoint-heading">
+              <span class="method">GET</span>
+              <code>/api/v1/launches</code>
+            </div>
+            <p>Fetch the canonical feed over HTTPS.</p>
+            <div class="terminal-block">
+              <button class="copy-button" type="button" data-copy-target="quickstart-command">
+                <svg aria-hidden="true" viewBox="0 0 16 16" width="15" height="15">
+                  <rect x="5" y="5" width="8" height="8" rx="1.5" fill="none" stroke="currentColor" />
+                  <path d="M3.5 10.5h-1V2.8c0-.7.6-1.3 1.3-1.3h7.7v1" fill="none" stroke="currentColor" />
+                </svg>
+                <span>Copy</span>
+              </button>
+              <pre><code id="quickstart-command">curl -fsSL https://developers.programmable.family/api/v1/launches</code></pre>
+            </div>
+            <div class="endpoint-links">
+              <a href="/api/v1/manifest">Open manifest <span aria-hidden="true">↗</span></a>
+              <a href="/api/v1/status">Open live status <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="integration-contract"
+        class="section section-rule"
+        aria-labelledby="contract-title"
+      >
+        <div class="section-heading">
+          <p class="section-index">02 / Integration contract</p>
+          <div>
+            <h2 id="contract-title">Integrate once. We carry the changes.</h2>
+            <p>
+              Custom activation and future compatible deployments flow through the same versioned
+              interface.
+            </p>
+          </div>
+        </div>
+
+        <div class="contract-grid">
+          <div class="contract-column">
+            <p class="contract-label">What remains stable</p>
+            <ul class="contract-list">
+              <li>
+                <span class="contract-key">Envelope</span>
+                <span>Launch identity, category, chain, token, verification and capabilities.</span>
+              </li>
+              <li>
+                <span class="contract-key">Categories</span>
+                <span>Public launches remain either <code>classic</code> or <code>custom</code>.</span>
+              </li>
+              <li>
+                <span class="contract-key">Evolution</span>
+                <span>New v1 fields are optional and additive. Breaking changes require a new major version.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="contract-column">
+            <p class="contract-label">What your integration does</p>
+            <ul class="contract-list">
+              <li>
+                <span class="contract-key">Discover</span>
+                <span>Read deployment sources from the manifest rather than hardcoding addresses.</span>
+              </li>
+              <li>
+                <span class="contract-key">Verify</span>
+                <span>Preserve launch proof and verification state alongside each record.</span>
+              </li>
+              <li>
+                <span class="contract-key">Extend</span>
+                <span>Ignore unknown optional fields and gate rich behavior by declared capabilities.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="contract-footnote">
+          Existing first-party stock-paired records normalize as Custom. The open community Custom
+          registry remains prelaunch.
+        </p>
+      </section>
+
+      <section id="build" class="section section-rule" aria-labelledby="build-title">
+        <div class="section-heading">
+          <p class="section-index">03 / Build</p>
+          <div>
+            <h2 id="build-title">One source, four product surfaces.</h2>
+            <p>Use the same canonical record at the layer your product needs.</p>
+          </div>
+        </div>
+
+        <div class="surface-list">
+          <article class="surface-row">
+            <div class="surface-title">
+              <span class="surface-symbol" aria-hidden="true">↳</span>
+              <h3>Terminals &amp; scanners</h3>
+            </div>
+            <p>Detect launches, label Classic or Custom, and expose supported market actions.</p>
+            <a href="https://github.com/0xprogrammable/developers/blob/main/docs/guides/terminals-and-scanners.md">
+              Integration guide <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+          <article class="surface-row">
+            <div class="surface-title">
+              <span class="surface-symbol" aria-hidden="true">↳</span>
+              <h3>Wallets</h3>
+            </div>
+            <p>Show canonical token identity, Programmable origin and verified market availability.</p>
+            <a href="https://github.com/0xprogrammable/developers/blob/main/docs/guides/wallets.md">
+              Wallet guide <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+          <article class="surface-row">
+            <div class="surface-title">
+              <span class="surface-symbol" aria-hidden="true">↳</span>
+              <h3>Indexers &amp; data</h3>
+            </div>
+            <p>Backfill from canonical sources, process cursors, and retain onchain provenance.</p>
+            <a href="https://github.com/0xprogrammable/developers/blob/main/docs/guides/indexers.md">
+              Indexing guide <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+          <article class="surface-row">
+            <div class="surface-title">
+              <span class="surface-symbol" aria-hidden="true">↳</span>
+              <h3>Apps &amp; games</h3>
+            </div>
+            <p>Discover launches and compose only the capabilities a verified adapter supports.</p>
+            <a href="https://github.com/0xprogrammable/developers/blob/main/docs/guides/apps-and-games.md">
+              Apps and games guide <span aria-hidden="true">↗</span>
+            </a>
+          </article>
+        </div>
+      </section>
+
+      <section id="status" class="section section-rule status-section" aria-labelledby="status-title">
+        <div class="section-heading">
+          <p class="section-index">04 / Live status</p>
+          <div>
+            <h2 id="status-title">Trust the source, not a screenshot.</h2>
+            <p>This panel reads the same public status endpoint your integration can monitor.</p>
+          </div>
+        </div>
+
+        <div class="status-ledger" aria-live="polite" aria-busy="true" id="status-ledger">
+          <div class="status-row">
+            <span>Developer interface</span>
+            <strong id="status-api-state" class="status-value status-value-pending">Checking…</strong>
+          </div>
+          <div class="status-row">
+            <span>Ethereum source</span>
+            <strong id="status-source-state" class="status-value">Waiting for status</strong>
+          </div>
+          <div class="status-row">
+            <span>Indexed launches</span>
+            <strong id="status-launch-count" class="status-value">—</strong>
+          </div>
+          <div class="status-row">
+            <span>Open Custom registry</span>
+            <strong class="status-value status-value-prelaunch">Prelaunch</strong>
+          </div>
+          <div class="status-row">
+            <span>Schema</span>
+            <strong id="status-schema" class="status-value"><code>v1</code></strong>
+          </div>
+          <p id="status-updated" class="status-updated">Requesting current status…</p>
+        </div>
+
+        <div class="reference-links" aria-label="Developer references">
+          <a href="/api/v1/status">
+            <span>Machine-readable status</span>
+            <code>GET /api/v1/status</code>
+          </a>
+          <a href="/api/v1/manifest">
+            <span>Deployment manifest</span>
+            <code>GET /api/v1/manifest</code>
+          </a>
+          <a href="https://github.com/0xprogrammable/developers">
+            <span>Source and changelog</span>
+            <code>github.com/0xprogrammable/developers</code>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <a class="footer-brand" href="/">
+          <img
+            src="/assets/brand/programmable-loop-mark.png"
+            width="30"
+            height="30"
+            alt=""
+          />
+          <span>Programmable Developers</span>
+        </a>
+        <p>Canonical developer interfaces for Programmable on Ethereum.</p>
+        <nav aria-label="Footer navigation">
+          <a href="https://programmable.family">Launchpad</a>
+          <a href="https://github.com/0xprogrammable/developers">GitHub</a>
+          <a href="/api/v1/status">Status</a>
+        </nav>
+        <p class="copyright">© <span id="current-year">2026</span> Programmable</p>
+      </div>
+    </footer>
+
+    <p class="copy-announcement" id="copy-announcement" role="status" aria-live="polite"></p>
+  </body>
+</html>

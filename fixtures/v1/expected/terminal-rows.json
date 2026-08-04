@@ -1,0 +1,160 @@
+[
+  {
+    "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
+    "category": "Programmable Classic",
+    "chainId": 1,
+    "tokenAddress": "0x1111111111111111111111111111111111111111",
+    "name": "Classic Fixture",
+    "symbol": "CLASSIC",
+    "lifecycle": "live",
+    "provenanceStatus": "verified",
+    "marketCount": 1,
+    "marketKinds": [
+      "uniswap-v4"
+    ],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "uniswap-v4-pool"
+    ],
+    "hasActiveMarket": true
+  },
+  {
+    "launchId": "eip155:1:0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa:4",
+    "category": "Programmable Classic",
+    "chainId": 1,
+    "tokenAddress": "0x1212121212121212121212121212121212121212",
+    "name": null,
+    "symbol": null,
+    "lifecycle": "live",
+    "provenanceStatus": "verified",
+    "marketCount": 1,
+    "marketKinds": [
+      "uniswap-v4"
+    ],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "uniswap-v4-pool"
+    ],
+    "hasActiveMarket": true
+  },
+  {
+    "launchId": "prelaunch:custom-no-market-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x8888888888888888888888888888888888888888",
+    "name": "Custom No Market Fixture",
+    "symbol": "NOMARKET",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 0,
+    "marketKinds": [],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "dynamic-supply",
+      "game-rewards"
+    ],
+    "hasActiveMarket": false
+  },
+  {
+    "launchId": "prelaunch:custom-contract-market-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x9999999999999999999999999999999999999999",
+    "name": "Contract Market Fixture",
+    "symbol": "CURVE",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 1,
+    "marketKinds": [
+      "contract-priced-market"
+    ],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "contract-priced-market"
+    ],
+    "hasActiveMarket": false
+  },
+  {
+    "launchId": "prelaunch:dynamic-supply-burn-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x1313131313131313131313131313131313131313",
+    "name": "Dynamic Supply Fixture",
+    "symbol": "DEFLATE",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 0,
+    "marketKinds": [],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "dynamic-supply",
+      "sell-triggered-burn",
+      "buyback-and-burn"
+    ],
+    "hasActiveMarket": false
+  },
+  {
+    "launchId": "prelaunch:game-rewards-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x1414141414141414141414141414141414141414",
+    "name": "Game Rewards Fixture",
+    "symbol": "PLAY",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 0,
+    "marketKinds": [],
+    "unsupportedMarketKinds": [],
+    "capabilityIds": [
+      "kill-to-earn",
+      "external-outcome-oracle",
+      "nft-rewards"
+    ],
+    "hasActiveMarket": false
+  },
+  {
+    "launchId": "prelaunch:multiple-markets-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x1515151515151515151515151515151515151515",
+    "name": "Multiple Markets Fixture",
+    "symbol": "MULTI",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 3,
+    "marketKinds": [
+      "uniswap-v4",
+      "contract-priced-market",
+      "geospatial-game-market"
+    ],
+    "unsupportedMarketKinds": [
+      "geospatial-game-market"
+    ],
+    "capabilityIds": [
+      "multiple-markets",
+      "delayed-market-activation"
+    ],
+    "hasActiveMarket": false
+  },
+  {
+    "launchId": "prelaunch:future-capability-fixture",
+    "category": "Programmable Custom",
+    "chainId": 1,
+    "tokenAddress": "0x1010101010101010101010101010101010101010",
+    "name": "Future Capability Fixture",
+    "symbol": "FUTURE",
+    "lifecycle": "prelaunch",
+    "provenanceStatus": "prelaunch",
+    "marketCount": 1,
+    "marketKinds": [
+      "future-market-kind-v99"
+    ],
+    "unsupportedMarketKinds": [
+      "future-market-kind-v99"
+    ],
+    "capabilityIds": [
+      "quantum-map-reward-market-v99"
+    ],
+    "hasActiveMarket": false
+  }
+]

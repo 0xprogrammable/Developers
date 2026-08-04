@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "Programmable Developer Platform",
+  "description": "One versioned integration for Programmable Classic and Custom launches.",
+  "apiVersion": "1",
+  "apiBaseUrl": "https://developers.programmable.family/api/v1",
+  "statusUrl": "https://developers.programmable.family/api/v1/status",
+  "manifestUrl": "https://developers.programmable.family/api/v1/manifest",
+  "launchesUrl": "https://developers.programmable.family/api/v1/launches",
+  "tokenListUrl": "https://developers.programmable.family/api/v1/token-list",
+  "openApiUrl": "https://developers.programmable.family/openapi/programmable-v1.yaml",
+  "schemasBaseUrl": "https://developers.programmable.family/schemas/v1/",
+  "documentationUrl": "https://developers.programmable.family/",
+  "sourceUrl": "https://github.com/0xprogrammable/developers",
+  "chains": [
+    {
+      "chainId": 1,
+      "caip2": "eip155:1",
+      "name": "Ethereum Mainnet",
+      "explorerUrl": "https://etherscan.io",
+      "status": "live"
+    }
+  ],
+  "publicCategories": {
+    "classic": {
+      "discoveryStatus": "live"
+    },
+    "custom": {
+      "discoveryStatus": "live",
+      "publicSubmissionStatus": "prelaunch",
+      "note": "Existing Custom records are first-party Stock-Paired launches. Public Custom submissions are not live."
+    }
+  },
+  "compatibility": {
+    "majorVersion": 1,
+    "additiveChangesOnly": true,
+    "unknownFields": "ignore",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "deploymentAddresses": "resolve-from-manifest"
+  },
+  "extensions": {}
+}

@@ -1,0 +1,8 @@
+# The Programmable account reviews every public integration change.
+* @0xprogrammable
+
+/.github/ @0xprogrammable
+/SECURITY.md @0xprogrammable
+/deployments/ @0xprogrammable
+/openapi/ @0xprogrammable
+/schemas/ @0xprogrammable

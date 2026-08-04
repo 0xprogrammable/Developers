@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "publicCategories": [
+    "classic",
+    "custom"
+  ],
+  "launchRequired": [
+    "schemaVersion",
+    "launchId",
+    "category",
+    "chainId",
+    "token",
+    "launch",
+    "verification",
+    "capabilities",
+    "markets",
+    "fees",
+    "extensions"
+  ],
+  "feedRequired": [
+    "schemaVersion",
+    "status",
+    "snapshot",
+    "items",
+    "page"
+  ],
+  "openIdentifierPaths": [
+    "/$defs/capability/properties/id",
+    "/$defs/market/properties/kind"
+  ],
+  "closedTrustObjects": [
+    "/$defs/launch",
+    "/$defs/verification",
+    "/$defs/market",
+    "/$defs/market/properties/support",
+    "/$defs/adapter",
+    "/$defs/fee"
+  ],
+  "forwardCompatibility": {
+    "unknownFields": "ignore-at-consumer-boundary",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "breakingChangesRequireNewMajor": true
+  }
+}

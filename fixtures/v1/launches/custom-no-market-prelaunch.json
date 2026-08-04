@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "prelaunch:custom-no-market-fixture",
+  "category": "custom",
+  "chainId": 1,
+  "token": {
+    "address": "0x8888888888888888888888888888888888888888",
+    "identityStatus": "complete",
+    "name": "Custom No Market Fixture",
+    "symbol": "NOMARKET",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "A prelaunch Custom fixture with no market.",
+      "imageUrl": null,
+      "links": null,
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "prelaunch",
+    "origin": "public-submission",
+    "modelId": "open-custom",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null
+  },
+  "verification": {
+    "sourceId": "fixture/custom-no-market",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": "https://github.com/example/custom-no-market"
+  },
+  "capabilities": [
+    {
+      "id": "dynamic-supply",
+      "version": "1",
+      "status": "conditional",
+      "parameters": {
+        "programmable/supply-model": "exponential-deflation"
+      }
+    },
+    {
+      "id": "game-rewards",
+      "version": null,
+      "status": "conditional",
+      "parameters": {
+        "programmable/reward-trigger": "verified-game-outcome"
+      }
+    }
+  ],
+  "markets": [],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "added-on-top",
+      "basis": "official-market-volume",
+      "assetAddress": null,
+      "verificationStatus": "prelaunch"
+    }
+  ],
+  "extensions": {
+    "example/display-note": "No market exists yet; do not fabricate pool, price, liquidity, or volume."
+  }
+}

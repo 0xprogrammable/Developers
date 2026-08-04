@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "Programmable",
+  "timestamp": "2026-08-04T08:10:00.000Z",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "tokens": [
+    {
+      "chainId": 1,
+      "address": "0x1111111111111111111111111111111111111111",
+      "name": "Classic Fixture",
+      "symbol": "CLASSIC",
+      "decimals": 18,
+      "logoURI": "https://developers.programmable.family/fixtures/classic.png",
+      "extensions": {
+        "programmable": {
+          "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
+          "category": "classic",
+          "provenanceStatus": "verified",
+          "marketCount": 1,
+          "launchBlockNumber": "25650000",
+          "finality": "finalized"
+        }
+      }
+    }
+  ]
+}

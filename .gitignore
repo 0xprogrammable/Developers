@@ -1,0 +1,39 @@
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.tmp/
+.next/
+.vercel/
+*.tsbuildinfo
+public/abis/
+public/deployments/
+public/openapi/
+public/schemas/
+public/llms.txt
+public/llms-full.txt
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.vercel

@@ -1,0 +1,516 @@
+openapi: 3.1.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: Programmable Developer API
+  version: 1.0.0
+  summary: One versioned integration for Programmable Classic and Custom launches.
+  description: |
+    Read-only discovery for terminals, scanners, explorers, bots, wallets and apps.
+
+    Classic is live on Ethereum. Existing Custom records are first-party
+    Stock-Paired launches. The public Custom submission registry is prelaunch;
+    the API never substitutes a placeholder registry address.
+
+    Within v1, existing fields keep their type and meaning. New deployments,
+    capabilities and market kinds are additive. Consumers must ignore unknown
+    fields and keep unknown market kinds discoverable, even when they cannot
+    chart, quote or execute them.
+  license:
+    name: MIT
+    identifier: MIT
+  contact:
+    name: Programmable
+    url: https://developers.programmable.family/
+externalDocs:
+  description: Programmable Developer Platform documentation
+  url: https://developers.programmable.family/
+servers:
+  - url: https://developers.programmable.family
+    description: Production
+tags:
+  - name: Discovery
+    description: Stable service and deployment discovery.
+  - name: Launches
+    description: Normalized Classic and Custom launch records.
+  - name: Compatibility
+    description: Compatibility output for existing token-list consumers.
+security: []
+paths:
+  /.well-known/programmable.json:
+    get:
+      tags: [Discovery]
+      operationId: getProgrammableDiscovery
+      summary: Discover the Programmable Developer API
+      description: |
+        Returns stable links to the v1 API, deployment manifest, schemas,
+        OpenAPI document and documentation. Integrators should begin here and
+        must resolve deployment addresses from the manifest rather than
+        hardcoding them.
+      responses:
+        "200":
+          description: Stable discovery document.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WellKnownDocument"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/status:
+    get:
+      tags: [Discovery]
+      operationId: getStatus
+      summary: Read API and data-pipeline status
+      description: |
+        Reports service availability separately from Classic discovery,
+        Custom public-submission readiness and feed freshness. A successful
+        HTTP response is not itself proof that indexed data is current.
+      responses:
+        "200":
+          description: Current service and feed status.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/manifest:
+    get:
+      tags: [Discovery]
+      operationId: getDeploymentManifest
+      summary: Resolve current and historical deployments
+      description: |
+        Returns the dynamic Ethereum deployment manifest. Historical
+        deployments remain present for backfills. New deployments are added
+        here so clients do not need a code change. A prelaunch deployment can
+        carry null address and start-block fields; clients must never replace
+        those nulls with guessed values.
+      responses:
+        "200":
+          description: Current deployment manifest.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Manifest"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/launches:
+    get:
+      tags: [Launches]
+      operationId: listLaunches
+      summary: List normalized Programmable launches
+      description: |
+        Returns Classic and Custom launches through one cursor-paginated
+        envelope. A launch can contain zero, one or several markets. The API
+        never fabricates a pool for a token without one. Token amounts are raw
+        decimal integer strings. Persist `page.resumeCursor` after processing a
+        completed poll and pass it back as `after`. `page.nextCursor` is only
+        for continuing the current page traversal. `after` and `cursor` must
+        not be sent together.
+      parameters:
+        - $ref: "#/components/parameters/ChainIdQuery"
+        - $ref: "#/components/parameters/CategoryQuery"
+        - $ref: "#/components/parameters/AfterQuery"
+        - $ref: "#/components/parameters/CursorQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Cursor-paginated launch feed.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchFeed"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/launches/{chainId}/{tokenAddress}:
+    get:
+      tags: [Launches]
+      operationId: getLaunchByToken
+      summary: Get one launch by chain and token address
+      description: |
+        Returns the canonical normalized record for one token. Name and symbol
+        are display metadata and are never used as identity.
+      parameters:
+        - $ref: "#/components/parameters/ChainIdPath"
+        - $ref: "#/components/parameters/TokenAddressPath"
+      responses:
+        "200":
+          description: Normalized launch record.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Launch"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/token-list:
+    get:
+      tags: [Compatibility]
+      operationId: getTokenList
+      summary: Read the token-list compatibility projection
+      description: |
+        Returns a token-list-compatible projection for integrations that need
+        token identity and metadata. Use the launch feed for markets,
+        capabilities, provenance, finality and complete fee disclosure.
+      parameters:
+        - $ref: "#/components/parameters/ChainIdQuery"
+      responses:
+        "200":
+          description: Token-list compatibility document.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenList"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+components:
+  schemas:
+    Status:
+      $ref: ../schemas/v1/status.schema.json
+    Manifest:
+      $ref: ../schemas/v1/manifest.schema.json
+    LaunchFeed:
+      $ref: ../schemas/v1/launch-feed.schema.json
+    Launch:
+      $ref: ../schemas/v1/launch.schema.json
+    TokenList:
+      $ref: ../schemas/v1/token-list.schema.json
+    Problem:
+      $ref: ../schemas/v1/problem.schema.json
+    WellKnownDocument:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - name
+        - description
+        - apiVersion
+        - apiBaseUrl
+        - statusUrl
+        - manifestUrl
+        - launchesUrl
+        - tokenListUrl
+        - openApiUrl
+        - schemasBaseUrl
+        - documentationUrl
+        - sourceUrl
+        - chains
+        - publicCategories
+        - compatibility
+        - extensions
+      properties:
+        schemaVersion:
+          const: 1.0.0
+        name:
+          type: string
+        description:
+          type: string
+        apiVersion:
+          const: "1"
+        apiBaseUrl:
+          type: string
+          format: uri
+        statusUrl:
+          type: string
+          format: uri
+        manifestUrl:
+          type: string
+          format: uri
+        launchesUrl:
+          type: string
+          format: uri
+        tokenListUrl:
+          type: string
+          format: uri
+        openApiUrl:
+          type: string
+          format: uri
+        schemasBaseUrl:
+          type: string
+          format: uri
+        documentationUrl:
+          type: string
+          format: uri
+        sourceUrl:
+          type: string
+          format: uri
+        chains:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [chainId, caip2, name, explorerUrl, status]
+            properties:
+              chainId:
+                const: 1
+              caip2:
+                const: eip155:1
+              name:
+                const: Ethereum Mainnet
+              explorerUrl:
+                type: string
+                format: uri
+              status:
+                const: live
+        publicCategories:
+          type: object
+          additionalProperties: false
+          required: [classic, custom]
+          properties:
+            classic:
+              type: object
+              additionalProperties: false
+              required: [discoveryStatus]
+              properties:
+                discoveryStatus:
+                  const: live
+            custom:
+              type: object
+              additionalProperties: false
+              required: [discoveryStatus, publicSubmissionStatus, note]
+              properties:
+                discoveryStatus:
+                  const: live
+                publicSubmissionStatus:
+                  const: prelaunch
+                note:
+                  type: string
+        compatibility:
+          type: object
+          additionalProperties: false
+          required:
+            - majorVersion
+            - additiveChangesOnly
+            - unknownFields
+            - unknownCapabilities
+            - unknownMarketKinds
+            - deploymentAddresses
+          properties:
+            majorVersion:
+              const: 1
+            additiveChangesOnly:
+              const: true
+            unknownFields:
+              const: ignore
+            unknownCapabilities:
+              const: preserve
+            unknownMarketKinds:
+              const: display-as-unsupported
+            deploymentAddresses:
+              const: resolve-from-manifest
+        extensions:
+          type: object
+          description: Namespaced, non-authoritative additive data. Consumers must never execute extension content.
+          propertyNames:
+            pattern: ^[a-z0-9]+(?:\.[a-z0-9-]+)+$
+          additionalProperties:
+            type: object
+
+  parameters:
+    ChainIdQuery:
+      name: chainId
+      in: query
+      required: false
+      description: EIP-155 chain ID. v1 currently supports Ethereum Mainnet only.
+      schema:
+        type: integer
+        enum: [1]
+        default: 1
+    CategoryQuery:
+      name: category
+      in: query
+      required: false
+      description: Stable public launch category.
+      schema:
+        type: string
+        enum: [classic, custom]
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque page-continuation cursor from `page.nextCursor`. Do not construct or parse it; do not combine it with `after`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+        pattern: "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+    AfterQuery:
+      name: after
+      in: query
+      required: false
+      description: Opaque durable polling checkpoint from `page.resumeCursor`. Returns records observed after that checkpoint. Do not construct or parse it; do not combine it with `cursor`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+        pattern: "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Maximum records returned on one page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    ChainIdPath:
+      name: chainId
+      in: path
+      required: true
+      description: EIP-155 chain ID. v1 currently supports Ethereum Mainnet only.
+      schema:
+        type: integer
+        enum: [1]
+    TokenAddressPath:
+      name: tokenAddress
+      in: path
+      required: true
+      description: ERC-20 token contract address. Address comparison is case-insensitive on EVM chains.
+      schema:
+        type: string
+        pattern: ^0x[a-fA-F0-9]{40}$
+
+  headers:
+    CacheControl:
+      description: Public cache policy for this representation.
+      schema:
+        type: string
+    ETag:
+      description: Entity tag for conditional requests with If-None-Match.
+      schema:
+        type: string
+    RequestId:
+      description: Opaque request identifier for support and diagnostics.
+      schema:
+        type: string
+
+  responses:
+    NotModified:
+      description: The representation has not changed since the supplied If-None-Match value.
+      headers:
+        ETag:
+          $ref: "#/components/headers/ETag"
+    BadRequest:
+      description: The request parameters are invalid.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: No launch exists for this chain and token address.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    RateLimited:
+      description: The public rate limit has been exceeded.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unavailable:
+      description: The service or required data source is temporarily unavailable.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, when known.
+          schema:
+            type: integer
+            minimum: 1
+        X-Request-Id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

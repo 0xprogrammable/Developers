@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "launchId": "prelaunch:game-rewards-fixture",
+  "category": "custom",
+  "chainId": 1,
+  "token": {
+    "address": "0x1414141414141414141414141414141414141414",
+    "identityStatus": "complete",
+    "name": "Game Rewards Fixture",
+    "symbol": "PLAY",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "A prelaunch fixture for game-triggered rewards and NFT outcomes.",
+      "imageUrl": null,
+      "links": {
+        "website": "https://example.com/game-rewards"
+      },
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "prelaunch",
+    "origin": "public-submission",
+    "modelId": "open-custom",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null
+  },
+  "verification": {
+    "sourceId": "fixture/game-rewards",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": "https://github.com/example/game-rewards"
+  },
+  "capabilities": [
+    {
+      "id": "kill-to-earn",
+      "version": null,
+      "status": "conditional",
+      "parameters": {
+        "rewardUnit": "token"
+      }
+    },
+    {
+      "id": "external-outcome-oracle",
+      "version": "1",
+      "status": "conditional",
+      "parameters": {
+        "outcomeSource": "game-server-attestation"
+      }
+    },
+    {
+      "id": "nft-rewards",
+      "version": null,
+      "status": "conditional",
+      "parameters": {}
+    }
+  ],
+  "markets": [],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "added-on-top",
+      "basis": "official-market-volume",
+      "assetAddress": null,
+      "verificationStatus": "prelaunch"
+    }
+  ],
+  "extensions": {
+    "example/scenario": "Game rewards are not trading volume and do not imply an active market."
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "$schema": "https://developers.programmable.family/schemas/v1/manifest.schema.json",
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "generatedAt": "2026-08-04T00:44:31Z",
+  "chainId": 1,
+  "network": {
+    "name": "Ethereum Mainnet",
+    "caip2": "eip155:1",
+    "explorerUrl": "https://etherscan.io"
+  },
+  "publicCategories": {
+    "classic": {
+      "discoveryStatus": "live",
+      "publicSubmissionStatus": "not-applicable"
+    },
+    "custom": {
+      "discoveryStatus": "live",
+      "publicSubmissionStatus": "prelaunch",
+      "note": "Existing Custom records are first-party Stock-Paired launches. The public Custom submission registry is not deployed."
+    }
+  },
+  "deployments": [
+    {
+      "deploymentId": "ethereum-classic-v1",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "1",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "retired",
+      "discovery": "enabled",
+      "startBlock": "25622048",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0x51d702731db281EE223904A4663E05BfCA26C775"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "cab072627be0bbacd582f7278e1c6339a9185e52",
+        "sourcePath": "contracts/src/MemeLaunchV1.sol",
+        "sourceCommitment": "0x34dba63453f487b6bd3365da526326a0c3f8c7f6c7c1d96756f1dc993623cea3",
+        "launcherRuntimeCodeHash": "0xa459ee6574d8bbd40ddcf9737dc5d1063adb3abbc11d9f367350c7f2a3cf738b",
+        "launcherDeploymentTransaction": "0x4d55e0ccfcbb9f450ab57b3460ac5a0950226c92fcaae4ec6ba6da7a888a30ae"
+      }
+    },
+    {
+      "deploymentId": "ethereum-classic-v2",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "2",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "legacy",
+      "discovery": "enabled",
+      "startBlock": "25624131",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0xD240D06f8586eB799f20056054e5b527405E6bAd"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "d0bec0a681b6ba4a25b42a4fe9d29ed2d3a783d2",
+        "sourcePath": "contracts/src/MemeLaunchV1.sol",
+        "sourceCommitment": "0x6bf2c70c5ab2a64a62f2c27e6be859e3428f2c35e6e2db5255b569b9f9eb1287",
+        "launcherRuntimeCodeHash": "0xd229555c79c61874549a1991c43df172104e1db3087ba8fca8804675b7440d36",
+        "launcherDeploymentTransaction": "0x86a6f1b3992ed8ad6d450970b78e94b29f298afd048a6a0cfa0cf253e9e98fdc",
+        "explorerUrl": "https://etherscan.io/address/0xD240D06f8586eB799f20056054e5b527405E6bAd#code"
+      }
+    },
+    {
+      "deploymentId": "ethereum-classic-v3",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "3",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "current",
+      "discovery": "enabled",
+      "startBlock": "25639596",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0xC3bd04aAc2fb2ba58efD7Eb673E544E0B80De770",
+        "hook": "0x35Fe236EA82F7cF525c9719d7df8F49F94D720CC"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "a117139b24041e87ccc318c6106f5aeb415b8128",
+        "sourcePath": "contracts/src/MemeLaunchV2.sol",
+        "sourceCommitment": "0x58991ed1743aaba5f1988a4576d36eb10af70b96bdb61661ba96e1f80acc9800",
+        "launcherRuntimeCodeHash": "0x9cc9723456c471d90ac838c02fa4fc47ed4b7e82c85358e71deec978c48d2dc8",
+        "launcherDeploymentTransaction": "0xc25f6a3b13b0789b4f69e28229b0b969184dbc3682555ea7e15bf731f5b1a150",
+        "explorerUrl": "https://etherscan.io/address/0xC3bd04aAc2fb2ba58efD7Eb673E544E0B80De770#code"
+      }
+    },
+    {
+      "deploymentId": "ethereum-stock-paired-v1",
+      "category": "custom",
+      "modelId": "stock-paired",
+      "modelVersion": "1",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "legacy",
+      "discovery": "enabled",
+      "startBlock": "25637469",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0x195750f33caD5eF2DF857a53226B421297A1e79e",
+        "coordinator": "0xfa5f17389CA28D071781d59750b32C842ab6A54b",
+        "hook": "0x7773D183fe7B60d4F1885047fa42b815a62Fe0Cc"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "eda6fc90ca8d60507e7e121f81e9a1674aaad68d",
+        "sourcePath": "contracts/src/StockPairedLaunchV1.sol",
+        "sourceCommitment": "0xa38eb2fead47e2dbfda7589ddeb235dd66c5dc26a604e49898a8bf51494b7693",
+        "launcherRuntimeCodeHash": "0xbd6f60760341db3d4ed31118676ab4342d0868cff42cc6f8205d877086fbce65",
+        "launcherDeploymentTransaction": "0x9b9b0147929190b4d6f5265c4e87f4ca14130bbe9733c04f1c5250d9d6d92631",
+        "explorerUrl": "https://etherscan.io/address/0x195750f33caD5eF2DF857a53226B421297A1e79e#code"
+      }
+    },
+    {
+      "deploymentId": "ethereum-stock-paired-v2",
+      "category": "custom",
+      "modelId": "stock-paired",
+      "modelVersion": "2",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "legacy",
+      "discovery": "enabled",
+      "startBlock": "25640338",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0x5eA6Be24838061bA45dbE8D82DE1b267DC240Daf",
+        "coordinator": "0xFb9E1034df6161088E8F358502B19E7515c30fD2",
+        "hook": "0x90c67C1E866f86526F0e338459cD435E1F23A0cc"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "7597bf39b25aebb723e2be99244f64bc72308ed2",
+        "sourcePath": "contracts/src/StockPairedLaunchV1.sol",
+        "sourceCommitment": "0x8514bb5b056fbb70d241c18f809dbfd8e99487d41f16ef5266df42150f2cf425",
+        "launcherRuntimeCodeHash": "0xeee5fbf395266fade461c8d3af1316bb2ce7efa1fb16e64c8d05edf71af0986d",
+        "launcherDeploymentTransaction": "0xe2352b2363b53299a6c65e06c1018422a66c60c61eee3ac98f29c30e9cdacf6f",
+        "explorerUrl": "https://etherscan.io/address/0x5eA6Be24838061bA45dbE8D82DE1b267DC240Daf#code"
+      }
+    },
+    {
+      "deploymentId": "ethereum-stock-paired-v3",
+      "category": "custom",
+      "modelId": "stock-paired",
+      "modelVersion": "3",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "current",
+      "discovery": "enabled",
+      "startBlock": "25642745",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0x0573879f72d8eE8B0e5a4Ec5E8bcDb2fCab9E51c",
+        "coordinator": "0xdDC3ABbAB0df7F1189310a4f70e7e365796B74E2",
+        "hook": "0x90c67C1E866f86526F0e338459cD435E1F23A0cc"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "8fd9ffa8364f28afb1481409ead61d800a3da789",
+        "sourcePath": "contracts/src/StockPairedLaunchV3.sol",
+        "sourceCommitment": "0xda537415a9678c414240ba9849011acef0aeee36bc938cc4597a0a78f0e74f66",
+        "launcherRuntimeCodeHash": "0xa392a2a24b0a2ac124b9f132eb1488589bbabe91e82323da12151ee42af87573",
+        "launcherDeploymentTransaction": "0x23a97b6cd91ad6e03f429e36f3d782b712d6a4821390709b854392a8a6e39abc",
+        "explorerUrl": "https://etherscan.io/address/0x0573879f72d8eE8B0e5a4Ec5E8bcDb2fCab9E51c#code"
+      }
+    }
+  ],
+  "customRegistry": {
+    "category": "custom",
+    "modelId": "open-custom",
+    "status": "prelaunch",
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null,
+    "note": "No Custom registry address or start block has been published. Null values are intentional and must not be replaced with placeholders."
+  },
+  "platformFee": {
+    "ratePpm": "1000",
+    "rateBps": "10",
+    "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+    "scope": "official-programmable-market-path",
+    "classic": {
+      "status": "verified",
+      "chargeMode": "included"
+    },
+    "customPublicSubmissions": {
+      "status": "prelaunch",
+      "chargeMode": "added-on-top"
+    }
+  },
+  "endpoints": {
+    "wellKnown": "https://developers.programmable.family/.well-known/programmable.json",
+    "status": "https://developers.programmable.family/api/v1/status",
+    "manifest": "https://developers.programmable.family/api/v1/manifest",
+    "launches": "https://developers.programmable.family/api/v1/launches",
+    "tokenList": "https://developers.programmable.family/api/v1/token-list",
+    "openApi": "https://developers.programmable.family/openapi/programmable-v1.yaml"
+  },
+  "compatibility": {
+    "majorVersion": 1,
+    "additiveChangesOnly": true,
+    "noMandatoryClientChangesWithinMajorVersion": true,
+    "unknownFields": "ignore",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "deploymentDiscovery": "refresh-manifest",
+    "hardcodeDeploymentAddresses": false
+  }
+}
