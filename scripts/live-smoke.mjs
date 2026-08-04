@@ -45,7 +45,7 @@ function apiRoot(value) {
 
 const apiBase = apiRoot(configuredBase);
 const MAX_BYTES = 5 * 1024 * 1024;
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 2;
 const registry = await createSchemaRegistry();
 
