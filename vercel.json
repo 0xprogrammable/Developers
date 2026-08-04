@@ -94,6 +94,10 @@
   ],
   "rewrites": [
     {
+      "source": "/schemas/v1",
+      "destination": "/schemas/v1/index.json"
+    },
+    {
       "source": "/v1/status",
       "destination": "/api/v1/status"
     },

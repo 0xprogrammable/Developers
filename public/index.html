@@ -12,7 +12,7 @@
     <meta property="og:title" content="Programmable Developers" />
     <meta
       property="og:description"
-      content="One versioned interface for every Programmable launch."
+      content="Public launch discovery for terminals, scanners, wallets, indexers, bots and apps."
     />
     <meta
       property="og:image"
@@ -53,8 +53,8 @@
 
         <nav class="desktop-nav" aria-label="Primary navigation">
           <a href="#quickstart">Quickstart</a>
-          <a href="#integration-contract">Integration contract</a>
-          <a href="#build">Build</a>
+          <a href="#integration-contract">Contract</a>
+          <a href="#build">Guides</a>
           <a href="#status">Status</a>
         </nav>
 
@@ -79,9 +79,10 @@
             </summary>
             <nav aria-label="Mobile navigation">
               <a href="#quickstart">Quickstart</a>
-              <a href="#integration-contract">Integration contract</a>
-              <a href="#build">Build</a>
+              <a href="#integration-contract">Contract</a>
+              <a href="#build">Guides</a>
               <a href="#status">Status</a>
+              <a href="https://programmable.family/docs/developers#reference">API reference</a>
               <a href="https://github.com/0xprogrammable/developers">GitHub</a>
             </nav>
           </details>
@@ -102,25 +103,25 @@
             </span>
           </div>
 
-          <p class="eyebrow">Programmable developer interface</p>
-          <h1 id="hero-title">One integration for every Programmable launch.</h1>
+          <p class="eyebrow">Programmable launch API</p>
+          <h1 id="hero-title">Build with Programmable launch data.</h1>
           <p class="hero-lede">
-            Discover, verify and build on Programmable Classic and Custom launches through one
-            versioned interface.
+            Public, versioned launch discovery for terminals, scanners, wallets, indexers, bots and
+            apps. Read-only REST, no API key.
           </p>
 
           <div class="hero-actions">
             <a class="button button-primary" href="#quickstart">
-              Start the 5-minute quickstart
+              Run the quickstart
               <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
                 <path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" />
               </svg>
             </a>
             <a
               class="button button-secondary"
-              href="https://github.com/0xprogrammable/developers/blob/main/docs/reference/http-api.md"
+              href="https://programmable.family/docs/developers#reference"
             >
-              View the API
+              Open API reference
             </a>
           </div>
 
@@ -133,10 +134,10 @@
         <div class="inspector" aria-labelledby="inspector-title">
           <div class="inspector-heading">
             <div>
-              <p class="code-kicker">Stable launch envelope</p>
-              <h2 id="inspector-title">One record, every launch</h2>
+              <p class="code-kicker">Normalized v1 response</p>
+              <h2 id="inspector-title">Inspect the launch envelope</h2>
             </div>
-            <span class="sample-label">Simulated sample</span>
+            <span class="sample-label">Schema example</span>
           </div>
 
           <div class="inspector-tabs" role="tablist" aria-label="Sample launch type">
@@ -205,8 +206,8 @@
             <pre><code id="sample-json"></code></pre>
           </div>
           <p class="inspector-note">
-            The envelope stays stable. v1 is read-only; support fields describe availability and do
-            not contain action URLs.
+            These examples cover supported record shapes. Live data comes from the public API; v1
+            never returns transaction payloads.
           </p>
         </div>
       </section>
@@ -215,7 +216,7 @@
         <div class="section-heading">
           <p class="section-index">01 / Quickstart</p>
           <div>
-            <h2 id="quickstart-title">From endpoint to launch feed in five minutes.</h2>
+            <h2 id="quickstart-title">Fetch the launch feed in five minutes.</h2>
             <p>
               Start with the canonical interface. Do not hardcode launcher or registry addresses in
               your product.
@@ -270,6 +271,11 @@
             <div class="endpoint-links">
               <a href="/api/v1/manifest">Open manifest <span aria-hidden="true">↗</span></a>
               <a href="/api/v1/status">Open live status <span aria-hidden="true">↗</span></a>
+              <a
+                href="/api/v1/launches/1/0x56a96463ead0c0b9b4e4df9e41805bb8877074a6"
+              >
+                Open token example <span aria-hidden="true">↗</span>
+              </a>
             </div>
           </div>
         </div>
@@ -283,7 +289,7 @@
         <div class="section-heading">
           <p class="section-index">02 / Integration contract</p>
           <div>
-            <h2 id="contract-title">Integrate once. We carry the changes.</h2>
+            <h2 id="contract-title">Stable v1, additive evolution.</h2>
             <p>
               Custom activation and future compatible deployments flow through the same versioned
               interface.
@@ -339,8 +345,8 @@
         <div class="section-heading">
           <p class="section-index">03 / Build</p>
           <div>
-            <h2 id="build-title">One source, four product surfaces.</h2>
-            <p>Use the same canonical record at the layer your product needs.</p>
+            <h2 id="build-title">Guides for each integration.</h2>
+            <p>Choose the implementation path for your product.</p>
           </div>
         </div>
 
@@ -392,7 +398,7 @@
         <div class="section-heading">
           <p class="section-index">04 / Live status</p>
           <div>
-            <h2 id="status-title">Trust the source, not a screenshot.</h2>
+            <h2 id="status-title">Verify live API status.</h2>
             <p>This panel reads the same public status endpoint your integration can monitor.</p>
           </div>
         </div>
@@ -426,13 +432,13 @@
             <span>Machine-readable status</span>
             <code>GET /api/v1/status</code>
           </a>
-          <a href="/api/v1/manifest">
-            <span>Deployment manifest</span>
-            <code>GET /api/v1/manifest</code>
+          <a href="/openapi/programmable-v1.yaml">
+            <span>OpenAPI 3.1</span>
+            <code>/openapi/programmable-v1.yaml</code>
           </a>
-          <a href="https://github.com/0xprogrammable/developers">
-            <span>Source and changelog</span>
-            <code>github.com/0xprogrammable/developers</code>
+          <a href="/schemas/v1">
+            <span>JSON Schema index</span>
+            <code>GET /schemas/v1</code>
           </a>
         </div>
       </section>
