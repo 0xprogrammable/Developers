@@ -1,4 +1,4 @@
-# Five-minute quickstart
+# Minimal API integration
 
 This guide fetches the current deployment manifest and the normalized launch feed. It is read-only and requires no SDK or API key.
 

@@ -1,8 +1,31 @@
 # Trading terminals and scanners
 
-Use the v1 launch feed to add a single Programmable source to new-launch lists, token pages, and discovery tools.
+This document is the implementation contract for adding Programmable launches to a terminal, scanner, bot, or market-data platform.
 
-The baseline integration discovers and verifies every registered launch. Charting, quotes, simulation, and execution are separate per-market features and may be unavailable.
+## Public classification contract
+
+Expose exactly two filters and labels:
+
+| API value | Display label | Include |
+| --- | --- | --- |
+| `category=classic` | `Programmable Classic` | Current and historical Classic releases |
+| `category=custom` | `Programmable Custom` | Listed first-party Custom launches and, after registry activation, registered Custom hooks |
+
+Do not expose internal model IDs as additional public categories. A Programmable label establishes recognized launch provenance. It is not a universal audit, safety, liquidity, or execution guarantee.
+
+## Current Ethereum sources
+
+Read launcher, hook, coordinator, event and start-block values from `GET /api/v1/manifest` in production. A complete backfill includes every deployment whose discovery state is enabled, including historical releases. Do not copy a deployment address into consumer code or documentation derived from this guide.
+
+The manifest records the historical Classic V2 hook and the current Classic V3 hook separately. New launches follow the current deployment; historical tokens remain associated with the deployment that emitted their launch event.
+
+Stock Paired coordinators can also emit `StockPairedEthTokenLaunched` with topic `0x3cbc0759c7c8dbace314ab27d7865532835458ca67ba12308949012593d5cc36`. Treat this as coordinator evidence, not a third category.
+
+## Current Custom boundary
+
+Existing first-party Stock Paired records are live as `custom`. Public Custom submission and the open Custom Registry are prelaunch. A future Custom hook enters the same `custom` feed only after recognized onchain launch evidence exists. Until then, do not synthesize or pre-register it.
+
+The baseline integration discovers every recognized launch. Charting, quotes, simulation, and execution are separate per-market capabilities and may be unavailable.
 
 ## Minimum integration
 
@@ -33,16 +56,15 @@ Do not show a launch as older because your indexer discovered it late. Sort by c
 
 When the feed status is `degraded`, canonical event coverage can still be complete while enrichment is incomplete. Ingest the records and preserve their partial provenance and unavailable fields. A retryable `503` from the launch-list route instead means the API is not publishing an incomplete event-log coverage boundary.
 
-## Classic and Custom
-
-Render only two public labels:
-
-- `Programmable Classic`
-- `Programmable Custom`
-
-Do not expose internal model IDs as additional launch categories. Existing first-party stock-paired records are Custom. Future hooks and other unfamiliar designs are also Custom.
-
 Use market kind, capabilities, and optional extensions for secondary details. This keeps filtering stable while allowing new designs.
+
+## Verification and sell support
+
+Current Classic V3 release evidence establishes a fixed supply of 1,000,000,000 tokens, no owner mint, blacklist, pause, or ERC20 transfer tax, permanently held one-sided Uniswap v4 liquidity, immutable directional fees, and a recorded mainnet buy, sell, and claim lifecycle.
+
+Classic V3 has no token-level sell restriction. A terminal must still check current pool state, liquidity, quote, and simulation before enabling a trade. Do not translate the label into a generic `safe`, `audited`, `unruggable`, or `sellable` boolean.
+
+Custom is a launch family rather than one mechanic. Preserve source provenance, declared capabilities, market support, fee disclosure, and any release-specific audit evidence as separate fields. Do not infer an audit from `category=custom`.
 
 ## Market presentation
 

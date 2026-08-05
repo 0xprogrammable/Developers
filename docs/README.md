@@ -5,7 +5,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 ## Start here
 
 1. [Current integration status](status.md)
-2. [Five-minute quickstart](quickstart.md)
+2. [Minimal API integration](quickstart.md)
 3. [The launch data model](concepts/data-model.md)
 4. [v1 compatibility rules](concepts/compatibility.md)
 5. [Production operations](operations.md)
@@ -13,6 +13,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 ## Choose an integration path
 
 - [Trading terminals and scanners](guides/terminals-and-scanners.md)
+- [Launch providers](guides/launch-providers.md)
 - [Wallets and explorers](guides/wallets.md)
 - [Indexers and data platforms](guides/indexers.md)
 - [Apps, games, and bots](guides/apps-and-games.md)
@@ -24,6 +25,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 - [OpenAPI 3.1 contract](../openapi/programmable-v1.yaml)
 - [JSON Schemas](../schemas/v1/)
 - [Read-only examples](../examples/)
+- [Prelaunch Custom Registry proposal](../proposals/custom-registry/)
 - [FAQ](faq.md)
 - [`llms.txt`](../llms.txt)
 - [`llms-full.txt`](../llms-full.txt)

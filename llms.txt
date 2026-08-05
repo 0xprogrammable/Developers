@@ -1,6 +1,6 @@
 # Programmable Developer Platform
 
-> One integration for every Programmable launch. Discover, verify, and build on Programmable Classic and Custom launches through one versioned, read-only interface.
+> Public, read-only integration contract for Programmable Classic and Programmable Custom launches.
 
 Canonical site: https://developers.programmable.family
 Source repository: https://github.com/0xprogrammable/developers
@@ -23,7 +23,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 ## Start here
 
 - [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
-- [Five-minute quickstart](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
+- [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
 - [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live, first-party Custom, and open Custom prelaunch boundaries.
 - [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
 - [v1 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
@@ -33,6 +33,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 ## Integration guides
 
 - [Trading terminals and scanners](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
+- [Launch providers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md): Prelaunch atomic registration, provider handoff, registry invariants and activation gates.
 - [Wallets and explorers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
 - [Indexers and data platforms](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
 - [Apps, games, and bots](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
@@ -71,6 +72,8 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 14. Read fee behavior from verified records. Do not infer it from category.
 15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
 16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
+17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and atomic with the provider launch.
+18. Treat the Custom Registry interface and provider examples as prelaunch until a deployed address appears in the manifest.
 
 ## Fee summary
 

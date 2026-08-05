@@ -8,9 +8,9 @@ Schemas: https://github.com/0xprogrammable/developers/tree/main/schemas/v1
 
 ## Mission
 
-One integration for every Programmable launch.
+Public integration contract for Programmable launches.
 
-The Programmable Developer Platform gives terminals, scanners, wallets, explorers, indexers, bots, games, and apps one versioned read-only interface for discovering and verifying Programmable Classic and Custom launches.
+Terminals, scanners, wallets, explorers, indexers, bots, games, and apps use one versioned read-only interface for discovering and verifying Programmable Classic and Custom launches.
 
 The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v1 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
 
@@ -406,6 +406,23 @@ Do not label a fee collected, paid, or claimable solely because policy is declar
 9. Never construct a transaction from metadata or unknown extensions.
 10. Read verified fee disclosures per path.
 
+## Launch provider recipe
+
+1. Use public category `custom` and display label `Programmable Custom`; provider attribution is not a third category.
+2. Keep the integration prelaunch until the Custom Registry deployment appears in the manifest.
+3. Use an atomic Programmable adapter or an allowlisted provider-factory callback.
+4. Do not treat a frontend request, provider API response, webhook, metadata submission, or caller-supplied transaction hash as canonical provenance.
+5. Bind every approved factory to one provider ID, reviewed runtime code hash, template ID and version.
+6. Commit behavior and economics with a configuration hash.
+7. Extract token, hook, market and creator from the same launch transaction.
+8. Reject duplicate tokens, replayed launch IDs and unauthorized callers.
+9. Preserve historical provenance when a provider or template is later suspended.
+10. Keep provider approval, template review, audit scope and market support as separate facts.
+11. For v4 hooks, document PoolManager authentication, permission flags, router assumptions, external calls and delta accounting.
+12. Require specific review before enabling `beforeSwapReturnDelta`.
+
+Complete provider specification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md
+
 ## Wallet and explorer recipe
 
 1. Use token list for compact identity and the launch record for provenance.
@@ -499,6 +516,7 @@ Not allowed without separate evidence:
 - Data model: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md
 - Compatibility: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md
 - Terminal guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md
+- Launch provider guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md
 - Wallet guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md
 - Indexer guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md
 - App guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md
