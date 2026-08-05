@@ -4,6 +4,13 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://programmable.family/docs/developers",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
