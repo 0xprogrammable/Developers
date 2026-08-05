@@ -39,4 +39,17 @@ describe("launch-provider documentation", () => {
     assert.match(guide, /beforeSwapReturnDelta/);
     assert.match(guide, /keep the provider integration prelaunch/i);
   });
+
+  test("keeps the visual documentation on the branded product route", async () => {
+    const vercel = JSON.parse(await read("vercel.json"));
+    const rootRedirect = vercel.redirects.find(
+      (redirect) => redirect.source === "/",
+    );
+
+    assert.deepEqual(rootRedirect, {
+      source: "/",
+      destination: "https://programmable.family/docs/developers",
+      permanent: false,
+    });
+  });
 });
