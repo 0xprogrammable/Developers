@@ -2,14 +2,15 @@ openapi: 3.1.1
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Programmable Developer API
-  version: 1.0.0
+  version: 1.1.0
   summary: One versioned integration for Programmable Classic and Custom launches.
   description: |
     Read-only discovery for terminals, scanners, explorers, bots, wallets and apps.
 
-    Classic is live on Ethereum. Existing Custom records are first-party
-    Stock-Paired launches. The public Custom submission registry is prelaunch;
-    the API never substitutes a placeholder registry address.
+    Classic is live on Ethereum. Existing Custom records include first-party
+    Stock-Paired launches. Authenticated finalized Custom Registry ingestion is
+    configuration-gated; the API never substitutes a placeholder Registry URL,
+    binding, credential, token, pair or pool.
 
     Within v1, existing fields keep their type and meaning. New deployments,
     capabilities and market kinds are additive. Consumers must ignore unknown
@@ -277,7 +278,7 @@ components:
         - extensions
       properties:
         schemaVersion:
-          const: 1.0.0
+          enum: [1.0.0, 1.1.0]
         platformId:
           const: programmable
         name:

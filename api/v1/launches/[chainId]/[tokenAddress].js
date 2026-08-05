@@ -1,6 +1,6 @@
 import { CHAIN_ID } from "../../../../server/constants.js";
 import {
-  feedStatus,
+  feedStatusForCategory,
   getDataset,
   isDatasetPublishable,
 } from "../../../../server/dataset.js";
@@ -41,7 +41,7 @@ export function createLaunchDetailHandler(loadDataset = getDataset) {
   try {
     const dataset = await loadDataset();
     const launch = dataset.records.find(
-      (record) => record.token.address.toLowerCase() === address,
+      (record) => record.token?.address?.toLowerCase() === address,
     );
     if (!launch && !isDatasetPublishable(dataset)) {
       error(
@@ -62,7 +62,7 @@ export function createLaunchDetailHandler(loadDataset = getDataset) {
       res,
       200,
       publicLaunch(launch),
-      { apiStatus: feedStatus(dataset.status.status) },
+      { apiStatus: feedStatusForCategory(dataset, launch.category) },
     );
   } catch {
     error(

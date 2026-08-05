@@ -1,6 +1,6 @@
 import { API_SCHEMA_VERSION, CHAIN_ID } from "../../server/constants.js";
 import {
-  feedStatus,
+  feedStatusForCategory,
   getDataset,
   isDatasetPublishable,
 } from "../../server/dataset.js";
@@ -19,7 +19,6 @@ import {
   parseLimit,
   queryParametersAllowed,
   queryValue,
-  recordsAfter,
 } from "../../server/http.js";
 import { publicLaunch } from "../../server/normalize.js";
 
@@ -34,7 +33,47 @@ function currentSnapshot(dataset) {
     blockHash: checkpoint.blockHash,
     indexedAt: dataset.status.generatedAt,
     finality: checkpoint.finality,
+    customRegistryHighWaterGeneration:
+      dataset.status.customRegistry?.highWaterGeneration ?? null,
   };
+}
+
+function registryGeneration(record) {
+  const value = record.extensions?.["programmable/registry-v2"]?.registryGeneration;
+  return typeof value === "string" && /^(0|[1-9]\d*)$/.test(value)
+    ? value
+    : null;
+}
+
+function greatestGeneration(left, right) {
+  if (left === null) return right;
+  if (right === null) return left;
+  return BigInt(left) > BigInt(right) ? left : right;
+}
+
+function currentRegistryHighWater(dataset, scope) {
+  if (scope === "classic") return null;
+  const statusValue = dataset.status.customRegistry?.highWaterGeneration;
+  if (typeof statusValue !== "string" || !/^(0|[1-9]\d*)$/.test(statusValue)) {
+    throw new Error("current Custom Registry generation is unavailable");
+  }
+  return statusValue;
+}
+
+function withinRegistryHighWater(record, highWaterGeneration) {
+  const generation = registryGeneration(record);
+  return generation === null || (
+    highWaterGeneration !== null && BigInt(generation) <= BigInt(highWaterGeneration)
+  );
+}
+
+function afterBoundary(record, sortHighWater, registryHighWaterGeneration) {
+  const generation = registryGeneration(record);
+  return record.sortKey > sortHighWater || (
+    generation !== null &&
+    registryHighWaterGeneration !== null &&
+    BigInt(generation) > BigInt(registryHighWaterGeneration)
+  );
 }
 
 function greatestSortKey(left, right) {
@@ -59,24 +98,38 @@ export function launchFeedPayload(
     ? dataset.records.filter((record) => record.category === category)
     : dataset.records;
   const newestSortKey = baseRecords[0]?.sortKey ?? EMPTY_HIGH_WATER;
+  const currentRegistryGeneration = currentRegistryHighWater(dataset, scope);
   const highWater = cursor
     ? cursor.highWater
     : greatestSortKey(newestSortKey, after?.highWater);
   const traversalSnapshot = cursor?.snapshot ?? currentSnapshot(dataset);
   const lowerBound = cursor?.after ?? after?.highWater ?? null;
-  const traversalRecords = recordsAfter(
-    baseRecords.filter((record) => record.sortKey <= highWater),
-    lowerBound,
+  const lowerRegistryBound = cursor?.afterRegistryHighWaterGeneration
+    ?? after?.registryHighWaterGeneration
+    ?? (scope === "classic" ? null : "0");
+  const registryHighWaterGeneration = cursor?.registryHighWaterGeneration
+    ?? greatestGeneration(
+      currentRegistryGeneration,
+      after?.registryHighWaterGeneration ?? null,
+    );
+  const traversalRecords = baseRecords.filter((record) =>
+    record.sortKey <= highWater &&
+    withinRegistryHighWater(record, registryHighWaterGeneration) &&
+    (lowerBound === null || afterBoundary(record, lowerBound, lowerRegistryBound))
   );
   const page = paginate(traversalRecords, {
     limit,
     cursor: cursor?.position ?? null,
   });
 
-  const resumeCursor = encodeResumeCursor(highWater, scope);
+  const resumeCursor = encodeResumeCursor(
+    highWater,
+    scope,
+    registryHighWaterGeneration,
+  );
   return {
     schemaVersion: API_SCHEMA_VERSION,
-    status: feedStatus(dataset.status.status),
+    status: feedStatusForCategory(dataset, category),
     snapshot: traversalSnapshot
       ? {
           ...traversalSnapshot,
@@ -94,6 +147,8 @@ export function launchFeedPayload(
               scope,
               traversalSnapshot,
               lowerBound,
+              registryHighWaterGeneration,
+              lowerRegistryBound,
             ),
       resumeCursor,
       hasMore: page.pagination.hasMore,
@@ -154,13 +209,15 @@ export function createLaunchesHandler(loadDataset = getDataset) {
 
   try {
     const dataset = await loadDataset();
-    if (!isDatasetPublishable(dataset)) {
+    if (!isDatasetPublishable(dataset, category)) {
       error(
         req,
         res,
         503,
         "INDEX_COVERAGE_INCOMPLETE",
-        "The launch feed is waiting for complete chain coverage",
+        category === "classic"
+          ? "The Classic launch feed is waiting for complete chain coverage"
+          : "The launch feed is waiting for complete Classic coverage and a current, complete Custom Registry feed",
       );
       return;
     }
@@ -176,7 +233,7 @@ export function createLaunchesHandler(loadDataset = getDataset) {
       res,
       200,
       payload,
-      { apiStatus: feedStatus(dataset.status.status) },
+      { apiStatus: feedStatusForCategory(dataset, category) },
     );
   } catch {
     error(

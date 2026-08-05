@@ -8,6 +8,17 @@ unannounced secret change.
 
 This guide covers the behavior a durable integration needs beyond a successful first request.
 
+## Custom Registry workload identity
+
+Custom ingestion is server-to-server and fail-closed. Production must inject the exact Registry feed URL, audience,
+target-binding hash, workload issuer and subject, token-exchange endpoint, and a secret-manager-provided subject token.
+The API obtains a fresh request-bound credential for every Registry page. That credential binds the exact `GET`,
+lane, target, path, opaque cursor, and page limit; it is never sent to a browser or written into a public manifest.
+
+Do not configure a placeholder URL or static Registry bearer token. When the deployment overlay is absent or the
+Registry does not report `ready / complete / current`, Custom and unfiltered feeds return retryable `503`. The
+Classic-only feed remains available through `category=classic` when its chain coverage is complete.
+
 ## Bootstrap sequence
 
 1. Fetch `/.well-known/programmable.json`.
@@ -68,7 +79,7 @@ The schema permits `orphaned`, but do not assume the current API emits a complet
 - Send that resume cursor as `after` on the next incremental poll.
 - Upsert launch records by `launchId`.
 - Make repeated pages harmless.
-- Store asset identity as chain ID plus token address.
+- Store a present ERC-20 as chain ID plus token address; store other authenticated assets by namespace plus value.
 - Store each market by `marketId`.
 - Preserve record or revision state needed for corrections.
 
@@ -97,7 +108,8 @@ Read-only GET requests are safe to retry with bounded exponential backoff and ji
 | --- | --- |
 | Status unavailable | Keep last data, mark freshness unknown, pause cursor advancement if necessary |
 | Manifest unavailable | Use last trusted manifest for read-only display, mark stale, do not accept new deployments |
-| Event-log coverage incomplete | Launch-list and token-list routes return retryable `503`; retain the last durable cursor |
+| Classic event-log coverage incomplete | Affected launch-list and token-list routes return retryable `503`; retain the last durable cursor |
+| Custom Registry unconfigured, incomplete, stale, or invalid | Custom and unfiltered routes return retryable `503`; Classic-only remains independently available |
 | Enrichment degraded | Ingest recognized launches and preserve partial, unavailable, or null metadata, supply, provenance, and timestamp fields |
 | Launch page unavailable for another transient failure | Retry without losing the last durable cursor |
 | Unknown schema major | Stop automatic ingestion and require an upgrade |

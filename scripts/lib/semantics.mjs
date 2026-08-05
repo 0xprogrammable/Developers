@@ -221,7 +221,7 @@ export function validateLaunchSemantics(launch) {
     }
     if (
       launch.verification?.provenanceStatus === "verified" &&
-      ["transactionHash", "blockNumber", "blockHash", "logIndex"].some(
+      ["transactionHash", "blockNumber", "blockHash"].some(
         (key) => launch.launch?.[key] === null,
       )
     ) {
@@ -229,7 +229,7 @@ export function validateLaunchSemantics(launch) {
         finding(
           "VERIFIED_PROVENANCE_INCOMPLETE",
           "/verification/provenanceStatus",
-          "Verified provenance requires the exact transaction, block number, block hash, and log index",
+          "Verified provenance requires the exact transaction, block number, and block hash; log index may be null for transaction-level launch identity",
         ),
       );
     }
@@ -254,7 +254,7 @@ export function validateLaunchSemantics(launch) {
     }
   }
 
-  const supplyKnown = launch.token?.supplyStatus !== "unavailable";
+  const supplyKnown = launch.token !== null && launch.token?.supplyStatus !== "unavailable";
   if (
     launch.token?.identityStatus === "complete" &&
     ["name", "symbol", "decimals"].some((key) => launch.token?.[key] === null)
@@ -268,10 +268,11 @@ export function validateLaunchSemantics(launch) {
     );
   }
   if (
-    (supplyKnown &&
+    launch.token !== null &&
+    ((supplyKnown &&
       (launch.token?.totalSupplyRaw === null || launch.token?.supplyAsOfBlock === null)) ||
-    (!supplyKnown &&
-      (launch.token?.totalSupplyRaw !== null || launch.token?.supplyAsOfBlock !== null))
+      (!supplyKnown &&
+        (launch.token?.totalSupplyRaw !== null || launch.token?.supplyAsOfBlock !== null)))
   ) {
     findings.push(
       finding(
@@ -282,9 +283,33 @@ export function validateLaunchSemantics(launch) {
     );
   }
 
+  if (launch.token === null) {
+    if (launch.schemaVersion !== "1.1.0") {
+      findings.push(
+        finding(
+          "NON_TOKEN_SCHEMA_VERSION",
+          "/schemaVersion",
+          "Project-only token-null records require the additive v1.1 schema",
+        ),
+      );
+    }
+    const primaryAssets = (launch.assets ?? []).filter(
+      (asset) => asset.role === "primary-token",
+    );
+    if (primaryAssets.length !== 0 || markets.length !== 0) {
+      findings.push(
+        finding(
+          "NON_TOKEN_CONTRADICTION",
+          "/token",
+          "A project-only launch cannot advertise a primary token or token market",
+        ),
+      );
+    }
+  }
+
   markets.forEach((market, index) => {
     const path = `/markets/${index}`;
-    if (
+    if (launch.token !== null &&
       market.baseTokenAddress?.toLowerCase() !== launch.token?.address?.toLowerCase()
     ) {
       findings.push(
@@ -354,9 +379,9 @@ export function validateFeedSemantics(feed) {
       finding("DUPLICATE_LAUNCH", "/items", `Duplicate launch ${launchId}`),
     );
   }
-  const tokenKeys = items.map(
-    (item) => `${item.chainId}:${item.token?.address?.toLowerCase()}`,
-  );
+  const tokenKeys = items
+    .filter((item) => item.token?.address)
+    .map((item) => `${item.chainId}:${item.token.address.toLowerCase()}`);
   for (const tokenKey of duplicateValues(tokenKeys)) {
     findings.push(
       finding("DUPLICATE_TOKEN", "/items", `Duplicate token ${tokenKey}`),

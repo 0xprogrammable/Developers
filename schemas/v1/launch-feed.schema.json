@@ -76,6 +76,7 @@
         "blockHash",
         "indexedAt",
         "finality",
+        "customRegistryHighWaterGeneration",
         "cursor"
       ],
       "properties": {
@@ -93,6 +94,16 @@
             "observed",
             "confirmed",
             "finalized"
+          ]
+        },
+        "customRegistryHighWaterGeneration": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/$defs/decimalString"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "cursor": {

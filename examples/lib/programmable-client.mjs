@@ -90,7 +90,9 @@ export function normalizedAddress(value) {
 }
 
 export function launchCategory(launch) {
-  const category = text(object(launch).category)?.toLowerCase();
+  const record = object(launch);
+  if (text(record.platformId)?.toLowerCase() !== "programmable") return "unknown";
+  const category = text(record.category)?.toLowerCase();
   return category === "classic" || category === "custom" ? category : "unknown";
 }
 

@@ -20,7 +20,7 @@ The universal guarantee is discovery through a stable core envelope. Charting, q
 - Classic launch discovery: live.
 - Existing first-party stock-paired records: live where the manifest declares them, normalized as public category `custom`.
 - Open Custom intake: prelaunch.
-- Open Custom Registry: prelaunch. Its address and start block remain null or unavailable until the manifest marks it live.
+- Authenticated finalized Custom Registry ingestion: implemented but deployment-configuration-gated. No live URL, audience, target binding, or credential is claimed here.
 - Public categories: exactly `classic` and `custom`.
 - Future Custom fixtures: examples only, never live launch evidence.
 - A submission or approval is not a public launch. A launch record requires recognized onchain provenance.
@@ -114,7 +114,7 @@ Production cursors are HMAC-signed. `PROGRAMMABLE_CURSOR_SIGNING_KEY` must be a 
 
 The snapshot binds the response to a chain boundary and includes a cursor. Consumers must preserve snapshot and finality information for reconciliation.
 
-The feed can return `status: "degraded"` when canonical event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete canonical event-log coverage instead makes launch-list and token-list routes return retryable `503` rather than a falsely complete list.
+The feed can return `status: "degraded"` when Classic event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete Classic coverage or unavailable Custom Registry completeness/freshness makes affected aggregate routes return retryable `503`; `category=classic` remains independent.
 
 ### GET /api/v1/launches/{chainId}/{tokenAddress}
 
@@ -129,7 +129,7 @@ Returns a token-list compatibility projection for wallets and simple consumers. 
 Use separate identities:
 
 - Platform: `platformId`, always `programmable` in the official projection.
-- Asset: `chainId + token.address`.
+- Asset: namespace plus value from `assets`; when `token` is present, also `chainId + token.address`.
 - Launch: `launchId`.
 - Market: `market.marketId`.
 - Raw event in a direct indexer: `chainId + transactionHash + logIndex`.
@@ -150,6 +150,7 @@ Every launch item has:
 - category
 - chainId
 - token
+- assets
 - launch
 - verification
 - capabilities
@@ -160,6 +161,8 @@ Every launch item has:
 The official producer assigns `platformId`, `category`, and `launch.modelId` from a recognized deployment or authenticated finalized Registry record. Never infer or override them from token metadata or a mutable tag.
 
 ### token
+
+`token` is null for a truthful project-only launch. Never derive a token, pair, or pool from project identity. When present:
 
 - address: token contract address
 - identityStatus: complete or partial
@@ -260,7 +263,7 @@ A market can exist without a pool. Null pool fields do not make the launch inval
 
 When market kind is unknown:
 
-1. Keep token identity and launch provenance visible.
+1. Keep launch provenance and authenticated asset identities visible; show token identity only when present.
 2. Keep category Custom.
 3. Show known lifecycle state.
 4. Read explicit support fields.

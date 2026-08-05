@@ -25,6 +25,10 @@ curl -fsSL https://developers.programmable.family/api/v1/manifest
 curl -fsSL https://developers.programmable.family/api/v1/launches
 ```
 
+If status reports the Custom Registry unavailable, request
+`/api/v1/launches?category=classic`; the unfiltered feed intentionally waits
+for complete source coverage instead of silently omitting Custom launches.
+
 ```js
 const baseUrl = "https://developers.programmable.family"
 
@@ -55,7 +59,7 @@ function requireOk(response) {
 A conforming v1 client must:
 
 1. Read active deployments from the manifest instead of hard-coding contract addresses.
-2. Identify an asset by `chainId` and token address, and deduplicate launches by `launchId`.
+2. Deduplicate launches by `launchId`. When `token` is present, identify that ERC-20 by `chainId` and token address; otherwise preserve the authenticated `assets` graph without inventing a token.
 3. Accept `markets: []`; never invent a pool, price, volume, or trade route.
 4. Treat capabilities and market types as extensible. Keep an unknown launch visible and hide unsupported features.
 5. Use `page.nextCursor` only to finish the current traversal, then persist `page.resumeCursor` and send it back as `after` when polling.
@@ -81,6 +85,7 @@ launchId
 category
 chainId
 token
+assets
 launch
 verification
 capabilities
@@ -89,7 +94,7 @@ fees
 extensions
 ```
 
-`platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while `launch.modelId` carries the open-ended model. These fields come from verified launch provenance, never from a creator-editable token tag.
+`platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while `launch.modelId` carries the open-ended model. These fields come from verified launch provenance, never from a creator-editable token tag. `token` can be null for project-only launches; `assets` preserves their real identities.
 
 The envelope is stable even when the product is unfamiliar. Market-specific information stays inside `markets`, optional capabilities advertise support, and namespaced extensions carry additional data without redefining trusted core fields.
 
@@ -101,7 +106,7 @@ Onchain launch provenance is authoritative. The API is a normalized projection d
 
 Legacy indexer records can have partial provenance. Recognized onchain events remain discoverable when metadata, supply, or block-timestamp enrichment is unavailable; affected fields stay partial, unavailable, or null and the feed can report `degraded`. Incomplete event-log coverage is different: launch-list and token-list routes return a retryable `503` rather than presenting an incomplete list as complete.
 
-Creator-supplied names, descriptions, images, and links are metadata. They do not inherit the trust level of launch provenance. Integrators should display metadata trust state, sanitize rich content, and keep chain and token address visible.
+Creator-supplied names, descriptions, images, and links are metadata. They do not inherit the trust level of launch provenance. Integrators should display metadata trust state, sanitize rich content, and keep the launch ID plus authenticated asset identities visible. A token address exists only when the record actually advertises a token.
 
 Registration means that a launch can be traced to a recognized Programmable deployment. It is not an unconditional statement that a token, external service, market, or economic outcome is safe or independently audited.
 

@@ -34,6 +34,10 @@ The manifest is the integration source for active deployments, start blocks, cat
 curl -fsSL https://developers.programmable.family/api/v1/launches
 ```
 
+If `/api/v1/status` reports Custom unavailable, use
+`/api/v1/launches?category=classic` for the independently complete Classic
+surface. An unfiltered `503` is a completeness guard, not an empty feed.
+
 The response has this stable root shape:
 
 ```text
@@ -52,7 +56,8 @@ platformId     stable value programmable from the trusted projection
 launchId       stable identity derived from canonical provenance or issued by a future Registry
 category       classic or custom
 chainId        EVM chain ID
-token          token identity and metadata state
+token          ERC-20 convenience view, or null for a project-only launch
+assets         authenticated identity-first asset graph when supplied
 launch         original launch transaction and block provenance
 verification   registry, runtime, and finality evidence
 capabilities   declared and verified feature support
@@ -92,7 +97,9 @@ let resumeCursor = page.page.resumeCursor ?? page.snapshot?.cursor ?? null
 
 for (;;) {
   for (const record of page.items) {
-    const assetKey = `${record.chainId}:${record.token.address.toLowerCase()}`
+    const assetKey = record.token
+      ? `${record.chainId}:${record.token.address.toLowerCase()}`
+      : `launch:${record.launchId}`
 
     renderLaunch({
       assetKey,
@@ -140,7 +147,7 @@ Use the numeric chain ID and token contract address exactly as identity inputs. 
 Before shipping:
 
 - Validate responses against the repository JSON Schemas.
-- Deduplicate feed items by `launchId`; key assets by `chainId` and token address.
+- Deduplicate feed items by `launchId`; key a present token by `chainId` and token address, and retain project-only asset identities from `assets`.
 - Preserve the onchain launch timestamp rather than the time your service first observed the record.
 - Accept a null timestamp, partial identity or provenance, and unavailable supply without dropping a recognized launch.
 - Treat a degraded response as usable but incomplete enrichment; do not convert null into zero or guessed metadata.

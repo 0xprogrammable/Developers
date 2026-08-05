@@ -11,6 +11,7 @@ import {
   discoverDeploymentAddresses,
   terminalRow,
 } from "../scripts/lib/consumer.mjs";
+import { launchIdentity } from "../examples/lib/programmable-client.mjs";
 
 describe("terminal consumer contract", () => {
   test("never upgrades an unknown category or platform identity to Programmable Custom", async () => {
@@ -22,6 +23,39 @@ describe("terminal consumer contract", () => {
     const row = terminalRow(fixture);
     assert.equal(row.platformId, null);
     assert.equal(row.category, "Unrecognized");
+  });
+
+  test("gates both Classic and Custom labels on the trusted platform identity", async () => {
+    const classic = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
+    );
+    const custom = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/custom-no-market-prelaunch.json"),
+    );
+    for (const launch of [classic, custom]) {
+      const expectedCategory = launch.category;
+      launch.platformId = "forged";
+      const row = terminalRow(launch);
+      assert.equal(launch.category, expectedCategory);
+      assert.equal(row.platformId, null);
+      assert.equal(row.category, "Unrecognized");
+      assert.equal(launchIdentity(launch).category, "unknown");
+    }
+  });
+
+  test("keeps a trusted project-only launch visible without inventing token fields", async () => {
+    const launch = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/custom-no-market-prelaunch.json"),
+    );
+    launch.schemaVersion = "1.1.0";
+    launch.token = null;
+    launch.assets = [];
+    const row = terminalRow(launch);
+    assert.equal(row.category, "Programmable Custom");
+    assert.equal(row.tokenAddress, null);
+    assert.equal(row.name, null);
+    assert.equal(row.symbol, null);
+    assert.equal(row.marketCount, 0);
   });
 
   test("renders Classic, no-market Custom, contract-market Custom, and unknown future Custom", async () => {

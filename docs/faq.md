@@ -16,6 +16,8 @@ Future Custom fixtures are examples, not live open-registry launches.
 
 Every registered launch can be discovered and shown through the stable core envelope.
 
+Project-only launches use `token: null` and retain authenticated identities in `assets`. A client must not invent a token contract to display them.
+
 ## Can every Custom launch be charted or traded?
 
 No. Charting, quotes, simulation, and execution require corresponding verified adapter support. Unsupported markets remain discoverable without fabricated data or transaction routes.
@@ -35,6 +37,8 @@ Those categories answer which Programmable launch family produced the record. To
 ## How do I identify a token?
 
 Use chain ID plus token contract address. Use `launchId` to identify the Programmable launch. Names and tickers are not unique.
+
+If `token` is null, the launch does not advertise a token. Use `launchId` and `assets[].identity`; do not turn the project contract into a token address.
 
 ## Should I hard-code the launcher or registry address?
 
@@ -64,7 +68,7 @@ No. A recognized onchain event remains discoverable when name, symbol, decimals,
 
 ## When does the feed return 503?
 
-For completeness gating, launch-list and token-list routes return a retryable `503` when canonical event-log coverage is incomplete. Missing metadata or supply alone produces degraded enrichment rather than hiding recognized launches. During partial coverage, a known detail record can still be returned; an unknown address is not treated as a definitive `404` until coverage is complete.
+For completeness gating, launch-list and token-list routes return a retryable `503` when Classic event coverage is incomplete. Custom and unfiltered routes also require the authenticated Registry to be current and complete; `category=classic` remains independent. Missing metadata or supply alone produces degraded enrichment rather than hiding recognized launches. During partial coverage, a known detail record can still be returned; an unknown address is not treated as a definitive `404` until coverage is complete.
 
 ## How does the 0.1% fee work?
 

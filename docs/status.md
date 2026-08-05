@@ -14,7 +14,7 @@ GET https://developers.programmable.family/api/v1/manifest
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v1 feed |
 | Existing first-party stock-paired records | `custom` | Ethereum | Live where listed by the manifest | These records use the public Custom category even though open Custom intake is not live |
 | Open Custom intake | `custom` | Ethereum | Prelaunch | Public submissions are not yet a live launch source |
-| Open Custom Registry | `custom` | Ethereum | Prelaunch | No open-registry address should be assumed until the manifest marks it active |
+| Open Custom Registry ingestion | `custom` | Ethereum | Configuration-gated | The code accepts only an authenticated finalized `ready / complete / current` Registry feed; no live URL or credential is claimed by this repository |
 | Other networks | — | — | Not declared | Support exists only when a network appears as active in the manifest |
 
 ## What `custom` means today
@@ -25,11 +25,11 @@ Existing first-party stock-paired launches normalize to `custom`. Future open Cu
 
 ## What prelaunch means
 
-Prelaunch means the integration contract is available for client development, but that launch source is not yet active. In particular:
+Prelaunch means the integration contract is available for client development, but live deployment evidence is not present in this repository. In particular:
 
 - future Custom examples are fixtures, not live assets;
 - approval or submission records do not belong in the public launch feed;
-- the Custom Registry must not be hard-coded from a draft;
+- the Custom Registry URL, audience, target binding, and workload identity must come from an approved deployment overlay, never a draft or placeholder;
 - a Custom record appears as a launch only after the recognized onchain launch evidence exists;
 - no fee path should be labeled onchain-verified before deployment and verification.
 
@@ -55,7 +55,7 @@ The v1 API is read-only. Support states describe verified availability; they do 
 
 - `ready` means canonical event coverage and enrichment meet the feed's normal publication state.
 - `degraded` means canonical event coverage is complete enough to publish, but some enrichment is incomplete. Recognized events remain visible with partial, unavailable, or null fields.
-- `unavailable` means the route cannot publish a complete event-coverage boundary. Launch-list and token-list requests return a retryable `503` rather than presenting an incomplete list as complete.
+- `unavailable` means the route cannot publish a complete source boundary. Custom and unfiltered launch/token-list requests require both complete Classic coverage and a current, complete authenticated Registry traversal. `category=classic` does not depend on Registry readiness.
 
 Missing ERC-20 metadata, supply, or a block timestamp alone does not make a recognized event disappear. Do not interpret `partial` provenance or unavailable metadata as a security judgment.
 

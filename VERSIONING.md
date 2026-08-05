@@ -10,7 +10,7 @@ Repository releases use Semantic Versioning and immutable Git tags in the form `
 - **MINOR** releases add backward-compatible fields, endpoints, capabilities, examples, or tooling.
 - **MAJOR** releases may introduce breaking changes and require an explicit migration.
 
-The initial public release is `v1.0.0`.
+The initial public release is `v1.0.0`. The additive identity-first project envelope is `v1.1.0`.
 
 API paths, schemas, and other machine-readable surfaces also expose their documented version. A repository release may update several surfaces without changing their major version when every change remains backward compatible.
 

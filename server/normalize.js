@@ -65,9 +65,6 @@ function safeRawAmount(value) {
 }
 
 function releaseForLegacy(token) {
-  const declared = safeText(token?.launch?.modelVersion, 64);
-  if (declared && RELEASE_BY_ID.has(declared)) return RELEASE_BY_ID.get(declared);
-
   const hook = safeAddress(token?.canonicalPool?.hookAddress)?.toLowerCase();
   if (hook === RELEASE_BY_ID.get("classic-v2").hook.toLowerCase()) {
     return RELEASE_BY_ID.get("classic-v2");
@@ -136,7 +133,7 @@ function marketFromParts({ pool, tokenAddress, fees, fallbackFees }) {
   const feeDisclosure = normalizeFeeDisclosure(fees, fallbackFees);
   return {
     marketId: `uniswap-v4:${poolId.toLowerCase()}`,
-    kind: "uniswap-v4-pool",
+    kind: "uniswap-v4",
     status: "active",
     baseTokenAddress: tokenAddress,
     quoteTokenAddress: quoteAddress,
@@ -197,7 +194,9 @@ function makeSortKey(record) {
   const block = String(record.launch.blockNumber ?? 0).padStart(16, "0");
   const transactionIndex = String(record.launch.transactionIndex ?? 0).padStart(10, "0");
   const logIndex = String(record.launch.logIndex ?? 0).padStart(10, "0");
-  return `${block}:${transactionIndex}:${logIndex}:${record.token.address.toLowerCase()}`;
+  const identity = record.token?.address?.toLowerCase() ??
+    String(record.launchId).replace(/^sha256:/, "").toLowerCase();
+  return `${block}:${transactionIndex}:${logIndex}:${identity}`;
 }
 
 function finalizeRecord(record) {
@@ -625,12 +624,15 @@ export function publicLaunch(record) {
 }
 
 export function compareLaunchesDescending(a, b) {
-  const blockDifference = (b.launch.blockNumber ?? 0) - (a.launch.blockNumber ?? 0);
-  if (blockDifference !== 0) return blockDifference;
+  const blockA = BigInt(a.launch.blockNumber ?? 0);
+  const blockB = BigInt(b.launch.blockNumber ?? 0);
+  if (blockA !== blockB) return blockA > blockB ? -1 : 1;
   const transactionDifference =
     (b.launch.transactionIndex ?? 0) - (a.launch.transactionIndex ?? 0);
   if (transactionDifference !== 0) return transactionDifference;
   const logDifference = (b.launch.logIndex ?? 0) - (a.launch.logIndex ?? 0);
   if (logDifference !== 0) return logDifference;
-  return b.token.address.toLowerCase().localeCompare(a.token.address.toLowerCase());
+  const identityA = a.token?.address?.toLowerCase() ?? a.launchId.toLowerCase();
+  const identityB = b.token?.address?.toLowerCase() ?? b.launchId.toLowerCase();
+  return identityB.localeCompare(identityA);
 }

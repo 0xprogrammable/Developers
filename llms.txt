@@ -11,12 +11,12 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 
 - Classic launch discovery is live on Ethereum.
 - Existing first-party stock-paired records normalize as category `custom`.
-- Open Custom intake and the open Custom Registry are prelaunch.
+- Open Custom intake is prelaunch. Authenticated finalized Custom Registry ingestion is implemented but remains deployment-configuration-gated.
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
 - The v1 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
 - Legacy indexer records can have partial provenance. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
-- Incomplete canonical event-log coverage makes launch-list and token-list routes retryable `503`; missing enrichment alone does not.
+- Incomplete Classic event coverage makes affected routes retryable `503`. Custom and unfiltered routes also fail closed unless the authenticated Registry is current and complete; `category=classic` remains independent.
 - Do not claim that launches are unconditionally safe, audited, or unruggable.
 - Do not claim that any named terminal or partner has integrated Programmable without confirmation.
 
@@ -57,9 +57,9 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 
 1. Fetch the discovery document, status, and manifest before reasoning about current deployments.
 2. Never hard-code deployment arrays; read them from the manifest.
-3. Use `chainId + token.address` for asset identity and `launchId` for launch deduplication.
+3. Use `launchId` for launch deduplication. Use `chainId + token.address` only when `token` is present; project-only records use `token: null` and authenticated `assets` identities.
 4. Require `platformId === "programmable"`; the official producer assigns it from trusted launch provenance, never creator metadata.
-5. `launchId` is derived from canonical chain and event provenance for current first-party launches; a future Registry may issue it directly.
+5. `launchId` is derived from canonical chain and event provenance for current first-party launches or issued by the authenticated finalized Registry.
 6. Public category is exactly `classic | custom`; use `launch.modelId` for the open-ended model.
 7. Accept `markets: []`, multiple markets, and markets without a pool.
 8. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.

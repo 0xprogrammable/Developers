@@ -31,7 +31,7 @@ Use it to distinguish:
 
 Do not treat HTTP 200 alone as proof that every launch source or execution adapter is live.
 
-The service separates canonical event coverage from enrichment. A feed can be `degraded` while still returning recognized launches with partial provenance, unavailable token supply, or null metadata and timestamps. Incomplete event-log coverage makes launch-list and token-list publication unavailable instead of returning a falsely complete list.
+The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` while still returning recognized launches with partial enrichment. Incomplete Classic event coverage or an unconfigured, incomplete, or non-current Custom Registry makes the affected aggregate route unavailable instead of returning a falsely complete list. `category=classic` remains independent from Custom Registry availability.
 
 ## Manifest
 
@@ -74,7 +74,13 @@ page.resumeCursor
 page.hasMore
 ```
 
-`items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. These values come from trusted provenance rather than token metadata. An item becomes public launch data only after the recognized onchain launch evidence exists; a submission or approval alone is not a launch.
+`items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. Classic derives those fields from a recognized deployment. Custom derives them only from the authenticated finalized Registry record; `launchRouteId` is retained separately and is never substituted for `modelId`. An item becomes public launch data only after the recognized finalized launch evidence exists; a submission or approval alone is not a launch.
+
+`token` is an ERC-20 convenience view. It is `null` for a truthful project-only Custom launch. `assets` preserves the authenticated identity-first asset graph and its immutable launch-produced, protocol-external, or adopted-external provenance. Only a launch-produced primary token may populate `token`. `markets` is empty when no market is registered. Consumers must not manufacture a token, pair, or pool from the project launch identity. The token-list and token-address detail surfaces remain token-only projections and skip `token: null` records.
+
+Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kind `uniswap-v4`, preserving the verifier and PoolManager authority bindings. Unknown authenticated market kinds remain visible with their pending verifier state as unsupported discovery data; they are never silently relabeled as a pair or executable market.
+
+For authenticated Custom launches, `extensions["programmable/registry-v2"]` preserves the exact `sourceKind`, source/finality binding hashes, and the optional presentation snapshot. The presentation version, binding hash, and display-only draft are always all null or all present. Consumers must not use presentation content as launch, token, market, fee, or execution authority.
 
 When event coverage is complete but metadata, supply, receipt, or block-timestamp enrichment is incomplete, the response can be `degraded`. The recognized item remains present and carries partial, unavailable, or null values. Consumers must not discard it or synthesize missing data.
 
@@ -84,7 +90,7 @@ When `page.hasMore` is true, continue the current traversal with:
 GET /api/v1/launches?cursor={urlEncodedCursor}
 ```
 
-Cursors are opaque. Store and return them unchanged. Do not parse a cursor into application logic.
+Cursors are opaque. Store and return them unchanged. Do not parse a cursor into application logic. The service binds both the chain ordering checkpoint and the authenticated Custom Registry generation so a newly accepted launch cannot be missed merely because its finalized block is older than the previous poll.
 
 After the full traversal has been durably applied, persist `page.resumeCursor`. Begin the next incremental poll with:
 
@@ -150,11 +156,11 @@ Clients should handle at least:
 | `404` | No registered launch for that asset | Show not found; do not call it unsafe |
 | `405` | Method not supported | Use the documented read-only GET method |
 | `429` | Rate limited | Honor `Retry-After` and back off |
-| `503` | Event-log coverage incomplete or the route could not be produced | Preserve the last good state and retry later |
+| `503` | Required Classic coverage or authenticated Custom Registry completeness/freshness is unavailable | Preserve the last good state and retry later |
 
 Do not turn a provider error into a security judgment about a token.
 
-For completeness gating, incomplete event-log coverage returns a retryable `503` from the launch-list and token-list routes. A known detail record can still be returned during partial coverage; an unknown address returns `503` instead of a potentially false `404` until coverage is complete. Missing ERC-20 metadata or supply alone does not cause a coverage `503`.
+For completeness gating, incomplete Classic event coverage returns a retryable `503`. Custom and unfiltered launch/token-list requests also return `503` until the authenticated Registry reports `ready / complete / current`. A Classic-only request remains available with `category=classic`. A known detail record can still be returned during partial coverage; an unknown address returns `503` instead of a potentially false `404` until every source that could contain it is complete. Missing ERC-20 metadata or supply alone does not cause a coverage `503`.
 
 ## Caching and freshness
 

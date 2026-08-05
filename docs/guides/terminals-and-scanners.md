@@ -9,7 +9,7 @@ The baseline integration discovers and verifies every registered launch. Chartin
 1. Fetch `/.well-known/programmable.json`.
 2. Read `/api/v1/status` and `/api/v1/manifest`.
 3. Backfill `/api/v1/launches` until `page.hasMore` is false.
-4. Require `platformId === "programmable"`, then persist `launchId`, category, model, chain and token address, provenance, timestamp, finality, markets, capabilities, and fees.
+4. Require `platformId === "programmable"`, then persist `launchId`, category, model, chain, optional token, authenticated assets, provenance, timestamp, finality, markets, capabilities, and fees.
 5. Use `page.nextCursor` to finish the current traversal, then persist `page.resumeCursor` and poll with `after`.
 6. Reconcile finality and explicit reorg states.
 
@@ -21,8 +21,8 @@ Do not detect Programmable launches from a token name, symbol, website, contract
 
 A robust minimum card shows:
 
-- token name and symbol as creator metadata;
-- checksummed token address and chain;
+- token name, symbol, and checksummed address when `token` is present;
+- otherwise the launch ID and authenticated project asset identities;
 - verified `platformId: "programmable"` provenance;
 - `Programmable Classic` or `Programmable Custom`;
 - original onchain launch time;
@@ -30,7 +30,7 @@ A robust minimum card shows:
 - market state such as active, inactive, paused, or no registered market;
 - a link to the launch transaction or provenance details.
 
-Name, symbol, decimals, supply, and timestamp can be null or unavailable when enrichment fails. Keep the recognized launch visible using chain, token address, launch ID, and the evidence that is present. Label incomplete fields rather than inventing values.
+The whole `token` view can be null for a project-only Custom launch. Name, symbol, decimals, supply, and timestamp can also be null or unavailable when enrichment fails. Keep the recognized launch visible using chain, launch ID, authenticated assets, and the evidence that is present. Label incomplete fields rather than inventing values.
 
 Do not show a launch as older because your indexer discovered it late. Sort by canonical launch block position and use the onchain timestamp when it is available.
 
@@ -55,7 +55,7 @@ Use market kind, capabilities, and optional extensions for secondary details. Th
 
 When `markets` is empty:
 
-- keep the token in the launch feed;
+- keep the launch in the feed, including `token: null` project-only records;
 - show `No registered market` or equivalent;
 - omit price, liquidity, volume, chart, quote, and trade controls;
 - never invent a pool or substitute another contract address.

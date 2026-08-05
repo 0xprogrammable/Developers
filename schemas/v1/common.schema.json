@@ -4,7 +4,10 @@
   "title": "Programmable API v1 common values",
   "$defs": {
     "schemaVersion": {
-      "const": "1.0.0"
+      "enum": [
+        "1.0.0",
+        "1.1.0"
+      ]
     },
     "category": {
       "enum": [

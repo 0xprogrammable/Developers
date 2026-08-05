@@ -12,6 +12,10 @@ import {
 } from "./constants.js";
 import { readLegacyFeed } from "./legacy.js";
 import {
+  normalizeRegistryCustomItem,
+  readRegistryCustomFeed,
+} from "./registry.js";
+import {
   compareLaunchesDescending,
   decodeLaunchLog,
   normalizeGapLaunch,
@@ -227,7 +231,7 @@ async function enrichGapLogs(logs, preferredProvider) {
   return { records, errors, decodeErrors, truncated };
 }
 
-function mergeRecords(legacyRecords, gapRecords) {
+function mergeRecords(legacyRecords, gapRecords, registryRecords = []) {
   const records = new Map();
   for (const record of legacyRecords) {
     records.set(`${record.chainId}:${record.token.address.toLowerCase()}`, record);
@@ -251,20 +255,26 @@ function mergeRecords(legacyRecords, gapRecords) {
       records.set(key, gapRecord);
     }
   }
+  for (const registryRecord of registryRecords) {
+    records.set(`registry:${registryRecord.launchId}`, registryRecord);
+  }
   return [...records.values()].sort(compareLaunchesDescending);
 }
 
 async function buildDataset() {
   const generatedAt = new Date().toISOString();
-  const [legacyResult, headResult, finalizedResult] = await Promise.allSettled([
+  const [legacyResult, headResult, finalizedResult, registryResult] = await Promise.allSettled([
     readLegacyFeed(),
     readHeadBlock(),
     readFinalizedBlock(),
+    readRegistryCustomFeed(),
   ]);
   const legacy = legacyResult.status === "fulfilled" ? legacyResult.value : null;
   const head = headResult.status === "fulfilled" ? headResult.value : null;
   const finalized =
     finalizedResult.status === "fulfilled" ? finalizedResult.value : null;
+  const registry =
+    registryResult.status === "fulfilled" ? registryResult.value : null;
   const errors = [];
   if (!legacy) errors.push({ source: "legacy", reason: shortError(legacyResult.reason) });
   if (!head) errors.push({ source: "chain-head", reason: shortError(headResult.reason) });
@@ -272,6 +282,12 @@ async function buildDataset() {
     errors.push({
       source: "chain-finality",
       reason: shortError(finalizedResult.reason),
+    });
+  }
+  if (!registry) {
+    errors.push({
+      source: "custom-registry",
+      reason: shortError(registryResult.reason),
     });
   }
 
@@ -362,12 +378,24 @@ async function buildDataset() {
   const legacyRecords = (legacy?.tokens ?? [])
     .map(normalizeLegacyToken)
     .filter(Boolean);
-  const records = mergeRecords(legacyRecords, enrichedGap.records).map((record) => ({
+  let registryRecords = [];
+  if (registry?.configured) {
+    try {
+      registryRecords = registry.records.map(normalizeRegistryCustomItem);
+    } catch (error) {
+      errors.push({ source: "custom-registry-normalization", reason: shortError(error) });
+      registryRecords = [];
+    }
+  }
+  const records = mergeRecords(legacyRecords, enrichedGap.records, registryRecords).map((record) => ({
     ...record,
     launch: {
       ...record.launch,
       finality:
-        record.launch.blockNumber === null
+        record.launch.publicSubmission === true &&
+        record.verification.sourceId === "programmable-custom-launch-registry-v2"
+          ? "finalized"
+          : record.launch.blockNumber === null
           ? null
           : finalizedBlock !== null && record.launch.blockNumber <= finalizedBlock
             ? "finalized"
@@ -392,6 +420,13 @@ async function buildDataset() {
     !gapTruncated &&
     !enrichedGap.truncated;
   const enrichmentComplete = enrichedGap.errors.length === 0;
+  const registryReady = Boolean(
+    registry?.configured &&
+      registry.source?.status === "ready" &&
+      registry.source?.completeness === "complete" &&
+      registry.source?.freshness === "current" &&
+      registryRecords.length === registry.records.length,
+  );
 
   let status = "degraded";
   if (
@@ -492,6 +527,22 @@ async function buildDataset() {
         diagnostics: enrichedGap.errors.length,
       },
     },
+    customRegistry: {
+      configured: registry?.configured === true,
+      status: registryReady
+        ? "ready"
+        : registry?.configured === false
+          ? "unconfigured"
+          : "unavailable",
+      sourceId: registry?.source?.sourceId ?? null,
+      completeness: registry?.source?.completeness ?? null,
+      freshness: registry?.source?.freshness ?? null,
+      checkedAt: registry?.source?.checkedAt ?? null,
+      latestAcceptedAt: registry?.source?.latestAcceptedAt ?? null,
+      highWaterGeneration: registry?.snapshot?.highWaterGeneration ?? null,
+      indexedAt: registry?.snapshot?.indexedAt ?? null,
+      launches: registryRecords.length,
+    },
     counts,
     errors,
   };
@@ -523,19 +574,35 @@ export function feedStatus(status) {
   return "unavailable";
 }
 
-export function isDatasetPublishable(dataset) {
-  return Boolean(
-    dataset &&
-      dataset.status?.coverage?.status === "complete" &&
-      dataset.status?.coverage?.checkpoint,
+export function feedStatusForCategory(dataset, category = null) {
+  if (!isDatasetPublishable(dataset, category)) return "unavailable";
+  if (category === "classic") return feedStatus(dataset.status.status);
+  return dataset.status.customRegistry?.status === "ready" &&
+    feedStatus(dataset.status.status) === "ready"
+    ? "ready"
+    : "degraded";
+}
+
+export function isDatasetPublishable(dataset, category = null) {
+  const classicReady = Boolean(
+    dataset && dataset.status?.coverage?.status === "complete" && dataset.status?.coverage?.checkpoint,
   );
+  if (!classicReady) return false;
+  if (category === "classic") return true;
+  return dataset.status?.customRegistry?.status === "ready";
 }
 
 export function serviceStatus(status) {
-  const routesAvailable = Boolean(
+  const classicAvailable = Boolean(
     status.coverage?.status === "complete" && status.coverage?.checkpoint,
   );
-  const feeds = routesAvailable ? feedStatus(status.status) : "unavailable";
+  const classicFeed = classicAvailable ? feedStatus(status.status) : "unavailable";
+  const customFeed = status.customRegistry?.status === "ready" ? "ready" : "unavailable";
+  const feeds = classicFeed === "unavailable" || customFeed === "unavailable"
+    ? "unavailable"
+    : classicFeed === "ready" && customFeed === "ready"
+      ? "ready"
+      : "degraded";
   return {
     schemaVersion: API_SCHEMA_VERSION,
     service:
@@ -543,12 +610,14 @@ export function serviceStatus(status) {
     checkedAt: status.generatedAt,
     chainId: CHAIN_ID,
     classic: {
-      status: "live",
+      status: classicAvailable ? "live" : "unavailable",
       note: "Classic V1, V2, and V3 launches are discoverable when event coverage is complete.",
     },
     custom: {
-      status: "live",
-      note: "Existing first-party Stock-Paired launches are discoverable under Custom; community Custom submissions remain prelaunch.",
+      status: customFeed === "ready" ? "live" : "unavailable",
+      note: customFeed === "ready"
+        ? "Authenticated finalized Registry launches and existing first-party Custom launches are discoverable."
+        : "Custom publication is fail-closed until the authenticated Registry feed is configured, complete, and current.",
     },
     feeds: {
       manifest: "ready",
@@ -558,6 +627,7 @@ export function serviceStatus(status) {
     source: status.source,
     chain: status.chain,
     coverage: status.coverage,
+    customRegistry: status.customRegistry,
     counts: status.counts,
     errors: status.errors,
   };

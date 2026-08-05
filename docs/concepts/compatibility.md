@@ -7,7 +7,7 @@ This is a compatibility promise, not a claim that software will never change.
 ## What remains stable within v1
 
 - Existing core fields are not removed.
-- Existing field names and types are not changed.
+- Existing token-bearing record shapes and field meanings are not changed. v1.1 widens the required `token` key to allow null only for newly representable project-only launches and adds optional `assets`.
 - Existing meanings are not reinterpreted.
 - `category` remains `classic | custom`.
 - A launch remains valid with `markets: []`.
@@ -40,6 +40,7 @@ A conforming client must:
 9. Handle repeated pages and events idempotently.
 10. Respect finality changes and explicit reorg or orphan states.
 11. Validate records against the schema version they declare.
+12. Accept `token: null` and use `launchId` plus `assets` for project-only records.
 
 ## Deployment changes
 
@@ -91,7 +92,8 @@ Store the original response or enough normalized data to preserve:
 
 - schema version;
 - launch ID;
-- chain ID and token address;
+- chain ID and token address when present;
+- authenticated asset namespace and value for project-only or multi-asset records;
 - launch transaction, block, timestamp, and finality;
 - manifest version used during verification;
 - markets and support state;
