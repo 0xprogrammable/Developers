@@ -17,6 +17,7 @@
       "logoURI": "https://developers.programmable.family/fixtures/classic.png",
       "extensions": {
         "programmable": {
+          "platformId": "programmable",
           "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
           "category": "classic",
           "provenanceStatus": "verified",

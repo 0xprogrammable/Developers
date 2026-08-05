@@ -506,6 +506,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "normalized legacy launch");
+    assert.equal(publicRecord.platformId, "programmable");
     assert.equal("sortKey" in publicRecord, false);
     assert.equal("transactionIndex" in publicRecord.launch, false);
     assert.equal(publicRecord.token.identityStatus, "complete");
@@ -552,6 +553,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "partial identity launch");
+    assert.equal(publicRecord.platformId, "programmable");
     assert.equal(publicRecord.token.identityStatus, "partial");
     assert.equal(publicRecord.token.name, null);
     assert.equal(publicRecord.token.supplyStatus, "unavailable");
@@ -629,6 +631,24 @@ describe("server normalization contract", () => {
       "https://github.com/example/project",
     );
   });
+
+  test("does not assign Programmable origin to an unmatched legacy record", () => {
+    const normalized = normalizeLegacyToken({
+      chainId: 1,
+      address: "0x1111111111111111111111111111111111111111",
+      name: "Forged Origin",
+      symbol: "FAKE",
+      decimals: 18,
+      launch: {
+        modelId: "custom",
+        modelVersion: "creator-defined-model",
+        transactionHash: `0x${"a".repeat(64)}`,
+        blockNumber: "25650000",
+        launchedAt: "2026-08-04T08:00:00.000Z",
+      },
+    });
+    assert.equal(normalized, null);
+  });
 });
 
 describe("server projections", () => {
@@ -674,6 +694,7 @@ describe("server projections", () => {
     );
     assert.deepEqual(await developerManifest(), canonical);
     assert.deepEqual(await developerManifest(), canonical);
+    assert.equal(canonical.platformId, "programmable");
   });
 
   test("matches normalized source IDs to the canonical deployment manifest", async () => {
@@ -738,6 +759,10 @@ describe("server projections", () => {
     assert.deepEqual(
       payload.tokens.map((token) => token.address),
       [source.address],
+    );
+    assert.equal(
+      payload.tokens[0].extensions.programmable.platformId,
+      "programmable",
     );
     const registry = await createSchemaRegistry();
     assertValid(

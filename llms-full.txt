@@ -57,6 +57,7 @@ Reports service state and the independent lifecycle of Classic, Custom, and the 
 Root fields:
 
 - schemaVersion
+- platformId: stable value `programmable`
 - manifestVersion
 - generatedAt
 - chainId
@@ -127,6 +128,7 @@ Returns a token-list compatibility projection for wallets and simple consumers. 
 
 Use separate identities:
 
+- Platform: `platformId`, always `programmable` in the official projection.
 - Asset: `chainId + token.address`.
 - Launch: `launchId`.
 - Market: `market.marketId`.
@@ -143,6 +145,7 @@ Use canonical block position for ordering. Preserve the original `launch.timesta
 Every launch item has:
 
 - schemaVersion
+- platformId
 - launchId
 - category
 - chainId
@@ -153,6 +156,8 @@ Every launch item has:
 - markets
 - fees
 - extensions
+
+The official producer assigns `platformId`, `category`, and `launch.modelId` from a recognized deployment or authenticated finalized Registry record. Never infer or override them from token metadata or a mutable tag.
 
 ### token
 

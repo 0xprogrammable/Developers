@@ -104,6 +104,9 @@
                 "finality"
               ],
               "properties": {
+                "platformId": {
+                  "const": "programmable"
+                },
                 "launchId": {
                   "type": "string",
                   "minLength": 1

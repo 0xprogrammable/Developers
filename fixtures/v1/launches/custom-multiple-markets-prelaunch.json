@@ -1,5 +1,6 @@
 {
   "schemaVersion": "1.0.0",
+  "platformId": "programmable",
   "launchId": "prelaunch:multiple-markets-fixture",
   "category": "custom",
   "chainId": 1,

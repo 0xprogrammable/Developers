@@ -86,4 +86,14 @@ describe("JSON Schema registry", () => {
     assert.equal(validate(fixture), false);
     assert.match(validationSummary(validate), /maxLength/);
   });
+
+  test("rejects a forged platform identity while preserving additive v1 compatibility", async () => {
+    const validate = registry.validator("launch.schema.json");
+    const fixture = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
+    );
+    fixture.platformId = "creator-declared-programmable";
+    assert.equal(validate(fixture), false);
+    assert.match(validationSummary(validate), /const/);
+  });
 });

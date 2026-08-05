@@ -32,6 +32,7 @@ export function tokenListPayload(records, generatedAt, category = null) {
     logoURI: record.token.metadata.imageUrl,
     extensions: {
       programmable: {
+        platformId: "programmable",
         launchId: record.launchId,
         category: record.category,
         provenanceStatus: record.verification.provenanceStatus,

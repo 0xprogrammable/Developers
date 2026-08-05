@@ -6,6 +6,7 @@ The v1 model separates a launch from its markets. This lets the same integration
 
 Use three different identities for three different jobs:
 
+- **Platform identity:** `platformId`, always `programmable` in the official projection
 - **Asset identity:** `chainId` plus `token.address`
 - **Launch identity:** `launchId`, derived from canonical chain and event provenance for current first-party launches; a future Registry may issue it directly
 - **Market identity:** `market.marketId`
@@ -21,6 +22,7 @@ Every record has the same top-level keys:
 | Field | Purpose |
 | --- | --- |
 | `schemaVersion` | Version of the launch-record schema |
+| `platformId` | Stable `programmable` platform identity assigned by the trusted projection |
 | `launchId` | Stable Programmable launch identity derived from canonical provenance or issued by a future Registry |
 | `category` | `classic` or `custom` |
 | `chainId` | EVM chain ID |
@@ -70,6 +72,8 @@ A recognized launch event stays discoverable when an ERC-20 metadata or supply c
 | `finality` | Current finality or reorg state |
 
 Use `launch.timestamp` for new-launch ordering. Do not replace it with the time your system first fetched the record.
+
+`platformId`, `category`, and `launch.modelId` are provenance fields. The official producer derives them from the matched deployment or authenticated finalized Registry record; it never accepts them from creator-editable token metadata.
 
 `verification` identifies the recognized source and the evidence used to normalize it:
 

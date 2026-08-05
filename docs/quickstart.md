@@ -48,6 +48,7 @@ Each item contains:
 
 ```text
 schemaVersion  launch schema version
+platformId     stable value programmable from the trusted projection
 launchId       stable identity derived from canonical provenance or issued by a future Registry
 category       classic or custom
 chainId        EVM chain ID
@@ -95,6 +96,7 @@ for (;;) {
 
     renderLaunch({
       assetKey,
+      platformId: record.platformId,
       launchId: record.launchId,
       category: record.category,
       token: record.token,

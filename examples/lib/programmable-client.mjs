@@ -117,6 +117,7 @@ export function launchIdentity(launch) {
       : "unknown";
 
   return {
+    platformId: text(record.platformId),
     launchId: text(
       record.launchId,
       `${chainId}:${token.address ?? "unknown-token"}`,

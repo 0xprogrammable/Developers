@@ -10,7 +10,7 @@ Both paths must use the same identities and lifecycle rules.
 2. Store the highest accepted `manifestVersion`.
 3. Check `/api/v1/status` for freshness and lifecycle.
 4. Fetch `/api/v1/launches` and use `page.nextCursor` to complete the current traversal.
-5. Upsert records by `launchId`.
+5. Accept the official origin only when `platformId === "programmable"`, then upsert records by `launchId`.
 6. Key assets by chain ID and token address.
 7. After the traversal is durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.
 8. Process finality changes and any `orphaned` correction the API returns.
@@ -27,6 +27,7 @@ Use the manifest's deployment arrays and start blocks. Do not assume one launche
 For each recognized event, retain enough evidence to reproduce ordering and detect reorgs:
 
 - chain ID;
+- `platformId: "programmable"` assigned by the trusted projection;
 - source deployment ID and address;
 - transaction hash and transaction index;
 - block number and block hash;
@@ -35,7 +36,7 @@ For each recognized event, retain enough evidence to reproduce ordering and dete
 - token address;
 - runtime and provenance verification state where provided.
 
-Pair related events according to the documented deployment contract. An event with the right name from an unrecognized contract is not a Programmable launch.
+Pair related events according to the documented deployment contract. An event with the right name from an unrecognized contract is not a Programmable launch. A creator-supplied token tag or string is not origin proof either.
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
 

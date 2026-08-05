@@ -8,7 +8,7 @@ Use the token-list endpoint for a compact finalized inventory. Use the launch fe
 curl -fsSL https://developers.programmable.family/api/v1/token-list
 ```
 
-The token list is a convenience projection of finalized registered launches with complete token identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
+The token list is a convenience projection of finalized registered launches with complete token identity. Its `extensions.programmable.platformId` value mirrors the canonical detailed-record identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
 
 ## Identity
 
@@ -24,7 +24,7 @@ Display the checksummed contract address where people make trust-sensitive decis
 
 ## Programmable provenance
 
-A Programmable label should mean that the detailed record traces the asset to a recognized source deployment in the active manifest.
+A Programmable label should mean that the detailed record has `platformId: "programmable"` and traces the asset to a recognized source deployment or authenticated finalized Registry record. The platform ID is assigned by the trusted projection, never read from creator metadata.
 
 It should not mean:
 

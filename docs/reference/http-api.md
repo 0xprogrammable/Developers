@@ -41,6 +41,7 @@ Returns:
 
 ```text
 schemaVersion
+platformId
 manifestVersion
 generatedAt
 chainId
@@ -73,7 +74,7 @@ page.resumeCursor
 page.hasMore
 ```
 
-`items` contains launch records. An item becomes public launch data only after the recognized onchain launch evidence exists; a submission or approval alone is not a launch.
+`items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. These values come from trusted provenance rather than token metadata. An item becomes public launch data only after the recognized onchain launch evidence exists; a submission or approval alone is not a launch.
 
 When event coverage is complete but metadata, supply, receipt, or block-timestamp enrichment is incomplete, the response can be `degraded`. The recognized item remains present and carries partial, unavailable, or null values. Consumers must not discard it or synthesize missing data.
 

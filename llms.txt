@@ -58,19 +58,20 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 1. Fetch the discovery document, status, and manifest before reasoning about current deployments.
 2. Never hard-code deployment arrays; read them from the manifest.
 3. Use `chainId + token.address` for asset identity and `launchId` for launch deduplication.
-4. `launchId` is derived from canonical chain and event provenance for current first-party launches; a future Registry may issue it directly.
-5. Public category is exactly `classic | custom`.
-6. Accept `markets: []`, multiple markets, and markets without a pool.
-7. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
-8. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
-9. `page.nextCursor` continues the current traversal. Persist `page.resumeCursor` only after the traversal is durably applied, then pass it as `after` for incremental polling. Never parse cursors.
-10. Preserve `launch.timestamp`; do not replace it with first observation time.
-11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
-12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-13. v1 is read-only. Support states do not authorize or construct transactions.
-14. Read fee behavior from verified records. Do not infer it from category.
-15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
-16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
+4. Require `platformId === "programmable"`; the official producer assigns it from trusted launch provenance, never creator metadata.
+5. `launchId` is derived from canonical chain and event provenance for current first-party launches; a future Registry may issue it directly.
+6. Public category is exactly `classic | custom`; use `launch.modelId` for the open-ended model.
+7. Accept `markets: []`, multiple markets, and markets without a pool.
+8. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
+9. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
+10. `page.nextCursor` continues the current traversal. Persist `page.resumeCursor` only after the traversal is durably applied, then pass it as `after` for incremental polling. Never parse cursors.
+11. Preserve `launch.timestamp`; do not replace it with first observation time.
+12. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
+13. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
+14. v1 is read-only. Support states do not authorize or construct transactions.
+15. Read fee behavior from verified records. Do not infer it from category.
+16. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
+17. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
 
 ## Fee summary
 

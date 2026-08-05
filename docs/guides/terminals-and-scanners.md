@@ -9,11 +9,13 @@ The baseline integration discovers and verifies every registered launch. Chartin
 1. Fetch `/.well-known/programmable.json`.
 2. Read `/api/v1/status` and `/api/v1/manifest`.
 3. Backfill `/api/v1/launches` until `page.hasMore` is false.
-4. Persist `launchId`, chain and token address, provenance, timestamp, finality, markets, capabilities, and fees.
+4. Require `platformId === "programmable"`, then persist `launchId`, category, model, chain and token address, provenance, timestamp, finality, markets, capabilities, and fees.
 5. Use `page.nextCursor` to finish the current traversal, then persist `page.resumeCursor` and poll with `after`.
 6. Reconcile finality and explicit reorg states.
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
+
+Do not detect Programmable launches from a token name, symbol, website, contract string, or mutable tag. The official feed assigns `platformId: "programmable"` only after matching a trusted launcher event or authenticated finalized Registry record. Use `category` for exactly Classic versus Custom and `launch.modelId` for the open-ended model.
 
 ## New-launch card
 
@@ -21,6 +23,7 @@ A robust minimum card shows:
 
 - token name and symbol as creator metadata;
 - checksummed token address and chain;
+- verified `platformId: "programmable"` provenance;
 - `Programmable Classic` or `Programmable Custom`;
 - original onchain launch time;
 - finality state;

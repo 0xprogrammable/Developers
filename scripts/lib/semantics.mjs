@@ -1,5 +1,6 @@
 export const PLATFORM_FEE_RECIPIENT =
   "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
+export const PLATFORM_ID = "programmable";
 
 const EXECUTABLE_KEY =
   /(^|[-_.])(calldata|executionurl|execution-url|executiontarget|execution-target|unsignedtransaction|unsigned-transaction|transactionrequest|transaction-request|approvalpayload|approval-payload|signature)([-_.]|$)/i;
@@ -123,6 +124,16 @@ export function validateLaunchSemantics(launch) {
   const capabilities = launch.capabilities ?? [];
   const markets = launch.markets ?? [];
   const fees = launch.fees ?? [];
+
+  if (launch.platformId !== PLATFORM_ID) {
+    findings.push(
+      finding(
+        "PLATFORM_IDENTITY",
+        "/platformId",
+        "Official launch records must carry the canonical Programmable platform identity",
+      ),
+    );
+  }
 
   for (const id of duplicateValues(capabilities.map((item) => item.id))) {
     findings.push(
@@ -432,6 +443,15 @@ export function validateFeedSemantics(feed) {
 
 export function validateManifestSemantics(manifest) {
   const findings = [];
+  if (manifest.platformId !== PLATFORM_ID) {
+    findings.push(
+      finding(
+        "PLATFORM_IDENTITY",
+        "/platformId",
+        "Manifest platform identity is not canonical",
+      ),
+    );
+  }
   if (`eip155:${manifest.chainId}` !== manifest.network?.caip2) {
     findings.push(
       finding("CHAIN_IDENTITY", "/network/caip2", "CAIP-2 identity does not match chainId"),

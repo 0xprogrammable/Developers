@@ -36,6 +36,7 @@ const [status, manifest, launches] = await Promise.all([
 
 for (const record of launches.items) {
   console.log({
+    platformId: record.platformId,
     launchId: record.launchId,
     category: record.category,
     chainId: record.chainId,
@@ -75,6 +76,7 @@ Every launch record uses the same top-level shape:
 
 ```text
 schemaVersion
+platformId
 launchId
 category
 chainId
@@ -86,6 +88,8 @@ markets
 fees
 extensions
 ```
+
+`platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while `launch.modelId` carries the open-ended model. These fields come from verified launch provenance, never from a creator-editable token tag.
 
 The envelope is stable even when the product is unfamiliar. Market-specific information stays inside `markets`, optional capabilities advertise support, and namespaced extensions carry additional data without redefining trusted core fields.
 

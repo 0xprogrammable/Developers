@@ -13,6 +13,17 @@ import {
 } from "../scripts/lib/consumer.mjs";
 
 describe("terminal consumer contract", () => {
+  test("never upgrades an unknown category or platform identity to Programmable Custom", async () => {
+    const fixture = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
+    );
+    fixture.platformId = "untrusted";
+    fixture.category = "future-category";
+    const row = terminalRow(fixture);
+    assert.equal(row.platformId, null);
+    assert.equal(row.category, "Unrecognized");
+  });
+
   test("renders Classic, no-market Custom, contract-market Custom, and unknown future Custom", async () => {
     const launchFiles = await listFiles(
       path.join(REPOSITORY_ROOT, "fixtures/v1/launches"),

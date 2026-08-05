@@ -31,6 +31,10 @@ console.log("");
 
 for (const launch of launchRecords(feed)) {
   const identity = launchIdentity(launch);
+  if (identity.platformId !== "programmable") {
+    console.warn(`Skipped record with unrecognized platform identity: ${identity.launchId}`);
+    continue;
+  }
   const markets = marketsOf(launch);
   const capabilities = capabilitiesOf(launch);
   const marketLabel = markets.length

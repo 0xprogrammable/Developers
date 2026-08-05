@@ -5,6 +5,7 @@ const SAMPLE_POOL = `0x${"3".repeat(64)}`;
 
 const baseSample = {
   schemaVersion: "1.0.0",
+  platformId: "programmable",
   launchId: `eip155:1:${SAMPLE_TOKEN}`,
   category: "classic",
   chainId: 1,

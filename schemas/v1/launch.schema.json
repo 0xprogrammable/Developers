@@ -20,6 +20,10 @@
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
     },
+    "platformId": {
+      "const": "programmable",
+      "description": "Stable platform identity assigned by the trusted Programmable projection. This is not creator metadata."
+    },
     "launchId": {
       "type": "string",
       "minLength": 1,

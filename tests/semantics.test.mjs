@@ -49,6 +49,28 @@ describe("semantic conformance", () => {
     assert.deepEqual(validateLaunchSemantics(launch), []);
   });
 
+  test("requires canonical platform identity on official producer records", async () => {
+    const launch = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
+    );
+    delete launch.platformId;
+    assert.ok(
+      validateLaunchSemantics(launch).some(
+        (finding) => finding.code === "PLATFORM_IDENTITY",
+      ),
+    );
+
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum.json"),
+    );
+    manifest.platformId = "untrusted";
+    assert.ok(
+      validateManifestSemantics(manifest).some(
+        (finding) => finding.code === "PLATFORM_IDENTITY",
+      ),
+    );
+  });
+
   test("rejects every malicious fixture at its declared layer", async () => {
     const validate = registry.validator("launch.schema.json");
     const cases = await listFiles(

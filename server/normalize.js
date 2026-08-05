@@ -2,6 +2,7 @@ import {
   CHAIN_ID,
   LAUNCH_SCHEMA_VERSION,
   LEGACY_SOURCE_URL,
+  PLATFORM_ID,
   PLATFORM_FEE,
   RELEASE_BY_ID,
   RELEASE_BY_LAUNCHER,
@@ -214,9 +215,10 @@ export function normalizeLegacyToken(token) {
     return null;
   }
   const release = releaseForLegacy(token);
+  if (!release) return null;
   const declaredModel = safeText(token?.launch?.modelId ?? token?.launch?.model, 64);
-  const modelId = release?.modelId ?? declaredModel ?? "unknown";
-  const category = modelId === "classic" ? "classic" : "custom";
+  const modelId = release.modelId ?? declaredModel ?? "unknown";
+  const category = release.category;
   const market = marketFromParts({
     pool: token.canonicalPool,
     tokenAddress,
@@ -226,6 +228,7 @@ export function normalizeLegacyToken(token) {
 
   const record = {
     schemaVersion: LAUNCH_SCHEMA_VERSION,
+    platformId: PLATFORM_ID,
     launchId: `eip155:${CHAIN_ID}:${tokenAddress.toLowerCase()}`,
     category,
     chainId: CHAIN_ID,
@@ -545,6 +548,7 @@ export function normalizeGapLaunch(decoded, metadata, block) {
   });
   const record = {
     schemaVersion: LAUNCH_SCHEMA_VERSION,
+    platformId: PLATFORM_ID,
     launchId: `eip155:${CHAIN_ID}:${decoded.tokenAddress.toLowerCase()}`,
     category: decoded.release.category,
     chainId: CHAIN_ID,
