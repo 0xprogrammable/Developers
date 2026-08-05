@@ -1,8 +1,15 @@
-# Programmable Developer Platform
+# Programmable integration reference
 
-## One integration for every Programmable launch.
+Public, read-only contracts and ingestion rules for trading terminals, scanners, wallets, indexers, bots, and apps.
 
-Discover, verify, and build on Programmable Classic and Custom launches through one versioned interface.
+## Terminal labels
+
+Use exactly these two public labels:
+
+| API category | Terminal label | Current boundary |
+| --- | --- | --- |
+| `classic` | `Programmable Classic` | Current and historical Classic releases |
+| `custom` | `Programmable Custom` | Listed first-party Custom launches today and future registered Custom hooks |
 
 | Surface | Current state |
 | --- | --- |
@@ -12,11 +19,11 @@ Discover, verify, and build on Programmable Classic and Custom launches through 
 
 The public category is always `classic` or `custom`. A Custom launch may have no market, one market, or several markets. Every registered launch remains discoverable; charts, quotes, simulation, and execution are available only when a verified adapter declares support for that market. The v1 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
 
-[Read the documentation](docs/README.md) · [Start the five-minute quickstart](docs/quickstart.md) · [Check integration status](docs/status.md) · [Open the developer site](https://developers.programmable.family)
+[Terminal guide](docs/guides/terminals-and-scanners.md) · [Launch provider guide](docs/guides/launch-providers.md) · [Minimal API example](docs/quickstart.md) · [Developer site](https://developers.programmable.family)
 
-## Integrate in five minutes
+## Minimal API consumer
 
-No SDK or API key is required for the read-only quickstart.
+No SDK or API key is required.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
@@ -60,11 +67,12 @@ A conforming v1 client must:
 5. Use `page.nextCursor` only to finish the current traversal, then persist `page.resumeCursor` and send it back as `after` when polling.
 6. Respect finality and reorg state instead of treating first observation as permanent.
 
-The complete walkthrough is in the [quickstart](docs/quickstart.md).
+The complete terminal contract is in [Trading terminals and scanners](docs/guides/terminals-and-scanners.md).
 
 ## Choose what you are building
 
 - **Trading terminal or scanner:** Follow the launch feed, label Classic and Custom, and expose only supported market features. [Open the terminal guide](docs/guides/terminals-and-scanners.md).
+- **Launch provider:** Connect a reviewed external factory to the future Custom Registry without creating a provider-specific terminal category. [Open the provider guide](docs/guides/launch-providers.md).
 - **Wallet or explorer:** Resolve token metadata and verify Programmable provenance without trusting names or tickers as identity. [Open the wallet guide](docs/guides/wallets.md).
 - **Indexer or data platform:** Backfill deterministically, resume with cursors, and handle observed blocks and reorgs. [Open the indexer guide](docs/guides/indexers.md).
 - **App, game, or bot:** Discover launches and inspect verified capabilities without interpreting arbitrary contract metadata as instructions. [Open the app guide](docs/guides/apps-and-games.md).
@@ -143,6 +151,7 @@ deployments/    Reproducible deployment evidence and source records
 abis/           Contract interfaces used for direct verification
 fixtures/       Classic, Custom, no-market, multi-market, and forward-compatibility cases
 examples/       Copy-paste integration examples
+proposals/      Explicitly prelaunch registry interfaces and provider handoff examples
 compatibility/  Frozen v1 consumer contract
 scripts/        Build, conformance, and live-smoke commands
 tests/          Offline schema, semantic, consumer, and server checks

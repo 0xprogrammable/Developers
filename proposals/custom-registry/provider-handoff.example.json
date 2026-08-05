@@ -1,0 +1,43 @@
+{
+  "status": "prelaunch-example",
+  "providerId": "example-provider",
+  "chainId": 1,
+  "integrationMode": "atomic-programmable-adapter",
+  "contracts": {
+    "factory": "0x1111111111111111111111111111111111111111",
+    "templateRegistry": "0x2222222222222222222222222222222222222222",
+    "implementation": "0x3333333333333333333333333333333333333333",
+    "admin": "0x4444444444444444444444444444444444444444"
+  },
+  "release": {
+    "deploymentTransaction": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "startBlock": "0",
+    "factoryRuntimeCodeHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "implementationRuntimeCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "template": {
+    "id": "example-template",
+    "version": "1",
+    "configurationHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "upgradeable": false
+  },
+  "receiptMapping": {
+    "event": "ExampleLaunched(address,address,bytes32,address)",
+    "token": "event.token",
+    "hook": "event.hook",
+    "marketId": "event.marketId",
+    "creator": "event.creator"
+  },
+  "hook": {
+    "poolManager": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+    "permissions": [],
+    "beforeSwapReturnDelta": false
+  },
+  "support": {
+    "discovery": "available",
+    "charting": "unknown",
+    "quote": "unknown",
+    "simulation": "unknown",
+    "execution": "unknown"
+  }
+}
