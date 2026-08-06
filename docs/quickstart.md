@@ -12,6 +12,8 @@ curl -fsSL https://developers.programmable.family/.well-known/programmable.json
 
 It points to the current v2 API, schemas, manifest, documentation, and operational status. Cache it according to its response headers and refresh it periodically.
 
+Treat the well-known document as the stable bootstrap. v2 is canonical for new integrations; v1 is a separate supported compatibility surface and its cursors must not be sent to v2.
+
 ## 2. Check status
 
 ```bash
@@ -52,6 +54,7 @@ launchId       stable identity derived from Classic provenance or committed by t
 category       classic or custom
 chainId        EVM chain ID
 token          token identity and metadata state
+assets         authenticated asset and contract graph when supplied
 launch         original launch transaction and block provenance
 verification   registry, runtime, and finality evidence
 capabilities   declared and verified feature support
@@ -59,6 +62,8 @@ markets        zero, one, or several markets
 fees           verified fee disclosures
 extensions     bounded namespaced additions
 ```
+
+Registry-backed records can also include `platformId`, `publicLabel`, `caip2`, `projectId`, `model`, `template`, `partner`, `builder`, `approvalBinding`, `deploymentBinding`, `verifiedReview`, `feePolicy`, `finalityEvidence`, `presentation`, `registryOrigin`, `launchingWallet`, `postLaunchAuthorityInventory`, `lifecycle`, and `mechanisms`. These are additive v2 fields, not a new API major version.
 
 An empty `markets` array is valid. It means the launch currently has no registered market; it does not permit a client to fabricate a pool, price, liquidity, volume, chart, or swap action.
 
@@ -91,13 +96,16 @@ let resumeCursor = page.page.resumeCursor ?? page.snapshot?.cursor ?? null
 
 for (;;) {
   for (const record of page.items) {
-    const assetKey = `${record.chainId}:${record.token.address.toLowerCase()}`
+    const assetKey = record.token
+      ? `${record.chainId}:${record.token.address.toLowerCase()}`
+      : `project:${record.projectId ?? record.launchId}`
 
     renderLaunch({
       assetKey,
       launchId: record.launchId,
       category: record.category,
       token: record.token,
+      assets: record.assets ?? [],
       markets: record.markets,
       capabilities: record.capabilities,
       verification: record.verification,
@@ -123,9 +131,19 @@ function renderLaunch(record) {
 
 The example deliberately does not construct transactions. The v2 API is strictly read-only. Discovery is universal; support states can report whether a separately verified market adapter supports charting, quote, simulation, or execution, but they do not authorize a transaction or return transaction payloads.
 
-## 6. Fetch one token
+In production, verify that the URLs selected from the discovery document stay on the canonical HTTPS origins your integration permits. Never copy credentials into a URL.
 
-Use the detail route with an address returned by the feed:
+## 6. Fetch one launch
+
+Use the launch ID returned by the feed for every record shape:
+
+```text
+GET https://developers.programmable.family/api/v2/launches/{launchId}
+```
+
+URL-encode the complete launch ID as one path segment. This route covers project-only and multi-asset records.
+
+For a token convenience lookup, use the detail route with an address returned by the feed:
 
 ```text
 GET https://developers.programmable.family/api/v2/launches/{chainId}/{tokenAddress}
@@ -139,15 +157,22 @@ Before shipping:
 
 - Validate responses against the repository JSON Schemas.
 - Deduplicate feed items by `launchId`; key assets by `chainId` and token address.
+- Preserve project-only records with `token: null`; key them by `projectId` and `launchId`, and retain their authenticated `assets` graph.
 - Preserve the onchain launch timestamp rather than the time your service first observed the record.
 - Accept a null timestamp, partial identity or provenance, and unavailable supply without dropping a recognized launch.
 - Treat a degraded response as usable but incomplete enrichment; do not convert null into zero or guessed metadata.
 - Treat `observed` and `confirmed` records as non-final. If a later poll marks a launch `orphaned`, apply that correction idempotently; otherwise reconcile non-final records against later snapshots.
 - Keep registered launches visible when a market or capability is unknown; do not invent another category.
+- Accept multiple primary or secondary tokens, contract markets, and open asset roles without selecting an invented canonical token.
 - Ignore unsupported capabilities, market types, and namespaced extensions.
 - Do not render a chart or trade button without the corresponding verified support.
 - Treat creator metadata and external links as untrusted display data.
+- Map only `classic` to `Programmable Classic` and `custom` to `Programmable Custom`; keep partner, template, model, hook, and market kind as secondary data.
+- Keep Custom inactive while the manifest reports a prelaunch Registry, null address or start block, or disabled public submissions.
+- Partition checkpoints by API major version, chain, and filter scope.
+- Display `Programmable Verified` only from an effective structured review bound to the deployed revision.
+- Keep partner attribution independent from fee state. A partner-attributed project without a verified fee path uses `no-qualifying-market` and zero shares; an active partnership-template fee path uses 20 bps split 15/5 with no extra Native Custom 10 bps.
 
 ## Next step
 
-Choose the guide for [terminals](guides/terminals-and-scanners.md), [wallets](guides/wallets.md), [indexers](guides/indexers.md), or [apps](guides/apps-and-games.md). Read [Operations](operations.md) before running a persistent indexer.
+Use the dependency-free [JavaScript helper](../examples/lib/programmable-client.mjs) or [typed client](../examples/programmable-client.ts), then choose the guide for [terminals](guides/terminals-and-scanners.md), [wallets](guides/wallets.md), [indexers](guides/indexers.md), or [apps](guides/apps-and-games.md). Read [Operations](operations.md) before running a persistent indexer.

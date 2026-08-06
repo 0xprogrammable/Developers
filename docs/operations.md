@@ -34,6 +34,8 @@ Classic-only feed remains available through `category=classic` when its chain co
 
 Do not enable an execution feature merely because discovery is healthy.
 
+Partition checkpoints by API major version, chain, and filter scope. Never send a cursor obtained from v1, another chain, or another category filter to a v2 traversal.
+
 ## Freshness
 
 Measure freshness from the status and snapshot data, not only from HTTP availability.
@@ -47,9 +49,14 @@ Track:
 - distance from current network head;
 - last successful feed page;
 - schema-validation failures;
-- adapter-specific status.
+- adapter-specific status;
+- onchain block time to indexer observation latency;
+- indexer observation to API publication latency; and
+- API publication to website or downstream ingestion latency.
 
 If the projection is stale, keep the last known data with a visible stale state. Do not relabel stale data as current. A `degraded` feed with complete event coverage can still publish recognized launches; enrichment gaps remain explicit on each record.
+
+Publish measured latency distributions and their observation window when making realtime claims. Do not promise same-second discovery without production evidence.
 
 ## Finality
 
@@ -79,9 +86,10 @@ The schema permits `orphaned`, but do not assume the current API emits a complet
 - Send that resume cursor as `after` on the next incremental poll.
 - Upsert launch records by `launchId`.
 - Make repeated pages harmless.
-- Store a present ERC-20 as chain ID plus token address; store other authenticated assets by namespace plus value.
+- Store a present ERC-20 as chain ID plus address; store project-only identity as `projectId`, `launchId`, and authenticated asset namespace/value references.
 - Store each market by `marketId`.
 - Preserve record or revision state needed for corrections.
+- Apply Registry corrections and revocations as append-only transitions.
 
 ## Caching
 
@@ -119,6 +127,8 @@ Read-only GET requests are safe to retry with bounded exponential backoff and ji
 | Supply unavailable | Preserve null supply and its status; do not display zero |
 | Provenance partial | Display available evidence; do not relabel it verified or unsafe |
 | Provenance conflict | Stop automatic trust advancement and surface the conflict |
+| One chain unavailable | Keep other healthy chains ingesting; mark the affected chain incomplete |
+| Registry generation change | Backfill from the new published start block while retaining the retired generation's historical range |
 
 ## Metadata handling
 
@@ -142,7 +152,9 @@ Alert on:
 - duplicate or conflicting launch identity;
 - unsupported Custom records being dropped;
 - verified adapter drift or failure;
-- fee recipient or rate mismatch in a verified path.
+- fee recipient or rate mismatch in a verified path;
+- one partnership share accruing to or claimable by the other party;
+- onchain-to-indexer, indexer-to-API, or API-to-product latency outside the measured operating range.
 
 ## Release checks
 
@@ -158,3 +170,6 @@ Before releasing an integration:
 8. Test adapter failure without losing discovery.
 9. Confirm the fee display distinguishes included from added-on-top.
 10. Confirm no partner integration or safety claim is inferred by the UI.
+11. Restore from a durable checkpoint and prove the backfill plus incremental handoff loses no records.
+12. Exercise resource limits with at least 100,000 simulated launches, bounded payloads, cursor replay, and an insertion during pagination.
+13. For partner attribution, test no-qualifying-market with zero shares; for active fee-bearing partnership templates, test exact 20 bps total, 15/5 allocation, common basis, currency, rounding, accrual, claim separation, double claim, and reentrancy behavior.

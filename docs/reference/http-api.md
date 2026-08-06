@@ -8,6 +8,8 @@ https://developers.programmable.family
 
 The public v2 discovery API is read-only JSON. The repository OpenAPI document and JSON Schemas are the normative field-level references.
 
+v2 is canonical for new integrations. API v1 remains a supported compatibility surface with its own schemas and cursors; do not mix records or cursors across the two major versions.
+
 ## Discovery document
 
 ### `GET /.well-known/programmable.json`
@@ -15,6 +17,8 @@ The public v2 discovery API is read-only JSON. The repository OpenAPI document a
 Stable bootstrap document for API version, status, manifest, schemas, documentation, and machine-readable resources.
 
 Clients should begin here and cache the response according to HTTP headers.
+
+Use only the URLs returned by the canonical discovery document. Do not place API keys, bearer tokens, or other credentials in URLs.
 
 ## Status
 
@@ -55,6 +59,8 @@ compatibility
 ```
 
 The manifest is the canonical integration inventory for active and prelaunch deployments. Read deployment arrays and lifecycle state. Never hard-code a single registry or launcher address as the entire Programmable source.
+
+The current v2 Custom Registry state is prelaunch with public submissions disabled and no address or start block. A client must keep the Custom integration inactive while those values remain unpublished.
 
 Clients should reject an unexplained manifest rollback and alert on conflicting data for the same manifest version.
 
@@ -102,6 +108,14 @@ Do not send `after` and `cursor` together. `page.nextCursor` continues one trave
 
 Implement replay-safe deduplication because retries and reorg reconciliation can repeat records. Never advance a durable resume cursor before the represented pages are committed.
 
+## Launch by ID
+
+### `GET /api/v2/launches/{launchId}`
+
+Returns one launch by its globally scoped `launchId`. Use this route for project-only, multi-token, and multi-asset records as well as token-backed launches. URL-encode the complete opaque launch ID as one path segment and validate the response against the v2 launch schema.
+
+Do not construct a launch ID from project name, symbol, creator metadata, or a market address. Obtain it from the canonical feed or Registry evidence.
+
 ## Launch by asset
 
 ### `GET /api/v2/launches/{chainId}/{tokenAddress}`
@@ -117,6 +131,8 @@ GET /api/v2/launches/1/0x0000000000000000000000000000000000000000
 The zero address is shown only as path syntax, not as a real token example.
 
 Use a numeric chain ID and a valid EVM address. Address comparison should be case-insensitive after validation; display a checksummed form where appropriate.
+
+This path is a convenience lookup for token-backed records. A project-only record has `token: null`; resolve it through the launch feed or launch-ID detail route with its `projectId` and authenticated `assets`. Do not substitute the zero address or a market contract for a missing token.
 
 ## Token list
 
@@ -137,6 +153,8 @@ The launch feed supports:
 - `after` to begin an incremental poll after a durable resume cursor.
 
 Treat server limits and cursor contents as opaque. The token-list endpoint supports `chainId`.
+
+The current discovery document advertises only Ethereum Mainnet. A numeric `chainId` parameter does not make an unadvertised chain supported. See [Multi-chain discovery](../concepts/multi-chain.md).
 
 ## Read-only boundary
 
@@ -178,7 +196,10 @@ Public response schemas live in `schemas/v2/`:
 - `manifest.schema.json`
 - `launch-feed.schema.json`
 - `launch.schema.json`
+- `custom-launch-registry-record-v3.schema.json`, advertised by the v2 schema index as `canonical-custom-registry-record-v3`
 - `token-list.schema.json`
 - `problem.schema.json`
 
 Validate fixtures and representative live responses in continuous integration. Unknown optional fields, capability identifiers, and market kinds must remain forward compatible as described in [v2 compatibility](../concepts/compatibility.md).
+
+For independent event and runtime verification, use [Direct onchain verification](onchain-verification.md). An HTTP 200 response is not a substitute for Registry deployment, canary, finality, or production evidence.

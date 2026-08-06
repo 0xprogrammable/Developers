@@ -113,6 +113,11 @@ export function tokenSummary(launch) {
 export function launchIdentity(launch) {
   const record = object(launch);
   const token = tokenSummary(record);
+  const assets = Array.isArray(record.assets)
+    ? record.assets.filter(
+        (value) => value !== null && typeof value === "object" && !Array.isArray(value),
+      )
+    : [];
   const chainId =
     typeof record.chainId === "string" || Number.isSafeInteger(record.chainId)
       ? String(record.chainId)
@@ -126,7 +131,18 @@ export function launchIdentity(launch) {
     ),
     chainId,
     category: launchCategory(record),
+    platformId: text(record.platformId),
+    publicLabel: text(
+      record.publicLabel,
+      launchCategory(record) === "classic"
+        ? "Programmable Classic"
+        : launchCategory(record) === "custom"
+          ? "Programmable Custom"
+          : "Unknown launch",
+    ),
+    projectId: text(record.projectId),
     token,
+    assets,
   };
 }
 

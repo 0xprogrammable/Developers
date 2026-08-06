@@ -12,6 +12,8 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - Classic launch discovery is live on Ethereum.
 - Programmable Custom intake and the Custom Registry are prelaunch; the v2 Custom feed is intentionally empty.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
+- Ethereum Mainnet is the only chain currently advertised by the well-known document.
+- No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is currently verified by the public v2 manifest.
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
 - The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
@@ -28,12 +30,16 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
 - [v2 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
 - [Production operations](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
+- [Programmable Verified](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md): Exact-review and deployed-revision binding without a blanket safety claim.
+- [Multi-chain discovery](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md): Chain activation, identity, registry generations, and cursor partitioning.
+- [Direct onchain verification](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
+- [Production checklist](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
 - [FAQ](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md): Common product and integration questions.
 
 ## Integration guides
 
 - [Trading terminals and scanners](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
-- [Launch providers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md): Prelaunch atomic registration, provider handoff, registry invariants and activation gates.
+- [Launch providers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md): Prelaunch atomic or finalized staged registration, provider handoff, registry invariants and activation gates.
 - [Wallets and explorers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
 - [Indexers and data platforms](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
 - [Apps, games, and bots](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
@@ -41,10 +47,10 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 ## Reference
 
 - [HTTP API](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
-- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): 10 bps policy, included versus added-on-top, verification, and scope.
+- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic and Native Custom 10 bps semantics, partnership-template 20/15/5 policy, evidence, claims, and scope.
 - [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
 - [JSON Schemas](https://github.com/0xprogrammable/developers/tree/main/schemas/v2): Normative public response schemas.
-- [Examples](https://github.com/0xprogrammable/developers/tree/main/examples): Read-only curl and JavaScript consumers.
+- [Examples](https://github.com/0xprogrammable/developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
 
 ## Live discovery and API
 
@@ -52,15 +58,17 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - [Status](https://developers.programmable.family/api/v2/status): Service and feed lifecycle.
 - [Manifest](https://developers.programmable.family/api/v2/manifest): Deployments, start blocks, Custom Registry state, fee policy, endpoints, and compatibility.
 - [Launch feed](https://developers.programmable.family/api/v2/launches): Cursor-paginated Classic and Custom launch records.
+- Launch detail: `GET /api/v2/launches/{launchId}` for project-only, token-backed, and multi-asset records.
+- Token detail: `GET /api/v2/launches/{chainId}/{tokenAddress}` for token-backed records.
 - [Token list](https://developers.programmable.family/api/v2/token-list): Wallet-friendly compatibility projection.
 
 ## Core agent rules
 
 1. Fetch the discovery document, status, and manifest before reasoning about current deployments.
 2. Never hard-code deployment arrays; read them from the manifest.
-3. Use `chainId + token.address` for asset identity and `launchId` for launch deduplication.
+3. Use `launchId` for launch deduplication. Use `chainId + token.address` when a primary token exists; for `token: null`, preserve `projectId` and the authenticated `assets` graph.
 4. `launchId` is derived from canonical Classic event provenance or committed by the Custom Registry.
-5. Public category is exactly `classic | custom`.
+5. Public category is exactly `classic | custom`; a full Registry-backed Custom record uses `platformId: programmable`, `category: custom`, and `publicLabel: Programmable Custom` from the trusted projection.
 6. Accept `markets: []`, multiple markets, and markets without a pool.
 7. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
 8. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
@@ -72,14 +80,19 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 14. Read fee behavior from verified records. Do not infer it from category.
 15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
 16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
-17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and atomic with the provider launch.
+17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and either atomic with the launch or emitted only after a verified staged workflow is finalized.
 18. Treat the Custom Registry interface and provider examples as prelaunch until a deployed address appears in the manifest.
 19. Assign `Programmable Custom` only to a v2 record backed by the manifest-listed Custom Registry. Provider metadata, hook addresses and API responses cannot self-assign the label.
+20. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
+21. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
+22. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
+23. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
 
 ## Fee summary
 
 - Rate: 10 bps = 0.1% = 1,000 ppm.
 - Recipient: `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
 - Current Classic official paths: the platform share is included within the configured trading fee.
-- Future Custom official paths: 10 bps is added on top of the creator-defined market fee only when deployed and verified.
+- Future Native Custom official paths: 10 bps is added on top of the creator-defined market fee only when deployed and verified.
+- Active fee-bearing partnership-template paths: exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis, with no additional Native Custom 10 bps. Partner-attributed projects without a qualifying fee path use zero shares.
 - The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.

@@ -47,10 +47,15 @@ for (const launch of launchRecords(feed)) {
         .join(", ")
     : "launch only — no market declared";
 
-  console.log(
-    `${identity.category.toUpperCase()}  ${identity.token.symbol}  ${shortAddress(identity.token.address)}`,
-  );
-  console.log(`  ${identity.token.name} · chain ${identity.chainId}`);
+  if (identity.token.address) {
+    console.log(
+      `${identity.category.toUpperCase()}  ${identity.token.symbol}  ${shortAddress(identity.token.address)}`,
+    );
+    console.log(`  ${identity.token.name} · chain ${identity.chainId}`);
+  } else {
+    console.log(`${identity.category.toUpperCase()}  PROJECT  ${identity.projectId ?? identity.launchId}`);
+    console.log(`  token: none · authenticated assets: ${identity.assets.length} · chain ${identity.chainId}`);
+  }
   console.log(`  markets: ${marketLabel}`);
   console.log(
     `  capabilities: ${capabilities.length ? capabilities.map(({ type }) => type).join(", ") : "none declared"}`,

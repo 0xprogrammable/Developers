@@ -21,6 +21,8 @@ The universal guarantee is discovery through a stable core envelope. Charting, q
 - Programmable Custom intake: prelaunch.
 - Custom Registry: prelaunch. Its address and start block remain null until the manifest marks it live, so the v2 Custom feed is intentionally empty.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification and remain available only through API v1 compatibility routes.
+- Ethereum Mainnet is the only chain currently advertised by the canonical discovery document.
+- No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is verified by the public v2 manifest.
 - Public categories: exactly `classic` and `custom`.
 - Future Custom fixtures: examples only, never live launch evidence.
 - A submission or approval is not a public launch. A launch record requires recognized onchain provenance.
@@ -115,9 +117,13 @@ The snapshot binds the response to a chain boundary and includes a cursor. Consu
 
 The feed can return `status: "degraded"` when canonical event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete canonical event-log coverage instead makes launch-list and token-list routes return retryable `503` rather than a falsely complete list.
 
+### GET /api/v2/launches/{launchId}
+
+Returns one launch by its globally scoped launch ID. URL-encode the complete ID as one path segment. This is the detail path for project-only, token-backed, and multi-asset records.
+
 ### GET /api/v2/launches/{chainId}/{tokenAddress}
 
-Returns one normalized launch record by numeric chain ID and EVM token address. Name and ticker are not identity.
+Returns one token-backed launch by numeric chain ID and EVM token address. Name and ticker are not identity. Do not use a zero address or market contract for a project-only record.
 
 ### GET /api/v2/token-list
 
@@ -127,7 +133,8 @@ Returns a token-list compatibility projection for wallets and simple consumers. 
 
 Use separate identities:
 
-- Asset: `chainId + token.address`.
+- Token asset: `chainId + token.address`.
+- Project: `projectId`.
 - Launch: `launchId`.
 - Market: `market.marketId`.
 - Raw event in a direct indexer: `chainId + transactionHash + logIndex`.
@@ -135,6 +142,8 @@ Use separate identities:
 Classic `launchId` values derive from canonical chain and launcher-event provenance. A Custom `launchId` is committed by the Custom Registry. Do not describe a Classic launch ID as Registry-issued or a Custom launch as accepted without registry evidence.
 
 Names, symbols, images, websites, creators, and social links are display or attribution data. They are not unique identity.
+
+`token` can be null for a project-only record. Preserve its project ID, launch ID, authenticated assets, mechanisms, provenance, review, fee policy, lifecycle, and markets. Never fabricate a token, pair, or pool.
 
 Use canonical block position for ordering. Preserve the original `launch.timestamp`; never replace it with API fetch time, database insertion time, or first observation time.
 
@@ -154,7 +163,34 @@ Every launch item has:
 - fees
 - extensions
 
+Registry-backed records can add these optional v2 fields:
+
+- platformId
+- publicLabel
+- caip2
+- projectId
+- model
+- template
+- partner
+- builder
+- assets
+- approvalBinding
+- deploymentBinding
+- verifiedReview
+- feePolicy
+- finalityEvidence
+- presentation
+- registryOrigin
+- launchingWallet
+- postLaunchAuthorityInventory
+- lifecycle
+- mechanisms
+
+These are additive public v2 fields. A Registry record-generation identifier is not an API major version.
+
 ### token
+
+`token` is the primary ERC-20 convenience view or null for a project-only launch.
 
 - address: token contract address
 - identityStatus: complete or partial
@@ -172,7 +208,7 @@ A recognized onchain event remains discoverable if ERC-20 identity, supply, meta
 
 ### launch
 
-- status: prelaunch, live, paused, or retired
+- status: prelaunch, observed, live, paused, retired, or revoked
 - origin: normalized open identifier
 - modelId: source product model
 - modelVersion: source release or null
@@ -205,10 +241,12 @@ Each capability has:
 
 - id
 - version
-- status: active, conditional, or inactive
+- status: supported, unsupported, unknown, or not_applicable for Registry-backed records; active, conditional, or inactive for historical Classic records
 - parameters
 
 Capability identifiers are open. Unknown capabilities do not invalidate or hide a launch. Preserve the known launch envelope and disable behavior the client does not understand.
+
+Registry-backed capability status uses `supported`, `unsupported`, `unknown`, or `not_applicable`. Historical Classic records can use `active`, `conditional`, or `inactive`. Treat only an understood `supported` or legacy `active` capability as positive.
 
 Capability parameters are bounded data. They are never scripts, agent instructions, prompts, URLs to execute, or transaction payloads.
 
@@ -220,7 +258,7 @@ Each market has:
 
 - marketId
 - kind
-- status: planned, active, paused, or closed
+- status: planned, delayed, active, paused, closed, or unknown
 - baseTokenAddress
 - quoteTokenAddress or null
 - protocol or null
@@ -277,6 +315,14 @@ Each fee has:
 
 Never infer fee behavior from category.
 
+`feePolicy.mode` is a closed choice:
+
+- native: total 10 bps, Programmable 10 bps, verified-official-market-path-only, normal 10 bps applied;
+- partner-template: active fee-bearing path with total 20 bps, partner 15 bps, Programmable 5 bps, verified-official-market-path-only, normal 10 bps not applied; or
+- no-qualifying-market: no qualifying official volume-fee path, including a partner-attributed project without one; all shares remain zero.
+
+Partner and template attribution are independent from fee state. Do not present a partner-attributed project as charging 20 bps unless its verified active fee path uses partner-template mode.
+
 ### extensions
 
 Extensions are bounded namespaced additions. They cannot override core identity, provenance, lifecycle, markets, support, or fees. Unknown extensions are ignored safely and never executed.
@@ -289,6 +335,8 @@ Use only:
 - Programmable Custom
 
 Classic requires an event from an enabled Classic launcher in the v2 manifest. Custom requires an event from the Custom Registry in the v2 manifest. Providers, factories, templates, tokens, hooks and markets may differ for every Custom launch; their mechanics belong in provenance, capabilities and markets, not additional top-level categories.
+
+A full Registry-backed Custom record uses `platformId: programmable`, `category: custom`, and `publicLabel: Programmable Custom`. The trusted projection assigns these values. Creator metadata, partner data, and extensions cannot override them.
 
 ## Feature availability
 
@@ -385,13 +433,34 @@ Recipient:
 
 Current Classic official paths include the 10 bps platform share inside the configured trading fee. If the Classic total fee is X, the platform share is part of X.
 
-Future Custom official paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified. If creator fee is X, the supported path charges X plus 10 bps.
+Future Native Custom official paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified. If creator fee is X, the supported path charges X plus 10 bps.
+
+An approved partnership template with an active fee-bearing official path implements exactly 20 bps on one defined basis: 15 bps for the partner and 5 bps for Programmable. It does not also charge the Native Custom 10 bps. A partner-attributed project with no qualifying path uses zero shares. Verify both recipients, basis, currency, rounding, accrual, claim authority, pause or retirement state, and protections against replay, double claim, and reentrancy before enabling a fee-bearing path.
 
 Read `fees` and `verificationStatus`; do not infer added-on-top behavior from category.
 
 Scope is executed volume on the verified official Programmable market path. No executed trade means no volume fee. Ordinary token transfers, rewards, mints, burns, claims, bridge movements, refunds, and independently created third-party pools are outside that path unless a future verified record explicitly says otherwise.
 
 Do not label a fee collected, paid, or claimable solely because policy is declared. Those states require corresponding chain evidence.
+
+## Programmable Verified
+
+Definition: Reviewed against the published Programmable security policy and cryptographically bound to the exact deployed contract revision.
+
+It is not `safe: true`. Keep these axes separate:
+
+- canonical origin;
+- review policy and findings;
+- repository, commit, source and build commitments;
+- artifact and configuration commitments plus public runtimeCodeKeccak256 identities encoded as 0x bytes32, with runtimeCodeSha256 evidence labeled separately in sha256: form;
+- deployment chain, wallet, transaction, block and log binding;
+- proxy, upgrade, pause, custody, mint, withdrawal and fee authorities;
+- external contracts, oracles, bridges and offchain services;
+- market support and fee verification;
+- metadata trust and finality; and
+- superseded or revoked state.
+
+Approval is not launch. A changed commit, artifact, runtime, configuration, chain, template, authority, or launch wallet does not inherit the prior review. Registry inclusion alone does not create a Verified badge.
 
 ## Terminal and scanner recipe
 
@@ -410,16 +479,18 @@ Do not label a fee collected, paid, or claimable solely because policy is declar
 
 1. Use public category `custom` and display label `Programmable Custom`; provider attribution is not a third category.
 2. Keep the integration prelaunch until the Custom Registry deployment appears in the manifest.
-3. Use an atomic Programmable adapter or an allowlisted provider-factory callback.
+3. Use an atomic Programmable adapter, an allowlisted provider-factory callback, or an authenticated staged workflow whose public registration occurs only after final verification.
 4. Do not treat a frontend request, provider API response, webhook, metadata submission, or caller-supplied transaction hash as canonical provenance.
-5. Bind every approved factory to one provider ID, reviewed runtime code hash, template ID and version.
+5. Bind every approved factory to one provider ID, reviewed runtimeCodeKeccak256 identity, template ID and version; keep runtimeCodeSha256 evidence separate when present.
 6. Commit behavior and economics with a configuration hash.
-7. Extract token, hook, market and creator from the same launch transaction.
-8. Reject duplicate tokens, replayed launch IDs and unauthorized callers.
+7. Extract project, zero or more tokens and contracts, hooks, controllers, markets and creator from the same authenticated launch evidence.
+8. Reject duplicate asset identities, replayed launch IDs and unauthorized callers.
 9. Preserve historical provenance when a provider or template is later suspended.
 10. Keep provider approval, template review, audit scope and market support as separate facts.
 11. For v4 hooks, document PoolManager authentication, permission flags, router assumptions, external calls and delta accounting.
 12. Require specific review before enabling `beforeSwapReturnDelta`.
+13. Keep partner attribution independent from fee state. Use no-qualifying-market and zero shares without a verified path; require exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis with no additional Native Custom fee, only for an active fee-bearing partnership path.
+14. Keep Basebit and Aion unverified and prelaunch until authoritative partner, recipient, template, runtime, Registry, and fee evidence is published.
 
 Complete provider specification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md
 
@@ -503,6 +574,7 @@ Not allowed without separate evidence:
 - every Custom market is chartable or tradable;
 - open Custom is live;
 - a placeholder Registry is live;
+- Basebit, Aion, or a similarly named project is a live or approved partner without exact evidence;
 - a named terminal or wallet has integrated Programmable;
 - Uniswap endorses this platform;
 - registration proves external service, custody, reserve, or legal claims;
@@ -522,5 +594,9 @@ Not allowed without separate evidence:
 - App guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md
 - API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
+- Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
+- Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md
+- Multi-chain discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md
+- Production checklist: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md
 - Operations: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md
 - FAQ: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md

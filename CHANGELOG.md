@@ -15,7 +15,13 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
-No unreleased changes.
+- Add direct onchain verification, Programmable Verified, multi-chain, and production integration guides.
+- Document the additive Registry-backed v2 project, multi-asset, approval, deployment, review, fee, finality, authority, lifecycle, and presentation fields plus launch-ID detail lookup.
+- Define Native Custom and partnership-template fee semantics, including the exact 20 bps total and 15/5 partner/Programmable split without an additional Native Custom fee.
+- Document the current Basebit and Aion evidence blockers without presenting either integration as live.
+- Add project-only-safe JavaScript examples and a typed v2 client covering discovery, feed, launch-ID, token, and token-list access.
+- Add conditional Preview and Live release-post drafts.
+- Correct the security support table to include canonical API v2 while retaining v1 compatibility support.
 
 ## [1.1.0] - 2026-08-05
 

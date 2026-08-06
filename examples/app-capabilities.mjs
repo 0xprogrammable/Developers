@@ -27,17 +27,21 @@ for (const launch of launchRecords(feed)) {
   console.log(
     JSON.stringify({
       launchId: identity.launchId,
-      token: {
-        address: identity.token.address,
-        symbol: identity.token.symbol,
-      },
+      projectId: identity.projectId,
+      token: identity.token.address
+        ? {
+            address: identity.token.address,
+            symbol: identity.token.symbol,
+          }
+        : null,
+      assets: identity.assets,
       category: identity.category,
       requestedCapability: requestedCapability
         ? {
             type: requestedCapability,
             declared: matchingCapabilities.length > 0,
-            active: matchingCapabilities.some(
-              ({ status }) => status.toLowerCase() === "active",
+            active: matchingCapabilities.some(({ status }) =>
+              ["active", "supported"].includes(status.toLowerCase()),
             ),
             statuses: matchingCapabilities.map(({ status }) => status),
           }

@@ -16,7 +16,8 @@ Future Custom fixtures are examples, not live registry launches. Historical Stoc
 
 Every registered launch can be discovered and shown through the stable core envelope.
 
-Project-only launches use `token: null` and retain authenticated identities in `assets`. A client must not invent a token contract to display them.
+That includes project-only launches with `token: null`, multiple tokens or contracts, no market, several markets, and unknown future asset roles. A token list can omit a project-only launch while the general feed retains it.
+A client must retain authenticated identities in `assets` and must not invent a token contract to display a project-only launch.
 
 ## Can every Custom launch be charted or traded?
 
@@ -38,7 +39,7 @@ Those categories answer which Programmable launch family produced the record. To
 
 Use chain ID plus token contract address. Use `launchId` to identify the Programmable launch. Names and tickers are not unique.
 
-If `token` is null, the launch does not advertise a token. Use `launchId` and `assets[].identity`; do not turn the project contract into a token address.
+If `token` is null, the launch does not advertise a token. Use `projectId`, `launchId`, and `assets[].identity`; do not turn a project or market contract into a token address.
 
 ## Should I hard-code the launcher or registry address?
 
@@ -53,6 +54,8 @@ It does not guarantee price performance, liquidity, offchain services, metadata 
 ## Is every launch audited or guaranteed safe?
 
 No unconditional audited, safe, or unruggable claim is made. Use the specific provenance, finality, runtime, adapter, and dependency evidence exposed by the record.
+
+`Programmable Verified` is narrower: it means the launch was reviewed under the published policy and cryptographically bound to the exact deployed revision. It does not collapse authorities, dependencies, market support, metadata, finality, or external audits into `safe: true`.
 
 ## Is metadata verified?
 
@@ -72,9 +75,11 @@ For completeness gating, launch-list and token-list routes return a retryable `5
 
 ## How does the 0.1% fee work?
 
-Current Classic official paths include the 10 bps Programmable share within the configured trading fee. Future verified Custom official paths add 10 bps on top of the creator-defined market fee. Read each verified fee disclosure rather than deriving economics from the category.
+Current Classic official paths include the 10 bps Programmable share within the configured trading fee. Future verified Native Custom official paths add 10 bps on top of the creator-defined market fee. Read each verified fee disclosure rather than deriving economics from the category.
 
 The recipient is `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
+
+Partner attribution does not by itself activate a fee. Without a qualifying official market path, a partner-attributed project uses zero shares. An active fee-bearing partnership-template path uses exactly 20 bps on one basis: 15 bps partner plus 5 bps Programmable, and it does not also charge the Native Custom 10 bps. No Basebit or Aion live partner path or recipient is currently verified by the public v2 manifest.
 
 ## Does the fee apply to transfers or a third-party pool?
 
@@ -91,6 +96,10 @@ The finality state can change. The schema permits an `orphaned` correction, but 
 ## Do I need an SDK?
 
 No. The read-only v2 API uses JSON over HTTP. OpenAPI, JSON Schemas, fixtures, and examples are available for generated or hand-written clients.
+
+## Is Programmable live on Base, BNB Chain, or Arbitrum?
+
+Not through the current public discovery document. Ethereum Mainnet is the only advertised active chain. A future EVM chain becomes supported only when the well-known document and chain manifest publish it with evidenced deployments or Registry generations.
 
 ## Does publication mean GMGN, Photon, Axiom, FOMO, or another terminal already supports Programmable?
 

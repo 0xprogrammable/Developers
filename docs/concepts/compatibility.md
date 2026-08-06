@@ -23,6 +23,7 @@ This is a compatibility promise, not a claim that software will never change.
 - new namespaced extensions;
 - new active deployments in the manifest;
 - new networks declared by a future manifest;
+- new Custom Registry generations and retired historical ranges;
 - new verified adapters and feature support.
 
 These additions must not make an existing valid v2 record invalid for a conforming consumer.
@@ -42,7 +43,8 @@ A conforming client must:
 9. Handle repeated pages and events idempotently.
 10. Respect finality changes and explicit reorg or orphan states.
 11. Validate records against the schema version they declare.
-12. Accept `token: null` and use `launchId` plus `assets` for project-only records.
+12. Partition cursors and checkpoints by API major version, chain, and filter scope.
+13. Accept `token: null` and use `projectId`, `launchId`, plus authenticated `assets` for project-only records.
 
 ## Deployment changes
 
@@ -76,6 +78,8 @@ Open Custom intake and the open Custom Registry are prelaunch. Their later activ
 
 Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 
+A Registry record generation is not an API major version. It can be projected through v2 only when the public v2 envelope remains backward compatible and historical record meanings do not change. A prelaunch Registry generation identifier is not evidence that its contract or feed is live.
+
 ## Breaking changes
 
 A change is breaking when an existing conforming consumer cannot safely process a response it could process before. Examples include removing a field, changing its type, changing identity rules, or making a previously optional relationship mandatory.
@@ -94,8 +98,10 @@ Store the original response or enough normalized data to preserve:
 
 - schema version;
 - launch ID;
+- project ID when present;
 - chain ID and token address when present;
-- authenticated asset namespace and value for project-only or multi-asset records;
+- authenticated assets and their open roles;
+- CAIP-2 identity when present;
 - launch transaction, block, timestamp, and finality;
 - manifest version used during verification;
 - markets and support state;

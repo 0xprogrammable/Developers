@@ -14,6 +14,8 @@ The initial public release is `v1.0.0`. API v2 introduces the corrected Programm
 
 API paths, schemas, and other machine-readable surfaces also expose their documented version. A repository release may update several surfaces without changing their major version when every change remains backward compatible.
 
+A Custom Registry record generation is not an API major version. A future record-generation identifier can evolve inside the v2 integration only when the v2 envelope remains backward compatible and older public records keep their meaning. Do not call a Registry record generation “API v3.”
+
 ## Version 1 compatibility contract
 
 Within version 1, Programmable may add:
@@ -72,6 +74,7 @@ Version 2 is the default API for new integrations.
 - `custom` means a launch event from the Custom Registry in the v2 manifest.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Provider, factory, template, token, hook and market contracts may vary without changing the public Custom category.
+- Partner and template attribution remain secondary provenance and never create another public category.
 
 Within version 2, those meanings are immutable. A future change to either classification requires another major API version.
 

@@ -10,6 +10,8 @@ curl -fsSL https://developers.programmable.family/api/v2/token-list
 
 The token list is a convenience projection of finalized registered launches with complete token identity. Its `extensions.programmable.platformId` value mirrors the canonical detailed-record identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
 
+Project-only launches with `token: null` belong in the general launch feed, not the token list. A wallet can show their authenticated contract or external-asset graph in a project view without fabricating a coin balance.
+
 ## Identity
 
 Identify a token by:
@@ -36,6 +38,8 @@ It should not mean:
 - the token cannot lose value or contain economic risk.
 
 Link the label to provenance details: launch transaction, block, source deployment, category, and verification state.
+
+Render `Programmable Verified` as a separate review state only when an effective structured review is cryptographically bound to the deployed revision. Registry provenance alone does not create that badge. See [Programmable Verified](../concepts/programmable-verified.md).
 
 ## Metadata
 
@@ -78,3 +82,4 @@ When a price is unavailable:
 - Add newly finalized tokens idempotently.
 - Preserve an explicit retired or orphaned state rather than silently reassigning identity.
 - Use the detailed record to explain why a token is observed, confirmed, orphaned, or unavailable.
+- Partition identity, caches, and cursors by chain; the same address on another chain is a different asset.

@@ -16,7 +16,7 @@ const first = feed.items[0]
 if (!first) throw new Error("No registered launch is currently available")
 
 const response = await fetch(
-  `${baseUrl}/api/v2/launches/${first.chainId}/${first.token.address}`,
+  `${baseUrl}/api/v2/launches/${encodeURIComponent(first.launchId)}`,
 )
 
 if (!response.ok) throw new Error(`Launch lookup failed: ${response.status}`)
@@ -24,6 +24,8 @@ if (!response.ok) throw new Error(`Launch lookup failed: ${response.status}`)
 const record = await response.json()
 
 console.log(record.category)
+console.log(record.projectId ?? record.launchId)
+console.log(record.assets ?? [])
 console.log(record.capabilities)
 console.log(record.markets)
 ```
@@ -32,12 +34,14 @@ console.log(record.markets)
 
 Every registered launch exposes the same core identity and provenance. That is enough to:
 
-- gate an experience to a specific token address;
+- gate an experience to a specific project, launch, or authenticated asset;
 - show a launch profile;
 - attribute a launch to Classic or Custom;
 - follow verified token supply and market features;
 - connect quests, rewards, NFTs, maps, tournaments, or other application state;
 - discover whether a supported market action exists.
+
+Project-only launches can use `token: null` and still carry contracts, oracles, bridges, rewards, mechanisms, and markets through `assets` and `market.assetReferences`. Do not invent a token only because an existing application data model requires one.
 
 The external application does not need to be contained in the token repository. Security-relevant contracts and authorities still need explicit provenance and verification where they affect the launch or user funds.
 
@@ -96,5 +100,7 @@ Display external dependencies and their availability separately. A registered to
 ## Fees
 
 Use the structured fee disclosures for official market paths. Do not charge the 10 bps platform volume fee on ordinary transfers, game rewards, mints, burns, or unrelated application actions merely because they use a Programmable token.
+
+Partner attribution does not establish a fee path. A partner-attributed project without a qualifying official market path has zero fee shares. For an active fee-bearing partnership-template path, do not stack the Native Custom 10 bps on the partner fee: the verified path is exactly 20 bps on one defined basis, split 15 bps partner and 5 bps Programmable.
 
 See [Platform fees](../reference/fees.md).

@@ -1,8 +1,8 @@
 # Reference consumers
 
 These dependency-free Node.js examples show the smallest safe integration with the Programmable developer API. They
-discover current deployment information from the manifest, preserve unknown fields and open capability or market types,
-and treat a missing market differently from a missing launch.
+discover current deployment information from the manifest, preserve unknown fields and open asset, capability, or market
+types, and treat a missing token or market differently from a missing launch.
 
 They do not quote, simulate, construct, sign, or submit transactions. A feed verification state is provenance data, not
 an audit or a recommendation.
@@ -43,10 +43,12 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 
 | File | Integration pattern |
 | --- | --- |
-| [`terminal-scanner.mjs`](terminal-scanner.mjs) | Shows Classic and Custom launches with zero, one, or several markets |
+| [`lib/programmable-client.mjs`](lib/programmable-client.mjs) | Dependency-free JavaScript fetch, retry, normalization, and provenance helpers used by the runnable examples |
+| [`programmable-client.ts`](programmable-client.ts) | Small typed client for discovery, status, manifest, feed pagination, launch-ID lookup, token lookup, and token-list access |
+| [`terminal-scanner.mjs`](terminal-scanner.mjs) | Shows token and project-only Classic or Custom launches with zero, one, or several markets |
 | [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
 | [`indexer-cursor.mjs`](indexer-cursor.mjs) | Separates page traversal from a durable high-water cursor and avoids checkpointing degraded data |
-| [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities while preserving unknown future types |
+| [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
 | [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest and paginated launch feed with curl |
 
 For a durable local indexer checkpoint, choose a path explicitly:
@@ -61,3 +63,7 @@ page traversal; the two cursor roles are never substituted for one another.
 Store the complete launch record, not only the fields your current interface renders. New optional fields then remain
 available without forcing an immediate consumer release. Treat a stale or degraded response as incomplete: retain
 existing records, retry, and do not interpret absence as deletion.
+
+`programmable-client.ts` deliberately types the stable core and preserves additive fields as `unknown`. Compile it with
+your application's TypeScript configuration and validate returned documents against the published JSON Schemas before
+persisting them.

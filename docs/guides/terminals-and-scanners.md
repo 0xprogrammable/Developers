@@ -34,7 +34,7 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 1. Fetch `/.well-known/programmable.json`.
 2. Read `/api/v2/status` and `/api/v2/manifest`.
 3. Backfill `/api/v2/launches` until `page.hasMore` is false.
-4. Persist `launchId`, chain and token address, provenance, timestamp, finality, markets, capabilities, and fees.
+4. Persist `launchId`, project and asset identities, provenance, timestamp, finality, markets, capabilities, and fees.
 5. Use `page.nextCursor` to finish the current traversal, then persist `page.resumeCursor` and poll with `after`.
 6. Reconcile finality and explicit reorg states.
 
@@ -50,15 +50,15 @@ For direct onchain consumers, apply this rule exactly:
 
 A robust minimum card shows:
 
-- token name and symbol as creator metadata;
-- checksummed token address and chain;
+- project or token name as creator metadata;
+- chain plus checksummed token or contract address when present;
 - `Programmable Classic` or `Programmable Custom`;
 - original onchain launch time;
 - finality state;
 - market state such as active, inactive, paused, or no registered market;
 - a link to the launch transaction or provenance details.
 
-Name, symbol, decimals, supply, and timestamp can be null or unavailable when enrichment fails. Keep the recognized launch visible using chain, token address, launch ID, and the evidence that is present. Label incomplete fields rather than inventing values.
+Name, symbol, decimals, supply, and timestamp can be null or unavailable when enrichment fails. `token` can be null for a project-only launch. Keep the recognized launch visible using its project ID, chain, authenticated assets, launch ID, and the evidence that is present. Label incomplete fields rather than inventing values.
 
 Do not show a launch as older because your indexer discovered it late. Sort by canonical launch block position and use the onchain timestamp when it is available.
 
@@ -72,7 +72,7 @@ Current Classic V3 release evidence establishes a fixed supply of 1,000,000,000 
 
 Classic V3 has no token-level sell restriction. A terminal must still check current pool state, liquidity, quote, and simulation before enabling a trade. Do not translate the label into a generic `safe`, `audited`, `unruggable`, or `sellable` boolean.
 
-Custom is a launch family rather than one mechanic. Preserve provider, factory, template, hook, source provenance, declared capabilities, market support, fee disclosure and release-specific review evidence as separate fields. Do not infer an audit from `category=custom`.
+Custom is a launch family rather than one mechanic. Preserve provider, factory, template, hook, source provenance, declared capabilities, market support, fee disclosure and release-specific review evidence as separate fields. Do not infer an audit or `Programmable Verified` from `category=custom`.
 
 ## Market presentation
 
@@ -82,7 +82,7 @@ Custom is a launch family rather than one mechanic. Preserve provider, factory, 
 
 When `markets` is empty:
 
-- keep the token in the launch feed;
+- keep the project or token in the launch feed;
 - show `No registered market` or equivalent;
 - omit price, liquidity, volume, chart, quote, and trade controls;
 - never invent a pool or substitute another contract address.
@@ -129,9 +129,10 @@ The v2 feed is read-only. It does not return transaction payloads or authorize e
 Read `fees` per record and market path.
 
 - Classic currently includes the 10 bps Programmable share inside the configured trading fee.
-- Future Custom official paths add 10 bps on top of the creator-defined market fee only when verified.
+- Future Native Custom official paths add 10 bps on top of the creator-defined market fee only when verified.
+- Partner attribution does not imply an active fee. A partner-attributed project without a qualifying path uses zero shares; an active fee-bearing partnership-template path uses exactly 20 bps on one verified basis: 15 bps partner plus 5 bps Programmable, with no additional Native Custom 10 bps.
 
-Never derive the charge mode from `category`.
+Never derive the charge mode from `category`, a partner name, or template metadata. Disable verified fee presentation when the rate, basis, currency, recipients, accrual, or claim path cannot be established.
 
 ## Recommended filters
 
@@ -139,6 +140,7 @@ Useful filters include:
 
 - category: Classic or Custom;
 - finality;
+- review and deployment-binding state;
 - market status;
 - verified chart support;
 - verified quote or execution support;
@@ -155,6 +157,8 @@ Test the client against repository fixtures for:
 - registered Custom with no market;
 - registered Custom with several markets;
 - registered Custom contract market without a pool;
+- project-only Custom with `token: null` and authenticated contract assets;
+- multiple primary and secondary tokens;
 - unregistered external launch excluded from the feed;
 - historical Stock-Paired launch excluded from v2;
 - paused market;
@@ -164,5 +168,7 @@ Test the client against repository fixtures for:
 - observed launch later confirmed and finalized;
 - observed launch later orphaned or absent after reconciliation;
 - duplicate name and ticker at different addresses.
+- Native Custom exact 10 bps, partner-attributed no-market with zero shares, and active partnership-template exact 20/15/5 bps without double charge;
+- forged partner or template attribution and a changed recipient.
 
 The integration is ready when every launch remains discoverable and unsupported features fail closed without breaking the feed.
