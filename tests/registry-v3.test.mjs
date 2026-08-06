@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { canonicalSha256 } from "../server/canonical.js";
+import { keccak256 } from "../server/keccak.js";
 import {
   deriveOnchainFeePolicyHashV1,
   derivePublicFeePolicyBindingV1,
@@ -15,6 +16,10 @@ import {
 } from "../server/registry-v3.js";
 import goldenRecord from
   "../fixtures/v2/custom-launch-registry-record-v3.golden.json" with { type: "json" };
+import registryAbi from
+  "../abis/candidates/programmable-custom-registry-v1.json" with { type: "json" };
+import registryEventSet from
+  "../fixtures/v2/custom-registry-event-set-v1.candidate.json" with { type: "json" };
 
 function projectionItem(producerValue = goldenRecord) {
   const producer = structuredClone(producerValue);
@@ -201,6 +206,35 @@ function resealProjectionItem(item) {
 }
 
 describe("Canonical Custom Registry v3 seam", () => {
+  test("pins the non-live Registry candidate ABI to its ordered event set", () => {
+    assert.equal(registryEventSet.events.length, 10);
+    assert.equal(
+      registryEventSet.eventSetHash,
+      canonicalSha256(registryEventSet.domain, {
+        events: registryEventSet.events,
+      }),
+    );
+    const abiEvents = new Map(
+      registryAbi
+        .filter((entry) => entry.type === "event")
+        .map((entry) => [entry.name, entry]),
+    );
+    for (const event of registryEventSet.events) {
+      const eventName = event.signature.slice(0, event.signature.indexOf("("));
+      const abiEvent = abiEvents.get(eventName);
+      assert.ok(abiEvent, event.id);
+      const signature = `${abiEvent.name}(${abiEvent.inputs
+        .map(({ type }) => type)
+        .join(",")})`;
+      assert.equal(signature, event.signature, event.id);
+      assert.equal(
+        keccak256(new TextEncoder().encode(signature)),
+        event.topic0,
+        event.id,
+      );
+    }
+  });
+
   test("matches the Solidity ABI registered-record and identity golden vector", () => {
     const commitment = deriveRegisteredRecordCommitmentV1({
       scopeAndApprovalHash: `0x${"11".repeat(32)}`,
