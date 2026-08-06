@@ -5,7 +5,7 @@ Use the token-list endpoint for a compact finalized inventory. Use the launch fe
 ## Fetch the token list
 
 ```bash
-curl -fsSL https://developers.programmable.family/api/v1/token-list
+curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 
 The token list is a convenience projection of finalized registered launches with complete token identity. Its `extensions.programmable.platformId` value mirrors the canonical detailed-record identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
@@ -58,7 +58,7 @@ A wallet token page may show registered markets, but it must accept `markets: []
 
 No registered market is not an error. Show the token and provenance without manufacturing price, value, or a swap route.
 
-Enable quote or execution only through a separately verified adapter. The read-only v1 feed does not return transaction payloads. A generic `Swap` button must not call an unknown Custom contract based on metadata or extension content.
+Enable quote or execution only through a separately verified adapter. The read-only v2 feed does not return transaction payloads. A generic `Swap` button must not call an unknown Custom contract based on metadata or extension content.
 
 ## Balances and prices
 

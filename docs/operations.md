@@ -2,7 +2,7 @@
 
 The hosted API requires `PROGRAMMABLE_CURSOR_SIGNING_KEY` as a protected deployment secret containing 32–1,024 UTF-8
 bytes. Never commit, log, publish, or place its value in an example. Keep the same value across every instance serving
-the v1 cursor surface. Rotation invalidates outstanding page and resume cursors, so it requires coordinated
+the v2 cursor surface. Rotation invalidates outstanding page and resume cursors, so it requires coordinated
 compatibility and operations handling, including an explicit migration or major-version plan rather than an
 unannounced secret change.
 
@@ -22,10 +22,10 @@ Classic-only feed remains available through `category=classic` when its chain co
 ## Bootstrap sequence
 
 1. Fetch `/.well-known/programmable.json`.
-2. Fetch `/api/v1/status`.
-3. Fetch and validate `/api/v1/manifest`.
+2. Fetch `/api/v2/status`.
+3. Fetch and validate `/api/v2/manifest`.
 4. Compare `manifestVersion` with the highest version previously accepted.
-5. Backfill `/api/v1/launches`.
+5. Backfill `/api/v2/launches`.
 6. Use `page.nextCursor` to complete the current traversal.
 7. After all represented pages are durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.
 8. Store the response snapshot for reconciliation.

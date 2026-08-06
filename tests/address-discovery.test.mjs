@@ -15,17 +15,18 @@ describe("documentation contract", () => {
   test("publishes the required read-only endpoints and fee disclosure", async () => {
     const readme = await readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8");
     for (const endpoint of [
-      "/api/v1/status",
-      "/api/v1/manifest",
-      "/api/v1/launches",
-      "/api/v1/token-list",
+      "/api/v2/status",
+      "/api/v2/manifest",
+      "/api/v2/launches",
+      "/api/v2/token-list",
     ]) {
       assert.ok(readme.includes(endpoint), `README is missing ${endpoint}`);
     }
     assert.ok(readme.includes(FEE_RECIPIENT));
     assert.match(readme, /10 basis points, or 0\.1%/);
-    assert.match(readme, /v1 API is read-only/i);
-    assert.match(readme, /Open Custom intake and Custom Registry \| Prelaunch/);
+    assert.match(readme, /v2 API is read-only/i);
+    assert.match(readme, /Programmable Custom intake and registry \| Prelaunch/i);
+    assert.match(readme, /Stock-Paired records are not part of the v2/i);
   });
 
   test("never presents the read-only feed as transaction authorization", async () => {
@@ -60,5 +61,44 @@ describe("documentation contract", () => {
       }
     }
     assert.deepEqual(failures, []);
+  });
+
+  test("publishes an openable index for the advertised schema base URL", async () => {
+    const wellKnown = JSON.parse(
+      await readFile(
+        path.join(REPOSITORY_ROOT, "public/.well-known/programmable.json"),
+        "utf8",
+      ),
+    );
+    const schemaIndex = JSON.parse(
+      await readFile(
+        path.join(REPOSITORY_ROOT, "schema-index-v2.json"),
+        "utf8",
+      ),
+    );
+    const vercel = JSON.parse(
+      await readFile(path.join(REPOSITORY_ROOT, "vercel.json"), "utf8"),
+    );
+
+    assert.equal(schemaIndex.baseUrl, wellKnown.schemasBaseUrl);
+    assert.deepEqual(
+      schemaIndex.schemas.map(({ name }) => name),
+      [
+        "common",
+        "launch-feed",
+        "launch",
+        "manifest",
+        "problem",
+        "status",
+        "token-list",
+      ],
+    );
+    assert.ok(
+      vercel.rewrites.some(
+        ({ source, destination }) =>
+          source === "/schemas/v2" &&
+          destination === "/schemas/v2/index.json",
+      ),
+    );
   });
 });

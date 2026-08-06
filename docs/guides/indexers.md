@@ -8,10 +8,10 @@ Both paths must use the same identities and lifecycle rules.
 
 1. Bootstrap from `/.well-known/programmable.json`.
 2. Store the highest accepted `manifestVersion`.
-3. Check `/api/v1/status` for freshness and lifecycle.
-4. Fetch `/api/v1/launches` and use `page.nextCursor` to complete the current traversal.
-5. Accept the official origin only when `platformId === "programmable"`, then upsert records by `launchId`.
-6. Key a present ERC-20 by chain ID and token address; preserve project-only identities from `assets` without fabricating a token.
+3. Check `/api/v2/status` for freshness and lifecycle.
+4. Fetch `/api/v2/launches` and use `page.nextCursor` to complete the current traversal.
+5. Upsert records by `launchId`.
+6. Key assets by chain ID and token address.
 7. After the traversal is durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.
 8. Process finality changes and any `orphaned` correction the API returns.
 9. Reconcile non-final records periodically from a prior finalized boundary.
@@ -27,17 +27,15 @@ Use the manifest's deployment arrays and start blocks. Do not assume one launche
 For each recognized event, retain enough evidence to reproduce ordering and detect reorgs:
 
 - chain ID;
-- `platformId: "programmable"` assigned by the trusted projection;
 - source deployment ID and address;
 - transaction hash and transaction index;
 - block number and block hash;
 - log index;
 - launch ID;
-- token address when the launch advertises a token;
-- authenticated asset identities for project-only or multi-asset launches;
+- token address;
 - runtime and provenance verification state where provided.
 
-Pair related events according to the documented deployment contract. An event with the right name from an unrecognized contract is not a Programmable launch. A creator-supplied token tag or string is not origin proof either.
+Pair related events according to the documented deployment contract. An event with the right name from an unrecognized contract is not a Programmable launch.
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
 
@@ -54,8 +52,7 @@ Do not use API receipt time, database insertion time, or token metadata timestam
 Use:
 
 - `launchId` for launch deduplication;
-- chain ID plus token address for a present ERC-20 asset;
-- namespace plus value from `assets[].identity` for other authenticated assets;
+- chain ID plus token address for asset identity;
 - `marketId` for a market;
 - chain ID plus transaction hash plus log index for an event.
 

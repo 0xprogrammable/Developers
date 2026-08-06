@@ -1,38 +1,39 @@
 # Programmable Developer Platform
 
-> One integration for every Programmable launch. Discover, verify, and build on Programmable Classic and Custom launches through one versioned, read-only interface.
+> Public, read-only integration contract for Programmable Classic and Programmable Custom launches.
 
 Canonical site: https://developers.programmable.family
 Source repository: https://github.com/0xprogrammable/developers
-API base: https://developers.programmable.family/api/v1
+API base: https://developers.programmable.family/api/v2
 Full agent context: https://developers.programmable.family/llms-full.txt
 
 ## Current status
 
 - Classic launch discovery is live on Ethereum.
-- Existing first-party stock-paired records normalize as category `custom`.
-- Open Custom intake is prelaunch. Authenticated finalized Custom Registry ingestion is implemented but remains deployment-configuration-gated.
+- Programmable Custom intake and the Custom Registry are prelaunch; the v2 Custom feed is intentionally empty.
+- Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
-- The v1 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
+- The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
 - Legacy indexer records can have partial provenance. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
-- Incomplete Classic event coverage makes affected routes retryable `503`. Custom and unfiltered routes also fail closed unless the authenticated Registry is current and complete; `category=classic` remains independent.
+- Incomplete canonical event-log coverage makes launch-list and token-list routes retryable `503`; missing enrichment alone does not.
 - Do not claim that launches are unconditionally safe, audited, or unruggable.
 - Do not claim that any named terminal or partner has integrated Programmable without confirmation.
 
 ## Start here
 
 - [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
-- [Five-minute quickstart](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
-- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live, first-party Custom, and open Custom prelaunch boundaries.
+- [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
+- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic, Custom prelaunch and compatibility boundaries.
 - [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
-- [v1 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
+- [v2 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
 - [Production operations](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
 - [FAQ](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md): Common product and integration questions.
 
 ## Integration guides
 
 - [Trading terminals and scanners](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
+- [Launch providers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md): Prelaunch atomic registration, provider handoff, registry invariants and activation gates.
 - [Wallets and explorers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
 - [Indexers and data platforms](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
 - [Apps, games, and bots](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
@@ -41,37 +42,39 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 
 - [HTTP API](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
 - [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): 10 bps policy, included versus added-on-top, verification, and scope.
-- [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v1.yaml): Normative HTTP contract.
-- [JSON Schemas](https://github.com/0xprogrammable/developers/tree/main/schemas/v1): Normative public response schemas.
+- [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
+- [JSON Schemas](https://github.com/0xprogrammable/developers/tree/main/schemas/v2): Normative public response schemas.
 - [Examples](https://github.com/0xprogrammable/developers/tree/main/examples): Read-only curl and JavaScript consumers.
 
 ## Live discovery and API
 
 - [Discovery document](https://developers.programmable.family/.well-known/programmable.json): Stable bootstrap document.
-- [Status](https://developers.programmable.family/api/v1/status): Service and feed lifecycle.
-- [Manifest](https://developers.programmable.family/api/v1/manifest): Deployments, start blocks, Custom Registry state, fee policy, endpoints, and compatibility.
-- [Launch feed](https://developers.programmable.family/api/v1/launches): Cursor-paginated Classic and Custom launch records.
-- [Token list](https://developers.programmable.family/api/v1/token-list): Wallet-friendly compatibility projection.
+- [Status](https://developers.programmable.family/api/v2/status): Service and feed lifecycle.
+- [Manifest](https://developers.programmable.family/api/v2/manifest): Deployments, start blocks, Custom Registry state, fee policy, endpoints, and compatibility.
+- [Launch feed](https://developers.programmable.family/api/v2/launches): Cursor-paginated Classic and Custom launch records.
+- [Token list](https://developers.programmable.family/api/v2/token-list): Wallet-friendly compatibility projection.
 
 ## Core agent rules
 
 1. Fetch the discovery document, status, and manifest before reasoning about current deployments.
 2. Never hard-code deployment arrays; read them from the manifest.
-3. Use `launchId` for launch deduplication. Use `chainId + token.address` only when `token` is present; project-only records use `token: null` and authenticated `assets` identities.
-4. Require `platformId === "programmable"`; the official producer assigns it from trusted launch provenance, never creator metadata.
-5. `launchId` is derived from canonical chain and event provenance for current first-party launches or issued by the authenticated finalized Registry.
-6. Public category is exactly `classic | custom`; use `launch.modelId` for the open-ended model.
-7. Accept `markets: []`, multiple markets, and markets without a pool.
-8. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
-9. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
-10. `page.nextCursor` continues the current traversal. Persist `page.resumeCursor` only after the traversal is durably applied, then pass it as `after` for incremental polling. Never parse cursors.
-11. Preserve `launch.timestamp`; do not replace it with first observation time.
-12. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
-13. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-14. v1 is read-only. Support states do not authorize or construct transactions.
-15. Read fee behavior from verified records. Do not infer it from category.
-16. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
-17. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
+3. Use `chainId + token.address` for asset identity and `launchId` for launch deduplication.
+4. `launchId` is derived from canonical Classic event provenance or committed by the Custom Registry.
+5. Public category is exactly `classic | custom`.
+6. Accept `markets: []`, multiple markets, and markets without a pool.
+7. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
+8. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
+9. `page.nextCursor` continues the current traversal. Persist `page.resumeCursor` only after the traversal is durably applied, then pass it as `after` for incremental polling. Never parse cursors.
+10. Preserve `launch.timestamp`; do not replace it with first observation time.
+11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
+12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
+13. v2 is read-only. Support states do not authorize or construct transactions.
+14. Read fee behavior from verified records. Do not infer it from category.
+15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
+16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
+17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and atomic with the provider launch.
+18. Treat the Custom Registry interface and provider examples as prelaunch until a deployed address appears in the manifest.
+19. Assign `Programmable Custom` only to a v2 record backed by the manifest-listed Custom Registry. Provider metadata, hook addresses and API responses cannot self-assign the label.
 
 ## Fee summary
 
@@ -79,5 +82,4 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - Recipient: `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
 - Current Classic official paths: the platform share is included within the configured trading fee.
 - Future Custom official paths: 10 bps is added on top of the creator-defined market fee only when deployed and verified.
-- Existing first-party Custom-category records can have deployment-specific behavior; inspect `fees`.
 - The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.

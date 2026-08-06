@@ -1,17 +1,19 @@
-# v1 compatibility
+# v2 compatibility
 
-The v1 contract is designed so terminals and applications can integrate Classic and Custom once. New deployments and unfamiliar market designs should not require a mandatory client rewrite.
+The v2 contract is designed so terminals and applications can integrate Classic and Custom once. New deployments and unfamiliar market designs should not require a mandatory client rewrite.
 
 This is a compatibility promise, not a claim that software will never change.
 
-## What remains stable within v1
+## What remains stable within v2
 
 - Existing core fields are not removed.
 - Existing token-bearing record shapes and field meanings are not changed. v1.1 widens the required `token` key to allow null only for newly representable project-only launches and adds optional `assets`.
 - Existing meanings are not reinterpreted.
 - `category` remains `classic | custom`.
 - A launch remains valid with `markets: []`.
-- Breaking changes use a new major API path rather than silently changing `/api/v1`.
+- `classic` always means an enabled Classic launcher event.
+- `custom` always means an accepted Custom Registry event.
+- Breaking changes use a new major API path rather than silently changing `/api/v2`.
 
 ## What can be added
 
@@ -23,7 +25,7 @@ This is a compatibility promise, not a claim that software will never change.
 - new networks declared by a future manifest;
 - new verified adapters and feature support.
 
-These additions must not make an existing valid v1 record invalid for a conforming consumer.
+These additions must not make an existing valid v2 record invalid for a conforming consumer.
 
 ## Consumer requirements
 
@@ -44,7 +46,7 @@ A conforming client must:
 
 ## Deployment changes
 
-The stable discovery document points to the active v1 manifest. The manifest publishes deployment arrays, activation state, and start blocks. When Programmable activates another compatible deployment, integrators that read these arrays automatically discover it.
+The stable discovery document points to the active v2 manifest. The manifest publishes deployment arrays, registry state and start blocks. When Programmable activates another compatible deployment, integrators that read these values automatically discover it.
 
 Do not:
 
@@ -72,7 +74,7 @@ An unknown value is not itself an error or security finding. It is an instructio
 
 Open Custom intake and the open Custom Registry are prelaunch. Their later activation is represented by manifest state and new launch records. It does not require a new public category or a different launch schema.
 
-Existing first-party stock-paired records already normalize as `custom`. This lets clients test Custom presentation without representing future open Custom fixtures as live assets.
+Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 
 ## Breaking changes
 
@@ -101,3 +103,7 @@ Store the original response or enough normalized data to preserve:
 - unknown capability and extension identifiers.
 
 This makes migrations and re-verification possible without guessing what an older client discarded.
+
+## Version 1 compatibility
+
+API v1 remains available for existing consumers and retains its original Stock-Paired classification. New integrations should use v2. Do not merge v1 Stock-Paired results into the v2 Programmable Custom filter. See [Migrate from API v1 to v2](../migrations/v1-to-v2.md).

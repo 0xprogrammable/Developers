@@ -1,28 +1,34 @@
-# Programmable Developer Platform
+# Programmable integration reference
 
-## One integration for every Programmable launch.
+Public, read-only contracts and ingestion rules for trading terminals, scanners, wallets, indexers, bots, and apps.
 
-Discover, verify, and build on Programmable Classic and Custom launches through one versioned interface.
+## Terminal labels
+
+Use exactly these two public labels:
+
+| API category | Terminal label | Current boundary |
+| --- | --- | --- |
+| `classic` | `Programmable Classic` | Current and historical Classic releases |
+| `custom` | `Programmable Custom` | Launches accepted through the canonical Custom Registry |
 
 | Surface | Current state |
 | --- | --- |
 | Programmable Classic on Ethereum | Live |
-| Existing first-party stock-paired records | Normalized as `custom`; availability comes from the manifest |
-| Open Custom intake and Custom Registry | Prelaunch |
+| Programmable Custom intake and registry | Prelaunch |
 
-The public category is always `classic` or `custom`. A Custom launch may have no market, one market, or several markets. Every registered launch remains discoverable; charts, quotes, simulation, and execution are available only when a verified adapter declares support for that market. The v1 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
+The public category is always `classic` or `custom`. Provider names, factories, hook addresses and template versions remain per-launch provenance. They never create additional terminal categories. A Custom launch may have no market, one market, or several markets. The v2 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
 
-[Read the documentation](docs/README.md) · [Start the five-minute quickstart](docs/quickstart.md) · [Check integration status](docs/status.md) · [Open the developer site](https://developers.programmable.family)
+[Terminal guide](docs/guides/terminals-and-scanners.md) · [Launch provider guide](docs/guides/launch-providers.md) · [Minimal API example](docs/quickstart.md) · [Developer site](https://developers.programmable.family)
 
-## Integrate in five minutes
+## Minimal API consumer
 
-No SDK or API key is required for the read-only quickstart.
+No SDK or API key is required.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
-curl -fsSL https://developers.programmable.family/api/v1/status
-curl -fsSL https://developers.programmable.family/api/v1/manifest
-curl -fsSL https://developers.programmable.family/api/v1/launches
+curl -fsSL https://developers.programmable.family/api/v2/status
+curl -fsSL https://developers.programmable.family/api/v2/manifest
+curl -fsSL https://developers.programmable.family/api/v2/launches
 ```
 
 If status reports the Custom Registry unavailable, request
@@ -33,9 +39,9 @@ for complete source coverage instead of silently omitting Custom launches.
 const baseUrl = "https://developers.programmable.family"
 
 const [status, manifest, launches] = await Promise.all([
-  fetch(`${baseUrl}/api/v1/status`).then(requireOk).then(response => response.json()),
-  fetch(`${baseUrl}/api/v1/manifest`).then(requireOk).then(response => response.json()),
-  fetch(`${baseUrl}/api/v1/launches`).then(requireOk).then(response => response.json()),
+  fetch(`${baseUrl}/api/v2/status`).then(requireOk).then(response => response.json()),
+  fetch(`${baseUrl}/api/v2/manifest`).then(requireOk).then(response => response.json()),
+  fetch(`${baseUrl}/api/v2/launches`).then(requireOk).then(response => response.json()),
 ])
 
 for (const record of launches.items) {
@@ -56,7 +62,7 @@ function requireOk(response) {
 }
 ```
 
-A conforming v1 client must:
+A conforming v2 client must:
 
 1. Read active deployments from the manifest instead of hard-coding contract addresses.
 2. Deduplicate launches by `launchId`. When `token` is present, identify that ERC-20 by `chainId` and token address; otherwise preserve the authenticated `assets` graph without inventing a token.
@@ -65,16 +71,17 @@ A conforming v1 client must:
 5. Use `page.nextCursor` only to finish the current traversal, then persist `page.resumeCursor` and send it back as `after` when polling.
 6. Respect finality and reorg state instead of treating first observation as permanent.
 
-The complete walkthrough is in the [quickstart](docs/quickstart.md).
+The complete terminal contract is in [Trading terminals and scanners](docs/guides/terminals-and-scanners.md).
 
 ## Choose what you are building
 
 - **Trading terminal or scanner:** Follow the launch feed, label Classic and Custom, and expose only supported market features. [Open the terminal guide](docs/guides/terminals-and-scanners.md).
+- **Launch provider:** Connect a reviewed external factory to the future Custom Registry without creating a provider-specific terminal category. [Open the provider guide](docs/guides/launch-providers.md).
 - **Wallet or explorer:** Resolve token metadata and verify Programmable provenance without trusting names or tickers as identity. [Open the wallet guide](docs/guides/wallets.md).
 - **Indexer or data platform:** Backfill deterministically, resume with cursors, and handle observed blocks and reorgs. [Open the indexer guide](docs/guides/indexers.md).
 - **App, game, or bot:** Discover launches and inspect verified capabilities without interpreting arbitrary contract metadata as instructions. [Open the app guide](docs/guides/apps-and-games.md).
 
-## One stable v1 envelope
+## One stable v2 envelope
 
 Every launch record uses the same top-level shape:
 
@@ -98,7 +105,7 @@ extensions
 
 The envelope is stable even when the product is unfamiliar. Market-specific information stays inside `markets`, optional capabilities advertise support, and namespaced extensions carry additional data without redefining trusted core fields.
 
-Within v1, existing fields are not removed, renamed, or reinterpreted. New deployments appear through the manifest. New optional fields, capabilities, and market types are additive. Clients must ignore what they do not recognize and preserve the known launch identity. See [Compatibility](docs/concepts/compatibility.md).
+Within v2, existing fields are not removed, renamed, or reinterpreted. New Classic deployments and an activated Custom Registry appear through the manifest. New optional fields, capabilities, and market types are additive. Clients must ignore what they do not recognize and preserve the known launch identity. See [Compatibility](docs/concepts/compatibility.md).
 
 ## Source of truth and trust
 
@@ -132,11 +139,11 @@ Never infer fee behavior from `category`; read the manifest and each market's ve
 | Resource | Purpose |
 | --- | --- |
 | `GET /.well-known/programmable.json` | Stable discovery document |
-| `GET /api/v1/status` | API, indexing, freshness, and lifecycle status |
-| `GET /api/v1/manifest` | Active deployments, start blocks, fee policy, and endpoint discovery |
-| `GET /api/v1/launches` | Paginated normalized launch feed |
-| `GET /api/v1/launches/{chainId}/{tokenAddress}` | One asset's Programmable launch record |
-| `GET /api/v1/token-list` | Wallet-friendly finalized token list |
+| `GET /api/v2/status` | API, indexing, freshness, and lifecycle status |
+| `GET /api/v2/manifest` | Active deployments, start blocks, fee policy, and endpoint discovery |
+| `GET /api/v2/launches` | Paginated normalized launch feed |
+| `GET /api/v2/launches/{chainId}/{tokenAddress}` | One asset's Programmable launch record |
+| `GET /api/v2/token-list` | Wallet-friendly finalized token list |
 | [`llms.txt`](llms.txt) | Compact agent index |
 | [`llms-full.txt`](llms-full.txt) | Complete agent-oriented integration contract |
 
@@ -146,13 +153,14 @@ The [HTTP API reference](docs/reference/http-api.md) describes response handling
 
 ```text
 docs/           Human-readable guides, concepts, reference, and operations
-openapi/        OpenAPI description for the hosted v1 API
+openapi/        OpenAPI descriptions for the hosted APIs
 schemas/        JSON Schemas for every public response
 deployments/    Reproducible deployment evidence and source records
 abis/           Contract interfaces used for direct verification
 fixtures/       Classic, Custom, no-market, multi-market, and forward-compatibility cases
 examples/       Copy-paste integration examples
-compatibility/  Frozen v1 consumer contract
+proposals/      Explicitly prelaunch registry interfaces and provider handoff examples
+compatibility/  Frozen public consumer contracts
 scripts/        Build, conformance, and live-smoke commands
 tests/          Offline schema, semantic, consumer, and server checks
 llms.txt        Compact agent documentation index
@@ -162,12 +170,14 @@ llms-full.txt   Complete agent integration context
 ## Current boundaries
 
 - Classic launch discovery is live on Ethereum.
-- Existing first-party stock-paired records use the public `custom` category.
-- Open Custom intake and the open Custom Registry are prelaunch. Examples of future open Custom launches are fixtures, not live assets.
+- Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty until a registry deployment is published.
+- Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
 - A registered launch is always discoverable. Chart, quote, simulation, and execution support remain explicit per market.
 - No named terminal, scanner, wallet, or data provider is implied to have integrated Programmable.
 
 Read the [FAQ](docs/faq.md) for common integration questions.
+
+Existing v1 consumers can follow the [v1 to v2 migration guide](docs/migrations/v1-to-v2.md). API v1 remains supported and has no retirement date.
 
 ## Support and security
 

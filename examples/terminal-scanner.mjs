@@ -16,8 +16,8 @@ import {
 const cursor = process.argv[2] || process.env.PROGRAMMABLE_CURSOR;
 const limit = process.env.PROGRAMMABLE_PAGE_SIZE || "25";
 
-const manifest = await fetchJson("/api/v1/manifest");
-const feed = await fetchJson("/api/v1/launches", { cursor, limit });
+const manifest = await fetchJson("/api/v2/manifest");
+const feed = await fetchJson("/api/v2/launches", { cursor, limit });
 const warning = formatSourceWarning(feed);
 
 if (warning) console.warn(`Warning: ${warning}`);

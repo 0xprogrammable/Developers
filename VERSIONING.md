@@ -10,7 +10,7 @@ Repository releases use Semantic Versioning and immutable Git tags in the form `
 - **MINOR** releases add backward-compatible fields, endpoints, capabilities, examples, or tooling.
 - **MAJOR** releases may introduce breaking changes and require an explicit migration.
 
-The initial public release is `v1.0.0`. The additive identity-first project envelope is `v1.1.0`.
+The initial public release is `v1.0.0`. API v2 introduces the corrected Programmable Custom classification while API v1 remains available for compatibility.
 
 API paths, schemas, and other machine-readable surfaces also expose their documented version. A repository release may update several surfaces without changing their major version when every change remains backward compatible.
 
@@ -63,6 +63,17 @@ Before any version 1 retirement, Programmable will publish:
 - an overlap period in which integrators can validate the migration.
 
 Version 1 has no retirement date unless an official release note states one.
+
+## Version 2 classification contract
+
+Version 2 is the default API for new integrations.
+
+- `classic` means a launch event from an enabled Classic launcher in the v2 manifest.
+- `custom` means a launch event from the Custom Registry in the v2 manifest.
+- Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
+- Provider, factory, template, token, hook and market contracts may vary without changing the public Custom category.
+
+Within version 2, those meanings are immutable. A future change to either classification requires another major API version.
 
 ## Immutable releases
 

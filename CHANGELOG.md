@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0 - 2026-08-06
+
+- Make API v2 the canonical integration for new consumers.
+- Define `Programmable Classic` from enabled Classic launcher events.
+- Reserve `Programmable Custom` for accepted Custom Registry events.
+- Exclude historical Stock-Paired records from the v2 Custom classification.
+- Keep API v1 available for compatibility and publish a migration guide.
+- Add v2 endpoints, schemas, OpenAPI, fixtures and conformance tests.
+
 All notable changes to the Programmable Developer Platform are recorded here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the compatibility rules in [VERSIONING.md](VERSIONING.md).

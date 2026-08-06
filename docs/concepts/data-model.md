@@ -1,14 +1,13 @@
 # Launch data model
 
-The v1 model separates a launch from its markets. This lets the same integration represent a Classic pool, a Custom hook, a contract-priced market, multiple markets, or a token with no active market.
+The v2 model separates a launch from its markets. This lets the same integration represent a Classic pool, a registered Custom hook, a contract-priced market, multiple markets, or a token with no active market.
 
 ## Identity
 
 Use three different identities for three different jobs:
 
-- **Platform identity:** `platformId`, always `programmable` in the official projection
-- **Asset identity:** namespace plus value from `assets[].identity`; for an advertised ERC-20, this also has the `chainId` plus `token.address` convenience view
-- **Launch identity:** `launchId`, derived from canonical chain and event provenance for current first-party launches or issued by the authenticated finalized Registry
+- **Asset identity:** `chainId` plus `token.address`
+- **Launch identity:** `launchId`, derived from canonical chain and event provenance for Classic or committed by the Custom Registry
 - **Market identity:** `market.marketId`
 
 Names and tickers are display metadata. They are not unique identifiers.
@@ -22,12 +21,10 @@ Every record has the same top-level keys:
 | Field | Purpose |
 | --- | --- |
 | `schemaVersion` | Version of the launch-record schema |
-| `platformId` | Stable `programmable` platform identity assigned by the trusted projection |
-| `launchId` | Stable Programmable launch identity derived from canonical provenance or issued by a future Registry |
+| `launchId` | Stable Programmable launch identity derived from canonical provenance or committed by the Custom Registry |
 | `category` | `classic` or `custom` |
 | `chainId` | EVM chain ID |
-| `token` | ERC-20 convenience identity and metadata, or null for project-only launches |
-| `assets` | Optional authenticated identity-first asset graph |
+| `token` | Token contract identity and basic metadata |
 | `launch` | Launch model, transaction, block, timestamp, and finality |
 | `verification` | Recognized source, launcher or registry, and provenance state |
 | `capabilities` | Extensible declared or verified product features |
@@ -37,7 +34,7 @@ Every record has the same top-level keys:
 
 ## Token
 
-When present, `token` contains:
+`token` contains:
 
 | Field | Meaning |
 | --- | --- |
@@ -51,19 +48,9 @@ When present, `token` contains:
 | `supplyAsOfBlock` | Block used for the supply observation or null |
 | `metadata` | Description, image, links, and metadata trust state |
 
-Key a present token by chain and address. A project-only record uses `token: null`; preserve its `assets` identities and never derive a token from `launchIdentity`. Treat name and symbol as untrusted display values. Preserve raw integer values and apply decimals only for presentation.
+Key the asset by chain and address. Treat name and symbol as untrusted display values. Preserve raw integer values and apply decimals only for presentation.
 
 A recognized launch event stays discoverable when an ERC-20 metadata or supply call fails. In that case, identity can be `partial`, individual fields remain null, supply can be `unavailable`, and metadata trust can be `unavailable`. Do not fill those values with guesses or remove the launch.
-
-## Asset provenance
-
-Each authenticated Registry asset carries an immutable `provenance` union:
-
-- `launch-produced` means the finalized launch created the asset;
-- `protocol-external` identifies a protocol dependency and its relationship;
-- `adopted-external` binds the exact reviewed dependency identity, runtime-code hashes, capability and role, review/interface evidence, and state observations.
-
-Only one `launch-produced` `primary-token` may create the public `token` convenience view. An external or adopted token never becomes a newly launched coin merely because a project references it. Preserve provenance exactly and do not replace the evidence fields with creator labels.
 
 ## Launch provenance
 
@@ -84,10 +71,6 @@ Only one `launch-produced` `primary-token` may create the public `token` conveni
 
 Use `launch.timestamp` for new-launch ordering. Do not replace it with the time your system first fetched the record.
 
-`platformId`, `category`, and `launch.modelId` are provenance fields. The official producer derives them from the matched deployment or authenticated finalized Registry record; it never accepts them from creator-editable token metadata.
-
-Authenticated Custom records also expose source and presentation lineage under `extensions["programmable/registry-v2"]`. `sourceKind` is exactly `browser-wallet-report` or `legacy-executor`. Presentation is an all-or-nothing snapshot: `presentationVersion`, `presentationBindingHash`, and `presentation` are either all null or all present. Presentation contains display-only description, image, and links; it cannot change platform identity, category, model, token identity, contracts, markets, or fees.
-
 `verification` identifies the recognized source and the evidence used to normalize it:
 
 | Field | Meaning |
@@ -104,12 +87,12 @@ The API is a projection. Consumers that require independent verification should 
 
 ## Categories
 
-v1 has exactly two public categories:
+v2 has exactly two public categories:
 
 - `classic`
 - `custom`
 
-Do not create public categories for every tokenomic or market design. Existing first-party stock-paired launches normalize as `custom`. Future hooks, auctions, games, contract markets, and designs not yet named also remain `custom`; their actual behavior belongs in capabilities and markets.
+`classic` requires an event from a Classic launcher in the v2 manifest. `custom` requires an event from the Custom Registry in the v2 manifest. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Historical Stock-Paired launches are excluded from v2.
 
 ## Capabilities
 
@@ -135,10 +118,7 @@ Each market contains:
 | `marketId` | Stable market identity |
 | `kind` | Extensible market type |
 | `status` | Current market lifecycle state |
-| `sourceStatus` | Authenticated source lifecycle when public support is conservatively downgraded |
-| `verificationStatus` | Whether the public market mapping is verified, unverified, or verification-pending |
-| `verification` | Source verifier status plus its adapter ID and binding hash, or an explicit pending value |
-| `baseTokenAddress` / `quoteTokenAddress` | Market currencies when they are EVM ERC-20 identities; otherwise null |
+| `baseTokenAddress` / `quoteTokenAddress` | Market currencies when applicable |
 | `protocol` | Protocol or settlement family |
 | `poolId` / `poolAddress` | Pool identifiers when the market has a pool |
 | `hookAddress` | Hook address when applicable |
@@ -151,13 +131,11 @@ A market can exist without a pool. In that case, pool fields remain absent or nu
 
 Unknown market kinds use a generic fallback:
 
-1. Show launch provenance and the authenticated asset identities; show token data only when present.
+1. Show token and launch provenance.
 2. Label the market as Custom or unsupported rather than guessing its mechanics.
 3. Read the explicit `support` states.
 4. Hide charts, quotes, simulation, or execution that lack verified support.
 5. Continue accepting future optional fields.
-
-The authenticated source status `verification_pending` remains visible as `sourceStatus`; the conservative public lifecycle is `planned`. A verified Uniswap v4 record also preserves its PoolManager review, interface, runtime-code, and pool-key evidence bindings.
 
 ## Feature support is independent
 
@@ -171,7 +149,7 @@ Market support is not one boolean. Treat these separately:
 
 For example, a contract market may be discoverable and chartable but not executable through a terminal. A token with no market remains discoverable but has no market features.
 
-Each axis is `available`, `unavailable`, or `unknown`. These states are descriptive. v1 never returns transaction payloads, and `available` does not itself authorize an action.
+Each axis is `available`, `unavailable`, or `unknown`. These states are descriptive. v2 never returns transaction payloads, and `available` does not itself authorize an action.
 
 When present, the read-only adapter descriptor contains `kind`, `version`, `adapterId`, and `verificationStatus`. It identifies the verified normalization contract; it does not provide quote, simulation, or execution URLs.
 
@@ -193,7 +171,7 @@ Do not infer fees from category or marketing text. Read the record and its verif
 
 ## Extensions
 
-Extensions allow future and project-specific data without changing core v1 meanings. They are deliberately subordinate to the core record.
+Extensions allow future and project-specific data without changing core v2 meanings. They are deliberately subordinate to the core record.
 
 - Extension keys are namespaced.
 - Unknown extensions are ignored safely.
@@ -210,6 +188,6 @@ Launch provenance and creator metadata have different trust levels.
 - Sanitize control characters and rich content.
 - Do not render arbitrary HTML or SVG from a project URL.
 - Treat external links as untrusted destinations.
-- Keep the launch ID and authenticated asset identities visible; keep token address and chain visible when a token exists.
+- Keep the token address and chain visible wherever identity matters.
 
 Registration does not make external APIs, games, or offchain assets trustworthy. It only establishes the provenance represented by the verified record.

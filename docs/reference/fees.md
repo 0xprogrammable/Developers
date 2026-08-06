@@ -36,7 +36,7 @@ If the creator-defined market fee is `X`, the supported official path charges `X
 
 Open Custom intake and the open Custom Registry are currently prelaunch. A fixture or draft must not claim that a future Custom fee path is already onchain-verified.
 
-Existing first-party records that normalize as `custom` may have deployment-specific fee behavior. Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
+Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
 
 ## Scope
 

@@ -2,15 +2,15 @@
 
 ## Do terminals need a second integration when open Custom launches activate?
 
-No mandatory client change is expected for a conforming v1 integration. Custom activation appears through the same discovery document, manifest, launch envelope, and categories.
+No mandatory client change is expected for a conforming v2 integration. Custom activation appears through the same discovery document, manifest, launch envelope and categories.
 
 The client must read deployment arrays dynamically, accept unknown optional values, support `markets: []`, and use feature support rather than a fixed list of market designs.
 
 ## Is Custom live?
 
-The public Custom category already represents existing first-party stock-paired records where declared by the manifest. Open Custom intake and the open Custom Registry are prelaunch.
+No. Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty.
 
-Future Custom fixtures are examples, not live open-registry launches.
+Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 
 ## Can every Custom launch be displayed?
 
@@ -42,7 +42,7 @@ If `token` is null, the launch does not advertise a token. Use `launchId` and `a
 
 ## Should I hard-code the launcher or registry address?
 
-No. Read active deployment arrays and start blocks from `/api/v1/manifest`. This is how compatible deployments are added without a mandatory client update.
+No. Read active deployment arrays and start blocks from `/api/v2/manifest`. This is how compatible deployments are added without a mandatory client update.
 
 ## What does registration prove?
 
@@ -72,7 +72,7 @@ For completeness gating, launch-list and token-list routes return a retryable `5
 
 ## How does the 0.1% fee work?
 
-Current Classic official paths include the 10 bps Programmable share within the configured trading fee. Future verified Custom official paths add 10 bps on top of the creator-defined market fee. Existing first-party Custom-category records can have deployment-specific behavior, so read each verified fee disclosure.
+Current Classic official paths include the 10 bps Programmable share within the configured trading fee. Future verified Custom official paths add 10 bps on top of the creator-defined market fee. Read each verified fee disclosure rather than deriving economics from the category.
 
 The recipient is `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
 
@@ -90,7 +90,7 @@ The finality state can change. The schema permits an `orphaned` correction, but 
 
 ## Do I need an SDK?
 
-No. The read-only v1 API uses JSON over HTTP. OpenAPI, JSON Schemas, fixtures, and examples are available for generated or hand-written clients.
+No. The read-only v2 API uses JSON over HTTP. OpenAPI, JSON Schemas, fixtures, and examples are available for generated or hand-written clients.
 
 ## Does publication mean GMGN, Photon, Axiom, FOMO, or another terminal already supports Programmable?
 
