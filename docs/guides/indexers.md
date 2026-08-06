@@ -8,8 +8,8 @@ Both paths must use the same identities and lifecycle rules.
 
 1. Bootstrap from `/.well-known/programmable.json`.
 2. Store the highest accepted `manifestVersion`.
-3. Check `/api/v1/status` for freshness and lifecycle.
-4. Fetch `/api/v1/launches` and use `page.nextCursor` to complete the current traversal.
+3. Check `/api/v2/status` for freshness and lifecycle.
+4. Fetch `/api/v2/launches` and use `page.nextCursor` to complete the current traversal.
 5. Upsert records by `launchId`.
 6. Key assets by chain ID and token address.
 7. After the traversal is durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.

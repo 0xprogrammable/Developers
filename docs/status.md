@@ -1,27 +1,27 @@
 # Integration status
 
-This page explains the product state represented by v1. For live machine-readable state, use:
+This page explains the product state represented by v2. For live machine-readable state, use:
 
 ```text
-GET https://developers.programmable.family/api/v1/status
-GET https://developers.programmable.family/api/v1/manifest
+GET https://developers.programmable.family/api/v2/status
+GET https://developers.programmable.family/api/v2/manifest
 ```
 
 ## Current availability
 
 | Surface | Category | Network | State | Meaning |
 | --- | --- | --- | --- | --- |
-| Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v1 feed |
-| Existing first-party stock-paired records | `custom` | Ethereum | Live where listed by the manifest | These records use the public Custom category even though open Custom intake is not live |
-| Open Custom intake | `custom` | Ethereum | Prelaunch | Public submissions are not yet a live launch source |
-| Open Custom Registry | `custom` | Ethereum | Prelaunch | No open-registry address should be assumed until the manifest marks it active |
+| Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
+| Programmable Custom intake | `custom` | Ethereum | Prelaunch | Approved submissions are not yet a live launch source |
+| Custom Registry | `custom` | Ethereum | Prelaunch | No registry address should be assumed until the v2 manifest marks it active |
+| Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
 | Other networks | — | — | Not declared | Support exists only when a network appears as active in the manifest |
 
 ## What `custom` means today
 
-`custom` is the durable public category for launches outside Classic. It is not itself a market type and it does not imply that open Custom intake is live.
+`custom` is reserved for accepted Custom Registry launches. It is not a generic label for every launch outside Classic and it does not imply that Custom intake is live.
 
-Existing first-party stock-paired launches normalize to `custom`. Future open Custom launches will use the same category and the same v1 envelope. Their particular behavior is described by markets, capabilities, verification, fees, and extensions rather than by adding more public launch categories.
+After registry activation, different providers, factories, templates, token contracts and hook contracts all use the same `custom` category. Their particular behavior is described by provenance, markets, capabilities, verification, fees and extensions rather than additional public categories.
 
 ## What prelaunch means
 
@@ -49,7 +49,7 @@ Every registered launch is discoverable. Feature availability is separate:
 
 If a requirement is not met, keep the launch visible and mark that feature unavailable. Do not infer support from contract names, metadata text, category, or an unfamiliar market type.
 
-The v1 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action.
+The v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action.
 
 ## Ready, degraded, and unavailable
 

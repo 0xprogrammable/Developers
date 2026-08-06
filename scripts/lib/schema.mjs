@@ -2,15 +2,18 @@ import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { listFiles, readJson, REPOSITORY_ROOT } from "./files.mjs";
 
-export async function createSchemaRegistry() {
-  const schemaDirectory = path.join(REPOSITORY_ROOT, "schemas", "v1");
+export async function createSchemaRegistry(version = "v1") {
+  if (version !== "v1" && version !== "v2") {
+    throw new Error(`Unsupported schema version: ${version}`);
+  }
+  const schemaDirectory = path.join(REPOSITORY_ROOT, "schemas", version);
   const files = await listFiles(schemaDirectory, (file) => file.endsWith(".json"));
   const schemas = new Map();
   const identifiers = new Set();
 
   for (const file of files) {
     const schema = await readJson(file);
-    const expectedId = `https://developers.programmable.family/schemas/v1/${path.basename(file)}`;
+    const expectedId = `https://developers.programmable.family/schemas/${version}/${path.basename(file)}`;
     if (schema.$schema !== "https://json-schema.org/draft/2020-12/schema") {
       throw new Error(`${path.basename(file)} must use JSON Schema 2020-12`);
     }

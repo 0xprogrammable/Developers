@@ -4,7 +4,7 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-This is a **prelaunch integration specification**. The open Programmable Custom Registry is not deployed. No registry address, ABI, or write endpoint in this document is live until it appears in `GET /api/v1/manifest` with deployment evidence.
+This is a **prelaunch integration specification**. The open Programmable Custom Registry is not deployed. No registry address, ABI, or write endpoint in this document is live until it appears in `GET /api/v2/manifest` with deployment evidence.
 
 ## Public classification
 
@@ -16,6 +16,8 @@ Terminal label: Programmable Custom
 ```
 
 The provider name, template and version are provenance details. They do not create additional public categories. Terminals can optionally show provider attribution beneath the stable Programmable label.
+
+The label is not embedded in the token contract and a provider cannot self-assign it. Programmable publishes the label only after the canonical registry has authenticated the launch path and emitted the registration event.
 
 ## Provenance requirement
 
@@ -59,12 +61,50 @@ Provide the following before an adapter or factory is approved.
 
 API credentials remain private between backend systems. Never put a provider API key, secret or bearer token in a browser bundle, registry event, public fixture or support issue.
 
+## What changes and what stays stable
+
+Provider contracts may differ on every integration. Token and hook addresses normally differ on every launch. The terminal contract does not depend on any of those addresses remaining constant.
+
+| Scope | Stable | May change |
+| --- | --- | --- |
+| Terminal classification | `custom` and `Programmable Custom` | Never |
+| Provider identity | Approved provider ID | New provider requires onboarding |
+| Template | Approved template ID and immutable version | New version requires review |
+| Runtime | Approved factory and implementation code hashes | Any code change requires review |
+| Launch | Registry event shape and uniqueness rules | Token, hook, market, creator and configuration |
+
+After activation, terminals poll one feed. They do not add a new contract list for every provider or launch.
+
+## Per-launch requirements
+
+Every accepted launch must produce one authenticated registry event in the same transaction as the provider launch. The registry record must bind:
+
+- the approved provider, factory, template and template version;
+- the created token and deployed hook, when a hook exists;
+- the canonical pool or market identifier, when a market exists;
+- the creator or beneficiary established by the launch path;
+- a configuration hash covering behavior and economic parameters;
+- the registry transaction, block, log index and finality used by indexers.
+
+If any required value cannot be established, the launch remains unclassified. A later support message, webhook or metadata edit does not upgrade it to Programmable Custom.
+
 ## Draft registry interface
 
 The review interface is kept under [`proposals/custom-registry`](../../proposals/custom-registry/IProgrammableCustomRegistryV1.sol). It is not a deployed ABI.
 
 ```solidity
 interface IProgrammableCustomRegistryV1 {
+    event ProgrammableCustomTemplateConfigured(
+        bytes32 indexed providerId,
+        bytes32 indexed templateId,
+        bytes32 indexed templateVersion,
+        address factory,
+        bytes32 factoryRuntimeCodeHash,
+        bytes32 implementationRuntimeCodeHash,
+        bytes32 reviewCommitment,
+        bool active
+    );
+
     event ProgrammableCustomLaunchRegistered(
         bytes32 indexed launchId,
         bytes32 indexed providerId,
@@ -77,6 +117,11 @@ interface IProgrammableCustomRegistryV1 {
         bytes32 configurationHash,
         address creator
     );
+
+    function isApprovedTemplate(bytes32 providerId, bytes32 templateId, bytes32 templateVersion)
+        external view returns (bool);
+
+    function registeredToken(bytes32 launchId) external view returns (address token);
 }
 ```
 
@@ -126,7 +171,7 @@ The `custom` category does not imply that these checks passed. Template-specific
 
 ## Feed projection
 
-After a registry deployment is live and a partner launch is finalized, the v1 feed projects it as a normal launch record:
+After a registry deployment is live and a partner launch is finalized, the v2 feed projects it as a normal launch record:
 
 ```json
 {
@@ -137,7 +182,7 @@ After a registry deployment is live and a partner launch is finalized, the v1 fe
     "modelVersion": "1"
   },
   "verification": {
-    "sourceId": "provider/example-template-v1",
+    "sourceId": "custom-registry/example-provider/example-template/1",
     "registryAddress": "0x...",
     "provenanceStatus": "verified"
   },
@@ -157,7 +202,7 @@ These values are illustrative until the registry is deployed. Never replace prel
 
 ## Terminal behavior
 
-Terminals ingest the launch through the same `/api/v1/launches?category=custom` feed used for other Custom records. They do not need a provider-specific discovery integration.
+Terminals ingest every registered launch through `/api/v2/launches?category=custom`. They do not need a provider-specific discovery integration.
 
 The minimum display is:
 

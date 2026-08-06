@@ -1,13 +1,13 @@
 # Launch data model
 
-The v1 model separates a launch from its markets. This lets the same integration represent a Classic pool, a Custom hook, a contract-priced market, multiple markets, or a token with no active market.
+The v2 model separates a launch from its markets. This lets the same integration represent a Classic pool, a registered Custom hook, a contract-priced market, multiple markets, or a token with no active market.
 
 ## Identity
 
 Use three different identities for three different jobs:
 
 - **Asset identity:** `chainId` plus `token.address`
-- **Launch identity:** `launchId`, derived from canonical chain and event provenance for current first-party launches; a future Registry may issue it directly
+- **Launch identity:** `launchId`, derived from canonical chain and event provenance for Classic or committed by the Custom Registry
 - **Market identity:** `market.marketId`
 
 Names and tickers are display metadata. They are not unique identifiers.
@@ -21,7 +21,7 @@ Every record has the same top-level keys:
 | Field | Purpose |
 | --- | --- |
 | `schemaVersion` | Version of the launch-record schema |
-| `launchId` | Stable Programmable launch identity derived from canonical provenance or issued by a future Registry |
+| `launchId` | Stable Programmable launch identity derived from canonical provenance or committed by the Custom Registry |
 | `category` | `classic` or `custom` |
 | `chainId` | EVM chain ID |
 | `token` | Token contract identity and basic metadata |
@@ -87,12 +87,12 @@ The API is a projection. Consumers that require independent verification should 
 
 ## Categories
 
-v1 has exactly two public categories:
+v2 has exactly two public categories:
 
 - `classic`
 - `custom`
 
-Do not create public categories for every tokenomic or market design. Existing first-party stock-paired launches normalize as `custom`. Future hooks, auctions, games, contract markets, and designs not yet named also remain `custom`; their actual behavior belongs in capabilities and markets.
+`classic` requires an event from a Classic launcher in the v2 manifest. `custom` requires an event from the Custom Registry in the v2 manifest. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Historical Stock-Paired launches are excluded from v2.
 
 ## Capabilities
 
@@ -149,7 +149,7 @@ Market support is not one boolean. Treat these separately:
 
 For example, a contract market may be discoverable and chartable but not executable through a terminal. A token with no market remains discoverable but has no market features.
 
-Each axis is `available`, `unavailable`, or `unknown`. These states are descriptive. v1 never returns transaction payloads, and `available` does not itself authorize an action.
+Each axis is `available`, `unavailable`, or `unknown`. These states are descriptive. v2 never returns transaction payloads, and `available` does not itself authorize an action.
 
 When present, the read-only adapter descriptor contains `kind`, `version`, `adapterId`, and `verificationStatus`. It identifies the verified normalization contract; it does not provide quote, simulation, or execution URLs.
 
@@ -171,7 +171,7 @@ Do not infer fees from category or marketing text. Read the record and its verif
 
 ## Extensions
 
-Extensions allow future and project-specific data without changing core v1 meanings. They are deliberately subordinate to the core record.
+Extensions allow future and project-specific data without changing core v2 meanings. They are deliberately subordinate to the core record.
 
 - Extension keys are namespaced.
 - Unknown extensions are ignored safely.

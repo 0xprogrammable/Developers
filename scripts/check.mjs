@@ -16,6 +16,7 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 const registry = await createSchemaRegistry();
+const v2Registry = await createSchemaRegistry("v2");
 const testFiles = await listFiles(
   path.join(REPOSITORY_ROOT, "tests"),
   (file) => file.endsWith(".test.mjs"),
@@ -48,6 +49,20 @@ for (const file of launchFiles) {
   );
 }
 
+const v2LaunchValidator = v2Registry.validator("launch.schema.json");
+const v2LaunchFiles = await listFiles(
+  path.join(REPOSITORY_ROOT, "fixtures", "v2", "launches"),
+  (file) => file.endsWith(".json"),
+);
+for (const file of v2LaunchFiles) {
+  const launch = await readJson(file);
+  assertValid(v2LaunchValidator, launch, path.relative(REPOSITORY_ROOT, file));
+  assertNoFindings(
+    validateLaunchSemantics(launch),
+    path.relative(REPOSITORY_ROOT, file),
+  );
+}
+
 const feedValidator = registry.validator("launch-feed.schema.json");
 for (const file of await listFiles(
   path.join(REPOSITORY_ROOT, "fixtures", "v1", "feeds"),
@@ -56,9 +71,45 @@ for (const file of await listFiles(
   assertValid(feedValidator, await readJson(file), path.relative(REPOSITORY_ROOT, file));
 }
 
+const v2FeedValidator = v2Registry.validator("launch-feed.schema.json");
+for (const file of await listFiles(
+  path.join(REPOSITORY_ROOT, "fixtures", "v2", "feeds"),
+  (candidate) => candidate.endsWith(".json"),
+)) {
+  assertValid(
+    v2FeedValidator,
+    await readJson(file),
+    path.relative(REPOSITORY_ROOT, file),
+  );
+}
+
 const manifest = await readJson(path.join(REPOSITORY_ROOT, "deployments", "ethereum.json"));
 assertValid(registry.validator("manifest.schema.json"), manifest, "deployments/ethereum.json");
 assertNoFindings(validateManifestSemantics(manifest), "deployments/ethereum.json");
+
+const v2Manifest = await readJson(
+  path.join(REPOSITORY_ROOT, "deployments", "ethereum-v2.json"),
+);
+assertValid(
+  v2Registry.validator("manifest.schema.json"),
+  v2Manifest,
+  "deployments/ethereum-v2.json",
+);
+assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2.json");
+if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
+  throw new Error("Version 2 manifest may only list Classic deployments before Custom Registry activation");
+}
+
+const v2Core = await readJson(
+  path.join(REPOSITORY_ROOT, "compatibility", "core-v2.json"),
+);
+if (
+  v2Core.classification?.classic?.label !== "Programmable Classic" ||
+  v2Core.classification?.custom?.label !== "Programmable Custom" ||
+  !v2Core.excludedModels?.includes("stock-paired")
+) {
+  throw new Error("Version 2 classification contract is incomplete");
+}
 
 const core = await readJson(path.join(REPOSITORY_ROOT, "compatibility", "core-v1.json"));
 const compatibilityFindings = assertCoreContract(
@@ -133,5 +184,5 @@ if (compatibilityBase) {
 }
 
 process.stdout.write(
-  `Conformance OK: ${registry.files.length} schemas, ${launchFiles.length} launch fixtures, ${testFiles.length} test files, ${jsonCount} canonical JSON files\n`,
+  `Conformance OK: ${registry.files.length + v2Registry.files.length} schemas, ${launchFiles.length + v2LaunchFiles.length} launch fixtures, ${testFiles.length} test files, ${jsonCount} canonical JSON files\n`,
 );

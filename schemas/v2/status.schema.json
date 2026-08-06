@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/status.schema.json",
+  "title": "Programmable integration service status",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "service",
+    "checkedAt",
+    "chainId",
+    "classic",
+    "custom",
+    "feeds"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "service": {
+      "enum": [
+        "operational",
+        "degraded",
+        "unavailable"
+      ]
+    },
+    "checkedAt": {
+      "$ref": "common.schema.json#/$defs/isoDateTime"
+    },
+    "chainId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "classic": {
+      "$ref": "#/$defs/categoryStatus"
+    },
+    "custom": {
+      "$ref": "#/$defs/categoryStatus"
+    },
+    "feeds": {
+      "type": "object",
+      "required": [
+        "manifest",
+        "launches",
+        "tokenList"
+      ],
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/feedStatus"
+        },
+        "launches": {
+          "$ref": "#/$defs/feedStatus"
+        },
+        "tokenList": {
+          "$ref": "#/$defs/feedStatus"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "categoryStatus": {
+      "type": "object",
+      "required": [
+        "status",
+        "note"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "unavailable"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "feedStatus": {
+      "enum": [
+        "ready",
+        "degraded",
+        "unavailable"
+      ]
+    }
+  }
+}

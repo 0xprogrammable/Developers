@@ -37,17 +37,17 @@ function apiRoot(value) {
     );
   }
   const path = parsed.pathname.replace(/\/+$/, "") || "/";
-  if (path !== "/" && path !== "/api/v1") {
-    throw new Error("PROGRAMMABLE_API_BASE path must be / or /api/v1");
+  if (path !== "/" && path !== "/api/v2") {
+    throw new Error("PROGRAMMABLE_API_BASE path must be / or /api/v2");
   }
-  return `${parsed.origin}/api/v1`;
+  return `${parsed.origin}/api/v2`;
 }
 
 const apiBase = apiRoot(configuredBase);
 const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 2;
-const registry = await createSchemaRegistry();
+const registry = await createSchemaRegistry("v2");
 
 async function boundedJson(path, schemaName) {
   let lastError;

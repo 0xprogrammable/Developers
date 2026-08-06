@@ -20,7 +20,7 @@ if (!requestedAddress) {
   );
   process.exitCode = 2;
 } else {
-  const manifest = await fetchJson("/api/v1/manifest");
+  const manifest = await fetchJson("/api/v2/manifest");
   const matches = [];
   const seenMatches = new Set();
   let cursor;
@@ -28,7 +28,7 @@ if (!requestedAddress) {
   const maxPages = Number.parseInt(process.env.PROGRAMMABLE_MAX_PAGES || "100", 10);
 
   do {
-    const feed = await fetchJson("/api/v1/launches", { cursor, limit: 100 });
+    const feed = await fetchJson("/api/v2/launches", { cursor, limit: 100 });
     const warning = formatSourceWarning(feed);
     if (warning) console.warn(`Warning: ${warning}`);
 

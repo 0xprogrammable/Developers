@@ -2,9 +2,9 @@
 
 Canonical site: https://developers.programmable.family
 Source repository: https://github.com/0xprogrammable/developers
-API base: https://developers.programmable.family/api/v1
-OpenAPI: https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v1.yaml
-Schemas: https://github.com/0xprogrammable/developers/tree/main/schemas/v1
+API base: https://developers.programmable.family/api/v2
+OpenAPI: https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml
+Schemas: https://github.com/0xprogrammable/developers/tree/main/schemas/v2
 
 ## Mission
 
@@ -12,15 +12,15 @@ Public integration contract for Programmable launches.
 
 Terminals, scanners, wallets, explorers, indexers, bots, games, and apps use one versioned read-only interface for discovering and verifying Programmable Classic and Custom launches.
 
-The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v1 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
+The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v2 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
 
 ## Current truth
 
 - Network: Ethereum mainnet, chain ID 1.
 - Classic launch discovery: live.
-- Existing first-party stock-paired records: live where the manifest declares them, normalized as public category `custom`.
-- Open Custom intake: prelaunch.
-- Open Custom Registry: prelaunch. Its address and start block remain null or unavailable until the manifest marks it live.
+- Programmable Custom intake: prelaunch.
+- Custom Registry: prelaunch. Its address and start block remain null until the manifest marks it live, so the v2 Custom feed is intentionally empty.
+- Historical Stock-Paired records are excluded from the v2 Programmable Custom classification and remain available only through API v1 compatibility routes.
 - Public categories: exactly `classic` and `custom`.
 - Future Custom fixtures: examples only, never live launch evidence.
 - A submission or approval is not a public launch. A launch record requires recognized onchain provenance.
@@ -29,8 +29,8 @@ The universal guarantee is discovery through a stable core envelope. Charting, q
 
 Always fetch current status and manifest before making a current-state claim:
 
-- GET https://developers.programmable.family/api/v1/status
-- GET https://developers.programmable.family/api/v1/manifest
+- GET https://developers.programmable.family/api/v2/status
+- GET https://developers.programmable.family/api/v2/manifest
 
 ## Stable bootstrap
 
@@ -38,7 +38,7 @@ Begin with:
 
 GET https://developers.programmable.family/.well-known/programmable.json
 
-The well-known document points to the v1 status, manifest, launches, token list, OpenAPI, schemas, documentation, source repository, public categories, and supported chains.
+The well-known document points to the v2 status, manifest, launches, token list, OpenAPI, schemas, documentation, source repository, public categories, and supported chains.
 
 Do not discover deployments by copying addresses from prose. Resolve active and historical deployment arrays from the manifest.
 
@@ -48,11 +48,11 @@ Do not discover deployments by copying addresses from prose. Resolve active and 
 
 Stable discovery document. Cache according to HTTP response headers and refresh periodically.
 
-### GET /api/v1/status
+### GET /api/v2/status
 
 Reports service state and the independent lifecycle of Classic, Custom, and the public feeds. A successful HTTP response is not itself proof that every source is live or every projection is fresh.
 
-### GET /api/v1/manifest
+### GET /api/v2/manifest
 
 Root fields:
 
@@ -72,11 +72,11 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 The open Custom Registry is represented separately. Prelaunch state does not carry a guessed live address.
 
-The compatibility object declares v1 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
+The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
 
 Clients should retain the highest accepted manifest version. An unexplained rollback or conflicting content for the same version requires operator review.
 
-### GET /api/v1/launches
+### GET /api/v2/launches
 
 Returns a cursor-paginated feed with:
 
@@ -115,11 +115,11 @@ The snapshot binds the response to a chain boundary and includes a cursor. Consu
 
 The feed can return `status: "degraded"` when canonical event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete canonical event-log coverage instead makes launch-list and token-list routes return retryable `503` rather than a falsely complete list.
 
-### GET /api/v1/launches/{chainId}/{tokenAddress}
+### GET /api/v2/launches/{chainId}/{tokenAddress}
 
 Returns one normalized launch record by numeric chain ID and EVM token address. Name and ticker are not identity.
 
-### GET /api/v1/token-list
+### GET /api/v2/token-list
 
 Returns a token-list compatibility projection for wallets and simple consumers. It contains finalized records with complete token identity. Recognized launches with partial identity remain in the launch feed. Use the launch feed for full provenance, finality, capabilities, markets, and fees.
 
@@ -132,7 +132,7 @@ Use separate identities:
 - Market: `market.marketId`.
 - Raw event in a direct indexer: `chainId + transactionHash + logIndex`.
 
-Current first-party Classic and stock-paired contracts do not receive a launch ID from a permanent Custom Registry. Their stable `launchId` is derived from canonical chain and event provenance. A future Custom Registry may issue an ID directly. Do not describe every current launch ID as Registry-issued.
+Classic `launchId` values derive from canonical chain and launcher-event provenance. A Custom `launchId` is committed by the Custom Registry. Do not describe a Classic launch ID as Registry-issued or a Custom launch as accepted without registry evidence.
 
 Names, symbols, images, websites, creators, and social links are display or attribution data. They are not unique identity.
 
@@ -247,7 +247,7 @@ When present, the read-only adapter descriptor contains:
 - adapterId
 - verificationStatus: prelaunch, verified, or revoked
 
-These values are descriptive. v1 never returns adapter action URLs, transaction payloads, or execution authority. `available` does not itself authorize an action.
+These values are descriptive. v2 never returns adapter action URLs, transaction payloads, or execution authority. `available` does not itself authorize an action.
 
 `markets: []` is valid. It means no registered market is represented. Keep the launch visible. Do not invent a pool, pair, price, liquidity, volume, chart, quote, or trade button.
 
@@ -288,7 +288,7 @@ Use only:
 - Programmable Classic
 - Programmable Custom
 
-Existing first-party stock-paired records are Custom. Future hooks, auctions, contract-priced markets, games, delayed markets, multi-market designs, and designs without a catalog name remain Custom. Their mechanics belong in capabilities and markets, not in additional top-level categories.
+Classic requires an event from an enabled Classic launcher in the v2 manifest. Custom requires an event from the Custom Registry in the v2 manifest. Providers, factories, templates, tokens, hooks and markets may differ for every Custom launch; their mechanics belong in provenance, capabilities and markets, not additional top-level categories.
 
 ## Feature availability
 
@@ -305,9 +305,9 @@ If support is absent, keep the launch visible and mark the feature unavailable. 
 
 Do not count every ERC-20 transfer as a trade. Mints, burns, rewards, claims, refunds, bridge transfers, game settlement, and liquidity movement can transfer tokens without being volume.
 
-## v1 compatibility contract
+## v2 compatibility contract
 
-Within v1:
+Within v2:
 
 - Existing core fields are not removed.
 - Existing field names and types are not changed.
@@ -332,7 +332,7 @@ A conforming consumer must:
 - respect finality and reorg reconciliation;
 - validate the declared schema version.
 
-Do not claim software will never change. The correct claim is: no mandatory client changes within v1 for a conforming client; additions are backward compatible.
+Do not claim software will never change. The correct claim is: no mandatory client changes within v2 for a conforming client; additions are backward compatible.
 
 ## Finality and reorgs
 
@@ -387,7 +387,7 @@ Current Classic official paths include the 10 bps platform share inside the conf
 
 Future Custom official paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified. If creator fee is X, the supported path charges X plus 10 bps.
 
-Existing first-party records normalized as Custom may have deployment-specific behavior. Read `fees` and `verificationStatus`; do not infer added-on-top from category.
+Read `fees` and `verificationStatus`; do not infer added-on-top behavior from category.
 
 Scope is executed volume on the verified official Programmable market path. No executed trade means no volume fee. Ordinary token transfers, rewards, mints, burns, claims, bridge movements, refunds, and independently created third-party pools are outside that path unless a future verified record explicitly says otherwise.
 
@@ -491,11 +491,11 @@ Allowed:
 
 - One versioned integration for every Programmable launch.
 - Classic is live on Ethereum.
-- Existing first-party stock-paired records normalize as Custom.
-- Open Custom intake and the open Custom Registry are prelaunch.
+- Programmable Custom intake and the Custom Registry are prelaunch.
+- Historical Stock-Paired records are excluded from the v2 Programmable Custom classification.
 - Every registered launch is discoverable.
 - Charts, quotes, simulation, and execution are available only when declared by a verified adapter.
-- New compatible deployments appear through the manifest without mandatory v1 client changes.
+- New compatible deployments appear through the manifest without mandatory v2 client changes.
 
 Not allowed without separate evidence:
 
@@ -506,7 +506,7 @@ Not allowed without separate evidence:
 - a named terminal or wallet has integrated Programmable;
 - Uniswap endorses this platform;
 - registration proves external service, custody, reserve, or legal claims;
-- the v1 API authorizes transactions.
+- the v2 API authorizes transactions.
 
 ## Human documentation
 

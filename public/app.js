@@ -72,7 +72,7 @@ async function loadStatus() {
   if (!ledger) return;
 
   try {
-    const response = await fetch("/api/v1/status", {
+    const response = await fetch("/api/v2/status", {
       cache: "no-store",
       headers: { Accept: "application/json" },
     });

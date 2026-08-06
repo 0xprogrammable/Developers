@@ -1,0 +1,635 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/launch.schema.json",
+  "title": "Programmable launch",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "launchId",
+    "category",
+    "chainId",
+    "token",
+    "launch",
+    "verification",
+    "capabilities",
+    "markets",
+    "fees",
+    "extensions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "launchId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "category": {
+      "$ref": "common.schema.json#/$defs/category"
+    },
+    "chainId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "token": {
+      "$ref": "#/$defs/token"
+    },
+    "launch": {
+      "$ref": "#/$defs/launch"
+    },
+    "verification": {
+      "$ref": "#/$defs/verification"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "markets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/market"
+      }
+    },
+    "fees": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fee"
+      }
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "token": {
+      "type": "object",
+      "required": [
+        "address",
+        "identityStatus",
+        "name",
+        "symbol",
+        "decimals",
+        "totalSupplyRaw",
+        "supplyStatus",
+        "supplyAsOfBlock",
+        "metadata"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "identityStatus": {
+          "enum": [
+            "complete",
+            "partial"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "decimals": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 255
+        },
+        "totalSupplyRaw": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "supplyStatus": {
+          "enum": [
+            "unavailable",
+            "observed",
+            "verified"
+          ]
+        },
+        "supplyAsOfBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "metadata": {
+          "$ref": "#/$defs/tokenMetadata"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tokenMetadata": {
+      "type": "object",
+      "required": [
+        "description",
+        "imageUrl",
+        "links",
+        "trustStatus"
+      ],
+      "properties": {
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "imageUrl": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "links": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/tokenLinks"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trustStatus": {
+          "enum": [
+            "creator-declared",
+            "sanitized",
+            "unavailable"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "tokenLinks": {
+      "type": "object",
+      "properties": {
+        "website": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "x": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "telegram": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "documentation": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "docs": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "github": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "launch": {
+      "type": "object",
+      "required": [
+        "status",
+        "origin",
+        "modelId",
+        "modelVersion",
+        "publicSubmission",
+        "creatorAddress",
+        "transactionHash",
+        "blockNumber",
+        "blockHash",
+        "logIndex",
+        "timestamp",
+        "finality"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "prelaunch",
+            "live",
+            "paused",
+            "retired"
+          ]
+        },
+        "origin": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "modelId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "modelVersion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "publicSubmission": {
+          "type": "boolean"
+        },
+        "creatorAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "transactionHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "blockNumber": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "logIndex": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "timestamp": {
+          "$ref": "common.schema.json#/$defs/nullableIsoDateTime",
+          "description": "Block timestamp enrichment. Null does not hide an otherwise verified launcher event."
+        },
+        "finality": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "observed",
+            "confirmed",
+            "finalized",
+            "orphaned",
+            null
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "sourceId",
+        "launcherAddress",
+        "registryAddress",
+        "provenanceStatus",
+        "sourceUrl"
+      ],
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "launcherAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "registryAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "provenanceStatus": {
+          "enum": [
+            "prelaunch",
+            "partial",
+            "verified",
+            "revoked"
+          ]
+        },
+        "sourceUrl": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "capability": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "status",
+        "parameters"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "status": {
+          "enum": [
+            "active",
+            "conditional",
+            "inactive"
+          ]
+        },
+        "parameters": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/parameterValue"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "market": {
+      "type": "object",
+      "required": [
+        "marketId",
+        "kind",
+        "status",
+        "baseTokenAddress",
+        "quoteTokenAddress",
+        "protocol",
+        "poolId",
+        "poolAddress",
+        "hookAddress",
+        "support",
+        "adapter",
+        "metrics"
+      ],
+      "properties": {
+        "marketId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "active",
+            "paused",
+            "closed"
+          ]
+        },
+        "baseTokenAddress": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "quoteTokenAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "protocol": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "poolId": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "poolAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "hookAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "support": {
+          "type": "object",
+          "required": [
+            "discovery",
+            "charting",
+            "quote",
+            "simulation",
+            "execution"
+          ],
+          "properties": {
+            "discovery": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "charting": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "quote": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "simulation": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ]
+            },
+            "execution": {
+              "enum": [
+                "available",
+                "unavailable",
+                "unknown"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "adapter": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/adapter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "metrics": {
+          "$ref": "#/$defs/marketMetrics"
+        }
+      },
+      "additionalProperties": false
+    },
+    "marketMetrics": {
+      "type": "object",
+      "required": [
+        "price",
+        "liquidity",
+        "volume24h",
+        "updatedAt"
+      ],
+      "properties": {
+        "price": {
+          "$ref": "#/$defs/metric"
+        },
+        "liquidity": {
+          "$ref": "#/$defs/metric"
+        },
+        "volume24h": {
+          "$ref": "#/$defs/metric"
+        },
+        "updatedAt": {
+          "$ref": "common.schema.json#/$defs/nullableIsoDateTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "value",
+        "status"
+      ],
+      "properties": {
+        "value": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalAmount"
+        },
+        "status": {
+          "enum": [
+            "unavailable",
+            "estimated",
+            "verified"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "adapter": {
+      "type": "object",
+      "required": [
+        "kind",
+        "version",
+        "adapterId",
+        "verificationStatus"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "adapterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "verificationStatus": {
+          "enum": [
+            "prelaunch",
+            "verified",
+            "revoked"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "fee": {
+      "type": "object",
+      "required": [
+        "kind",
+        "ratePpm",
+        "rateBps",
+        "recipient",
+        "chargeMode",
+        "basis",
+        "assetAddress",
+        "verificationStatus"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "ratePpm": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "rateBps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "recipient": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "chargeMode": {
+          "enum": [
+            "included",
+            "added-on-top"
+          ]
+        },
+        "basis": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "assetAddress": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "verificationStatus": {
+          "enum": [
+            "prelaunch",
+            "verified",
+            "revoked"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "parameterScalar": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 1024
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parameterValue": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/parameterScalar"
+        },
+        {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/parameterScalar"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -9,34 +9,42 @@ Expose exactly two filters and labels:
 | API value | Display label | Include |
 | --- | --- | --- |
 | `category=classic` | `Programmable Classic` | Current and historical Classic releases |
-| `category=custom` | `Programmable Custom` | Listed first-party Custom launches and, after registry activation, registered Custom hooks |
+| `category=custom` | `Programmable Custom` | Launches accepted through the Custom Registry listed in the v2 manifest |
 
 Do not expose internal model IDs as additional public categories. A Programmable label establishes recognized launch provenance. It is not a universal audit, safety, liquidity, or execution guarantee.
 
 ## Current Ethereum sources
 
-Read launcher, hook, coordinator, event and start-block values from `GET /api/v1/manifest` in production. A complete backfill includes every deployment whose discovery state is enabled, including historical releases. Do not copy a deployment address into consumer code or documentation derived from this guide.
+Read launcher, hook, registry, event and start-block values from `GET /api/v2/manifest` in production. A complete Classic backfill includes every deployment whose discovery state is enabled, including historical releases. Do not copy a deployment address into consumer code or documentation derived from this guide.
 
 The manifest records the historical Classic V2 hook and the current Classic V3 hook separately. New launches follow the current deployment; historical tokens remain associated with the deployment that emitted their launch event.
 
-Stock Paired coordinators can also emit `StockPairedEthTokenLaunched` with topic `0x3cbc0759c7c8dbace314ab27d7865532835458ca67ba12308949012593d5cc36`. Treat this as coordinator evidence, not a third category.
-
 ## Current Custom boundary
 
-Existing first-party Stock Paired records are live as `custom`. Public Custom submission and the open Custom Registry are prelaunch. A future Custom hook enters the same `custom` feed only after recognized onchain launch evidence exists. Until then, do not synthesize or pre-register it.
+Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty until the manifest publishes an evidenced registry address and start block.
+
+Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
+
+After registry activation, every accepted Custom launch uses the same `custom` category even when its token, hook, factory, provider, market and template contracts differ from every prior launch. Those values stay on the individual record. The terminal classification comes from the registry event and its normalized v2 record.
 
 The baseline integration discovers every recognized launch. Charting, quotes, simulation, and execution are separate per-market capabilities and may be unavailable.
 
 ## Minimum integration
 
 1. Fetch `/.well-known/programmable.json`.
-2. Read `/api/v1/status` and `/api/v1/manifest`.
-3. Backfill `/api/v1/launches` until `page.hasMore` is false.
+2. Read `/api/v2/status` and `/api/v2/manifest`.
+3. Backfill `/api/v2/launches` until `page.hasMore` is false.
 4. Persist `launchId`, chain and token address, provenance, timestamp, finality, markets, capabilities, and fees.
 5. Use `page.nextCursor` to finish the current traversal, then persist `page.resumeCursor` and poll with `after`.
 6. Reconcile finality and explicit reorg states.
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
+
+For direct onchain consumers, apply this rule exactly:
+
+1. `Programmable Classic` requires a launch event from an enabled Classic launcher in the v2 manifest.
+2. `Programmable Custom` requires a launch event from the Custom Registry in the v2 manifest.
+3. No token, hook, factory, frontend, provider API or metadata field can self-assign either label.
 
 ## New-launch card
 
@@ -64,7 +72,7 @@ Current Classic V3 release evidence establishes a fixed supply of 1,000,000,000 
 
 Classic V3 has no token-level sell restriction. A terminal must still check current pool state, liquidity, quote, and simulation before enabling a trade. Do not translate the label into a generic `safe`, `audited`, `unruggable`, or `sellable` boolean.
 
-Custom is a launch family rather than one mechanic. Preserve source provenance, declared capabilities, market support, fee disclosure, and any release-specific audit evidence as separate fields. Do not infer an audit from `category=custom`.
+Custom is a launch family rather than one mechanic. Preserve provider, factory, template, hook, source provenance, declared capabilities, market support, fee disclosure and release-specific review evidence as separate fields. Do not infer an audit from `category=custom`.
 
 ## Market presentation
 
@@ -114,7 +122,7 @@ Enable quote, simulation, or execution only when the corresponding market suppor
 
 If support is absent or stale, keep the market discoverable and disable the action.
 
-The v1 feed is read-only. It does not return transaction payloads or authorize execution, even when a support state is `available`.
+The v2 feed is read-only. It does not return transaction payloads or authorize execution, even when a support state is `available`.
 
 ## Fees
 
@@ -122,7 +130,6 @@ Read `fees` per record and market path.
 
 - Classic currently includes the 10 bps Programmable share inside the configured trading fee.
 - Future Custom official paths add 10 bps on top of the creator-defined market fee only when verified.
-- Existing first-party records categorized Custom may have deployment-specific fee behavior.
 
 Never derive the charge mode from `category`.
 
@@ -145,10 +152,11 @@ Avoid a single `safe` filter. Provenance, finality, metadata trust, market suppo
 Test the client against repository fixtures for:
 
 - Classic with one market;
-- Custom first-party stock-paired record;
-- Custom with no market;
-- Custom with several markets;
-- Custom contract market without a pool;
+- registered Custom with no market;
+- registered Custom with several markets;
+- registered Custom contract market without a pool;
+- unregistered external launch excluded from the feed;
+- historical Stock-Paired launch excluded from v2;
 - paused market;
 - unknown future market kind;
 - unknown capability and extension;
