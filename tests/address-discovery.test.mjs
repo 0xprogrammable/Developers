@@ -85,6 +85,7 @@ describe("documentation contract", () => {
       schemaIndex.schemas.map(({ name }) => name),
       [
         "common",
+        "canonical-custom-registry-record-v3",
         "launch-feed",
         "launch",
         "manifest",
