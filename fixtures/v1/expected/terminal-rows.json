@@ -1,6 +1,5 @@
 [
   {
-    "platformId": "programmable",
     "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
     "category": "Programmable Classic",
     "chainId": 1,
@@ -20,7 +19,6 @@
     "hasActiveMarket": true
   },
   {
-    "platformId": "programmable",
     "launchId": "eip155:1:0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa:4",
     "category": "Programmable Classic",
     "chainId": 1,
@@ -40,7 +38,6 @@
     "hasActiveMarket": true
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:custom-no-market-fixture",
     "category": "Programmable Custom",
     "chainId": 1,
@@ -59,7 +56,6 @@
     "hasActiveMarket": false
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:custom-contract-market-fixture",
     "category": "Programmable Custom",
     "chainId": 1,
@@ -79,7 +75,6 @@
     "hasActiveMarket": false
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:dynamic-supply-burn-fixture",
     "category": "Programmable Custom",
     "chainId": 1,
@@ -99,7 +94,6 @@
     "hasActiveMarket": false
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:game-rewards-fixture",
     "category": "Programmable Custom",
     "chainId": 1,
@@ -119,7 +113,6 @@
     "hasActiveMarket": false
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:multiple-markets-fixture",
     "category": "Programmable Custom",
     "chainId": 1,
@@ -144,7 +137,6 @@
     "hasActiveMarket": false
   },
   {
-    "platformId": "programmable",
     "launchId": "prelaunch:future-capability-fixture",
     "category": "Programmable Custom",
     "chainId": 1,

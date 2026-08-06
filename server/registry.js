@@ -11,6 +11,11 @@ import {
   REQUEST_LIMITS,
 } from "./constants.js";
 import { deriveUniswapV4PoolId } from "./keccak.js";
+import {
+  normalizeRegistryCustomItemV3,
+  REGISTRY_V3_FEED_SOURCE_ID,
+  validateRegistryCustomFeedItemV3,
+} from "./registry-v3.js";
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/;
@@ -499,12 +504,15 @@ function validateCheckpoint(value) {
     throw new TypeError("Registry custom-feed checkpoint is invalid");
   }
   let expected = 1n;
+  let feedGeneration = null;
   for (const item of value.records) {
-    if (!exactKeys(item, ["generation", "projectionKey", "recordHash", "record"]) ||
+    const current = "projectionDigest" in item ? "v3" : "v2";
+    feedGeneration ??= current;
+    if (feedGeneration !== current ||
       !safeDecimal(item.generation, true) || BigInt(item.generation) !== expected ||
-      item.projectionKey !== `custom:${item.record?.launchId}` || !DIGEST.test(item.recordHash) ||
-      !validateRegistryCustomRecord(item.record) ||
-      canonicalSha256(RECORD_SCHEMA, item.record) !== item.recordHash) {
+      !validateRegistryFeedItem(item, current === "v3"
+        ? REGISTRY_V3_FEED_SOURCE_ID
+        : FEED_SOURCE_ID)) {
       throw new TypeError("Registry custom-feed checkpoint is invalid");
     }
     expected += 1n;
@@ -590,7 +598,8 @@ function validateRequestBoundAccessToken(token, configuration, request) {
 function validateFeedPage(page, previous, now) {
   if (!exactKeys(page, ["schemaVersion", "source", "snapshot", "items", "page"]) || page.schemaVersion !== FEED_SCHEMA ||
     !exactKeys(page.source, ["sourceId", "status", "completeness", "freshness", "checkedAt", "latestAcceptedAt"]) ||
-    page.source.sourceId !== FEED_SOURCE_ID || page.source.status !== "ready" ||
+    ![FEED_SOURCE_ID, REGISTRY_V3_FEED_SOURCE_ID].includes(page.source.sourceId) ||
+    page.source.status !== "ready" ||
     page.source.completeness !== "complete" || page.source.freshness !== "current" ||
     !canonicalInstant(page.source.checkedAt) || (page.source.latestAcceptedAt !== null && !canonicalInstant(page.source.latestAcceptedAt)) ||
     !exactKeys(page.snapshot, ["highWaterGeneration", "indexedAt"]) || !safeDecimal(page.snapshot.highWaterGeneration) ||
@@ -610,9 +619,21 @@ function validateFeedPage(page, previous, now) {
     throw new TypeError("Registry custom feed is not current");
   }
   if (previous && (page.snapshot.highWaterGeneration !== previous.highWaterGeneration ||
+    page.source.sourceId !== previous.sourceId ||
     page.source.latestAcceptedAt !== previous.latestAcceptedAt)) {
     throw new TypeError("Registry custom-feed snapshot changed during traversal");
   }
+}
+
+function validateRegistryFeedItem(item, sourceId) {
+  if (sourceId === REGISTRY_V3_FEED_SOURCE_ID) {
+    return validateRegistryCustomFeedItemV3(item);
+  }
+  return exactKeys(item, ["generation", "projectionKey", "recordHash", "record"]) &&
+    safeDecimal(item.generation, true) &&
+    item.projectionKey === `custom:${item.record?.launchId}` &&
+    DIGEST.test(item.recordHash) && validateRegistryCustomRecord(item.record) &&
+    canonicalSha256(RECORD_SCHEMA, item.record) === item.recordHash;
 }
 
 export async function readRegistryCustomFeed(options = {}) {
@@ -631,6 +652,11 @@ export async function readRegistryCustomFeed(options = {}) {
     ? null
     : validateCheckpoint(await checkpointStore.load(stateKey));
   const records = checkpoint === null ? [] : [...checkpoint.records];
+  const checkpointSourceId = records.length === 0
+    ? null
+    : "projectionDigest" in records[0]
+      ? REGISTRY_V3_FEED_SOURCE_ID
+      : FEED_SOURCE_ID;
   let cursor = checkpoint?.resumeCursor ?? null;
   let previous = null;
   let expectedGeneration = BigInt(checkpoint?.highWaterGeneration ?? "0") + 1n;
@@ -673,16 +699,26 @@ export async function readRegistryCustomFeed(options = {}) {
       }
       const page = parseCanonicalJson(await readBoundedText(response, REQUEST_LIMITS.registryResponseBytes, "Registry custom-feed response"));
       validateFeedPage(page, previous, now());
+      if (
+        checkpointSourceId !== null &&
+        checkpointSourceId !== page.source.sourceId
+      ) {
+        throw new TypeError("Registry custom-feed source changed across checkpoint");
+      }
       if (BigInt(page.snapshot.highWaterGeneration) < checkpointHighWater) {
         throw new TypeError("Registry custom-feed snapshot rolled back");
       }
-      previous ??= { highWaterGeneration: page.snapshot.highWaterGeneration, latestAcceptedAt: page.source.latestAcceptedAt, source: page.source, snapshot: page.snapshot };
+      previous ??= {
+        highWaterGeneration: page.snapshot.highWaterGeneration,
+        latestAcceptedAt: page.source.latestAcceptedAt,
+        sourceId: page.source.sourceId,
+        source: page.source,
+        snapshot: page.snapshot,
+      };
       for (const item of page.items) {
-        if (!exactKeys(item, ["generation", "projectionKey", "recordHash", "record"]) ||
-          !safeDecimal(item.generation, true) || BigInt(item.generation) !== expectedGeneration ||
-          item.projectionKey !== `custom:${item.record?.launchId}` || !DIGEST.test(item.recordHash) ||
-          !validateRegistryCustomRecord(item.record) ||
-          canonicalSha256(RECORD_SCHEMA, item.record) !== item.recordHash) {
+        if (!safeDecimal(item.generation, true) ||
+          BigInt(item.generation) !== expectedGeneration ||
+          !validateRegistryFeedItem(item, page.source.sourceId)) {
           throw new TypeError("Registry custom-feed item is invalid");
         }
         expectedGeneration += 1n;
@@ -810,6 +846,9 @@ function publicMarket(record, market, assets) {
 }
 
 export function normalizeRegistryCustomItem(item) {
+  if ("projectionDigest" in (item ?? {})) {
+    return normalizeRegistryCustomItemV3(item);
+  }
   if (!item || !validateRegistryCustomRecord(item.record) ||
     canonicalSha256(RECORD_SCHEMA, item.record) !== item.recordHash) {
     throw new TypeError("Registry custom launch item is invalid");

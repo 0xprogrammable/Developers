@@ -1,0 +1,822 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
+  "title": "Programmable integration manifest",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "manifestVersion",
+    "generatedAt",
+    "chainId",
+    "network",
+    "publicCategories",
+    "deployments",
+    "customRegistry",
+    "platformFee",
+    "endpoints",
+    "compatibility"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://developers.programmable.family/schemas/v2/manifest.schema.json"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "platformId": {
+      "const": "programmable"
+    },
+    "manifestVersion": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "generatedAt": {
+      "$ref": "common.schema.json#/$defs/isoDateTime"
+    },
+    "chainId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "chains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/chainProfile"
+      }
+    },
+    "network": {
+      "type": "object",
+      "required": [
+        "name",
+        "caip2"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "explorerUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "publicCategories": {
+      "type": "object",
+      "required": [
+        "classic",
+        "custom"
+      ],
+      "properties": {
+        "classic": {
+          "$ref": "#/$defs/categoryState"
+        },
+        "custom": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/categoryState"
+            },
+            {
+              "type": "object",
+              "required": [
+                "note"
+              ],
+              "properties": {
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deployment"
+      }
+    },
+    "customRegistry": {
+      "$ref": "#/$defs/customRegistry"
+    },
+    "registryGenerations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/registryGeneration"
+      }
+    },
+    "partnerTemplates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/partnerTemplate"
+      }
+    },
+    "platformFee": {
+      "$ref": "#/$defs/platformFee"
+    },
+    "endpoints": {
+      "type": "object",
+      "required": [
+        "wellKnown",
+        "status",
+        "manifest",
+        "launches",
+        "tokenList",
+        "openApi"
+      ],
+      "properties": {
+        "wellKnown": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "manifest": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "launches": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "tokenList": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "openApi": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compatibility": {
+      "type": "object",
+      "required": [
+        "majorVersion",
+        "additiveChangesOnly",
+        "noMandatoryClientChangesWithinMajorVersion",
+        "unknownFields",
+        "unknownCapabilities",
+        "unknownMarketKinds",
+        "deploymentDiscovery",
+        "hardcodeDeploymentAddresses"
+      ],
+      "properties": {
+        "majorVersion": {
+          "const": 2
+        },
+        "additiveChangesOnly": {
+          "const": true
+        },
+        "noMandatoryClientChangesWithinMajorVersion": {
+          "const": true
+        },
+        "unknownFields": {
+          "const": "ignore"
+        },
+        "unknownCapabilities": {
+          "const": "preserve"
+        },
+        "unknownMarketKinds": {
+          "const": "display-as-unsupported"
+        },
+        "deploymentDiscovery": {
+          "const": "refresh-manifest"
+        },
+        "hardcodeDeploymentAddresses": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "chainProfile": {
+      "type": "object",
+      "required": [
+        "chainId",
+        "caip2",
+        "name",
+        "status",
+        "manifestUrl"
+      ],
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "retired"
+          ]
+        },
+        "manifestUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryGeneration": {
+      "type": "object",
+      "required": [
+        "chainId",
+        "caip2",
+        "generation",
+        "status",
+        "address",
+        "runtimeCodeKeccak256",
+        "startBlock",
+        "endBlock",
+        "authorizedWriters",
+        "registryEventSetHash",
+        "events",
+        "abiUrl",
+        "finalityConfirmations"
+      ],
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "generation": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "status": {
+          "enum": [
+            "live",
+            "paused",
+            "retired"
+          ]
+        },
+        "address": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "runtimeCodeKeccak256": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "endBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "authorizedWriters": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/evmAddress"
+          }
+        },
+        "registryEventSetHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "events": {
+          "type": "object",
+          "required": [
+            "registered",
+            "approvalAuthorized",
+            "provenance",
+            "review",
+            "attribution",
+            "feePolicy",
+            "feeEvidence",
+            "finalized",
+            "corrected",
+            "revoked"
+          ],
+          "properties": {
+            "registered": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "approvalAuthorized": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "provenance": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "review": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "attribution": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "feePolicy": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "feeEvidence": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "finalized": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "corrected": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "revoked": {
+              "$ref": "#/$defs/registryEvent"
+            }
+          },
+          "additionalProperties": false
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "finalityConfirmations": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryEvent": {
+      "type": "object",
+      "required": [
+        "signature",
+        "topic0"
+      ],
+      "properties": {
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "topic0": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        }
+      },
+      "additionalProperties": false
+    },
+    "partnerTemplate": {
+      "type": "object",
+      "required": [
+        "partnerId",
+        "partnerName",
+        "status",
+        "recipient",
+        "chainId",
+        "templateId",
+        "templateVersion",
+        "repository",
+        "commit",
+        "runtimeHashes",
+        "totalPartnershipFeeBps",
+        "partnerShareBps",
+        "programmableShareBps",
+        "programmableRecipient",
+        "chargeMode",
+        "basis",
+        "currency",
+        "accrual",
+        "claim",
+        "activationBlock",
+        "paused",
+        "retired",
+        "verificationEvidenceHash"
+      ],
+      "properties": {
+        "partnerId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "partnerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "active",
+            "paused",
+            "retired"
+          ]
+        },
+        "recipient": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "templateId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "templateVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "repository": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "runtimeHashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "common.schema.json#/$defs/hash32"
+          }
+        },
+        "totalPartnershipFeeBps": {
+          "const": 20
+        },
+        "partnerShareBps": {
+          "const": 15
+        },
+        "programmableShareBps": {
+          "const": 5
+        },
+        "programmableRecipient": {
+          "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+        },
+        "chargeMode": {
+          "const": "partner-template-enforced"
+        },
+        "basis": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "currency": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "accrual": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "claim": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "activationBlock": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "retired": {
+          "type": "boolean"
+        },
+        "verificationEvidenceHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "categoryState": {
+      "type": "object",
+      "required": [
+        "discoveryStatus",
+        "publicSubmissionStatus"
+      ],
+      "properties": {
+        "discoveryStatus": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "unavailable"
+          ]
+        },
+        "publicSubmissionStatus": {
+          "enum": [
+            "open",
+            "prelaunch",
+            "closed",
+            "not-applicable"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployment": {
+      "type": "object",
+      "required": [
+        "deploymentId",
+        "category",
+        "modelId",
+        "modelVersion",
+        "origin",
+        "publicSubmission",
+        "lifecycle",
+        "discovery",
+        "startBlock",
+        "endBlock",
+        "contracts"
+      ],
+      "properties": {
+        "deploymentId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "category": {
+          "$ref": "common.schema.json#/$defs/category"
+        },
+        "modelId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "modelVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "origin": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "publicSubmission": {
+          "type": "boolean"
+        },
+        "lifecycle": {
+          "enum": [
+            "retired",
+            "legacy",
+            "current"
+          ]
+        },
+        "discovery": {
+          "enum": [
+            "enabled",
+            "disabled"
+          ]
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "endBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "contracts": {
+          "type": "object",
+          "required": [
+            "launcher"
+          ],
+          "properties": {
+            "launcher": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "coordinator": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "hook": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            }
+          },
+          "additionalProperties": false
+        },
+        "evidence": {
+          "$ref": "#/$defs/deploymentEvidence"
+        }
+      },
+      "additionalProperties": false
+    },
+    "deploymentEvidence": {
+      "type": "object",
+      "required": [
+        "sourceRepository",
+        "sourceCommit",
+        "sourcePath",
+        "sourceCommitment",
+        "launcherRuntimeCodeHash",
+        "launcherDeploymentTransaction"
+      ],
+      "properties": {
+        "sourceRepository": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "sourcePath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sourceCommitment": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "launcherRuntimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "launcherDeploymentTransaction": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "explorerUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "customRegistry": {
+      "type": "object",
+      "required": [
+        "category",
+        "modelId",
+        "status",
+        "publicSubmissionsEnabled",
+        "address",
+        "startBlock",
+        "note"
+      ],
+      "properties": {
+        "category": {
+          "const": "custom"
+        },
+        "modelId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "status": {
+          "enum": [
+            "prelaunch",
+            "live",
+            "retired"
+          ]
+        },
+        "publicSubmissionsEnabled": {
+          "type": "boolean"
+        },
+        "address": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "generation": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "eventSignature": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "eventTopic": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "finalityConfirmations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "platformFee": {
+      "type": "object",
+      "required": [
+        "ratePpm",
+        "rateBps",
+        "recipient",
+        "scope",
+        "classic",
+        "customPublicSubmissions"
+      ],
+      "properties": {
+        "ratePpm": {
+          "const": "1000"
+        },
+        "rateBps": {
+          "const": "10"
+        },
+        "recipient": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classic": {
+          "$ref": "#/$defs/feeState"
+        },
+        "customPublicSubmissions": {
+          "$ref": "#/$defs/feeState"
+        },
+        "nativeCustom": {
+          "type": "object",
+          "required": [
+            "totalFeeBps",
+            "programmableShareBps",
+            "scope"
+          ],
+          "properties": {
+            "totalFeeBps": {
+              "const": 10
+            },
+            "programmableShareBps": {
+              "const": 10
+            },
+            "scope": {
+              "const": "verified-official-market-path-only"
+            }
+          },
+          "additionalProperties": false
+        },
+        "partnerTemplate": {
+          "type": "object",
+          "required": [
+            "totalFeeBps",
+            "partnerShareBps",
+            "programmableShareBps",
+            "programmableRecipient",
+            "chargeMode",
+            "additionalNativeFeeBps"
+          ],
+          "properties": {
+            "totalFeeBps": {
+              "const": 20
+            },
+            "partnerShareBps": {
+              "const": 15
+            },
+            "programmableShareBps": {
+              "const": 5
+            },
+            "programmableRecipient": {
+              "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+            },
+            "chargeMode": {
+              "const": "partner-template-enforced"
+            },
+            "additionalNativeFeeBps": {
+              "const": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "feeState": {
+      "type": "object",
+      "required": [
+        "status",
+        "chargeMode"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "verified",
+            "revoked"
+          ]
+        },
+        "chargeMode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "included",
+            "added-on-top",
+            "policy-specific-no-overlay",
+            null
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

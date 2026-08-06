@@ -7,6 +7,7 @@ import {
 
 import {
   API_SCHEMA_VERSION,
+  API_V2_SCHEMA_VERSION,
   REQUEST_LIMITS,
 } from "./constants.js";
 
@@ -54,7 +55,10 @@ export function json(req, res, statusCode, payload, options = {}) {
   const requestId = options.requestId ?? randomUUID();
 
   applyCors(res);
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader(
+    "Content-Type",
+    options.contentType ?? "application/json; charset=utf-8",
+  );
   res.setHeader("ETag", etag);
   res.setHeader("X-Request-Id", requestId);
   res.setHeader(
@@ -85,7 +89,9 @@ export function error(req, res, statusCode, code, message, details) {
     res,
     statusCode,
     {
-      schemaVersion: API_SCHEMA_VERSION,
+      schemaVersion: String(req?.url ?? "").includes("/api/v2/")
+        ? API_V2_SCHEMA_VERSION
+        : API_SCHEMA_VERSION,
       type: `https://developers.programmable.family/problems/${normalizedCode}`,
       title: message,
       status: statusCode,
@@ -96,7 +102,12 @@ export function error(req, res, statusCode, code, message, details) {
         ? {}
         : { extensions: { "programmable/details": details } }),
     },
-    { cacheControl: "no-store", apiStatus: "error", requestId },
+    {
+      cacheControl: "no-store",
+      apiStatus: "error",
+      contentType: "application/problem+json; charset=utf-8",
+      requestId,
+    },
   );
 }
 
@@ -160,6 +171,13 @@ export function parseChainId(value, supportedChainId) {
     : null;
 }
 
+export function parseEvmChainId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (!/^[1-9]\d*$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
 export function parseLimit(value) {
   if (value === null || value === undefined || value === "") {
     return REQUEST_LIMITS.defaultPageSize;
@@ -177,7 +195,8 @@ export function parseLimit(value) {
 }
 
 function validScope(value) {
-  return value === "all" || value === "classic" || value === "custom";
+  return value === "all" || value === "classic" || value === "custom" ||
+    /^v2:(?:all|classic|custom):(?:all|[1-9]\d*)$/.test(value);
 }
 
 function cursorSigningKey() {
@@ -285,6 +304,10 @@ function validRegistryGeneration(value) {
 
 export function cursorScope(category) {
   return category ?? "all";
+}
+
+export function cursorScopeV2(category, chainId = null) {
+  return `v2:${category ?? "all"}:${chainId ?? "all"}`;
 }
 
 export function encodeResumeCursor(

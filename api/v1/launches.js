@@ -20,7 +20,7 @@ import {
   queryParametersAllowed,
   queryValue,
 } from "../../server/http.js";
-import { publicLaunch } from "../../server/normalize.js";
+import { isV1PublicLaunch, publicLaunch } from "../../server/normalize.js";
 
 const EMPTY_HIGH_WATER =
   "0000000000000000:0000000000:0000000000:0x0000000000000000000000000000000000000000";
@@ -94,9 +94,10 @@ export function launchFeedPayload(
   { category = null, limit, cursor = null, after = null },
 ) {
   const scope = cursorScope(category);
+  const v1Records = dataset.records.filter(isV1PublicLaunch);
   const baseRecords = category
-    ? dataset.records.filter((record) => record.category === category)
-    : dataset.records;
+    ? v1Records.filter((record) => record.category === category)
+    : v1Records;
   const newestSortKey = baseRecords[0]?.sortKey ?? EMPTY_HIGH_WATER;
   const currentRegistryGeneration = currentRegistryHighWater(dataset, scope);
   const highWater = cursor

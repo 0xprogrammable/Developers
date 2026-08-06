@@ -24,10 +24,6 @@
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
     },
-    "platformId": {
-      "const": "programmable",
-      "description": "Stable identity for records produced by this integration."
-    },
     "manifestVersion": {
       "type": "string",
       "pattern": "^[1-9][0-9]*$"

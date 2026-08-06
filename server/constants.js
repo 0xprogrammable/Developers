@@ -1,5 +1,6 @@
-export const API_SCHEMA_VERSION = "1.1.0";
-export const LAUNCH_SCHEMA_VERSION = "1.1.0";
+export const API_SCHEMA_VERSION = "1.0.0";
+export const LAUNCH_SCHEMA_VERSION = "1.0.0";
+export const API_V2_SCHEMA_VERSION = "2.0.0";
 export const PLATFORM_ID = "programmable";
 
 export const CHAIN_ID = 1;

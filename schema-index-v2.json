@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "2.0.0",
+  "apiVersion": "2",
+  "baseUrl": "https://developers.programmable.family/schemas/v2/",
+  "schemas": [
+    {
+      "name": "common",
+      "url": "https://developers.programmable.family/schemas/v2/common.schema.json"
+    },
+    {
+      "name": "canonical-custom-registry-record-v3",
+      "url": "https://developers.programmable.family/schemas/v2/custom-launch-registry-record-v3.schema.json"
+    },
+    {
+      "name": "launch-feed",
+      "url": "https://developers.programmable.family/schemas/v2/launch-feed.schema.json"
+    },
+    {
+      "name": "launch",
+      "url": "https://developers.programmable.family/schemas/v2/launch.schema.json"
+    },
+    {
+      "name": "manifest",
+      "url": "https://developers.programmable.family/schemas/v2/manifest.schema.json"
+    },
+    {
+      "name": "problem",
+      "url": "https://developers.programmable.family/schemas/v2/problem.schema.json"
+    },
+    {
+      "name": "status",
+      "url": "https://developers.programmable.family/schemas/v2/status.schema.json"
+    },
+    {
+      "name": "token-list",
+      "url": "https://developers.programmable.family/schemas/v2/token-list.schema.json"
+    }
+  ]
+}

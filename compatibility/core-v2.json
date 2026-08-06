@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "2.0.0",
+  "publicCategories": [
+    "classic",
+    "custom"
+  ],
+  "classification": {
+    "classic": {
+      "label": "Programmable Classic",
+      "requiredEvidence": "recognized-classic-launcher-event"
+    },
+    "custom": {
+      "label": "Programmable Custom",
+      "requiredEvidence": "programmable-custom-registry-event"
+    }
+  },
+  "excludedModels": [
+    "stock-paired"
+  ],
+  "launchRequired": [
+    "schemaVersion",
+    "launchId",
+    "category",
+    "chainId",
+    "token",
+    "launch",
+    "verification",
+    "capabilities",
+    "markets",
+    "fees",
+    "extensions"
+  ],
+  "feedRequired": [
+    "schemaVersion",
+    "status",
+    "snapshot",
+    "items",
+    "page"
+  ],
+  "forwardCompatibility": {
+    "unknownFields": "ignore-at-consumer-boundary",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "breakingChangesRequireNewMajor": true
+  }
+}

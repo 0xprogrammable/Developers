@@ -618,9 +618,26 @@ export function normalizeGapLaunch(decoded, metadata, block) {
 }
 
 export function publicLaunch(record) {
-  const { sortKey: _sortKey, ...publicRecord } = record;
+  const {
+    sortKey: _sortKey,
+    platformId: _platformId,
+    assets: _assets,
+    ...publicRecord
+  } = record;
   const { transactionIndex: _transactionIndex, ...launch } = publicRecord.launch;
   return { ...publicRecord, launch };
+}
+
+export function isV1PublicLaunch(record) {
+  return Boolean(
+    record &&
+      !(
+        record.launch?.publicSubmission === true &&
+        String(record.verification?.sourceId).startsWith(
+          "programmable-custom-launch-registry",
+        )
+      ),
+  );
 }
 
 export function compareLaunchesDescending(a, b) {

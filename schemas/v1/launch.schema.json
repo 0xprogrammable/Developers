@@ -20,10 +20,6 @@
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
     },
-    "platformId": {
-      "const": "programmable",
-      "description": "Stable platform identity assigned by the trusted Programmable projection. This is not creator metadata."
-    },
     "launchId": {
       "type": "string",
       "minLength": 1,
@@ -38,23 +34,7 @@
       "maximum": 9007199254740991
     },
     "token": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/token"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "ERC-20 convenience projection when the authenticated launch advertises exactly one primary token. Null for truthful project-only launches."
-    },
-    "assets": {
-      "type": "array",
-      "maxItems": 1024,
-      "items": {
-        "$ref": "#/$defs/asset"
-      },
-      "description": "Identity-first authenticated asset graph. Optional on legacy v1 records."
+      "$ref": "#/$defs/token"
     },
     "launch": {
       "$ref": "#/$defs/launch"
@@ -115,14 +95,16 @@
             "string",
             "null"
           ],
-          "maxLength": 256
+          "minLength": 1,
+          "maxLength": 128
         },
         "symbol": {
           "type": [
             "string",
             "null"
           ],
-          "maxLength": 64
+          "minLength": 1,
+          "maxLength": 32
         },
         "decimals": {
           "type": [
@@ -186,243 +168,6 @@
             "sanitized",
             "unavailable"
           ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "asset": {
-      "type": "object",
-      "required": [
-        "assetId",
-        "role",
-        "identity",
-        "provenance",
-        "identityEvidenceHash",
-        "onchainMetadata",
-        "onchainMetadataHash"
-      ],
-      "properties": {
-        "assetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "role": {
-          "enum": [
-            "root",
-            "primary-token",
-            "secondary-token",
-            "pool",
-            "hook",
-            "controller"
-          ]
-        },
-        "identity": {
-          "$ref": "#/$defs/assetIdentity"
-        },
-        "provenance": {
-          "$ref": "#/$defs/assetProvenance"
-        },
-        "identityEvidenceHash": {
-          "$ref": "#/$defs/sha256Digest"
-        },
-        "onchainMetadata": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/onchainTokenMetadata"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "onchainMetadataHash": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/sha256Digest"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "assetProvenance": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "kind"
-          ],
-          "properties": {
-            "kind": {
-              "const": "launch-produced"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "kind",
-            "relationship"
-          ],
-          "properties": {
-            "kind": {
-              "const": "protocol-external"
-            },
-            "relationship": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "kind",
-            "relationship",
-            "dependencyId",
-            "capabilityId",
-            "reviewedRole",
-            "chainProfileId",
-            "identity",
-            "expectedRuntimeCodeKeccak256",
-            "expectedRuntimeCodeSha256",
-            "reviewEvidenceBindingHash",
-            "interfaceEvidenceBindingHash",
-            "stateObservationIds"
-          ],
-          "properties": {
-            "kind": {
-              "const": "adopted-external"
-            },
-            "relationship": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "dependencyId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "capabilityId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "reviewedRole": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "chainProfileId": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 256
-            },
-            "identity": {
-              "$ref": "#/$defs/assetIdentity"
-            },
-            "expectedRuntimeCodeKeccak256": {
-              "$ref": "common.schema.json#/$defs/hash32"
-            },
-            "expectedRuntimeCodeSha256": {
-              "$ref": "#/$defs/sha256Digest"
-            },
-            "reviewEvidenceBindingHash": {
-              "$ref": "#/$defs/sha256Digest"
-            },
-            "interfaceEvidenceBindingHash": {
-              "$ref": "#/$defs/sha256Digest"
-            },
-            "stateObservationIds": {
-              "type": "array",
-              "maxItems": 256,
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "assetIdentity": {
-      "type": "object",
-      "required": [
-        "namespace",
-        "value"
-      ],
-      "properties": {
-        "namespace": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "value": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 1024
-        }
-      },
-      "additionalProperties": false
-    },
-    "sha256Digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
-    },
-    "onchainTokenMetadata": {
-      "type": "object",
-      "required": [
-        "schemaVersion",
-        "status",
-        "source",
-        "evidenceHash"
-      ],
-      "properties": {
-        "schemaVersion": {
-          "const": "programmable.discoverable-launch-token-metadata.v2"
-        },
-        "status": {
-          "enum": [
-            "available",
-            "unavailable"
-          ]
-        },
-        "source": {
-          "const": "finality-resolved-onchain"
-        },
-        "name": {
-          "type": "string",
-          "maxLength": 256
-        },
-        "symbol": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "decimals": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 255
-        },
-        "reason": {
-          "enum": [
-            "onchain-read-unavailable",
-            "non-standard-metadata",
-            "invalid-metadata"
-          ]
-        },
-        "evidenceHash": {
-          "$ref": "#/$defs/sha256Digest"
         }
       },
       "additionalProperties": false
@@ -640,26 +385,8 @@
             "closed"
           ]
         },
-        "sourceStatus": {
-          "enum": [
-            "active",
-            "paused",
-            "closed",
-            "verification_pending"
-          ]
-        },
-        "verificationStatus": {
-          "enum": [
-            "verified",
-            "unverified",
-            "verification-pending"
-          ]
-        },
-        "verification": {
-          "$ref": "#/$defs/marketVerification"
-        },
         "baseTokenAddress": {
-          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+          "$ref": "common.schema.json#/$defs/evmAddress"
         },
         "quoteTokenAddress": {
           "$ref": "common.schema.json#/$defs/nullableEvmAddress"
@@ -740,163 +467,6 @@
         },
         "metrics": {
           "$ref": "#/$defs/marketMetrics"
-        },
-        "assetReferences": {
-          "$ref": "#/$defs/marketAssetReferences"
-        },
-        "evidenceHash": {
-          "$ref": "#/$defs/sha256Digest"
-        },
-        "uniswapV4": {
-          "oneOf": [
-            {
-              "$ref": "#/$defs/uniswapV4"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "marketVerification": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "status",
-            "verifierAdapterId",
-            "verifierBindingHash"
-          ],
-          "properties": {
-            "status": {
-              "const": "verified"
-            },
-            "verifierAdapterId": {
-              "$ref": "common.schema.json#/$defs/openIdentifier"
-            },
-            "verifierBindingHash": {
-              "$ref": "#/$defs/sha256Digest"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "status",
-            "verifierAdapterId",
-            "verifierBindingHash"
-          ],
-          "properties": {
-            "status": {
-              "const": "pending"
-            },
-            "verifierAdapterId": {
-              "type": "null"
-            },
-            "verifierBindingHash": {
-              "type": "null"
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "marketAssetReferences": {
-      "type": "object",
-      "required": [
-        "marketAssetId",
-        "baseAssetId",
-        "quoteAssetId"
-      ],
-      "properties": {
-        "marketAssetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "baseAssetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "quoteAssetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      },
-      "additionalProperties": false
-    },
-    "uniswapV4": {
-      "type": "object",
-      "required": [
-        "poolId",
-        "poolManager",
-        "poolManagerReviewEvidenceBindingHash",
-        "poolManagerInterfaceEvidenceBindingHash",
-        "poolManagerRuntimeCodeKeccak256",
-        "poolManagerRuntimeCodeSha256",
-        "currency0AssetId",
-        "currency1AssetId",
-        "feeRaw",
-        "dynamicFee",
-        "tickSpacing",
-        "hooksAssetId",
-        "poolKeyEvidenceHash"
-      ],
-      "properties": {
-        "poolId": {
-          "$ref": "common.schema.json#/$defs/hash32"
-        },
-        "poolManager": {
-          "$ref": "#/$defs/assetIdentity"
-        },
-        "poolManagerReviewEvidenceBindingHash": {
-          "$ref": "#/$defs/sha256Digest"
-        },
-        "poolManagerInterfaceEvidenceBindingHash": {
-          "$ref": "#/$defs/sha256Digest"
-        },
-        "poolManagerRuntimeCodeKeccak256": {
-          "$ref": "common.schema.json#/$defs/hash32"
-        },
-        "poolManagerRuntimeCodeSha256": {
-          "$ref": "#/$defs/sha256Digest"
-        },
-        "currency0AssetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "currency1AssetId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "feeRaw": {
-          "$ref": "common.schema.json#/$defs/decimalString"
-        },
-        "dynamicFee": {
-          "type": "boolean"
-        },
-        "tickSpacing": {
-          "type": "string",
-          "maxLength": 16,
-          "pattern": "^(0|-?[1-9][0-9]*)$"
-        },
-        "hooksAssetId": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 256
-        },
-        "poolKeyEvidenceHash": {
-          "$ref": "#/$defs/sha256Digest"
         }
       },
       "additionalProperties": false

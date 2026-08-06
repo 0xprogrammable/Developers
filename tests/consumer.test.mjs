@@ -14,6 +14,10 @@ import {
 import { launchIdentity } from "../examples/lib/programmable-client.mjs";
 
 describe("terminal consumer contract", () => {
+  const trustOfficialV1Fixture = (launch) => ({
+    ...launch,
+    platformId: "programmable",
+  });
   test("never upgrades an unknown category or platform identity to Programmable Custom", async () => {
     const fixture = await readJson(
       path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
@@ -45,11 +49,8 @@ describe("terminal consumer contract", () => {
 
   test("keeps a trusted project-only launch visible without inventing token fields", async () => {
     const launch = await readJson(
-      path.join(REPOSITORY_ROOT, "fixtures/v1/launches/custom-no-market-prelaunch.json"),
+      path.join(REPOSITORY_ROOT, "fixtures/v2/launches/custom-project-only-prelaunch.json"),
     );
-    launch.schemaVersion = "1.1.0";
-    launch.token = null;
-    launch.assets = [];
     const row = terminalRow(launch);
     assert.equal(row.category, "Programmable Custom");
     assert.equal(row.tokenAddress, null);
@@ -64,21 +65,26 @@ describe("terminal consumer contract", () => {
       (file) => file.endsWith(".json"),
     );
     const launches = [];
-    for (const file of launchFiles) launches.push(await readJson(file));
+    for (const file of launchFiles) {
+      launches.push(trustOfficialV1Fixture(await readJson(file)));
+    }
     launches.sort((left, right) => left.launchId.localeCompare(right.launchId));
 
     const expected = await readJson(
       path.join(REPOSITORY_ROOT, "fixtures/v1/expected/terminal-rows.json"),
     );
     expected.sort((left, right) => left.launchId.localeCompare(right.launchId));
-    assert.deepEqual(launches.map(terminalRow), expected);
+    assert.deepEqual(
+      launches.map(terminalRow),
+      expected.map((row) => ({ platformId: "programmable", ...row })),
+    );
   });
 
   test("keeps a token visible when it has no market", async () => {
     const launch = await readJson(
       path.join(REPOSITORY_ROOT, "fixtures/v1/launches/custom-no-market-prelaunch.json"),
     );
-    const row = terminalRow(launch);
+    const row = terminalRow(trustOfficialV1Fixture(launch));
     assert.equal(row.category, "Programmable Custom");
     assert.equal(row.marketCount, 0);
     assert.equal(row.hasActiveMarket, false);
@@ -91,7 +97,7 @@ describe("terminal consumer contract", () => {
         "fixtures/v1/launches/custom-multiple-markets-prelaunch.json",
       ),
     );
-    const row = terminalRow(launch);
+    const row = terminalRow(trustOfficialV1Fixture(launch));
     assert.equal(row.marketCount, 3);
     assert.deepEqual(
       launch.markets.map((market) => market.status),
@@ -117,9 +123,9 @@ describe("terminal consumer contract", () => {
     assert.equal(dynamic.token.totalSupplyRaw, null);
     assert.equal(dynamic.token.supplyStatus, "unavailable");
     assert.equal(dynamic.markets.length, 0);
-    assert.ok(terminalRow(dynamic).capabilityIds.includes("sell-triggered-burn"));
+    assert.ok(terminalRow(trustOfficialV1Fixture(dynamic)).capabilityIds.includes("sell-triggered-burn"));
     assert.equal(game.markets.length, 0);
-    assert.ok(terminalRow(game).capabilityIds.includes("kill-to-earn"));
+    assert.ok(terminalRow(trustOfficialV1Fixture(game)).capabilityIds.includes("kill-to-earn"));
   });
 
   test("discovers newly appended deployments without changing consumer code", async () => {

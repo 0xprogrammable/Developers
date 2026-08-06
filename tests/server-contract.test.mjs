@@ -583,7 +583,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "normalized legacy launch");
-    assert.equal(publicRecord.platformId, "programmable");
+    assert.equal(publicRecord.platformId, undefined);
     assert.equal("sortKey" in publicRecord, false);
     assert.equal("transactionIndex" in publicRecord.launch, false);
     assert.equal(publicRecord.token.identityStatus, "complete");
@@ -630,7 +630,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "partial identity launch");
-    assert.equal(publicRecord.platformId, "programmable");
+    assert.equal(publicRecord.platformId, undefined);
     assert.equal(publicRecord.token.identityStatus, "partial");
     assert.equal(publicRecord.token.name, null);
     assert.equal(publicRecord.token.supplyStatus, "unavailable");
@@ -803,7 +803,7 @@ describe("server projections", () => {
     );
     assert.deepEqual(await developerManifest(), canonical);
     assert.deepEqual(await developerManifest(), canonical);
-    assert.equal(canonical.platformId, "programmable");
+    assert.equal(canonical.platformId, undefined);
   });
 
   test("matches normalized source IDs to the canonical deployment manifest", async () => {

@@ -1,16 +1,16 @@
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "One versioned integration for Programmable Classic and Custom launches.",
-  "apiVersion": "1",
-  "apiBaseUrl": "https://developers.programmable.family/api/v1",
-  "statusUrl": "https://developers.programmable.family/api/v1/status",
-  "manifestUrl": "https://developers.programmable.family/api/v1/manifest",
-  "launchesUrl": "https://developers.programmable.family/api/v1/launches",
-  "tokenListUrl": "https://developers.programmable.family/api/v1/token-list",
-  "openApiUrl": "https://developers.programmable.family/openapi/programmable-v1.yaml",
-  "schemasBaseUrl": "https://developers.programmable.family/schemas/v1/",
+  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches.",
+  "apiVersion": "2",
+  "apiBaseUrl": "https://developers.programmable.family/api/v2",
+  "statusUrl": "https://developers.programmable.family/api/v2/status",
+  "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
+  "launchesUrl": "https://developers.programmable.family/api/v2/launches",
+  "tokenListUrl": "https://developers.programmable.family/api/v2/token-list",
+  "openApiUrl": "https://developers.programmable.family/openapi/programmable-v2.yaml",
+  "schemasBaseUrl": "https://developers.programmable.family/schemas/v2/",
   "documentationUrl": "https://developers.programmable.family/",
   "sourceUrl": "https://github.com/0xprogrammable/developers",
   "chains": [
@@ -27,18 +27,24 @@
       "discoveryStatus": "live"
     },
     "custom": {
-      "discoveryStatus": "live",
+      "discoveryStatus": "prelaunch",
       "publicSubmissionStatus": "prelaunch",
-      "note": "Existing Custom records are first-party Stock-Paired launches. Public Custom submissions are not live."
+      "note": "Only approved Custom Registry launches qualify. No registry deployment is published yet."
     }
   },
   "compatibility": {
-    "majorVersion": 1,
+    "majorVersion": 2,
     "additiveChangesOnly": true,
     "unknownFields": "ignore",
     "unknownCapabilities": "preserve",
     "unknownMarketKinds": "display-as-unsupported",
     "deploymentAddresses": "resolve-from-manifest"
   },
-  "extensions": {}
+  "extensions": {
+    "programmable.legacy-v1": {
+      "status": "supported",
+      "apiBaseUrl": "https://developers.programmable.family/api/v1",
+      "migrationGuideUrl": "https://github.com/0xprogrammable/developers/blob/main/docs/migrations/v1-to-v2.md"
+    }
+  }
 }

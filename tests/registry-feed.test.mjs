@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { createLaunchesHandler } from "../api/v1/launches.js";
+import { projectV2Record, publicLaunchV2 } from "../server/v2-dataset.js";
 import { canonicalSha256, canonicalizeJson } from "../server/canonical.js";
 import { deriveUniswapV4PoolId, keccak256 } from "../server/keccak.js";
 import {
@@ -437,12 +438,16 @@ describe("authenticated Custom Registry ingestion", () => {
     assert.equal(launch.fees[0].chargeMode, "added-on-top");
     assert.equal(launch.fees[0].recipient.toLowerCase(), FEE_RECIPIENT.toLowerCase());
 
-    const schemas = await createSchemaRegistry();
+    const schemas = await createSchemaRegistry("v2");
     const validate = schemas.validator("launch.schema.json");
-    assert.equal(validate(publicLaunch(launch)), true, JSON.stringify(validate.errors));
+    assert.equal(
+      validate(publicLaunchV2(projectV2Record(launch))),
+      true,
+      JSON.stringify(validate.errors),
+    );
   });
 
-  test("serves an authenticated Registry project through GET /v1/launches without inventing a token", async () => {
+  test("does not leak a project-only Registry record through frozen GET /v1/launches", async () => {
     const source = feed(registryRecord());
     const ingested = await readRegistryCustomFeed({
       configuration,
@@ -481,15 +486,7 @@ describe("authenticated Custom Registry ingestion", () => {
     const response = await callLaunches(handler, { category: "custom", limit: "10" });
     assert.equal(response.status, 200);
     assert.equal(response.body.status, "ready");
-    assert.equal(response.body.items.length, 1);
-    assert.equal(response.body.items[0].launchId, source.items[0].record.launchId);
-    assert.equal(response.body.items[0].platformId, "programmable");
-    assert.equal(response.body.items[0].category, "custom");
-    assert.equal(response.body.items[0].launch.modelId, "contract-game");
-    assert.equal(response.body.items[0].token, null);
-    assert.equal(response.body.items[0].assets.length, 1);
-    assert.equal(response.body.items[0].assets[0].role, "root");
-    assert.deepEqual(response.body.items[0].markets, []);
+    assert.equal(response.body.items.length, 0);
   });
 
   test("maps only the authenticated Registry v4 kind to the frozen public v1 kind", () => {

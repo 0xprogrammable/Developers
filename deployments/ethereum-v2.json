@@ -1,0 +1,168 @@
+{
+  "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
+  "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "manifestVersion": "2",
+  "generatedAt": "2026-08-06T00:00:00Z",
+  "chainId": 1,
+  "chains": [
+    {
+      "chainId": 1,
+      "caip2": "eip155:1",
+      "name": "Ethereum Mainnet",
+      "status": "live",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest"
+    }
+  ],
+  "network": {
+    "name": "Ethereum Mainnet",
+    "caip2": "eip155:1",
+    "explorerUrl": "https://etherscan.io"
+  },
+  "publicCategories": {
+    "classic": {
+      "discoveryStatus": "live",
+      "publicSubmissionStatus": "not-applicable"
+    },
+    "custom": {
+      "discoveryStatus": "prelaunch",
+      "publicSubmissionStatus": "prelaunch",
+      "note": "Programmable Custom is reserved for approved Custom Registry launches. The registry is not deployed yet."
+    }
+  },
+  "deployments": [
+    {
+      "deploymentId": "ethereum-classic-v1",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "1",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "retired",
+      "discovery": "enabled",
+      "startBlock": "25622048",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0x51d702731db281EE223904A4663E05BfCA26C775"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "cab072627be0bbacd582f7278e1c6339a9185e52",
+        "sourcePath": "contracts/src/MemeLaunchV1.sol",
+        "sourceCommitment": "0x34dba63453f487b6bd3365da526326a0c3f8c7f6c7c1d96756f1dc993623cea3",
+        "launcherRuntimeCodeHash": "0xa459ee6574d8bbd40ddcf9737dc5d1063adb3abbc11d9f367350c7f2a3cf738b",
+        "launcherDeploymentTransaction": "0x4d55e0ccfcbb9f450ab57b3460ac5a0950226c92fcaae4ec6ba6da7a888a30ae"
+      }
+    },
+    {
+      "deploymentId": "ethereum-classic-v2",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "2",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "legacy",
+      "discovery": "enabled",
+      "startBlock": "25624131",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0xD240D06f8586eB799f20056054e5b527405E6bAd"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "d0bec0a681b6ba4a25b42a4fe9d29ed2d3a783d2",
+        "sourcePath": "contracts/src/MemeLaunchV1.sol",
+        "sourceCommitment": "0x6bf2c70c5ab2a64a62f2c27e6be859e3428f2c35e6e2db5255b569b9f9eb1287",
+        "launcherRuntimeCodeHash": "0xd229555c79c61874549a1991c43df172104e1db3087ba8fca8804675b7440d36",
+        "launcherDeploymentTransaction": "0x86a6f1b3992ed8ad6d450970b78e94b29f298afd048a6a0cfa0cf253e9e98fdc",
+        "explorerUrl": "https://etherscan.io/address/0xD240D06f8586eB799f20056054e5b527405E6bAd#code"
+      }
+    },
+    {
+      "deploymentId": "ethereum-classic-v3",
+      "category": "classic",
+      "modelId": "classic",
+      "modelVersion": "3",
+      "origin": "first-party",
+      "publicSubmission": false,
+      "lifecycle": "current",
+      "discovery": "enabled",
+      "startBlock": "25639596",
+      "endBlock": null,
+      "contracts": {
+        "launcher": "0xC3bd04aAc2fb2ba58efD7Eb673E544E0B80De770",
+        "hook": "0x35Fe236EA82F7cF525c9719d7df8F49F94D720CC"
+      },
+      "evidence": {
+        "sourceRepository": "https://github.com/0xprogrammable/programmable",
+        "sourceCommit": "a117139b24041e87ccc318c6106f5aeb415b8128",
+        "sourcePath": "contracts/src/MemeLaunchV2.sol",
+        "sourceCommitment": "0x58991ed1743aaba5f1988a4576d36eb10af70b96bdb61661ba96e1f80acc9800",
+        "launcherRuntimeCodeHash": "0x9cc9723456c471d90ac838c02fa4fc47ed4b7e82c85358e71deec978c48d2dc8",
+        "launcherDeploymentTransaction": "0xc25f6a3b13b0789b4f69e28229b0b969184dbc3682555ea7e15bf731f5b1a150",
+        "explorerUrl": "https://etherscan.io/address/0xC3bd04aAc2fb2ba58efD7Eb673E544E0B80De770#code"
+      }
+    }
+  ],
+  "customRegistry": {
+    "category": "custom",
+    "modelId": "open-custom",
+    "status": "prelaunch",
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null,
+    "generation": null,
+    "eventSignature": null,
+    "eventTopic": null,
+    "abiUrl": null,
+    "finalityConfirmations": null,
+    "note": "No Custom Registry address or start block has been published. Custom feed results remain empty until an evidenced registry deployment is listed here."
+  },
+  "registryGenerations": [],
+  "partnerTemplates": [],
+  "platformFee": {
+    "ratePpm": "1000",
+    "rateBps": "10",
+    "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+    "scope": "official-programmable-market-path",
+    "classic": {
+      "status": "verified",
+      "chargeMode": "included"
+    },
+    "customPublicSubmissions": {
+      "status": "prelaunch",
+      "chargeMode": "policy-specific-no-overlay"
+    },
+    "nativeCustom": {
+      "totalFeeBps": 10,
+      "programmableShareBps": 10,
+      "scope": "verified-official-market-path-only"
+    },
+    "partnerTemplate": {
+      "totalFeeBps": 20,
+      "partnerShareBps": 15,
+      "programmableShareBps": 5,
+      "programmableRecipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "partner-template-enforced",
+      "additionalNativeFeeBps": 0
+    }
+  },
+  "endpoints": {
+    "wellKnown": "https://developers.programmable.family/.well-known/programmable.json",
+    "status": "https://developers.programmable.family/api/v2/status",
+    "manifest": "https://developers.programmable.family/api/v2/manifest",
+    "launches": "https://developers.programmable.family/api/v2/launches",
+    "tokenList": "https://developers.programmable.family/api/v2/token-list",
+    "openApi": "https://developers.programmable.family/openapi/programmable-v2.yaml"
+  },
+  "compatibility": {
+    "majorVersion": 2,
+    "additiveChangesOnly": true,
+    "noMandatoryClientChangesWithinMajorVersion": true,
+    "unknownFields": "ignore",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "deploymentDiscovery": "refresh-manifest",
+    "hardcodeDeploymentAddresses": false
+  }
+}

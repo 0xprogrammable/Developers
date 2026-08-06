@@ -11,8 +11,20 @@ import {
   createSchemaRegistry,
   validationSummary,
 } from "../scripts/lib/schema.mjs";
+import { canonicalSha256 } from "../server/canonical.js";
+import {
+  deriveFinalityPolicyHashV1,
+  deriveOnchainFeePolicyHashV1,
+  derivePublicFeePolicyBindingV1,
+  deriveRegisteredRecordCommitmentV1,
+  deriveRegisteredRecordComponentHashesV1,
+  deriveRegistrationBindingHashV1,
+  deriveVerifiedReviewEvidenceHashV1,
+  validateRegisteredRecordBindingsV1,
+} from "../server/registry-v3.js";
 
 const registry = await createSchemaRegistry();
+const registryV2 = await createSchemaRegistry("v2");
 
 describe("JSON Schema registry", () => {
   test("compiles every v1 schema with unique local identifiers", () => {
@@ -87,13 +99,98 @@ describe("JSON Schema registry", () => {
     assert.match(validationSummary(validate), /maxLength/);
   });
 
-  test("rejects a forged platform identity while preserving additive v1 compatibility", async () => {
-    const validate = registry.validator("launch.schema.json");
+  test("keeps v1 frozen and rejects a forged platform identity in v2", async () => {
+    const validateV1 = registry.validator("launch.schema.json");
     const fixture = await readJson(
       path.join(REPOSITORY_ROOT, "fixtures/v1/launches/classic-v4-pool.json"),
     );
     fixture.platformId = "creator-declared-programmable";
-    assert.equal(validate(fixture), false);
-    assert.match(validationSummary(validate), /const/);
+    assert.equal(validateV1(fixture), false);
+    assert.match(validationSummary(validateV1), /additionalProperties/);
+
+    const validateV2 = registryV2.validator("launch.schema.json");
+    const v2Fixture = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v2/launches/classic-v4-pool.json"),
+    );
+    v2Fixture.platformId = "creator-declared-programmable";
+    assert.equal(validateV2(v2Fixture), false);
+    assert.match(validationSummary(validateV2), /const/);
+  });
+
+  test("round-trips the exact Approval v3 producer fixture and hash domains", async () => {
+    const validate = registryV2.validator(
+      "custom-launch-registry-record-v3.schema.json",
+    );
+    const fixture = await readJson(
+      path.join(
+        REPOSITORY_ROOT,
+        "fixtures/v2/custom-launch-registry-record-v3.golden.json",
+      ),
+    );
+    assertValid(validate, fixture, "Approval producer v3 golden fixture");
+
+    const { schemaVersion: _schemaVersion, envelopeDigest, ...preimage } = fixture;
+    assert.equal(
+      envelopeDigest,
+      canonicalSha256(
+        "programmable.custom-launch-registry-envelope-digest.v3",
+        preimage,
+      ),
+    );
+    assert.equal(
+      canonicalSha256("programmable.custom-launch-registry-record.v3", fixture),
+      "sha256:6bde61c0d7347b389e53999f984a8cb1f4fdc66395b1136b08eb328e1a53e2af",
+    );
+    assert.equal(
+      fixture.registryOrigin.registryLaunchIdRaw,
+      `0x${fixture.launchId.slice("sha256:".length)}`,
+    );
+    assert.notEqual(
+      fixture.envelopeDigest,
+      fixture.registryOrigin.registeredRecordHash,
+    );
+    const components = deriveRegisteredRecordComponentHashesV1(
+      fixture.registeredRecordPreimage,
+    );
+    assert.deepEqual(components, fixture.registeredRecordComponentHashes);
+    assert.equal(
+      deriveRegisteredRecordCommitmentV1(components),
+      fixture.registeredRecordCommitment,
+    );
+    assert.equal(
+      deriveRegistrationBindingHashV1(fixture.registeredRecordCommitment),
+      fixture.registrationBindingHash,
+    );
+    assert.equal(
+      fixture.registryOrigin.registeredRecordHash,
+      fixture.registeredRecordCommitment,
+    );
+    assert.equal(
+      derivePublicFeePolicyBindingV1(fixture.feePolicy),
+      fixture.feePolicy.publicPolicyBindingHash,
+    );
+    assert.equal(
+      fixture.onchainFeePolicy.publicPolicyBindingHash,
+      `0x${fixture.feePolicy.publicPolicyBindingHash.slice("sha256:".length)}`,
+    );
+    assert.equal(
+      deriveOnchainFeePolicyHashV1(fixture.onchainFeePolicy),
+      fixture.registeredRecordPreimage.feePolicyHash,
+    );
+    assert.equal(
+      deriveVerifiedReviewEvidenceHashV1(fixture.verifiedReview),
+      fixture.verifiedReview.reviewEvidenceHash,
+    );
+    assert.equal(
+      deriveFinalityPolicyHashV1(fixture.finalityPolicy),
+      fixture.registeredRecordPreimage.finalityPolicyHash,
+    );
+    assert.equal(validateRegisteredRecordBindingsV1(fixture), true);
+
+    const aliased = structuredClone(fixture);
+    aliased.deploymentBinding.contracts[0].runtimeCodeHash =
+      aliased.deploymentBinding.contracts[0].runtimeCodeKeccak256;
+    assert.equal(validate(aliased), false);
+    assert.match(validationSummary(validate), /additionalProperties/);
   });
 });

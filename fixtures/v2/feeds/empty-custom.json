@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "2.0.0",
+  "status": "ready",
+  "snapshot": null,
+  "items": [],
+  "page": {
+    "nextCursor": null,
+    "resumeCursor": "fixture.fixture",
+    "hasMore": false
+  }
+}

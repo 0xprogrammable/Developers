@@ -1,7 +1,6 @@
 {
   "$schema": "https://developers.programmable.family/schemas/v1/manifest.schema.json",
   "schemaVersion": "1.0.0",
-  "platformId": "programmable",
   "manifestVersion": "1",
   "generatedAt": "2026-08-04T00:44:31Z",
   "chainId": 1,

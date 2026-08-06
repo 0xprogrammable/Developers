@@ -1,6 +1,5 @@
 {
   "schemaVersion": "1.0.0",
-  "platformId": "programmable",
   "launchId": "eip155:1:0xfafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa:4",
   "category": "classic",
   "chainId": 1,

@@ -37,17 +37,17 @@ function apiRoot(value) {
     );
   }
   const path = parsed.pathname.replace(/\/+$/, "") || "/";
-  if (path !== "/" && path !== "/api/v1") {
-    throw new Error("PROGRAMMABLE_API_BASE path must be / or /api/v1");
+  if (path !== "/" && path !== "/api/v2") {
+    throw new Error("PROGRAMMABLE_API_BASE path must be / or /api/v2");
   }
-  return `${parsed.origin}/api/v1`;
+  return `${parsed.origin}/api/v2`;
 }
 
 const apiBase = apiRoot(configuredBase);
 const MAX_BYTES = 5 * 1024 * 1024;
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 2;
-const registry = await createSchemaRegistry();
+const registry = await createSchemaRegistry("v2");
 
 async function boundedJson(path, schemaName) {
   let lastError;
@@ -132,10 +132,10 @@ if (feedResult.value.page.hasMore) {
 
 if (feedResult.value.items[0]) {
   const launch = feedResult.value.items[0];
-  const detailResult = await boundedJson(
-    `/launches/${launch.chainId}/${encodeURIComponent(launch.token.address)}`,
-    "launch.schema.json",
-  );
+  const detailPath = launch.token
+    ? `/launches/${launch.chainId}/${encodeURIComponent(launch.token.address)}`
+    : `/launches/${encodeURIComponent(launch.launchId)}`;
+  const detailResult = await boundedJson(detailPath, "launch.schema.json");
   if (detailResult.value.launchId !== launch.launchId) {
     throw new Error("launch detail does not match the feed record");
   }

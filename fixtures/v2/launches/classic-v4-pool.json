@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "publicLabel": "Programmable Classic",
+  "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
+  "category": "classic",
+  "chainId": 1,
+  "caip2": "eip155:1",
+  "projectId": null,
+  "model": {
+    "id": "classic",
+    "version": "3"
+  },
+  "token": {
+    "address": "0x1111111111111111111111111111111111111111",
+    "identityStatus": "complete",
+    "name": "Classic Fixture",
+    "symbol": "CLASSIC",
+    "decimals": 18,
+    "totalSupplyRaw": "1000000000000000000000000000",
+    "supplyStatus": "observed",
+    "supplyAsOfBlock": "25650000",
+    "metadata": {
+      "description": "A deterministic Classic consumer fixture.",
+      "imageUrl": "https://developers.programmable.family/fixtures/classic.png",
+      "links": {
+        "website": "https://developers.programmable.family"
+      },
+      "trustStatus": "creator-declared"
+    }
+  },
+  "launch": {
+    "status": "live",
+    "origin": "first-party",
+    "modelId": "classic",
+    "modelVersion": "3",
+    "publicSubmission": false,
+    "creatorAddress": "0x7777777777777777777777777777777777777777",
+    "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "blockNumber": "25650000",
+    "blockHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "logIndex": 0,
+    "timestamp": "2026-08-04T08:00:00.000Z",
+    "finality": "confirmed"
+  },
+  "verification": {
+    "sourceId": "ethereum-classic-v3",
+    "launcherAddress": "0x2222222222222222222222222222222222222222",
+    "registryAddress": null,
+    "provenanceStatus": "verified",
+    "sourceUrl": "https://github.com/0xprogrammable/programmable"
+  },
+  "capabilities": [
+    {
+      "id": "uniswap-v4-pool",
+      "version": "1",
+      "status": "active",
+      "parameters": {}
+    }
+  ],
+  "markets": [
+    {
+      "marketId": "uniswap-v4:0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "kind": "uniswap-v4",
+      "status": "active",
+      "baseTokenAddress": "0x1111111111111111111111111111111111111111",
+      "quoteTokenAddress": null,
+      "protocol": "uniswap-v4",
+      "poolId": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "poolAddress": null,
+      "hookAddress": "0x5555555555555555555555555555555555555555",
+      "support": {
+        "discovery": "available",
+        "charting": "available",
+        "quote": "unknown",
+        "simulation": "unknown",
+        "execution": "unknown"
+      },
+      "adapter": {
+        "kind": "uniswap-v4-observation",
+        "version": "1",
+        "adapterId": "programmable/uniswap-v4-observation",
+        "verificationStatus": "verified"
+      },
+      "metrics": {
+        "price": {
+          "value": "0.000001",
+          "status": "estimated"
+        },
+        "liquidity": {
+          "value": "12.5",
+          "status": "estimated"
+        },
+        "volume24h": {
+          "value": "2.25",
+          "status": "estimated"
+        },
+        "updatedAt": "2026-08-04T08:05:00.000Z"
+      }
+    }
+  ],
+  "fees": [
+    {
+      "kind": "programmable-platform",
+      "ratePpm": 1000,
+      "rateBps": 10,
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "included",
+      "basis": "swap-volume",
+      "assetAddress": null,
+      "verificationStatus": "verified"
+    },
+    {
+      "kind": "creator",
+      "ratePpm": 9000,
+      "rateBps": 90,
+      "recipient": "0x7777777777777777777777777777777777777777",
+      "chargeMode": "included",
+      "basis": "swap-volume",
+      "assetAddress": null,
+      "verificationStatus": "verified"
+    }
+  ],
+  "extensions": {
+    "programmable/classification": {
+      "namespace": "programmable",
+      "category": "classic",
+      "label": "Programmable Classic",
+      "basis": "recognized-classic-launcher-event"
+    }
+  }
+}

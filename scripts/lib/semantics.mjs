@@ -119,13 +119,302 @@ function executableMetadataFindings(value, path = "") {
   return findings;
 }
 
+function validateV2FeePolicy(launch) {
+  const findings = [];
+  const policy = launch.feePolicy;
+  const fees = launch.fees ?? [];
+  if (!policy) {
+    if (launch.category === "custom") {
+      findings.push(finding(
+        "FEE_POLICY_REQUIRED",
+        "/feePolicy",
+        "Every v2 Custom record must disclose one closed fee policy",
+      ));
+    }
+    return findings;
+  }
+  if (
+    policy.programmableRecipient?.namespace !== "eip155-address" ||
+    String(policy.programmableRecipient?.value).toLowerCase() !==
+      PLATFORM_FEE_RECIPIENT.toLowerCase()
+  ) {
+    findings.push(finding(
+      "PLATFORM_FEE_RECIPIENT",
+      "/feePolicy/programmableRecipient",
+      "The fee policy does not bind the canonical Programmable recipient",
+    ));
+  }
+
+  if (policy.mode === "no-qualifying-market") {
+    if (
+      (launch.markets ?? []).length !== 0 ||
+      fees.length !== 0 ||
+      policy.totalFeeBps !== 0 ||
+      policy.programmableShareBps !== 0 ||
+      policy.partnerShareBps !== 0 ||
+      policy.normalProgrammableTenBpsApplied !== false ||
+      policy.chargeMode !== "none-no-qualifying-market" ||
+      policy.claimRights?.programmable !== null ||
+      policy.claimRights?.partner !== null ||
+      policy.claimRights?.independentlyClaimable !== false ||
+      policy.claimRights?.crossPartyClaimingProhibited !== true
+    ) {
+      findings.push(finding(
+        "NO_MARKET_FEE_CONTRADICTION",
+        "/feePolicy",
+        "A no-qualifying-market policy cannot publish a market fee or market",
+      ));
+    }
+    return findings;
+  }
+
+  const programmable = fees.filter((fee) => fee.share === "programmable");
+  const partner = fees.filter((fee) => fee.share === "partner");
+  const verifiedMarketIds = policy.verifiedMarketIds ?? [];
+  const marketsById = new Map(
+    (launch.markets ?? []).map((market) => [market.marketId, market]),
+  );
+  if (
+    verifiedMarketIds.length === 0 ||
+    duplicateValues(verifiedMarketIds).length > 0 ||
+    verifiedMarketIds.some((marketId) => {
+      const market = marketsById.get(marketId);
+      return market?.status !== "active" ||
+        market?.verification?.status !== "verified";
+    })
+  ) {
+    findings.push(finding(
+      "FEE_MARKET_EVIDENCE",
+      "/feePolicy/verifiedMarketIds",
+      "A charged fee policy must name active, verified official markets",
+    ));
+  }
+  if (programmable.length !== 1) {
+    findings.push(finding(
+      "PROGRAMMABLE_SHARE_COUNT",
+      "/fees",
+      "A verified v2 fee policy requires exactly one Programmable share",
+    ));
+  }
+  const programmableFee = programmable[0];
+  if (
+    programmableFee &&
+    String(programmableFee.recipient).toLowerCase() !== PLATFORM_FEE_RECIPIENT.toLowerCase()
+  ) {
+    findings.push(finding(
+      "PLATFORM_FEE_RECIPIENT",
+      "/fees",
+      "The Programmable share recipient does not match the canonical recipient",
+    ));
+  }
+
+  if (policy.mode === "native") {
+    if (
+      policy.totalFeeBps !== 10 ||
+      policy.programmableShareBps !== 10 ||
+      policy.chargeMode !== "verified-official-market-path-only" ||
+      policy.partnerShareBps !== 0 ||
+      partner.length !== 0 ||
+      fees.length !== 1 ||
+      programmableFee?.rateBps !== 10 ||
+      launch.partner !== null ||
+      policy.claimRights?.programmable === null ||
+      policy.claimRights?.partner !== null ||
+      policy.claimRights?.independentlyClaimable !== false ||
+      policy.claimRights?.crossPartyClaimingProhibited !== true
+    ) {
+      findings.push(finding(
+        "NATIVE_CUSTOM_FEE_POLICY",
+        "/feePolicy",
+        "Native Custom must charge exactly 10 bps to Programmable with no partner share",
+      ));
+    }
+  } else if (policy.mode === "partner-template") {
+    const partnerFee = partner[0];
+    if (
+      policy.totalFeeBps !== 20 ||
+      policy.partnerShareBps !== 15 ||
+      policy.programmableShareBps !== 5 ||
+      policy.normalProgrammableTenBpsApplied !== false ||
+      policy.chargeMode !== "template-native-verified-market-path" ||
+      programmableFee?.rateBps !== 5 ||
+      partner.length !== 1 ||
+      partnerFee?.rateBps !== 15 ||
+      fees.length !== 2 ||
+      launch.partner === null ||
+      launch.template === null ||
+      launch.partner?.status !== "active" ||
+      launch.template?.partnerId !== launch.partner?.id ||
+      launch.partner?.recipient?.value?.toLowerCase() !==
+        policy.partnerRecipient?.value?.toLowerCase() ||
+      String(partnerFee?.recipient).toLowerCase() !==
+        String(policy.partnerRecipient?.value).toLowerCase() ||
+      programmableFee?.basis !== partnerFee?.basis ||
+      JSON.stringify(programmableFee?.currency) !== JSON.stringify(partnerFee?.currency) ||
+      policy.verificationStatus !== "verified" ||
+      policy.claimRights?.programmable === null ||
+      policy.claimRights?.partner === null ||
+      policy.claimRights?.independentlyClaimable !== true ||
+      policy.claimRights?.crossPartyClaimingProhibited !== true
+    ) {
+      findings.push(finding(
+        "PARTNER_TEMPLATE_FEE_POLICY",
+        "/feePolicy",
+        "Partner templates must prove exactly 20 bps total as independent 15 bps partner and 5 bps Programmable shares with no added native 10 bps",
+      ));
+    }
+  }
+  return findings;
+}
+
+function validateV2IdentityAndReview(launch) {
+  const findings = [];
+  const expectedLabel = launch.category === "classic"
+    ? "Programmable Classic"
+    : "Programmable Custom";
+  if (launch.publicLabel !== expectedLabel) {
+    findings.push(finding(
+      "PUBLIC_LABEL",
+      "/publicLabel",
+      "The public label must follow the canonical Classic or Custom category",
+    ));
+  }
+  if (launch.caip2 !== `eip155:${launch.chainId}`) {
+    findings.push(finding(
+      "CHAIN_IDENTITY",
+      "/caip2",
+      "CAIP-2 identity must match chainId",
+    ));
+  }
+  if (
+    launch.model &&
+    (launch.model.id !== launch.launch?.modelId ||
+      launch.model.version !== launch.launch?.modelVersion)
+  ) {
+    findings.push(finding(
+      "MODEL_IDENTITY",
+      "/model",
+      "Top-level model identity must match the launch projection",
+    ));
+  }
+  const assetIds = (launch.assets ?? []).map((asset) => asset.assetId);
+  for (const duplicate of duplicateValues(assetIds)) {
+    findings.push(finding(
+      "DUPLICATE_ASSET",
+      "/assets",
+      `Duplicate asset ${duplicate}`,
+    ));
+  }
+
+  const materializedCustom = launch.category === "custom" &&
+    ["observed", "live", "paused", "retired", "revoked"].includes(
+      launch.launch?.status,
+    );
+  if (materializedCustom && (
+    launch.origin !== "programmable" ||
+    launch.launchFamily !== "custom" ||
+    launch.registryRecordSchemaVersion !==
+      "programmable.custom-launch-registry-record.v3" ||
+    !/^sha256:[0-9a-f]{64}$/.test(launch.producerEnvelopeDigest ?? "") ||
+    !/^0x[0-9a-f]{64}$/.test(launch.registeredRecordHash ?? "") ||
+    !/^sha256:[0-9a-f]{64}$/.test(launch.projectionDigest ?? "") ||
+    launch.verification?.registryAddress === null ||
+    launch.verification?.registryGeneration === null ||
+    launch.verification?.registryEventTopic === null ||
+    launch.verification?.approvalMatch !== "matched" ||
+    launch.verification?.runtimeMatch !== "matched" ||
+    launch.approvalBinding === null ||
+    launch.deploymentBinding?.runtimeMatch !== "exact" ||
+    launch.verifiedReview === null
+  )) {
+    findings.push(finding(
+      "CUSTOM_VERIFIED_BINDING",
+      "/verification",
+      "A materialized Programmable Custom record must prove registry, approval, runtime and current review bindings",
+    ));
+  }
+  if (materializedCustom) {
+    const origin = launch.registryOrigin;
+    const launchIdRaw = typeof launch.launchId === "string" &&
+      /^sha256:[0-9a-f]{64}$/.test(launch.launchId)
+      ? `0x${launch.launchId.slice("sha256:".length)}`
+      : null;
+    const approvalRaw = typeof launch.approvalBinding?.approvalBindingHash === "string" &&
+      /^sha256:[0-9a-f]{64}$/.test(launch.approvalBinding.approvalBindingHash)
+      ? `0x${launch.approvalBinding.approvalBindingHash.slice("sha256:".length)}`
+      : null;
+    if (
+      origin?.launchIdEncoding !== "sha256-digest-raw-bytes32" ||
+      origin?.registryLaunchIdRaw !== launchIdRaw ||
+      origin?.registryApprovalBindingHashRaw !== approvalRaw ||
+      origin?.registeredRecordHash !== launch.registeredRecordHash ||
+      origin?.chainId !== String(launch.chainId) ||
+      origin?.caip2 !== launch.caip2 ||
+      origin?.registryAddress?.toLowerCase() !==
+        launch.verification?.registryAddress?.toLowerCase()
+    ) {
+      findings.push(finding(
+        "CUSTOM_REGISTRY_IDENTITY_BINDING",
+        "/registryOrigin",
+        "Registry chain, launch ID, approval and immutable record hash must match the public projection",
+      ));
+    }
+    const contracts = launch.deploymentBinding?.contracts ?? [];
+    const deployedKeccak = contracts
+      .map((contract) => contract.runtimeCodeKeccak256)
+      .sort();
+    const deployedSha256 = contracts
+      .map((contract) => contract.runtimeCodeSha256)
+      .sort();
+    const reviewedKeccak = [...(launch.verifiedReview?.runtimeCodeKeccak256 ?? [])]
+      .sort();
+    const reviewedSha256 = [...(launch.verifiedReview?.runtimeCodeSha256 ?? [])]
+      .sort();
+    if (
+      JSON.stringify(deployedKeccak) !== JSON.stringify(reviewedKeccak) ||
+      JSON.stringify(deployedSha256) !== JSON.stringify(reviewedSha256)
+    ) {
+      findings.push(finding(
+        "CUSTOM_RUNTIME_HASH_BINDING",
+        "/verifiedReview",
+        "Reviewed Keccak-256 and SHA-256 runtime sets must exactly match deployed contracts",
+      ));
+    }
+  }
+  if (
+    materializedCustom &&
+    launch.lifecycle?.status === "active" &&
+    (launch.verifiedReview?.status !== "verified" ||
+      launch.verifiedReview?.supersededBy !== null ||
+      launch.verifiedReview?.revokedAt !== null)
+  ) {
+    findings.push(finding(
+      "CUSTOM_ACTIVE_REVIEW",
+      "/verifiedReview",
+      "An active Custom record requires a current deployment-bound review",
+    ));
+  }
+  if (
+    launch.verifiedReview?.status === "verified" &&
+    (launch.verifiedReview.supersededBy !== null || launch.verifiedReview.revokedAt !== null)
+  ) {
+    findings.push(finding(
+      "REVIEW_STATUS_CONTRADICTION",
+      "/verifiedReview",
+      "A current reviewed record cannot also be superseded or revoked",
+    ));
+  }
+  return findings;
+}
+
 export function validateLaunchSemantics(launch) {
   const findings = [];
   const capabilities = launch.capabilities ?? [];
   const markets = launch.markets ?? [];
   const fees = launch.fees ?? [];
+  const isV2 = launch.schemaVersion === "2.0.0";
 
-  if (launch.platformId !== PLATFORM_ID) {
+  if (isV2 && launch.platformId !== PLATFORM_ID) {
     findings.push(
       finding(
         "PLATFORM_IDENTITY",
@@ -145,7 +434,7 @@ export function validateLaunchSemantics(launch) {
   }
 
   const platformFees = fees.filter((fee) => fee.kind === "programmable-platform");
-  if (platformFees.length !== 1) {
+  if (!isV2 && platformFees.length !== 1) {
     findings.push(
       finding(
         "PLATFORM_FEE_COUNT",
@@ -153,7 +442,7 @@ export function validateLaunchSemantics(launch) {
         "Exactly one Programmable platform fee is required",
       ),
     );
-  } else {
+  } else if (!isV2) {
     const platformFee = platformFees[0];
     if (platformFee.rateBps !== 10 || platformFee.ratePpm !== 1000) {
       findings.push(
@@ -198,6 +487,11 @@ export function validateLaunchSemantics(launch) {
         ),
       );
     }
+  }
+
+  if (isV2) {
+    findings.push(...validateV2IdentityAndReview(launch));
+    findings.push(...validateV2FeePolicy(launch));
   }
 
   const lifecycle = launch.launch?.status;
@@ -284,7 +578,7 @@ export function validateLaunchSemantics(launch) {
   }
 
   if (launch.token === null) {
-    if (launch.schemaVersion !== "1.1.0") {
+    if (!isV2) {
       findings.push(
         finding(
           "NON_TOKEN_SCHEMA_VERSION",
@@ -296,7 +590,7 @@ export function validateLaunchSemantics(launch) {
     const primaryAssets = (launch.assets ?? []).filter(
       (asset) => asset.role === "primary-token",
     );
-    if (primaryAssets.length !== 0 || markets.length !== 0) {
+    if (!isV2 && (primaryAssets.length !== 0 || markets.length !== 0)) {
       findings.push(
         finding(
           "NON_TOKEN_CONTRADICTION",
@@ -309,7 +603,7 @@ export function validateLaunchSemantics(launch) {
 
   markets.forEach((market, index) => {
     const path = `/markets/${index}`;
-    if (launch.token !== null &&
+    if (!isV2 && launch.token !== null &&
       market.baseTokenAddress?.toLowerCase() !== launch.token?.address?.toLowerCase()
     ) {
       findings.push(
@@ -468,7 +762,7 @@ export function validateFeedSemantics(feed) {
 
 export function validateManifestSemantics(manifest) {
   const findings = [];
-  if (manifest.platformId !== PLATFORM_ID) {
+  if (manifest.schemaVersion === "2.0.0" && manifest.platformId !== PLATFORM_ID) {
     findings.push(
       finding(
         "PLATFORM_IDENTITY",
@@ -526,7 +820,10 @@ export function validateManifestSemantics(manifest) {
   const registry = manifest.customRegistry;
   if (
     registry?.status === "prelaunch" &&
-    (registry.address !== null || registry.startBlock !== null)
+    (registry.address !== null ||
+      registry.startBlock !== null ||
+      registry.publicSubmissionsEnabled !== false ||
+      (manifest.registryGenerations ?? []).length !== 0)
   ) {
     findings.push(
       finding(
@@ -535,6 +832,91 @@ export function validateManifestSemantics(manifest) {
         "A prelaunch registry may not publish placeholder deployment facts",
       ),
     );
+  }
+  if (registry?.status === "live") {
+    const liveGeneration = (manifest.registryGenerations ?? []).find(
+      (generation) =>
+        generation.status === "live" &&
+        generation.address.toLowerCase() === registry.address?.toLowerCase() &&
+        generation.startBlock === registry.startBlock &&
+        generation.generation === registry.generation,
+    );
+    if (
+      registry.publicSubmissionsEnabled !== true ||
+      registry.address === null ||
+      registry.startBlock === null ||
+      registry.generation === null ||
+      registry.eventSignature === null ||
+      registry.eventTopic === null ||
+      registry.abiUrl === null ||
+      registry.finalityConfirmations === null ||
+      liveGeneration === undefined
+    ) {
+      findings.push(finding(
+        "LIVE_REGISTRY_BINDING",
+        "/customRegistry",
+        "A live Registry must bind the complete active generation and public submission state",
+      ));
+    }
+  }
+  const chainIds = new Set((manifest.chains ?? []).map((chain) => chain.chainId));
+  const registryKeys = [];
+  for (const [index, generation] of (manifest.registryGenerations ?? []).entries()) {
+    registryKeys.push(
+      `${generation.chainId}:${generation.generation}:${generation.address.toLowerCase()}`,
+    );
+    if (
+      generation.caip2 !== `eip155:${generation.chainId}` ||
+      !chainIds.has(generation.chainId)
+    ) {
+      findings.push(finding(
+        "REGISTRY_CHAIN_IDENTITY",
+        `/registryGenerations/${index}`,
+        "Registry generation chain identity must match a published chain profile",
+      ));
+    }
+    if (
+      generation.endBlock !== null &&
+      BigInt(generation.endBlock) < BigInt(generation.startBlock)
+    ) {
+      findings.push(finding(
+        "REGISTRY_BLOCK_RANGE",
+        `/registryGenerations/${index}`,
+        "Registry generation end block precedes its start block",
+      ));
+    }
+    const topics = Object.values(generation.events ?? {})
+      .map((event) => event.topic0?.toLowerCase())
+      .filter(Boolean);
+    if (topics.length !== 10 || new Set(topics).size !== topics.length) {
+      findings.push(finding(
+        "REGISTRY_EVENT_SET",
+        `/registryGenerations/${index}/events`,
+        "A Registry generation must publish ten distinct canonical event topics",
+      ));
+    }
+  }
+  for (const duplicate of duplicateValues(registryKeys)) {
+    findings.push(finding(
+      "DUPLICATE_REGISTRY_GENERATION",
+      "/registryGenerations",
+      `Duplicate Registry generation ${duplicate}`,
+    ));
+  }
+  for (const [index, partner] of (manifest.partnerTemplates ?? []).entries()) {
+    if (
+      partner.totalPartnershipFeeBps !== 20 ||
+      partner.partnerShareBps !== 15 ||
+      partner.programmableShareBps !== 5 ||
+      partner.programmableRecipient.toLowerCase() !==
+        PLATFORM_FEE_RECIPIENT.toLowerCase()
+    ) {
+      findings.push(finding(
+        "PARTNER_FEE_POLICY",
+        `/partnerTemplates/${index}`,
+        "Partner templates must prove exactly 20 bps split 15/5",
+      ));
+    }
   }
   findings.push(...executableMetadataFindings(manifest.extensions, "/extensions"));
   return findings;

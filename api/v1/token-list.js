@@ -13,10 +13,12 @@ import {
   queryParametersAllowed,
   queryValue,
 } from "../../server/http.js";
+import { isV1PublicLaunch } from "../../server/normalize.js";
 
 export function tokenListPayload(records, generatedAt, category = null) {
   const finalizedRecords = records.filter(
     (record) =>
+      isV1PublicLaunch(record) &&
       record.launch.finality === "finalized" &&
       record.token !== null &&
       record.token.identityStatus === "complete",

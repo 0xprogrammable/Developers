@@ -1,6 +1,5 @@
 {
   "schemaVersion": "1.0.0",
-  "platformId": "programmable",
   "launchId": "prelaunch:future-capability-fixture",
   "category": "custom",
   "chainId": 1,
