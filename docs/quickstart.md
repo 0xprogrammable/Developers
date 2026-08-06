@@ -10,12 +10,12 @@ Use the well-known document as the stable entry point:
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
 ```
 
-It points to the current v1 API, schemas, manifest, documentation, and operational status. Cache it according to its response headers and refresh it periodically.
+It points to the current v2 API, schemas, manifest, documentation, and operational status. Cache it according to its response headers and refresh it periodically.
 
 ## 2. Check status
 
 ```bash
-curl -fsSL https://developers.programmable.family/api/v1/status
+curl -fsSL https://developers.programmable.family/api/v2/status
 ```
 
 Check status before a backfill or realtime ingestion run. Use the reported lifecycle, indexed block, finality, and freshness information to distinguish a healthy feed from a stale or prelaunch surface.
@@ -23,7 +23,7 @@ Check status before a backfill or realtime ingestion run. Use the reported lifec
 ## 3. Fetch the deployment manifest
 
 ```bash
-curl -fsSL https://developers.programmable.family/api/v1/manifest
+curl -fsSL https://developers.programmable.family/api/v2/manifest
 ```
 
 The manifest is the integration source for active deployments, start blocks, categories, Custom Registry state, platform fee disclosure, API routes, and compatibility information. Read its arrays at runtime. Do not copy an individual contract address into permanent client code.
@@ -31,7 +31,7 @@ The manifest is the integration source for active deployments, start blocks, cat
 ## 4. Fetch launches
 
 ```bash
-curl -fsSL https://developers.programmable.family/api/v1/launches
+curl -fsSL https://developers.programmable.family/api/v2/launches
 ```
 
 The response has this stable root shape:
@@ -48,7 +48,7 @@ Each item contains:
 
 ```text
 schemaVersion  launch schema version
-launchId       stable identity derived from canonical provenance or issued by a future Registry
+launchId       stable identity derived from Classic provenance or committed by the Custom Registry
 category       classic or custom
 chainId        EVM chain ID
 token          token identity and metadata state
@@ -84,9 +84,9 @@ async function getJson(path) {
   return response.json()
 }
 
-const status = await getJson("/api/v1/status")
-const manifest = await getJson("/api/v1/manifest")
-let page = await getJson("/api/v1/launches")
+const status = await getJson("/api/v2/status")
+const manifest = await getJson("/api/v2/manifest")
+let page = await getJson("/api/v2/launches")
 let resumeCursor = page.page.resumeCursor ?? page.snapshot?.cursor ?? null
 
 for (;;) {
@@ -106,29 +106,29 @@ for (;;) {
 
   // nextCursor is only for completing this traversal.
   if (!page.page.hasMore || page.page.nextCursor === null) break
-  page = await getJson(`/api/v1/launches?cursor=${encodeURIComponent(page.page.nextCursor)}`)
+  page = await getJson(`/api/v2/launches?cursor=${encodeURIComponent(page.page.nextCursor)}`)
   resumeCursor = page.page.resumeCursor ?? resumeCursor
 }
 
 // Persist resumeCursor only after the full traversal above is durably applied.
 // The next incremental poll begins after that high-water checkpoint.
 const updates = resumeCursor
-  ? await getJson(`/api/v1/launches?after=${encodeURIComponent(resumeCursor)}`)
-  : await getJson("/api/v1/launches")
+  ? await getJson(`/api/v2/launches?after=${encodeURIComponent(resumeCursor)}`)
+  : await getJson("/api/v2/launches")
 
 function renderLaunch(record) {
   console.log(record)
 }
 ```
 
-The example deliberately does not construct transactions. The v1 API is strictly read-only. Discovery is universal; support states can report whether a separately verified market adapter supports charting, quote, simulation, or execution, but they do not authorize a transaction or return transaction payloads.
+The example deliberately does not construct transactions. The v2 API is strictly read-only. Discovery is universal; support states can report whether a separately verified market adapter supports charting, quote, simulation, or execution, but they do not authorize a transaction or return transaction payloads.
 
 ## 6. Fetch one token
 
 Use the detail route with an address returned by the feed:
 
 ```text
-GET https://developers.programmable.family/api/v1/launches/{chainId}/{tokenAddress}
+GET https://developers.programmable.family/api/v2/launches/{chainId}/{tokenAddress}
 ```
 
 Use the numeric chain ID and token contract address exactly as identity inputs. Never identify a token by name or ticker alone.
@@ -143,7 +143,7 @@ Before shipping:
 - Accept a null timestamp, partial identity or provenance, and unavailable supply without dropping a recognized launch.
 - Treat a degraded response as usable but incomplete enrichment; do not convert null into zero or guessed metadata.
 - Treat `observed` and `confirmed` records as non-final. If a later poll marks a launch `orphaned`, apply that correction idempotently; otherwise reconcile non-final records against later snapshots.
-- Keep unknown launches visible with a generic Custom presentation.
+- Keep registered launches visible when a market or capability is unknown; do not invent another category.
 - Ignore unsupported capabilities, market types, and namespaced extensions.
 - Do not render a chart or trade button without the corresponding verified support.
 - Treat creator metadata and external links as untrusted display data.

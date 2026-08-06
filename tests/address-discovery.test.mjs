@@ -15,17 +15,18 @@ describe("documentation contract", () => {
   test("publishes the required read-only endpoints and fee disclosure", async () => {
     const readme = await readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8");
     for (const endpoint of [
-      "/api/v1/status",
-      "/api/v1/manifest",
-      "/api/v1/launches",
-      "/api/v1/token-list",
+      "/api/v2/status",
+      "/api/v2/manifest",
+      "/api/v2/launches",
+      "/api/v2/token-list",
     ]) {
       assert.ok(readme.includes(endpoint), `README is missing ${endpoint}`);
     }
     assert.ok(readme.includes(FEE_RECIPIENT));
     assert.match(readme, /10 basis points, or 0\.1%/);
-    assert.match(readme, /v1 API is read-only/i);
-    assert.match(readme, /Open Custom intake and Custom Registry \| Prelaunch/);
+    assert.match(readme, /v2 API is read-only/i);
+    assert.match(readme, /Programmable Custom intake and registry \| Prelaunch/i);
+    assert.match(readme, /Stock-Paired records are not part of the v2/i);
   });
 
   test("never presents the read-only feed as transaction authorization", async () => {
@@ -71,7 +72,7 @@ describe("documentation contract", () => {
     );
     const schemaIndex = JSON.parse(
       await readFile(
-        path.join(REPOSITORY_ROOT, "schema-index-v1.json"),
+        path.join(REPOSITORY_ROOT, "schema-index-v2.json"),
         "utf8",
       ),
     );
@@ -95,8 +96,8 @@ describe("documentation contract", () => {
     assert.ok(
       vercel.rewrites.some(
         ({ source, destination }) =>
-          source === "/schemas/v1" &&
-          destination === "/schemas/v1/index.json",
+          source === "/schemas/v2" &&
+          destination === "/schemas/v2/index.json",
       ),
     );
   });

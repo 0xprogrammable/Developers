@@ -105,6 +105,10 @@
       "destination": "/schemas/v1/index.json"
     },
     {
+      "source": "/schemas/v2",
+      "destination": "/schemas/v2/index.json"
+    },
+    {
       "source": "/v1/status",
       "destination": "/api/v1/status"
     },
@@ -123,6 +127,26 @@
     {
       "source": "/v1/token-list",
       "destination": "/api/v1/token-list"
+    },
+    {
+      "source": "/v2/status",
+      "destination": "/api/v2/status"
+    },
+    {
+      "source": "/v2/manifest",
+      "destination": "/api/v2/manifest"
+    },
+    {
+      "source": "/v2/launches",
+      "destination": "/api/v2/launches"
+    },
+    {
+      "source": "/v2/launches/:chainId/:tokenAddress",
+      "destination": "/api/v2/launches/:chainId/:tokenAddress"
+    },
+    {
+      "source": "/v2/token-list",
+      "destination": "/api/v2/token-list"
     }
   ]
 }

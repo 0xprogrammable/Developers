@@ -37,7 +37,7 @@ PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 node examples/app-capabilities.mjs
 PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 sh examples/curl-quickstart.sh
 ```
 
-The server only needs to expose `GET /api/v1/manifest` and `GET /api/v1/launches`.
+The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches`.
 
 ## Examples
 

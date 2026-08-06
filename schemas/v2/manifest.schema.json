@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
+  "title": "Programmable integration manifest",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "manifestVersion",
+    "generatedAt",
+    "chainId",
+    "network",
+    "publicCategories",
+    "deployments",
+    "customRegistry",
+    "platformFee",
+    "endpoints",
+    "compatibility"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://developers.programmable.family/schemas/v2/manifest.schema.json"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "manifestVersion": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "generatedAt": {
+      "$ref": "common.schema.json#/$defs/isoDateTime"
+    },
+    "chainId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "network": {
+      "type": "object",
+      "required": [
+        "name",
+        "caip2"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "explorerUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "publicCategories": {
+      "type": "object",
+      "required": [
+        "classic",
+        "custom"
+      ],
+      "properties": {
+        "classic": {
+          "$ref": "#/$defs/categoryState"
+        },
+        "custom": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/categoryState"
+            },
+            {
+              "type": "object",
+              "required": [
+                "note"
+              ],
+              "properties": {
+                "note": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deployment"
+      }
+    },
+    "customRegistry": {
+      "$ref": "#/$defs/customRegistry"
+    },
+    "platformFee": {
+      "$ref": "#/$defs/platformFee"
+    },
+    "endpoints": {
+      "type": "object",
+      "required": [
+        "wellKnown",
+        "status",
+        "manifest",
+        "launches",
+        "tokenList",
+        "openApi"
+      ],
+      "properties": {
+        "wellKnown": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "status": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "manifest": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "launches": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "tokenList": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "openApi": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compatibility": {
+      "type": "object",
+      "required": [
+        "majorVersion",
+        "additiveChangesOnly",
+        "noMandatoryClientChangesWithinMajorVersion",
+        "unknownFields",
+        "unknownCapabilities",
+        "unknownMarketKinds",
+        "deploymentDiscovery",
+        "hardcodeDeploymentAddresses"
+      ],
+      "properties": {
+        "majorVersion": {
+          "const": 2
+        },
+        "additiveChangesOnly": {
+          "const": true
+        },
+        "noMandatoryClientChangesWithinMajorVersion": {
+          "const": true
+        },
+        "unknownFields": {
+          "const": "ignore"
+        },
+        "unknownCapabilities": {
+          "const": "preserve"
+        },
+        "unknownMarketKinds": {
+          "const": "display-as-unsupported"
+        },
+        "deploymentDiscovery": {
+          "const": "refresh-manifest"
+        },
+        "hardcodeDeploymentAddresses": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "$ref": "common.schema.json#/$defs/extensions"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "categoryState": {
+      "type": "object",
+      "required": [
+        "discoveryStatus",
+        "publicSubmissionStatus"
+      ],
+      "properties": {
+        "discoveryStatus": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "unavailable"
+          ]
+        },
+        "publicSubmissionStatus": {
+          "enum": [
+            "open",
+            "prelaunch",
+            "closed",
+            "not-applicable"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployment": {
+      "type": "object",
+      "required": [
+        "deploymentId",
+        "category",
+        "modelId",
+        "modelVersion",
+        "origin",
+        "publicSubmission",
+        "lifecycle",
+        "discovery",
+        "startBlock",
+        "endBlock",
+        "contracts"
+      ],
+      "properties": {
+        "deploymentId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "category": {
+          "$ref": "common.schema.json#/$defs/category"
+        },
+        "modelId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "modelVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "origin": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "publicSubmission": {
+          "type": "boolean"
+        },
+        "lifecycle": {
+          "enum": [
+            "retired",
+            "legacy",
+            "current"
+          ]
+        },
+        "discovery": {
+          "enum": [
+            "enabled",
+            "disabled"
+          ]
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "endBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "contracts": {
+          "type": "object",
+          "required": [
+            "launcher"
+          ],
+          "properties": {
+            "launcher": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "coordinator": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "hook": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            }
+          },
+          "additionalProperties": false
+        },
+        "evidence": {
+          "$ref": "#/$defs/deploymentEvidence"
+        }
+      },
+      "additionalProperties": false
+    },
+    "deploymentEvidence": {
+      "type": "object",
+      "required": [
+        "sourceRepository",
+        "sourceCommit",
+        "sourcePath",
+        "sourceCommitment",
+        "launcherRuntimeCodeHash",
+        "launcherDeploymentTransaction"
+      ],
+      "properties": {
+        "sourceRepository": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "sourcePath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sourceCommitment": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "launcherRuntimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "launcherDeploymentTransaction": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "explorerUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "customRegistry": {
+      "type": "object",
+      "required": [
+        "category",
+        "modelId",
+        "status",
+        "publicSubmissionsEnabled",
+        "address",
+        "startBlock",
+        "note"
+      ],
+      "properties": {
+        "category": {
+          "const": "custom"
+        },
+        "modelId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "status": {
+          "enum": [
+            "prelaunch",
+            "live",
+            "retired"
+          ]
+        },
+        "publicSubmissionsEnabled": {
+          "type": "boolean"
+        },
+        "address": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "platformFee": {
+      "type": "object",
+      "required": [
+        "ratePpm",
+        "rateBps",
+        "recipient",
+        "scope",
+        "classic",
+        "customPublicSubmissions"
+      ],
+      "properties": {
+        "ratePpm": {
+          "const": "1000"
+        },
+        "rateBps": {
+          "const": "10"
+        },
+        "recipient": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classic": {
+          "$ref": "#/$defs/feeState"
+        },
+        "customPublicSubmissions": {
+          "$ref": "#/$defs/feeState"
+        }
+      },
+      "additionalProperties": false
+    },
+    "feeState": {
+      "type": "object",
+      "required": [
+        "status",
+        "chargeMode"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "verified",
+            "revoked"
+          ]
+        },
+        "chargeMode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "included",
+            "added-on-top",
+            null
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

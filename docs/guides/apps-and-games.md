@@ -8,7 +8,7 @@ Fetch the launch record and decide what your product understands:
 
 ```js
 const baseUrl = "https://developers.programmable.family"
-const feedResponse = await fetch(`${baseUrl}/api/v1/launches?limit=1`)
+const feedResponse = await fetch(`${baseUrl}/api/v2/launches?limit=1`)
 if (!feedResponse.ok) throw new Error(`Feed lookup failed: ${feedResponse.status}`)
 
 const feed = await feedResponse.json()
@@ -16,7 +16,7 @@ const first = feed.items[0]
 if (!first) throw new Error("No registered launch is currently available")
 
 const response = await fetch(
-  `${baseUrl}/api/v1/launches/${first.chainId}/${first.token.address}`,
+  `${baseUrl}/api/v2/launches/${first.chainId}/${first.token.address}`,
 )
 
 if (!response.ok) throw new Error(`Launch lookup failed: ${response.status}`)
@@ -73,7 +73,7 @@ Do not construct a transaction from creator metadata, arbitrary extension data, 
 
 Only expose an action when a separately verified adapter supports it. The adapter contract should define the chain, approved target, method, arguments, value, allowances, deadlines, slippage, quote boundary, expected movements, and simulation result.
 
-The v1 API is read-only. It never returns transaction payloads or authorizes an action. Support states are descriptive input to a separate integration decision.
+The v2 API is read-only. It never returns transaction payloads or authorizes an action. Support states are descriptive input to a separate integration decision.
 
 Before signing:
 

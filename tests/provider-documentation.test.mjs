@@ -29,6 +29,8 @@ describe("launch-provider documentation", () => {
     assert.match(guide, /Programmable adapter/);
     assert.match(guide, /Provider factory callback/);
     assert.match(guide, /webhook.*does not prove/is);
+    assert.match(guide, /token and hook addresses normally differ on every launch/i);
+    assert.match(guide, /terminals poll one feed/i);
     assert.match(proposal, /This is not a deployed ABI/);
   });
 

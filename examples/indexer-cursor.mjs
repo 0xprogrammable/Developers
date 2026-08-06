@@ -13,7 +13,7 @@ import {
 } from "./lib/programmable-client.mjs";
 
 const checkpointPath = process.env.PROGRAMMABLE_CURSOR_FILE || null;
-const manifest = await fetchJson("/api/v1/manifest");
+const manifest = await fetchJson("/api/v2/manifest");
 const checkpoint = await readCheckpoint(checkpointPath);
 const limit = process.env.PROGRAMMABLE_PAGE_SIZE || 100;
 const maximumPages = positiveInteger(process.env.PROGRAMMABLE_MAX_PAGES, 1_000);
@@ -30,7 +30,7 @@ for (;;) {
     throw new Error(`Stopped after ${maximumPages} pages without reaching the poll boundary`);
   }
 
-  const feed = await fetchJson("/api/v1/launches", request);
+  const feed = await fetchJson("/api/v2/launches", request);
   pageCount += 1;
   schemaVersion ??= feed.schemaVersion ?? null;
 

@@ -23,17 +23,17 @@ get_json() {
 }
 
 printf '%s\n' 'Manifest and deployment discovery'
-get_json "$api_base/api/v1/manifest"
+get_json "$api_base/api/v2/manifest"
 
 printf '\n%s\n' 'Launch feed'
 if [ -n "$cursor" ]; then
   encoded_cursor=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$cursor")
-  get_json "$api_base/api/v1/launches?limit=25&cursor=$encoded_cursor"
+  get_json "$api_base/api/v2/launches?limit=25&cursor=$encoded_cursor"
 elif [ -n "$after" ]; then
   encoded_after=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$after")
-  get_json "$api_base/api/v1/launches?limit=25&after=$encoded_after"
+  get_json "$api_base/api/v2/launches?limit=25&after=$encoded_after"
 else
-  get_json "$api_base/api/v1/launches?limit=25"
+  get_json "$api_base/api/v2/launches?limit=25"
 fi
 
 # Pass the opaque nextCursor as the first argument to request the next page:

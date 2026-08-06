@@ -6,7 +6,7 @@ Base URL:
 https://developers.programmable.family
 ```
 
-The public v1 discovery API is read-only JSON. The repository OpenAPI document and JSON Schemas are the normative field-level references.
+The public v2 discovery API is read-only JSON. The repository OpenAPI document and JSON Schemas are the normative field-level references.
 
 ## Discovery document
 
@@ -18,7 +18,7 @@ Clients should begin here and cache the response according to HTTP headers.
 
 ## Status
 
-### `GET /api/v1/status`
+### `GET /api/v2/status`
 
 Returns service lifecycle, supported chain state, indexer freshness, and the synchronization or finality boundary needed to interpret feed responses.
 
@@ -35,7 +35,7 @@ The service separates canonical event coverage from enrichment. A feed can be `d
 
 ## Manifest
 
-### `GET /api/v1/manifest`
+### `GET /api/v2/manifest`
 
 Returns:
 
@@ -59,7 +59,7 @@ Clients should reject an unexplained manifest rollback and alert on conflicting 
 
 ## Launch feed
 
-### `GET /api/v1/launches`
+### `GET /api/v2/launches`
 
 Returns a normalized, cursor-paginated launch feed:
 
@@ -80,7 +80,7 @@ When event coverage is complete but metadata, supply, receipt, or block-timestam
 When `page.hasMore` is true, continue the current traversal with:
 
 ```text
-GET /api/v1/launches?cursor={urlEncodedCursor}
+GET /api/v2/launches?cursor={urlEncodedCursor}
 ```
 
 Cursors are opaque. Store and return them unchanged. Do not parse a cursor into application logic.
@@ -88,7 +88,7 @@ Cursors are opaque. Store and return them unchanged. Do not parse a cursor into 
 After the full traversal has been durably applied, persist `page.resumeCursor`. Begin the next incremental poll with:
 
 ```text
-GET /api/v1/launches?after={urlEncodedResumeCursor}
+GET /api/v2/launches?after={urlEncodedResumeCursor}
 ```
 
 Do not send `after` and `cursor` together. `page.nextCursor` continues one traversal; `page.resumeCursor` is the durable high-water checkpoint for a later poll. `snapshot.cursor` identifies the response snapshot boundary.
@@ -97,14 +97,14 @@ Implement replay-safe deduplication because retries and reorg reconciliation can
 
 ## Launch by asset
 
-### `GET /api/v1/launches/{chainId}/{tokenAddress}`
+### `GET /api/v2/launches/{chainId}/{tokenAddress}`
 
 Returns the Programmable launch record for one chain and token address.
 
 Example:
 
 ```text
-GET /api/v1/launches/1/0x0000000000000000000000000000000000000000
+GET /api/v2/launches/1/0x0000000000000000000000000000000000000000
 ```
 
 The zero address is shown only as path syntax, not as a real token example.
@@ -113,7 +113,7 @@ Use a numeric chain ID and a valid EVM address. Address comparison should be cas
 
 ## Token list
 
-### `GET /api/v1/token-list`
+### `GET /api/v2/token-list`
 
 Returns a wallet-friendly token-list compatibility projection. Use the launch feed when you need full provenance, market support, fee data, non-final records, or reorg state.
 
@@ -133,7 +133,7 @@ Treat server limits and cursor contents as opaque. The token-list endpoint suppo
 
 ## Read-only boundary
 
-v1 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions.
+v2 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions.
 
 ## Response handling
 
@@ -165,7 +165,7 @@ For completeness gating, incomplete event-log coverage returns a retryable `503`
 
 ## Schema validation
 
-Public response schemas live in `schemas/v1/`:
+Public response schemas live in `schemas/v2/`:
 
 - `status.schema.json`
 - `manifest.schema.json`
@@ -174,4 +174,4 @@ Public response schemas live in `schemas/v1/`:
 - `token-list.schema.json`
 - `problem.schema.json`
 
-Validate fixtures and representative live responses in continuous integration. Unknown optional fields, capability identifiers, and market kinds must remain forward compatible as described in [v1 compatibility](../concepts/compatibility.md).
+Validate fixtures and representative live responses in continuous integration. Unknown optional fields, capability identifiers, and market kinds must remain forward compatible as described in [v2 compatibility](../concepts/compatibility.md).

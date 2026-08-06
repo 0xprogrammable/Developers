@@ -10,7 +10,7 @@ import {
 } from "./lib/programmable-client.mjs";
 
 const requestedCapability = process.argv[2]?.trim().toLowerCase() || null;
-const feed = await fetchJson("/api/v1/launches", {
+const feed = await fetchJson("/api/v2/launches", {
   limit: process.env.PROGRAMMABLE_PAGE_SIZE || 100,
 });
 const warning = formatSourceWarning(feed);
