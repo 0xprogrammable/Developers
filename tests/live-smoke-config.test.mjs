@@ -20,4 +20,3 @@ test("live smoke allows a bounded serverless cold start", async () => {
   assert.match(source, /createSchemaRegistry\("v2"\)/u);
   assert.match(source, /api\/v2/u);
 });
-
