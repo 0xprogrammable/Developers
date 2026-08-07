@@ -926,7 +926,7 @@ export function validateManifestSemantics(manifest) {
     const topics = Object.values(generation.events ?? {})
       .map((event) => event.topic0?.toLowerCase())
       .filter(Boolean);
-    const expectedTopicCount = generation.generation === "2" ? 15 : 10;
+    const expectedTopicCount = generation.generation === "2" ? 15 : 11;
     if (topics.length !== expectedTopicCount || new Set(topics).size !== topics.length) {
       findings.push(finding(
         "REGISTRY_EVENT_SET",

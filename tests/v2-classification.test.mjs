@@ -116,7 +116,7 @@ describe("version 2 classification", () => {
     );
   });
 
-  test("serves a version 2 feed envelope", () => {
+  test("serves a version 2 feed envelope", async () => {
     const projected = projectV2Dataset({
       records: [
         internalRecord(
@@ -129,6 +129,11 @@ describe("version 2 classification", () => {
     const payload = launchFeedPayload(projected, { limit: 100 });
     assert.equal(payload.schemaVersion, "2.0.0");
     assert.equal(payload.items[0].schemaVersion, "2.0.0");
+    assertValid(
+      (await createSchemaRegistry("v2")).validator("launch-feed.schema.json"),
+      payload,
+      "produced v2 launch feed",
+    );
   });
 
   test("publishes Registry discovery while keeping general intake prelaunch", async () => {

@@ -29,7 +29,10 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "prelaunch",
-      "note": "Registry discovery is live for finalized approved launches. General public submissions remain prelaunch."
+      "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
+      "registryStartBlock": "25701139",
+      "registryGeneration": "1",
+      "note": "Finalized approved Custom Registry launches are discoverable. General public submissions remain prelaunch."
     }
   },
   "compatibility": {

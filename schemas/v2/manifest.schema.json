@@ -372,6 +372,7 @@
             "review",
             "attribution",
             "feePolicy",
+            "feeScope",
             "feeEvidence",
             "finalized",
             "corrected",
