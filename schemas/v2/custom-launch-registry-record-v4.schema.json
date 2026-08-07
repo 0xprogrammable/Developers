@@ -256,6 +256,11 @@
       "type": "string",
       "pattern": "^0x[0-9a-f]{64}$"
     },
+    "hexData": {
+      "type": "string",
+      "pattern": "^0x(?:[0-9a-f]{2})*$",
+      "maxLength": 16386
+    },
     "gitObject": {
       "type": "string",
       "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
@@ -2151,9 +2156,13 @@
         "emitterAddress",
         "observedRuntimeCodeHash",
         "topic0",
+        "indexedTopics",
+        "data",
         "transactionHash",
         "blockNumber",
         "blockHash",
+        "transactionIndex",
+        "logIndex",
         "configurationHash",
         "providerId",
         "factory",
@@ -2178,6 +2187,17 @@
         "topic0": {
           "$ref": "#/definitions/hash32"
         },
+        "indexedTopics": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/definitions/hash32"
+          }
+        },
+        "data": {
+          "$ref": "#/definitions/hexData"
+        },
         "transactionHash": {
           "$ref": "#/definitions/hash32"
         },
@@ -2186,6 +2206,14 @@
         },
         "blockHash": {
           "$ref": "#/definitions/hash32"
+        },
+        "transactionIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logIndex": {
+          "type": "integer",
+          "minimum": 0
         },
         "configurationHash": {
           "$ref": "#/definitions/hash32"
@@ -2227,9 +2255,13 @@
         "emitterAddress",
         "observedRuntimeCodeHash",
         "topic0",
+        "indexedTopics",
+        "data",
         "transactionHash",
         "blockNumber",
         "blockHash",
+        "transactionIndex",
+        "logIndex",
         "configurationHash",
         "modelRepositoryId",
         "modelSourceCommitId",
@@ -2253,6 +2285,17 @@
         "topic0": {
           "$ref": "#/definitions/hash32"
         },
+        "indexedTopics": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/definitions/hash32"
+          }
+        },
+        "data": {
+          "$ref": "#/definitions/hexData"
+        },
         "transactionHash": {
           "$ref": "#/definitions/hash32"
         },
@@ -2261,6 +2304,14 @@
         },
         "blockHash": {
           "$ref": "#/definitions/hash32"
+        },
+        "transactionIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logIndex": {
+          "type": "integer",
+          "minimum": 0
         },
         "configurationHash": {
           "$ref": "#/definitions/hash32"
@@ -2302,11 +2353,15 @@
         "transactionHash",
         "blockNumber",
         "blockHash",
+        "transactionIndex",
+        "logIndex",
         "launchId",
         "deployed",
-        "requestHash",
-        "registeredRecordCommitment",
-        "registrationBindingHash"
+        "salt",
+        "creationCodeHash",
+        "initializationResultHash",
+        "indexedTopics",
+        "data"
       ],
       "properties": {
         "emitterRole": {
@@ -2330,20 +2385,39 @@
         "blockHash": {
           "$ref": "#/definitions/hash32"
         },
+        "transactionIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
         "launchId": {
           "$ref": "#/definitions/hash32"
         },
         "deployed": {
           "$ref": "#/definitions/address"
         },
-        "requestHash": {
+        "salt": {
           "$ref": "#/definitions/hash32"
         },
-        "registeredRecordCommitment": {
+        "creationCodeHash": {
           "$ref": "#/definitions/hash32"
         },
-        "registrationBindingHash": {
+        "initializationResultHash": {
           "$ref": "#/definitions/hash32"
+        },
+        "indexedTopics": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/definitions/hash32"
+          }
+        },
+        "data": {
+          "$ref": "#/definitions/hexData"
         }
       }
     },

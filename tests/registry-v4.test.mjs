@@ -17,10 +17,13 @@ import {
   validateGen2PartnerFactoryAuthorization,
 } from "../server/custom-registry-gen2.js";
 import {
+  deriveRegistryPartnerFactoryAuthorizedAbiProofV4,
+  deriveRegistryPartnerFactorySourceBoundAbiProofV4,
   normalizeRegistryCustomItemV4,
   REGISTRY_V4_PRODUCER_SCHEMA,
   validateRegistryContractRecordV4,
   validateRegistryCustomFeedItemV4,
+  validateRegistryExecutionProofV4,
   validateRegistryProjectionEnvelopeV4,
 } from "../server/registry-v4.js";
 import {
@@ -234,6 +237,85 @@ function partnerRecord() {
   };
 }
 
+function partnerExecutionRecord() {
+  const record = partnerRecord();
+  const authorization = record.partnerFactoryAuthorization;
+  const origin = registryV4Envelope.rawRecord.registryOrigin;
+  const partnerRegistry = origin.releaseContracts.partnerFactoryRegistry;
+  const topic = (id) => origin.eventBindings.find((event) => event.id === id).topic0;
+  const transactionHash = hash(920);
+  const blockHash = hash(921);
+  const authorizedEvent = {
+    emitterRole: "partnerFactoryRegistry",
+    emitterAddress: partnerRegistry.address,
+    observedRuntimeCodeHash: partnerRegistry.runtimeCodeHash,
+    topic0: topic("partnerFactoryAuthorized"),
+    indexedTopics: [],
+    data: "0x",
+    transactionHash,
+    blockNumber: "90",
+    blockHash,
+    transactionIndex: 3,
+    logIndex: 4,
+    configurationHash: authorization.configurationHash,
+    providerId: authorization.providerId,
+    factory: authorization.factory,
+    modelId: authorization.modelId,
+    modelVersion: authorization.modelVersion,
+    templateId: authorization.templateId,
+    templateVersion: authorization.templateVersion,
+    validAfterBlock: authorization.validAfterBlock,
+    expiresAtBlock: authorization.expiresAtBlock,
+    evidenceHash: authorization.evidenceHash,
+  };
+  Object.assign(
+    authorizedEvent,
+    deriveRegistryPartnerFactoryAuthorizedAbiProofV4(authorizedEvent),
+  );
+  const sourceBoundEvent = {
+    emitterRole: "partnerFactoryRegistry",
+    emitterAddress: partnerRegistry.address,
+    observedRuntimeCodeHash: partnerRegistry.runtimeCodeHash,
+    topic0: topic("partnerFactorySourceBound"),
+    indexedTopics: [],
+    data: "0x",
+    transactionHash,
+    blockNumber: "90",
+    blockHash,
+    transactionIndex: 3,
+    logIndex: 5,
+    configurationHash: authorization.configurationHash,
+    modelRepositoryId: authorization.modelRepositoryId,
+    modelSourceCommitId: authorization.modelSourceCommitId,
+    factorySourceRepositoryId: authorization.factorySourceRepositoryId,
+    factorySourceCommitId: authorization.factorySourceCommitId,
+    factoryRuntimeCodeHash: authorization.factoryRuntimeCodeHash,
+    launchRuntimeCodeSetHash: authorization.launchRuntimeCodeSetHash,
+    permissionsHash: authorization.permissionsHash,
+    feePolicyHash: authorization.feePolicyHash,
+  };
+  Object.assign(
+    sourceBoundEvent,
+    deriveRegistryPartnerFactorySourceBoundAbiProofV4(sourceBoundEvent),
+  );
+  return {
+    ...record,
+    atomicExecutionProof: null,
+    registryOrigin: {
+      registrationBlockNumber: "100",
+      releaseContracts: structuredClone(origin.releaseContracts),
+    },
+    partnerFactoryAuthorization: {
+      ...authorization,
+      revoked: false,
+      stateObservedAtBlock: "95",
+      stateProofHash: `sha256:${"9".repeat(64)}`,
+      authorizedEvent,
+      sourceBoundEvent,
+    },
+  };
+}
+
 function resealContractRecord(record) {
   const preimage = record.registeredRecordPreimage;
   preimage.approvalBindingHash = deriveGen2ApprovalBindingHash(preimage);
@@ -357,7 +439,9 @@ function v4Manifest(envelope = registryV4Envelope) {
       endBlock: null,
       generation: origin.registryGeneration,
       registryEventSetHash: origin.registryEventSetHash,
-      authorizedWriters: [origin.registryWriter],
+      authorizedWriters: [
+        ...origin.authorizedWriterSetEvidence.authorizedAddresses,
+      ],
       events: {
         [origin.operation]: {
           emitterRole: "registry",
@@ -486,11 +570,11 @@ describe("Registry generation 2 contract parity", () => {
     );
     assert.equal(
       registryV4Envelope.rawRecordHash,
-      "sha256:6f581863290b23305995768520b43fa497d37f25ee297127ce21e122fd0d6de1",
+      "sha256:ec5379c7cc828075c2c05c258aebc87c0ac5951205aeb40d8661501c6b901f3f",
     );
     assert.equal(
       registryV4Envelope.projectionDigest,
-      "sha256:6e2a0df93b2fbc764b631f9fac7b8288e892d33b5ca8167486698233cb87c9b2",
+      "sha256:0a20b4b7acfa55f2238b3901759a88eee0247346e9597d2e9d71274f918f5172",
     );
   });
 
@@ -522,6 +606,34 @@ describe("Registry generation 2 contract parity", () => {
       normalized.extensions["programmable/registry-v4"].transitionCheckpoint,
       null,
     );
+    assert.deepEqual(
+      normalized.extensions["programmable/registry-v4"]
+        .authorizedWriterSetEvidence,
+      item.projection.origin.authorizedWriterSetEvidence,
+    );
+    assert.equal(
+      normalized.extensions["programmable/registry-v4"]
+        .authorizedWriterSetEvidence.eventCaller,
+      null,
+    );
+    assert.equal(
+      Object.hasOwn(
+        normalized.extensions["programmable/registry-v4"],
+        "registryWriter",
+      ),
+      false,
+    );
+    assert.deepEqual(
+      normalized.extensions["programmable/registry-v4"].atomicExecutionProof,
+      item.rawRecord.atomicExecutionProof,
+    );
+    assert.equal(
+      Object.hasOwn(
+        normalized.extensions["programmable/registry-v4"].atomicExecutionProof,
+        "requestHash",
+      ),
+      false,
+    );
     assert.equal(isV2PublicLaunch(normalized, v4Manifest()), true);
     const schemas = await createSchemaRegistry("v2");
     const validate = schemas.validator("launch.schema.json");
@@ -539,7 +651,16 @@ describe("Registry generation 2 contract parity", () => {
           .runtimeCodeHash = hash(980);
       }],
       ["atomic proof", (value) => {
-        value.rawRecord.atomicExecutionProof.requestHash = ZERO_HASH;
+        value.rawRecord.atomicExecutionProof.indexedTopics[0] = hash(981);
+      }],
+      ["atomic data", (value) => {
+        value.rawRecord.atomicExecutionProof.data = "0x00";
+      }],
+      ["atomic log order", (value) => {
+        value.rawRecord.atomicExecutionProof.logIndex -= 1;
+      }],
+      ["old atomic proof field", (value) => {
+        value.rawRecord.atomicExecutionProof.requestHash = hash(981);
       }],
       ["event topic", (value) => {
         value.projection.origin.eventTopic0 = hash(982);
@@ -556,10 +677,16 @@ describe("Registry generation 2 contract parity", () => {
       ["event payload extension", (value) => {
         value.projection.origin.eventPayload.untrusted = true;
       }],
-      ["duplicate writer", (value) => {
-        value.projection.origin.authorizedWriters.finalizers.push(
-          value.projection.origin.authorizedWriters.finalizers[0],
-        );
+      ["forged caller", (value) => {
+        value.projection.origin.authorizedWriterSetEvidence.eventCaller =
+          address(999);
+      }],
+      ["old registry writer claim", (value) => {
+        value.projection.origin.registryWriter = address(999);
+      }],
+      ["forged authorized set", (value) => {
+        value.projection.origin.authorizedWriterSetEvidence
+          .authorizedAddresses[0] = address(999);
       }],
       ["latest revision", (value) => {
         value.projection.origin.latestRecordRevision = "2";
@@ -610,6 +737,55 @@ describe("Registry generation 2 contract parity", () => {
     }
   });
 
+  test("binds both provider-factory logs to exact raw ABI data and order", () => {
+    const baseline = partnerExecutionRecord();
+    assert.equal(validateRegistryExecutionProofV4(baseline), true);
+    for (const [name, mutate] of [
+      ["authorized topic", (value) => {
+        value.partnerFactoryAuthorization.authorizedEvent.indexedTopics[0] =
+          hash(990);
+      }],
+      ["authorized data", (value) => {
+        value.partnerFactoryAuthorization.authorizedEvent.data = "0x00";
+      }],
+      ["source-bound topic", (value) => {
+        value.partnerFactoryAuthorization.sourceBoundEvent.indexedTopics[1] =
+          hash(991);
+      }],
+      ["source-bound data", (value) => {
+        value.partnerFactoryAuthorization.sourceBoundEvent.data = "0x00";
+      }],
+      ["log order", (value) => {
+        value.partnerFactoryAuthorization.sourceBoundEvent.logIndex += 1;
+      }],
+    ]) {
+      const changed = structuredClone(baseline);
+      mutate(changed);
+      assert.equal(validateRegistryExecutionProofV4(changed), false, name);
+    }
+  });
+
+  test("requires head block minus observed block to meet the full finality depth", () => {
+    function atDepth(depth) {
+      const changed = structuredClone(registryV4Envelope);
+      const finality = changed.projection.registryFinality;
+      finality.status = "finalized";
+      finality.canonicalHeadBlock = String(
+        BigInt(finality.blockNumber) + BigInt(depth),
+      );
+      finality.confirmedAt = finality.observedAt;
+      finality.finalizedAt = finality.observedAt;
+      changed.projection.publicProjection.finality = structuredClone(finality);
+      changed.projectionDigest = canonicalSha256(
+        changed.projectionSchemaVersion,
+        changed.projection,
+      );
+      return changed;
+    }
+    assert.equal(validateRegistryProjectionEnvelopeV4(atDepth(63)), false);
+    assert.equal(validateRegistryProjectionEnvelopeV4(atDepth(64)), true);
+  });
+
   test("keeps v3 on Gen1 and v4 on Gen2 without cross-generation acceptance", () => {
     const v4 = normalizeRegistryCustomItemV4(v4FeedItem());
     const manifestV4 = v4Manifest();
@@ -625,6 +801,8 @@ describe("Registry generation 2 contract parity", () => {
     delete v3.extensions["programmable/registry-v4"];
     const manifestV3 = structuredClone(manifestV4);
     manifestV3.registryGenerations[0].generation = "1";
+    v3.extensions["programmable/registry-v3"].registryWriter =
+      manifestV3.registryGenerations[0].authorizedWriters[0];
     assert.equal(isV2PublicLaunch(v3, manifestV3), true);
 
     const v4OnGen1 = structuredClone(v4);
@@ -793,9 +971,16 @@ describe("Registry generation 2 contract parity", () => {
         registrationBlockNumber: "2",
       },
       extensions: {
-        "programmable/registry-v3": {
+        "programmable/registry-v4": {
           registryRuntimeCodeHash: generation.runtimeCodeKeccak256,
-          registryWriter: generation.authorizedWriters[0],
+          authorizedWriterSetEvidence: {
+            operationRole: "atomicRegistrar",
+            authorizedAddresses: [generation.contractSet.atomicRegistrar.address],
+            eventCaller: null,
+            callerIdentityStatus: "not-emitted-by-registry-abi",
+            authorizationBasis:
+              "atomic-registrar-runtime-and-same-transaction-event",
+          },
           operation: "registered",
           eventTopic0: generation.events.registered.topic0,
           registryGenerationContractSet: structuredClone(generation.contractSet),
@@ -823,7 +1008,7 @@ describe("Registry generation 2 contract parity", () => {
     }
 
     const wrongEvidence = structuredClone(record);
-    wrongEvidence.extensions["programmable/registry-v3"]
+    wrongEvidence.extensions["programmable/registry-v4"]
       .registryGenerationContractSet.partnerFactoryRegistry.runtimeCodeKeccak256 =
         hash(901);
     assert.equal(registryOriginMatchesManifest(wrongEvidence, manifest), false);

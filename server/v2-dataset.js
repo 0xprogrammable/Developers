@@ -29,6 +29,45 @@ function canonicalRegistryDeployments(manifest) {
   );
 }
 
+function generationWriterEvidenceMatches(record, registry, evidence) {
+  if (registry.generation !== "2") {
+    return Array.isArray(registry.authorizedWriters) &&
+      registry.authorizedWriters.some((writer) =>
+        writer.toLowerCase() === evidence?.registryWriter?.toLowerCase());
+  }
+  const writerSet = evidence?.authorizedWriterSetEvidence;
+  if (!writerSet || writerSet.eventCaller !== null ||
+    writerSet.callerIdentityStatus !== "not-emitted-by-registry-abi" ||
+    !Array.isArray(writerSet.authorizedAddresses) ||
+    writerSet.authorizedAddresses.length === 0) return false;
+  if (evidence.operation === "registered") {
+    if (writerSet.operationRole === "atomicRegistrar") {
+      const atomic = registry.contractSet?.atomicRegistrar?.address;
+      return writerSet.authorizationBasis ===
+          "atomic-registrar-runtime-and-same-transaction-event" &&
+        typeof atomic === "string" && writerSet.authorizedAddresses.length === 1 &&
+        writerSet.authorizedAddresses[0].toLowerCase() === atomic.toLowerCase();
+    }
+    const factory = record.registryV4Envelope?.rawRecord
+      ?.partnerFactoryAuthorization?.factory;
+    return writerSet.operationRole === "providerFactory" &&
+      writerSet.authorizationBasis === "partner-factory-state-and-registry-runtime" &&
+      typeof factory === "string" && writerSet.authorizedAddresses.length === 1 &&
+      writerSet.authorizedAddresses[0].toLowerCase() === factory.toLowerCase();
+  }
+  const expectedRole = {
+    finalized: "finalizer",
+    corrected: "corrector",
+    revoked: "revoker",
+  }[evidence.operation];
+  return writerSet.operationRole === expectedRole &&
+    writerSet.authorizationBasis === "registry-role-guard-and-manifest-allowlist" &&
+    Array.isArray(registry.authorizedWriters) &&
+    writerSet.authorizedAddresses.every((address) =>
+      registry.authorizedWriters.some((writer) =>
+        writer.toLowerCase() === address.toLowerCase()));
+}
+
 export function registryOriginMatchesManifest(record, manifest) {
   const origin = record?.registryOrigin;
   const evidence = record?.extensions?.["programmable/registry-v4"] ??
@@ -47,9 +86,7 @@ export function registryOriginMatchesManifest(record, manifest) {
       registry.generation === origin.registryGeneration &&
       registry.registryEventSetHash === origin.registryEventSetHash &&
       evidence?.registryRuntimeCodeHash === registry.runtimeCodeKeccak256 &&
-      Array.isArray(registry.authorizedWriters) &&
-      registry.authorizedWriters.some((writer) =>
-        writer.toLowerCase() === evidence?.registryWriter?.toLowerCase()) &&
+      generationWriterEvidenceMatches(record, registry, evidence) &&
       event?.topic0 === evidence?.eventTopic0 &&
       BigInt(origin.registrationBlockNumber) >= BigInt(registry.startBlock) &&
       (registry.endBlock === null ||

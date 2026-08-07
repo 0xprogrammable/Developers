@@ -305,6 +305,110 @@ function companionAbiProof(record, kind) {
   };
 }
 
+function atomicExecutionAbiProof(proof) {
+  return {
+    indexedTopics: [
+      proof.launchId,
+      `0x${abiAddressWord(proof.deployed)}`,
+      proof.salt,
+    ],
+    data: abiDataWords([
+      abiBytes32Word(proof.creationCodeHash),
+      abiBytes32Word(proof.initializationResultHash),
+    ]),
+  };
+}
+
+function partnerFactoryAuthorizedAbiProof(event) {
+  return {
+    indexedTopics: [
+      event.configurationHash,
+      event.providerId,
+      `0x${abiAddressWord(event.factory)}`,
+    ],
+    data: abiDataWords([
+      abiBytes32Word(event.modelId),
+      abiBytes32Word(event.modelVersion),
+      abiBytes32Word(event.templateId),
+      abiBytes32Word(event.templateVersion),
+      abiUintWord(event.validAfterBlock, 64),
+      abiUintWord(event.expiresAtBlock, 64),
+      abiBytes32Word(event.evidenceHash),
+    ]),
+  };
+}
+
+export function deriveRegistryPartnerFactoryAuthorizedAbiProofV4(event) {
+  return partnerFactoryAuthorizedAbiProof(event);
+}
+
+function partnerFactorySourceBoundAbiProof(event) {
+  return {
+    indexedTopics: [
+      event.configurationHash,
+      event.modelRepositoryId,
+      event.modelSourceCommitId,
+    ],
+    data: abiDataWords([
+      abiBytes32Word(event.factorySourceRepositoryId),
+      abiBytes32Word(event.factorySourceCommitId),
+      abiBytes32Word(event.factoryRuntimeCodeHash),
+      abiBytes32Word(event.launchRuntimeCodeSetHash),
+      abiBytes32Word(event.permissionsHash),
+      abiBytes32Word(event.feePolicyHash),
+    ]),
+  };
+}
+
+export function deriveRegistryPartnerFactorySourceBoundAbiProofV4(event) {
+  return partnerFactorySourceBoundAbiProof(event);
+}
+
+function writerSetEvidenceMatches(record, projection) {
+  const evidence = projection.origin.authorizedWriterSetEvidence;
+  if (!exactKeys(evidence, [
+    "operationRole", "authorizedAddresses", "eventCaller",
+    "callerIdentityStatus", "authorizationBasis",
+  ]) || evidence.eventCaller !== null ||
+    evidence.callerIdentityStatus !== "not-emitted-by-registry-abi" ||
+    !Array.isArray(evidence.authorizedAddresses) ||
+    evidence.authorizedAddresses.length === 0 ||
+    !evidence.authorizedAddresses.every((address) =>
+      ADDRESS.test(address) && address.toLowerCase() !== ZERO_ADDRESS) ||
+    new Set(evidence.authorizedAddresses.map((address) => address.toLowerCase()))
+      .size !== evidence.authorizedAddresses.length) return false;
+
+  const operation = projection.origin.operation;
+  if (operation === "registered") {
+    const providerId = record.registeredRecordPreimage.providerId;
+    if (providerId === ZERO_HASH) {
+      const atomic = record.registryOrigin.releaseContracts.atomicRegistrar;
+      return evidence.operationRole === "atomicRegistrar" &&
+        evidence.authorizationBasis ===
+          "atomic-registrar-runtime-and-same-transaction-event" &&
+        equalJson(
+          evidence.authorizedAddresses.map((address) => address.toLowerCase()),
+          [atomic.address.toLowerCase()],
+        );
+    }
+    return evidence.operationRole === "providerFactory" &&
+      evidence.authorizationBasis ===
+        "partner-factory-state-and-registry-runtime" &&
+      record.partnerFactoryAuthorization !== null &&
+      equalJson(
+        evidence.authorizedAddresses.map((address) => address.toLowerCase()),
+        [record.partnerFactoryAuthorization.factory.toLowerCase()],
+      );
+  }
+  const expectedRole = {
+    finalized: "finalizer",
+    corrected: "corrector",
+    revoked: "revoker",
+  }[operation];
+  return evidence.operationRole === expectedRole &&
+    evidence.authorizationBasis === "registry-role-guard-and-manifest-allowlist";
+}
+
 function authorizationMatchesPreimage(authorization, preimage) {
   if (!authorization) return false;
   try {
@@ -402,7 +506,19 @@ function trustRootMatches(record, projection) {
   const origin = record.registryOrigin;
   const projected = projection.origin;
   const releaseContracts = origin?.releaseContracts;
-  if (!exactKeys(releaseContracts, Object.keys(GEN2_CONTRACTS)) ||
+  if (!exactKeys(projected, [
+    "registryGeneration", "registryAddress", "registryRuntimeCodeHash",
+    "registryStartBlock", "registryContractId",
+    "contractIntegrationAbiVersion", "registryReleaseSourceCommit",
+    "registryAbiSha256", "registryEventSetId", "registryEventSetHash",
+    "registryEventSetBytesSha256", "feePolicyDomain", "releaseContracts",
+    "authorizedWriterSetEvidence", "registrationOnchainTimestamp",
+    "operation", "eventTopic0", "eventIndexedTopics", "eventData",
+    "transactionIndex", "logIndex", "registrationCompanions",
+    "eventPayload", "latestRecordRevision", "latestRecordHash",
+    "transitionSequence", "transitionCheckpoint", "transactionHash",
+    "blockNumber", "blockHash", "onchainTimestamp",
+  ]) || !exactKeys(releaseContracts, Object.keys(GEN2_CONTRACTS)) ||
     !equalJson(origin.eventBindings, GEN2_EVENT_BINDINGS) ||
     !Object.entries(GEN2_RELEASE).every(([field, value]) =>
       origin[field] === value && projected[field] === value) ||
@@ -415,8 +531,6 @@ function trustRootMatches(record, projection) {
       projected.operation,
     ) ||
     projected.eventTopic0 !== EVENT_TOPIC[projected.operation] ||
-    !ADDRESS.test(projected.registryWriter ?? "") ||
-    projected.registryWriter.toLowerCase() === ZERO_ADDRESS ||
     projected.registrationOnchainTimestamp !==
       origin.registrationOnchainTimestamp ||
     !timestamp(projected.registrationOnchainTimestamp) ||
@@ -473,31 +587,22 @@ function trustRootMatches(record, projection) {
       companion.logIndex !== projected.logIndex + index + 1;
     }
   )) return false;
-  const writers = projected.authorizedWriters;
-  if (!exactKeys(writers, ["finalizers", "correctors", "revokers"]) ||
-    !Object.values(writers).every((list) => Array.isArray(list) &&
-      list.every((writer) => ADDRESS.test(writer) &&
-        writer.toLowerCase() !== ZERO_ADDRESS) &&
-      new Set(list.map((writer) => writer.toLowerCase())).size === list.length)) {
-    return false;
-  }
-  const authorizedRole = {
-    finalized: "finalizers",
-    corrected: "correctors",
-    revoked: "revokers",
-  }[projected.operation];
-  return authorizedRole === undefined || writers[authorizedRole].some(
-    (writer) => writer.toLowerCase() === projected.registryWriter.toLowerCase(),
-  );
+  return writerSetEvidenceMatches(record, projection);
 }
 
-function proofMatches(record, projection) {
+function proofMatches(record) {
   const preimage = record.registeredRecordPreimage;
-  const origin = projection.origin;
   const contracts = record.registryOrigin.releaseContracts;
   if (preimage.providerId === ZERO_HASH) {
     const proof = record.atomicExecutionProof;
     const atomic = contracts.atomicRegistrar;
+    if (!exactKeys(proof, [
+      "emitterRole", "emitterAddress", "observedRuntimeCodeHash", "topic0",
+      "transactionHash", "blockNumber", "blockHash", "transactionIndex",
+      "logIndex", "launchId", "deployed", "salt", "creationCodeHash",
+      "initializationResultHash", "indexedTopics", "data",
+    ])) return false;
+    const abiProof = atomicExecutionAbiProof(proof);
     return record.partnerFactoryAuthorization === null && proof !== null &&
       proof.emitterRole === "atomicRegistrar" &&
       proof.emitterAddress.toLowerCase() === atomic.address.toLowerCase() &&
@@ -507,23 +612,41 @@ function proofMatches(record, projection) {
         record.registryOrigin.registrationTransactionHash &&
       proof.blockNumber === record.registryOrigin.registrationBlockNumber &&
       proof.blockHash === record.registryOrigin.registrationBlockHash &&
+      proof.transactionIndex ===
+        Number(record.registryOrigin.registrationTransactionIndex) &&
+      proof.logIndex === Number(record.registryOrigin.registrationLogIndex) + 7 &&
       proof.launchId === `0x${record.launchId.slice("sha256:".length)}` &&
       proof.deployed.toLowerCase() === preimage.primaryContract.toLowerCase() &&
-      HASH32.test(proof.requestHash) && proof.requestHash !== ZERO_HASH &&
-      proof.registeredRecordCommitment === record.registeredRecordCommitment &&
-      proof.registrationBindingHash === record.registrationBindingHash &&
-      (origin.operation !== "registered" ||
-        origin.registryWriter.toLowerCase() === atomic.address.toLowerCase());
+      HASH32.test(proof.salt) && proof.salt !== ZERO_HASH &&
+      HASH32.test(proof.creationCodeHash) && proof.creationCodeHash !== ZERO_HASH &&
+      HASH32.test(proof.initializationResultHash) &&
+      proof.initializationResultHash !== ZERO_HASH &&
+      equalJson(proof.indexedTopics, abiProof.indexedTopics) &&
+      proof.data === abiProof.data;
   }
 
   const authorization = record.partnerFactoryAuthorization;
   const partnerRegistry = contracts.partnerFactoryRegistry;
   const authorized = authorization?.authorizedEvent;
   const sourceBound = authorization?.sourceBoundEvent;
+  if (!exactKeys(authorized, [
+    "emitterRole", "emitterAddress", "observedRuntimeCodeHash", "topic0",
+    "indexedTopics", "data", "transactionHash", "blockNumber", "blockHash",
+    "transactionIndex", "logIndex", "configurationHash", "providerId",
+    "factory", "modelId", "modelVersion", "templateId", "templateVersion",
+    "validAfterBlock", "expiresAtBlock", "evidenceHash",
+  ]) || !exactKeys(sourceBound, [
+    "emitterRole", "emitterAddress", "observedRuntimeCodeHash", "topic0",
+    "indexedTopics", "data", "transactionHash", "blockNumber", "blockHash",
+    "transactionIndex", "logIndex", "configurationHash", "modelRepositoryId",
+    "modelSourceCommitId", "factorySourceRepositoryId", "factorySourceCommitId",
+    "factoryRuntimeCodeHash", "launchRuntimeCodeSetHash", "permissionsHash",
+    "feePolicyHash",
+  ])) return false;
+  const authorizedAbi = partnerFactoryAuthorizedAbiProof(authorized);
+  const sourceBoundAbi = partnerFactorySourceBoundAbiProof(sourceBound);
   return record.atomicExecutionProof === null && authorization !== null &&
     authorization.revoked === false &&
-    (origin.operation !== "registered" ||
-      origin.registryWriter.toLowerCase() === authorization.factory.toLowerCase()) &&
     authorized.emitterRole === "partnerFactoryRegistry" &&
     sourceBound.emitterRole === "partnerFactoryRegistry" &&
     authorized.emitterAddress.toLowerCase() ===
@@ -534,6 +657,44 @@ function proofMatches(record, projection) {
     sourceBound.observedRuntimeCodeHash === partnerRegistry.runtimeCodeHash &&
     authorized.topic0 === EVENT_TOPIC.partnerFactoryAuthorized &&
     sourceBound.topic0 === EVENT_TOPIC.partnerFactorySourceBound &&
+    HASH32.test(authorized.transactionHash) &&
+    HASH32.test(authorized.blockHash) &&
+    DECIMAL.test(authorized.blockNumber) &&
+    Number.isSafeInteger(authorized.transactionIndex) &&
+    authorized.transactionIndex >= 0 && Number.isSafeInteger(authorized.logIndex) &&
+    authorized.logIndex >= 0 && Number.isSafeInteger(sourceBound.transactionIndex) &&
+    sourceBound.transactionIndex >= 0 && Number.isSafeInteger(sourceBound.logIndex) &&
+    sourceBound.logIndex >= 0 &&
+    authorized.configurationHash === authorization.configurationHash &&
+    authorized.providerId === authorization.providerId &&
+    authorized.factory.toLowerCase() === authorization.factory.toLowerCase() &&
+    authorized.modelId === authorization.modelId &&
+    authorized.modelVersion === authorization.modelVersion &&
+    authorized.templateId === authorization.templateId &&
+    authorized.templateVersion === authorization.templateVersion &&
+    authorized.validAfterBlock === authorization.validAfterBlock &&
+    authorized.expiresAtBlock === authorization.expiresAtBlock &&
+    authorized.evidenceHash === authorization.evidenceHash &&
+    sourceBound.configurationHash === authorization.configurationHash &&
+    sourceBound.modelRepositoryId === authorization.modelRepositoryId &&
+    sourceBound.modelSourceCommitId === authorization.modelSourceCommitId &&
+    sourceBound.factorySourceRepositoryId ===
+      authorization.factorySourceRepositoryId &&
+    sourceBound.factorySourceCommitId === authorization.factorySourceCommitId &&
+    sourceBound.factoryRuntimeCodeHash === authorization.factoryRuntimeCodeHash &&
+    sourceBound.launchRuntimeCodeSetHash ===
+      authorization.launchRuntimeCodeSetHash &&
+    sourceBound.permissionsHash === authorization.permissionsHash &&
+    sourceBound.feePolicyHash === authorization.feePolicyHash &&
+    equalJson(authorized.indexedTopics, authorizedAbi.indexedTopics) &&
+    authorized.data === authorizedAbi.data &&
+    equalJson(sourceBound.indexedTopics, sourceBoundAbi.indexedTopics) &&
+    sourceBound.data === sourceBoundAbi.data &&
+    sourceBound.transactionHash === authorized.transactionHash &&
+    sourceBound.blockNumber === authorized.blockNumber &&
+    sourceBound.blockHash === authorized.blockHash &&
+    sourceBound.transactionIndex === authorized.transactionIndex &&
+    sourceBound.logIndex === authorized.logIndex + 1 &&
     BigInt(authorized.blockNumber) <=
       BigInt(record.registryOrigin.registrationBlockNumber) &&
     BigInt(sourceBound.blockNumber) <=
@@ -542,6 +703,14 @@ function proofMatches(record, projection) {
       BigInt(sourceBound.blockNumber) &&
     BigInt(authorization.stateObservedAtBlock) <=
       BigInt(record.registryOrigin.registrationBlockNumber);
+}
+
+export function validateRegistryExecutionProofV4(record) {
+  try {
+    return proofMatches(record);
+  } catch {
+    return false;
+  }
 }
 
 function finalityShape(finality, projected = false) {
@@ -642,7 +811,7 @@ function finalityAndLifecycleMatch(record, projection) {
   const head = BigInt(finality.canonicalHeadBlock);
   const registration = BigInt(origin.registrationBlockNumber);
   if (head < registration) return false;
-  const depth = head - registration + 1n;
+  const depth = head - registration;
   const confirmationDepth = BigInt(record.finalityPolicy.confirmationDepth);
   const finalityDepth = origin.chainId === "1"
     ? ETHEREUM_GEN2_FINALITY_DEPTH
@@ -745,6 +914,9 @@ function eventStateMatches(record, projection) {
       BigInt(checkpoint.lastTransitionSequence) + 1n ||
     payload.transitionSequence !== origin.transitionSequence) return false;
   if (origin.operation === "finalized") {
+    const requiredDepth = record.registryOrigin.chainId === "1"
+      ? ETHEREUM_GEN2_FINALITY_DEPTH
+      : BigInt(record.finalityPolicy.confirmationDepth);
     return payload.observedTransactionHash ===
         record.registryOrigin.registrationTransactionHash &&
       payload.observedBlockNumber === record.registryOrigin.registrationBlockNumber &&
@@ -752,7 +924,15 @@ function eventStateMatches(record, projection) {
       payload.observedTransactionIndex ===
         Number(record.registryOrigin.registrationTransactionIndex) &&
       payload.observedLogIndex === Number(record.registryOrigin.registrationLogIndex) &&
+      payload.finalityEvidenceHash ===
+        `0x${record.finality.finalityEvidenceHash.slice("sha256:".length)}` &&
       payload.finalityPolicyHash === preimage.finalityPolicyHash &&
+      DECIMAL.test(payload.confirmedHeadBlockNumber ?? "") &&
+      HASH32.test(payload.confirmedHeadBlockHash ?? "") &&
+      BigInt(payload.confirmedHeadBlockNumber) >=
+        BigInt(payload.observedBlockNumber) + requiredDepth &&
+      BigInt(payload.confirmedHeadBlockNumber) <=
+        BigInt(projection.registryFinality.canonicalHeadBlock) &&
       payload.finalizedAtBlock === origin.blockNumber &&
       Number(payload.finalizedAtTimestamp) * 1000 === Date.parse(origin.onchainTimestamp) &&
       origin.latestRecordRevision === "1" &&
@@ -881,7 +1061,7 @@ export function validateRegistryProjectionEnvelopeV4(envelope) {
       envelope.rawRecord.registryOrigin.registrationBindingHashRaw !==
         envelope.rawRecord.registrationBindingHash ||
       !trustRootMatches(envelope.rawRecord, envelope.projection) ||
-      !proofMatches(envelope.rawRecord, envelope.projection) ||
+      !proofMatches(envelope.rawRecord) ||
       !eventStateMatches(envelope.rawRecord, envelope.projection) ||
       !finalityAndLifecycleMatch(envelope.rawRecord, envelope.projection) ||
       !publicProjectionMatches(envelope.rawRecord, envelope.projection)) {
@@ -993,8 +1173,9 @@ export function normalizeRegistryCustomItemV4(item) {
     projectionKey,
     rawRecordHash: envelope.rawRecordHash,
     registryRuntimeCodeHash: origin.registryRuntimeCodeHash,
-    registryWriter: origin.registryWriter,
-    authorizedWriters: structuredClone(origin.authorizedWriters),
+    authorizedWriterSetEvidence: structuredClone(
+      origin.authorizedWriterSetEvidence,
+    ),
     registrationOnchainTimestamp: origin.registrationOnchainTimestamp,
     operation: origin.operation,
     eventTopic0: origin.eventTopic0,
@@ -1011,6 +1192,10 @@ export function normalizeRegistryCustomItemV4(item) {
     transactionIndex: origin.transactionIndex,
     logIndex: origin.logIndex,
     onchainTimestamp: origin.onchainTimestamp,
+    atomicExecutionProof: structuredClone(raw.atomicExecutionProof),
+    partnerFactoryAuthorization: structuredClone(
+      raw.partnerFactoryAuthorization,
+    ),
     registryFinality: structuredClone(projection.registryFinality),
     projectionLifecycle: structuredClone(projection.lifecycle),
     programmableVerified,
