@@ -29,7 +29,9 @@ The following files are byte-for-byte ABI exports from contract release-candidat
 | `candidates/programmable-custom-fee-policy-verifier-v2.json` | `0bc9bdda4a1e78e2c498568ddfa164b35c3cb5c297f563dd4771935e75304f62` |
 | `candidates/programmable-custom-atomic-registrar-v2.json` | `a053f14e59c3c54a0dad47e6e772ba411c7659a46eab3313a6c124260ebcff1f` |
 
-The ordered 15-event candidate is published at [`event-sets/candidates/programmable-custom-registry-v2.json`](../event-sets/candidates/programmable-custom-registry-v2.json); its semantic event-set hash is `sha256:bcff2958529fecaa7ef8c4c654389829bfb7dd61a3246f0d681cf7db0a42a58c`. The fail-closed release metadata is published at [`specifications/custom-registry-generation-2.release-candidate.json`](../specifications/custom-registry-generation-2.release-candidate.json).
+The snapshot's ordered 15-event candidate is published at [`event-sets/candidates/programmable-custom-registry-v2.json`](../event-sets/candidates/programmable-custom-registry-v2.json); its snapshot semantic event-set hash is `sha256:bcff2958529fecaa7ef8c4c654389829bfb7dd61a3246f0d681cf7db0a42a58c`. The fail-closed snapshot metadata is published at [`specifications/custom-registry-generation-2.release-candidate.json`](../specifications/custom-registry-generation-2.release-candidate.json).
+
+These files are not the final Generation 2 ABI authority. The Public Registry root is still changing execution-policy, ordered route, and market-data-source evidence. That work changes ABI, topics, event count, Solidity hash preimages, artifact hashes, and the artifact-set hash. A byte-identical parity follow-up against the final Public commit and its Foundry golden vectors is mandatory before manifest activation.
 
 These are integration candidates, not live deployment evidence. They have no published address, start block, runtime identity, verified source deployment, or canary. Do not scan them until the official v2 manifest publishes a complete Generation 2 four-contract set.
 
