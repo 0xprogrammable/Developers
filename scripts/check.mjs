@@ -22,7 +22,14 @@ const testFiles = await listFiles(
   (file) => file.endsWith(".test.mjs"),
 );
 if (testFiles.length === 0) throw new Error("No tests/*.test.mjs files found");
-const jsonRoots = ["schemas", "fixtures", "compatibility", "deployments"];
+const jsonRoots = [
+  "schemas",
+  "fixtures",
+  "compatibility",
+  "deployments",
+  "event-sets",
+  "specifications",
+];
 let jsonCount = 0;
 for (const root of jsonRoots) {
   const files = await listFiles(
@@ -34,6 +41,10 @@ for (const root of jsonRoots) {
     jsonCount += 1;
   }
 }
+await assertCanonicalJson(
+  path.join(REPOSITORY_ROOT, "abis", "ethereum", "programmable-custom-registry-v1.json"),
+);
+jsonCount += 1;
 
 const launchValidator = registry.validator("launch.schema.json");
 const launchFiles = await listFiles(

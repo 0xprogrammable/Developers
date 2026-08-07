@@ -126,6 +126,25 @@ describe("version 2 classification", () => {
     assert.equal(publicStatus.custom.status, "prelaunch");
   });
 
+  test("keeps Registry discovery independent from the general submission intake", async () => {
+    const manifest = structuredClone(await developerManifestV2());
+    manifest.customRegistry.status = "live";
+    manifest.customRegistry.publicSubmissionsEnabled = false;
+    const projected = projectV2Dataset({
+      records: [internalRecord(classic, "0001")],
+      status: {
+        ...status(),
+        customRegistry: { status: "ready" },
+      },
+    }, manifest);
+
+    assert.equal(projected.status.customRegistryPublication.status, "live");
+    assert.equal(
+      projected.status.customRegistryPublication.publicSubmissionsEnabled,
+      false,
+    );
+  });
+
   test("fixtures conform to the version 2 schema", async () => {
     const registry = await createSchemaRegistry("v2");
     const validate = registry.validator("launch.schema.json");

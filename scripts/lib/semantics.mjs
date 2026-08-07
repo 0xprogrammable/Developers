@@ -842,7 +842,6 @@ export function validateManifestSemantics(manifest) {
         generation.generation === registry.generation,
     );
     if (
-      registry.publicSubmissionsEnabled !== true ||
       registry.address === null ||
       registry.startBlock === null ||
       registry.generation === null ||
@@ -855,7 +854,7 @@ export function validateManifestSemantics(manifest) {
       findings.push(finding(
         "LIVE_REGISTRY_BINDING",
         "/customRegistry",
-        "A live Registry must bind the complete active generation and public submission state",
+        "A live Registry must bind the complete active generation",
       ));
     }
   }

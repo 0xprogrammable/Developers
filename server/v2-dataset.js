@@ -112,8 +112,9 @@ export function publicLaunchV2(record) {
 }
 
 export function projectV2Dataset(dataset, manifest = null) {
-  const customRegistryLive = manifest?.customRegistry?.status === "live" &&
-    manifest.customRegistry.publicSubmissionsEnabled === true;
+  const customRegistryLive = manifest?.customRegistry?.status === "live";
+  const publicSubmissionsEnabled =
+    manifest?.customRegistry?.publicSubmissionsEnabled === true;
   const customSourceReady = dataset.status?.customRegistry?.status === "ready";
   const records = dataset.records
     .filter((record) =>
@@ -133,7 +134,7 @@ export function projectV2Dataset(dataset, manifest = null) {
       schemaVersion: API_V2_SCHEMA_VERSION,
       customRegistryPublication: {
         status: customRegistryLive ? "live" : "prelaunch",
-        publicSubmissionsEnabled: customRegistryLive,
+        publicSubmissionsEnabled,
         sourceReady: customSourceReady,
         publishedRegistries: canonicalRegistryDeployments(manifest).length,
       },
