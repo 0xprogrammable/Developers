@@ -129,7 +129,7 @@ describe("semantic conformance", () => {
       path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
     );
     manifest.customRegistry.status = "live";
-    manifest.customRegistry.publicSubmissionsEnabled = true;
+    manifest.customRegistry.publicSubmissionsEnabled = false;
     manifest.customRegistry.address =
       "0x1111111111111111111111111111111111111111";
     manifest.customRegistry.startBlock = "1";

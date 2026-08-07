@@ -5,7 +5,14 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const publicRoot = resolve(repositoryRoot, "public");
 
-const trees = ["abis", "deployments", "openapi", "schemas"];
+const trees = [
+  "abis",
+  "deployments",
+  "event-sets",
+  "openapi",
+  "schemas",
+  "specifications",
+];
 const files = ["llms.txt", "llms-full.txt"];
 const schemaIndexes = ["v1", "v2"];
 
