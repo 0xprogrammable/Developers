@@ -25,7 +25,8 @@ describe("documentation contract", () => {
     assert.ok(readme.includes(FEE_RECIPIENT));
     assert.match(readme, /10 basis points, or 0\.1%/);
     assert.match(readme, /v2 API is read-only/i);
-    assert.match(readme, /Programmable Custom intake and registry \| Prelaunch/i);
+    assert.match(readme, /Programmable Custom Registry discovery \| Live on Ethereum/i);
+    assert.match(readme, /Programmable Custom public intake \| Prelaunch/i);
     assert.match(readme, /Stock-Paired records are not part of the v2/i);
   });
 
@@ -81,6 +82,20 @@ describe("documentation contract", () => {
     );
 
     assert.equal(schemaIndex.baseUrl, wellKnown.schemasBaseUrl);
+    const manifest = JSON.parse(
+      await readFile(
+        path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+        "utf8",
+      ),
+    );
+    assert.deepEqual(wellKnown.publicCategories.custom, {
+      discoveryStatus: "live",
+      publicSubmissionStatus: "prelaunch",
+      registryAddress: manifest.customRegistry.address,
+      registryStartBlock: manifest.customRegistry.startBlock,
+      registryGeneration: manifest.customRegistry.generation,
+      note: "Finalized approved Custom Registry launches are discoverable. General public submissions remain prelaunch.",
+    });
     assert.deepEqual(
       schemaIndex.schemas.map(({ name }) => name),
       [

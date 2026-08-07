@@ -309,6 +309,7 @@
             "review",
             "attribution",
             "feePolicy",
+            "feeScope",
             "feeEvidence",
             "finalized",
             "corrected",
@@ -331,6 +332,9 @@
               "$ref": "#/$defs/registryEvent"
             },
             "feePolicy": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "feeScope": {
               "$ref": "#/$defs/registryEvent"
             },
             "feeEvidence": {
