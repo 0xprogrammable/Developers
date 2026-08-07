@@ -74,6 +74,10 @@ Classic V3 has no token-level sell restriction. A terminal must still check curr
 
 Custom is a launch family rather than one mechanic. Preserve provider, factory, template, hook, source provenance, declared capabilities, market support, fee disclosure and release-specific review evidence as separate fields. Do not infer an audit or `Programmable Verified` from `category=custom`.
 
+### Unknown provider or template
+
+Suppose a future record names template ID `future-auction-v99` and carries `provider.id: "future-provider-v99"` with `provider.verificationStatus: "display-only"`. Keep the launch visible as `Programmable Custom`, and optionally display `Future Provider · future-auction-v99` as secondary attribution. Preserve namespaced provider extensions for later clients, but do not use the provider or template name to upgrade origin, partner status, fee verification, review status, charting, quotes, simulation, or execution. Only a provider record marked `registry-bound` with its evidence hash is authenticated provider provenance; even that status does not independently prove fees, review, or market support.
+
 ## Market presentation
 
 `markets` may contain zero, one, or several entries.

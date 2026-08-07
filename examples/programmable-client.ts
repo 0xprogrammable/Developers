@@ -25,6 +25,14 @@ export interface MarketRecord {
   [field: string]: unknown
 }
 
+export interface ProviderAttribution {
+  id: string
+  displayName: string | null
+  verificationStatus: "registry-bound" | "display-only" | "revoked"
+  evidenceHash: string | null
+  extensions: Record<string, unknown>
+}
+
 export interface LaunchRecord {
   schemaVersion: string
   launchId: string
@@ -42,6 +50,7 @@ export interface LaunchRecord {
   caip2?: string
   projectId?: string | null
   assets?: LaunchAsset[]
+  provider?: ProviderAttribution | null
   finalityEvidence?: { status: FinalityState; [field: string]: unknown }
   [field: string]: unknown
 }

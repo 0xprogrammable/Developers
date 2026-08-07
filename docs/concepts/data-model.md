@@ -52,6 +52,7 @@ Registry-backed records can add these v2 fields without changing the API major v
 | `feePolicy` | Closed Native Custom, partnership-template, or no-qualifying-market policy |
 | `finalityEvidence` | Observed, confirmed, finalized, or orphaned chain evidence |
 | `presentation` | Creator-facing description, image, website, and social links with explicit trust boundary |
+| `provider` | Optional provider attribution with explicit registry-bound, display-only, or revoked status; never a category, fee, review, or execution authority |
 | `registryOrigin` | Registry record generation, source, and origin evidence |
 | `launchingWallet` | Namespaced wallet identity bound to the launch |
 | `postLaunchAuthorityInventory` | Effective post-launch roles and authority evidence |
