@@ -233,6 +233,34 @@ describe("v2 API contract", () => {
     assert.equal(combined.body.items.length, 1);
   });
 
+  test("fails every non-Classic feed closed when active Gen2 coverage is stale", async () => {
+    const current = dataset([launch(10)], {
+      customRegistry: {
+        status: "unavailable",
+        completeness: "incomplete",
+        freshness: "stale",
+        highWaterGeneration: "1",
+      },
+      customRegistryPublication: {
+        status: "live",
+        publicSubmissionsEnabled: false,
+        sourceReady: false,
+        activeGeneration: "2",
+        requiresLiveSource: true,
+        publishedRegistries: 2,
+      },
+    });
+    const handler = createLaunchesHandler(async () => current);
+
+    const combined = await call(handler);
+    assert.equal(combined.status, 503);
+    assert.equal(combined.body.code, "index-coverage-incomplete");
+    const custom = await call(handler, { category: "custom" });
+    assert.equal(custom.status, 503);
+    const classicOnly = await call(handler, { category: "classic" });
+    assert.equal(classicOnly.status, 200);
+  });
+
   test("binds opaque cursors to category and chain filters", async () => {
     const chainOne = launch(10, { chainId: 1 });
     const base = launch(9, { chainId: 8453 });

@@ -510,15 +510,17 @@ function validateCheckpoint(value) {
     throw new TypeError("Registry custom-feed checkpoint is invalid");
   }
   let expected = 1n;
-  let feedSourceId = null;
+  let schemaRank = 0;
   for (const item of value.records) {
     const currentSourceId = registryFeedSourceIdForItem(item);
-    feedSourceId ??= currentSourceId;
-    if (feedSourceId !== currentSourceId ||
-      !safeDecimal(item.generation, true) || BigInt(item.generation) !== expected ||
+    const currentSchemaRank = registryFeedSchemaRank(item);
+    if (!safeDecimal(item.generation, true) ||
+      BigInt(item.generation) !== expected ||
+      currentSchemaRank < schemaRank ||
       !validateRegistryFeedItem(item, currentSourceId)) {
       throw new TypeError("Registry custom-feed checkpoint is invalid");
     }
+    schemaRank = currentSchemaRank;
     expected += 1n;
   }
   if (expected - 1n !== BigInt(value.highWaterGeneration)) {
@@ -534,6 +536,14 @@ function registryFeedSourceIdForItem(item) {
   return "projectionDigest" in (item ?? {})
     ? REGISTRY_V3_FEED_SOURCE_ID
     : FEED_SOURCE_ID;
+}
+
+function registryFeedSchemaRank(item) {
+  return {
+    [FEED_SOURCE_ID]: 2,
+    [REGISTRY_V3_FEED_SOURCE_ID]: 3,
+    [REGISTRY_V4_FEED_SOURCE_ID]: 4,
+  }[registryFeedSourceIdForItem(item)];
 }
 
 async function subjectToken(configuration) {
@@ -643,10 +653,12 @@ function validateFeedPage(page, previous, now) {
 }
 
 function validateRegistryFeedItem(item, sourceId) {
-  if (sourceId === REGISTRY_V4_FEED_SOURCE_ID) {
+  const itemSourceId = registryFeedSourceIdForItem(item);
+  if (sourceId !== FEED_SOURCE_ID && sourceId !== itemSourceId) return false;
+  if (itemSourceId === REGISTRY_V4_FEED_SOURCE_ID) {
     return validateRegistryCustomFeedItemV4(item);
   }
-  if (sourceId === REGISTRY_V3_FEED_SOURCE_ID) {
+  if (itemSourceId === REGISTRY_V3_FEED_SOURCE_ID) {
     return validateRegistryCustomFeedItemV3(item);
   }
   return exactKeys(item, ["generation", "projectionKey", "recordHash", "record"]) &&
@@ -672,12 +684,12 @@ export async function readRegistryCustomFeed(options = {}) {
     ? null
     : validateCheckpoint(await checkpointStore.load(stateKey));
   const records = checkpoint === null ? [] : [...checkpoint.records];
-  const checkpointSourceId = records.length === 0
-    ? null
-    : registryFeedSourceIdForItem(records[0]);
   let cursor = checkpoint?.resumeCursor ?? null;
   let previous = null;
   let expectedGeneration = BigInt(checkpoint?.highWaterGeneration ?? "0") + 1n;
+  let schemaRank = records.length === 0
+    ? 0
+    : registryFeedSchemaRank(records.at(-1));
   const checkpointHighWater = expectedGeneration - 1n;
   const seenCursors = new Set();
   const now = typeof options.now === "function" ? options.now : () => Date.now();
@@ -717,12 +729,6 @@ export async function readRegistryCustomFeed(options = {}) {
       }
       const page = parseCanonicalJson(await readBoundedText(response, REQUEST_LIMITS.registryResponseBytes, "Registry custom-feed response"));
       validateFeedPage(page, previous, now());
-      if (
-        checkpointSourceId !== null &&
-        checkpointSourceId !== page.source.sourceId
-      ) {
-        throw new TypeError("Registry custom-feed source changed across checkpoint");
-      }
       if (BigInt(page.snapshot.highWaterGeneration) < checkpointHighWater) {
         throw new TypeError("Registry custom-feed snapshot rolled back");
       }
@@ -734,11 +740,14 @@ export async function readRegistryCustomFeed(options = {}) {
         snapshot: page.snapshot,
       };
       for (const item of page.items) {
+        const currentSchemaRank = registryFeedSchemaRank(item);
         if (!safeDecimal(item.generation, true) ||
           BigInt(item.generation) !== expectedGeneration ||
+          currentSchemaRank < schemaRank ||
           !validateRegistryFeedItem(item, page.source.sourceId)) {
           throw new TypeError("Registry custom-feed item is invalid");
         }
+        schemaRank = currentSchemaRank;
         expectedGeneration += 1n;
         records.push(item);
         if (records.length > REQUEST_LIMITS.registryMaximumLaunches) throw new TypeError("Registry custom feed exceeds launch limit");

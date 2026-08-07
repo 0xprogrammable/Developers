@@ -27,7 +27,9 @@ import {
   validateRegistryProjectionEnvelopeV4,
 } from "../server/registry-v4.js";
 import {
+  isV2DatasetPublishable,
   isV2PublicLaunch,
+  projectV2Dataset,
   publicLaunchV2,
   registryOriginMatchesManifest,
 } from "../server/v2-dataset.js";
@@ -541,6 +543,18 @@ describe("Registry generation 2 contract parity", () => {
     assert.equal(registryReleaseCandidate.minimumSupportedPublicApiVersion, 2);
     assert.equal(registryReleaseCandidate.registryRecordProducerVersion, 4);
     assert.equal(
+      registryReleaseCandidate.release.artifactSetHash,
+      "sha256:1b89c9f5ac64cd0d3193039d02a1bafaafd31da272c84575e5d5aa6ff6c7474f",
+    );
+    const publicReleaseCandidateBytes = await readFile(new URL(
+      "../fixtures/v2/custom-registry-generation-2.release-candidate.json",
+      import.meta.url,
+    ));
+    assert.equal(
+      createHash("sha256").update(publicReleaseCandidateBytes).digest("hex"),
+      "ab460890036d37fadb07770a52225a8bff49f8506b40fcf46bf857792bae1af0",
+    );
+    assert.equal(
       registryReleaseCandidate.release.publicSubmissionsEnabled,
       false,
     );
@@ -817,6 +831,66 @@ describe("Registry generation 2 contract parity", () => {
     malformedV4.registryV4Envelope.projectionDigest =
       `sha256:${"0".repeat(64)}`;
     assert.equal(isV2PublicLaunch(malformedV4, manifestV4), false);
+  });
+
+  test("requires complete current high-water coverage after Gen2 activation", () => {
+    const record = normalizeRegistryCustomItemV4(v4FeedItem());
+    const manifest = v4Manifest();
+    manifest.customRegistry = {
+      status: "live",
+      publicSubmissionsEnabled: false,
+      generation: "2",
+    };
+    manifest.chains = [{ chainId: 1, status: "live" }];
+    const source = {
+      configured: true,
+      status: "ready",
+      sourceId: "programmable-custom-launch-registry-v4",
+      completeness: "complete",
+      freshness: "current",
+      highWaterGeneration: "1",
+    };
+    const dataset = (customRegistry = source) => ({
+      records: [record],
+      status: {
+        schemaVersion: "1.0.0",
+        status: "ready",
+        generatedAt: "2026-08-07T10:00:00.000Z",
+        chainId: 1,
+        coverage: {
+          status: "complete",
+          checkpoint: {
+            blockNumber: 21_000_100,
+            blockHash: hash(999),
+            finality: "finalized",
+          },
+        },
+        customRegistry,
+        counts: { total: 1, classic: 0, custom: 1 },
+        errors: [],
+      },
+    });
+    const ready = projectV2Dataset(dataset(), manifest);
+    assert.equal(ready.status.customRegistryPublication.activeGeneration, "2");
+    assert.equal(ready.status.customRegistryPublication.requiresLiveSource, true);
+    assert.equal(ready.status.customRegistryPublication.sourceReady, true);
+    assert.equal(isV2DatasetPublishable(ready), true);
+
+    for (const [name, change] of [
+      ["missing", { ...source, status: "unavailable" }],
+      ["stale", { ...source, freshness: "stale" }],
+      ["incomplete", { ...source, completeness: "incomplete" }],
+      ["high-water", { ...source, highWaterGeneration: "0" }],
+    ]) {
+      const blocked = projectV2Dataset(dataset(change), manifest);
+      assert.equal(
+        blocked.status.customRegistryPublication.sourceReady,
+        false,
+        name,
+      );
+      assert.equal(isV2DatasetPublishable(blocked), false, name);
+      assert.equal(isV2DatasetPublishable(blocked, "classic"), true, name);
+    }
   });
 
   test("changes the commitment for every one of the 37 preimage words", () => {

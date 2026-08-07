@@ -6,7 +6,7 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
-An unreleased Generation 2 candidate set exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though any were deployed. A prior Generation 1 deployment is quarantined because its deployed source and runtime are not verified against the stronger interface; its address is intentionally not a public trust root. A direct Custom indexer cannot be activated until the manifest publishes an evidenced Generation 2 deployment.
+Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
 ## Trust root
 

@@ -46,7 +46,7 @@
   },
   "release": {
     "sourceCommit": null,
-    "artifactSetHash": null,
+    "artifactSetHash": "sha256:1b89c9f5ac64cd0d3193039d02a1bafaafd31da272c84575e5d5aa6ff6c7474f",
     "registryPolicyHash": null,
     "deployer": null,
     "startingNonce": null,

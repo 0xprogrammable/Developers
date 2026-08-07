@@ -10,7 +10,7 @@ import {
   REGISTRY_GEN2_BINDING_FIELDS,
   validateGen2PartnerFactoryAuthorization,
 } from "./custom-registry-gen2.js";
-import { canonicalSha256 } from "./canonical.js";
+import { canonicalSha256, canonicalizeJson } from "./canonical.js";
 import {
   publicRegistryFees,
   publicRegistryLaunchStatus,
@@ -103,7 +103,7 @@ const EVENT_TOPIC = Object.freeze(Object.fromEntries(
 ));
 
 function equalJson(left, right) {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return canonicalizeJson(left) === canonicalizeJson(right);
 }
 
 function timestamp(value) {
