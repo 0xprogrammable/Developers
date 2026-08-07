@@ -901,11 +901,11 @@ export function validateManifestSemantics(manifest) {
     const topics = Object.values(generation.events ?? {})
       .map((event) => event.topic0?.toLowerCase())
       .filter(Boolean);
-    if (topics.length !== 10 || new Set(topics).size !== topics.length) {
+    if (topics.length !== 11 || new Set(topics).size !== topics.length) {
       findings.push(finding(
         "REGISTRY_EVENT_SET",
         `/registryGenerations/${index}/events`,
-        "A Registry generation must publish ten distinct canonical event topics",
+        "A Registry generation must publish eleven distinct canonical event topics",
       ));
     }
   }

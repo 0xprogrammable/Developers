@@ -16,7 +16,8 @@ Use exactly these two public labels:
 | Surface | Current state |
 | --- | --- |
 | Programmable Classic on Ethereum | Live |
-| Programmable Custom intake and registry | Prelaunch |
+| Programmable Custom Registry discovery | Live on Ethereum |
+| Programmable Custom public intake | Prelaunch |
 
 The public category is always `classic` or `custom`. Provider names, factories, hook addresses and template versions remain per-launch provenance. They never create additional terminal categories. A Custom launch may have no market, one market, or several markets. The v2 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
 
@@ -82,7 +83,7 @@ The complete terminal contract is in [Trading terminals and scanners](docs/guide
 ## Choose what you are building
 
 - **Trading terminal or scanner:** Follow the launch feed, label Classic and Custom, and expose only supported market features. [Open the terminal guide](docs/guides/terminals-and-scanners.md).
-- **Launch provider:** Connect a reviewed external factory to the future Custom Registry without creating a provider-specific terminal category. [Open the provider guide](docs/guides/launch-providers.md).
+- **Launch provider:** Connect a reviewed external factory to the live Custom Registry without creating a provider-specific terminal category. [Open the provider guide](docs/guides/launch-providers.md).
 - **Wallet or explorer:** Resolve token metadata and verify Programmable provenance without trusting names or tickers as identity. [Open the wallet guide](docs/guides/wallets.md).
 - **Indexer or data platform:** Backfill deterministically, resume with cursors, and handle observed blocks and reorgs. [Open the indexer guide](docs/guides/indexers.md).
 - **App, game, or bot:** Discover launches and inspect verified capabilities without interpreting arbitrary contract metadata as instructions. [Open the app guide](docs/guides/apps-and-games.md).

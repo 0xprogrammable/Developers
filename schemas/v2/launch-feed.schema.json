@@ -95,6 +95,9 @@
             "finalized"
           ]
         },
+        "customRegistryHighWaterGeneration": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
         "cursor": {
           "type": "string",
           "minLength": 1,

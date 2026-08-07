@@ -157,6 +157,10 @@
           "signature": "CustomLaunchFeePolicyBoundV1(bytes32,bytes32,bytes32,uint8,uint16,uint16,uint16,uint16,address,address)",
           "topic0": "0xb889df8572071d751e87d3e2a46c54093a55a9bc5a4697440cd29c90255dc5bf"
         },
+        "feeScope": {
+          "signature": "CustomLaunchFeeScopeBoundV1(bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
+          "topic0": "0xfb69ef55bd117e822ea39d795bd1506dc489a1ce2c1ccd3ad4c781ef04598336"
+        },
         "feeEvidence": {
           "signature": "CustomLaunchFeeEvidenceBoundV1(bytes32,bytes32,bytes32,address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
           "topic0": "0xe647c474a92f722808930d32d310f47d0e3a4faf393255e0dea4b272588babb0"
