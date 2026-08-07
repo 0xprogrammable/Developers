@@ -46,6 +46,6 @@ The pagination model, response shape and read-only security boundary remain the 
 
 ## Availability
 
-Classic discovery is live. The Custom Registry is prelaunch, so v2 currently returns no Custom records. This is intentional. A future registry address and start block will appear in the manifest before the first Custom record is published.
+Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. General Custom intake remains prelaunch and is represented separately by `publicSubmissionsEnabled: false`.
 
 API v1 remains supported and has no retirement date. New integrations should use v2.

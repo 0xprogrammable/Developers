@@ -74,7 +74,7 @@ An unknown value is not itself an error or security finding. It is an instructio
 
 ## Custom activation
 
-Open Custom intake and the open Custom Registry are prelaunch. Their later activation is represented by manifest state and new launch records. It does not require a new public category or a different launch schema.
+Custom Registry discovery is live while general Custom intake remains prelaunch. Future intake activation is represented independently by manifest state and new launch records; it does not require a new public category or a different launch schema.
 
 Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 

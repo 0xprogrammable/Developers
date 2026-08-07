@@ -8,7 +8,8 @@ info:
     Read-only discovery for terminals, scanners, explorers, bots, wallets and apps.
 
     Classic is live on Ethereum. Programmable Custom is reserved for launches
-    accepted through the canonical Custom Registry. That registry is prelaunch,
+    accepted through the canonical Custom Registry. Registry discovery is live,
+    while general public intake remains prelaunch,
     so the Custom feed is empty until an evidenced address and start block are
     published in the manifest. Historical Stock-Paired launches are not part of
     the version 2 Programmable Custom classification.

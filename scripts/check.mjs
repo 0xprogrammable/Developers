@@ -108,7 +108,7 @@ assertValid(
 );
 assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2.json");
 if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
-  throw new Error("Version 2 manifest may only list Classic deployments before Custom Registry activation");
+  throw new Error("Version 2 deployment inventory must keep Custom discovery Registry-derived");
 }
 
 const v2Core = await readJson(
