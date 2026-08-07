@@ -6,6 +6,7 @@ import { launchFeedPayload } from "../api/v2/launches.js";
 import { readJson, REPOSITORY_ROOT } from "../scripts/lib/files.mjs";
 import { createSchemaRegistry, assertValid } from "../scripts/lib/schema.mjs";
 import {
+  customRegistryGenesisCanaryRecord,
   developerManifestV2,
   isV2PublicLaunch,
   projectV2Dataset,
@@ -146,6 +147,26 @@ describe("version 2 classification", () => {
     assert.equal(manifest.customRegistry.publicSubmissionsEnabled, false);
     assert.equal(manifest.deployments.some((item) => item.modelId === "stock-paired"), false);
     assert.equal(publicStatus.custom.status, "live");
+  });
+
+  test("includes the immutable Registry genesis canary in the Custom feed", async () => {
+    const manifest = await developerManifestV2();
+    const internalGenesis = customRegistryGenesisCanaryRecord();
+    const projected = projectV2Dataset({
+      records: [internalGenesis],
+      status: {
+        ...status(),
+        customRegistry: { status: "ready", highWaterGeneration: "1" },
+      },
+    }, manifest);
+    const payload = launchFeedPayload(projected, {
+      category: "custom",
+      limit: 100,
+    });
+
+    assert.equal(payload.items.length, 1);
+    assert.equal(payload.items[0].launchId, genesisCanary.launchId);
+    assert.equal("sortKey" in payload.items[0], false);
   });
 
   test("keeps Registry discovery independent from the general submission intake", async () => {

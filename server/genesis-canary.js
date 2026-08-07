@@ -23,6 +23,25 @@ export const CUSTOM_REGISTRY_GENESIS_CANARY = Object.freeze(
   structuredClone(genesisCanary),
 );
 
+export const CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY = `${String(
+  genesisCanary.launch.blockNumber,
+).padStart(16, "0")}:${String(genesisCanary.launch.transactionIndex).padStart(
+  10,
+  "0",
+)}:${String(genesisCanary.launch.logIndex).padStart(10, "0")}:${
+  genesisCanary.launchId.slice("sha256:".length)
+}`;
+
 export function isExactCustomRegistryGenesisCanary(value) {
-  return recordDigest(value) === GENESIS_CANARY_RECORD_DIGEST;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const { sortKey, ...publicValue } = value;
+  if (
+    sortKey !== undefined &&
+    sortKey !== CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY
+  ) {
+    return false;
+  }
+  return recordDigest(publicValue) === GENESIS_CANARY_RECORD_DIGEST;
 }
