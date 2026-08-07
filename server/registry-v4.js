@@ -33,7 +33,16 @@ const ZERO_HASH = `0x${"0".repeat(64)}`;
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH32 = /^0x[0-9a-f]{64}$/;
+const DIGEST = /^sha256:[0-9a-f]{64}$/;
+const HEX_DATA = /^0x(?:[0-9a-f]{2})*$/;
 const DECIMAL = /^(?:0|[1-9][0-9]*)$/;
+const LIFECYCLE_STATUSES = new Set([
+  "active", "superseded", "revoked", "orphaned",
+]);
+const FINALITY_STATUSES = new Set([
+  "observed", "confirmed", "finalized", "orphaned",
+]);
+const ETHEREUM_GEN2_FINALITY_DEPTH = 64n;
 
 const GEN2_RELEASE = Object.freeze({
   registryContractId: "ProgrammableCustomRegistryV2",
@@ -97,9 +106,203 @@ function equalJson(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function timestamp(value) {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
+}
+
+function timestampOrder(values) {
+  const instants = values.filter((value) => value !== null);
+  return instants.every((value, index) => timestamp(value) &&
+    (index === 0 || Date.parse(value) >= Date.parse(instants[index - 1])));
+}
+
 function exactKeys(value, keys) {
   return value && typeof value === "object" && !Array.isArray(value) &&
     Object.keys(value).sort().join("\0") === [...keys].sort().join("\0");
+}
+
+function abiUintWord(value, bits) {
+  const parsed = typeof value === "bigint"
+    ? value
+    : typeof value === "number" && Number.isSafeInteger(value)
+      ? BigInt(value)
+      : typeof value === "string" && DECIMAL.test(value)
+        ? BigInt(value)
+        : -1n;
+  if (parsed < 0n || parsed >= (1n << BigInt(bits))) {
+    throw new RangeError(`value does not fit uint${bits}`);
+  }
+  return parsed.toString(16).padStart(64, "0");
+}
+
+function abiAddressWord(value) {
+  if (!ADDRESS.test(value ?? "")) throw new TypeError("invalid ABI address");
+  return value.slice(2).toLowerCase().padStart(64, "0");
+}
+
+function abiBytes32Word(value) {
+  if (!HASH32.test(value ?? "")) throw new TypeError("invalid ABI bytes32");
+  return value.slice(2).toLowerCase();
+}
+
+function abiDataWords(words) {
+  return `0x${words.join("")}`;
+}
+
+function registryEventAbiProof(record, payload) {
+  const preimage = record.registeredRecordPreimage;
+  if (payload.kind === "registered") {
+    return {
+      indexedTopics: [
+        preimage.launchId,
+        preimage.projectId,
+        `0x${abiAddressWord(payload.primaryContract)}`,
+      ],
+      data: abiDataWords([
+        abiUintWord(payload.registrationSequence, 64),
+        abiUintWord(payload.chainId, 256),
+        abiUintWord(payload.registryGeneration, 64),
+        abiBytes32Word(payload.approvalId),
+        abiBytes32Word(payload.deploymentId),
+        abiAddressWord(payload.launchWallet),
+        abiBytes32Word(payload.identityHash),
+        abiBytes32Word(payload.registeredRecordCommitment),
+        abiUintWord(payload.observedAtBlock, 64),
+      ]),
+    };
+  }
+  if (payload.kind === "finalized") {
+    return {
+      indexedTopics: [
+        preimage.launchId,
+        payload.observedTransactionHash,
+        payload.finalityEvidenceHash,
+      ],
+      data: abiDataWords([
+        abiUintWord(payload.transitionSequence, 64),
+        abiUintWord(payload.observedBlockNumber, 64),
+        abiBytes32Word(payload.observedBlockHash),
+        abiUintWord(payload.observedTransactionIndex, 32),
+        abiUintWord(payload.observedLogIndex, 32),
+        abiUintWord(payload.confirmedHeadBlockNumber, 64),
+        abiBytes32Word(payload.confirmedHeadBlockHash),
+        abiBytes32Word(payload.finalityPolicyHash),
+        abiUintWord(payload.finalizedAtBlock, 64),
+        abiUintWord(payload.finalizedAtTimestamp, 64),
+      ]),
+    };
+  }
+  if (payload.kind === "corrected") {
+    return {
+      indexedTopics: [
+        preimage.launchId,
+        `0x${abiUintWord(payload.revision, 64)}`,
+        payload.correctedRecordHash,
+      ],
+      data: abiDataWords([
+        abiUintWord(payload.transitionSequence, 64),
+        abiBytes32Word(payload.previousRecordHash),
+        abiBytes32Word(payload.reasonCode),
+        abiBytes32Word(payload.evidenceHash),
+      ]),
+    };
+  }
+  if (payload.kind !== "revoked") throw new TypeError("unknown Registry event");
+  return {
+    indexedTopics: [
+      preimage.launchId,
+      payload.reasonCode,
+      payload.evidenceHash,
+    ],
+    data: abiDataWords([
+      abiUintWord(payload.transitionSequence, 64),
+      abiUintWord(payload.latestRecordRevision, 64),
+      abiBytes32Word(payload.latestRecordHash),
+      abiUintWord(payload.revokedAtBlock, 64),
+      abiUintWord(payload.revokedAtTimestamp, 64),
+    ]),
+  };
+}
+
+function companionAbiProof(record, kind) {
+  const preimage = record.registeredRecordPreimage;
+  const fee = record.onchainFeePolicy;
+  if (kind === "provenance") {
+    return {
+      indexedTopics: [preimage.launchId, preimage.repositoryId, preimage.commitId],
+      data: abiDataWords([
+        preimage.sourceCommitment, preimage.buildCommitment,
+        preimage.artifactSetHash, preimage.deploymentConfigurationHash,
+        preimage.deploymentSetHash, preimage.runtimeCodeSetHash,
+        preimage.primaryRuntimeCodeHash,
+      ].map(abiBytes32Word)),
+    };
+  }
+  if (kind === "review") {
+    return {
+      indexedTopics: [
+        preimage.launchId, preimage.approvalBindingHash,
+        preimage.securityReviewHash,
+      ],
+      data: abiDataWords([
+        preimage.reviewPolicyHash, preimage.reviewResultId,
+        preimage.reviewDeploymentBindingHash, preimage.feePolicyHash,
+        preimage.finalityPolicyHash,
+      ].map(abiBytes32Word)),
+    };
+  }
+  if (kind === "attribution") {
+    return {
+      indexedTopics: [preimage.launchId, preimage.modelId, preimage.templateId],
+      data: abiDataWords([
+        preimage.modelVersion, preimage.templateVersion, preimage.providerId,
+        preimage.builderAttributionHash, preimage.originHash,
+        preimage.assetSetHash, preimage.marketSetHash, preimage.marketPathId,
+        preimage.configurationHash, preimage.permissionsHash,
+        preimage.capabilitySetHash,
+      ].map(abiBytes32Word)),
+    };
+  }
+  if (kind === "feePolicy") {
+    return {
+      indexedTopics: [preimage.launchId, preimage.feePolicyHash, fee.providerId],
+      data: abiDataWords([
+        abiUintWord(fee.kind, 8),
+        abiUintWord(fee.totalFeeBps, 16),
+        abiUintWord(fee.nativeCustomFeeBps, 16),
+        abiUintWord(fee.partner.shareBps, 16),
+        abiUintWord(fee.programmable.shareBps, 16),
+        abiAddressWord(fee.partner.recipient),
+        abiAddressWord(fee.programmable.recipient),
+      ]),
+    };
+  }
+  if (kind === "feeScope") {
+    return {
+      indexedTopics: [
+        preimage.launchId, preimage.feePolicyHash, fee.publicPolicyBindingHash,
+      ],
+      data: abiDataWords([
+        fee.modelId, fee.modelVersion, fee.templateId, fee.templateVersion,
+        fee.marketPathId,
+      ].map(abiBytes32Word)),
+    };
+  }
+  if (kind !== "feeEvidence") throw new TypeError("unknown companion event");
+  return {
+    indexedTopics: [
+      preimage.launchId, preimage.feePolicyHash, fee.verificationEvidenceHash,
+    ],
+    data: abiDataWords([
+      abiAddressWord(fee.programmable.currency),
+      ...[
+        fee.programmable.chargeModeId, fee.programmable.basisId,
+        fee.programmable.roundingId, fee.partner.accrualId,
+        fee.programmable.accrualId, fee.claimIsolationEvidenceHash,
+        fee.accountingSafetyEvidenceHash,
+      ].map(abiBytes32Word),
+    ]),
+  };
 }
 
 function authorizationMatchesPreimage(authorization, preimage) {
@@ -212,7 +415,14 @@ function trustRootMatches(record, projection) {
       projected.operation,
     ) ||
     projected.eventTopic0 !== EVENT_TOPIC[projected.operation] ||
-    projected.registryWriter?.toLowerCase() === ZERO_ADDRESS) return false;
+    !ADDRESS.test(projected.registryWriter ?? "") ||
+    projected.registryWriter.toLowerCase() === ZERO_ADDRESS ||
+    projected.registrationOnchainTimestamp !==
+      origin.registrationOnchainTimestamp ||
+    !timestamp(projected.registrationOnchainTimestamp) ||
+    !Array.isArray(projected.eventIndexedTopics) ||
+    !projected.eventIndexedTopics.every((topic) => HASH32.test(topic)) ||
+    !HEX_DATA.test(projected.eventData ?? "")) return false;
 
   const addresses = new Set();
   for (const [role, expected] of Object.entries(GEN2_CONTRACTS)) {
@@ -234,13 +444,50 @@ function trustRootMatches(record, projection) {
     releaseContracts.registry.startBlock !== origin.registryStartBlock ||
     origin.registryAbiSha256 !== GEN2_CONTRACTS.registry.abiSha256) return false;
 
-  const companions = [
+  const companionKinds = [
     "provenance", "review", "attribution", "feePolicy", "feeScope",
     "feeEvidence",
-  ].map((kind) => ({ kind, topic0: EVENT_TOPIC[kind] }));
-  return equalJson(
-    projected.registrationCompanions,
-    projected.operation === "registered" ? companions : [],
+  ];
+  const companions = projected.registrationCompanions;
+  if (!Array.isArray(companions) ||
+    (projected.operation === "registered"
+      ? companions.length !== companionKinds.length
+      : companions.length !== 0)) return false;
+  if (projected.operation === "registered" && companions.some(
+    (companion, index) => {
+      const kind = companionKinds[index];
+      const abiProof = companionAbiProof(record, kind);
+      return companion.kind !== kind ||
+      companion.emitterRole !== "registry" ||
+      companion.emitterAddress?.toLowerCase() !==
+        releaseContracts.registry.address.toLowerCase() ||
+      companion.observedRuntimeCodeHash !==
+        releaseContracts.registry.runtimeCodeHash ||
+      companion.topic0 !== EVENT_TOPIC[companion.kind] ||
+      !equalJson(companion.indexedTopics, abiProof.indexedTopics) ||
+      companion.data !== abiProof.data ||
+      companion.transactionHash !== projected.transactionHash ||
+      companion.blockNumber !== projected.blockNumber ||
+      companion.blockHash !== projected.blockHash ||
+      companion.transactionIndex !== projected.transactionIndex ||
+      companion.logIndex !== projected.logIndex + index + 1;
+    }
+  )) return false;
+  const writers = projected.authorizedWriters;
+  if (!exactKeys(writers, ["finalizers", "correctors", "revokers"]) ||
+    !Object.values(writers).every((list) => Array.isArray(list) &&
+      list.every((writer) => ADDRESS.test(writer) &&
+        writer.toLowerCase() !== ZERO_ADDRESS) &&
+      new Set(list.map((writer) => writer.toLowerCase())).size === list.length)) {
+    return false;
+  }
+  const authorizedRole = {
+    finalized: "finalizers",
+    corrected: "correctors",
+    revoked: "revokers",
+  }[projected.operation];
+  return authorizedRole === undefined || writers[authorizedRole].some(
+    (writer) => writer.toLowerCase() === projected.registryWriter.toLowerCase(),
   );
 }
 
@@ -256,15 +503,17 @@ function proofMatches(record, projection) {
       proof.emitterAddress.toLowerCase() === atomic.address.toLowerCase() &&
       proof.observedRuntimeCodeHash === atomic.runtimeCodeHash &&
       proof.topic0 === EVENT_TOPIC.atomicExecuted &&
-      proof.transactionHash === origin.transactionHash &&
-      proof.blockNumber === origin.blockNumber &&
-      proof.blockHash === origin.blockHash &&
+      proof.transactionHash ===
+        record.registryOrigin.registrationTransactionHash &&
+      proof.blockNumber === record.registryOrigin.registrationBlockNumber &&
+      proof.blockHash === record.registryOrigin.registrationBlockHash &&
       proof.launchId === `0x${record.launchId.slice("sha256:".length)}` &&
       proof.deployed.toLowerCase() === preimage.primaryContract.toLowerCase() &&
       HASH32.test(proof.requestHash) && proof.requestHash !== ZERO_HASH &&
       proof.registeredRecordCommitment === record.registeredRecordCommitment &&
       proof.registrationBindingHash === record.registrationBindingHash &&
-      origin.registryWriter.toLowerCase() === atomic.address.toLowerCase();
+      (origin.operation !== "registered" ||
+        origin.registryWriter.toLowerCase() === atomic.address.toLowerCase());
   }
 
   const authorization = record.partnerFactoryAuthorization;
@@ -273,7 +522,8 @@ function proofMatches(record, projection) {
   const sourceBound = authorization?.sourceBoundEvent;
   return record.atomicExecutionProof === null && authorization !== null &&
     authorization.revoked === false &&
-    origin.registryWriter.toLowerCase() === authorization.factory.toLowerCase() &&
+    (origin.operation !== "registered" ||
+      origin.registryWriter.toLowerCase() === authorization.factory.toLowerCase()) &&
     authorized.emitterRole === "partnerFactoryRegistry" &&
     sourceBound.emitterRole === "partnerFactoryRegistry" &&
     authorized.emitterAddress.toLowerCase() ===
@@ -284,11 +534,252 @@ function proofMatches(record, projection) {
     sourceBound.observedRuntimeCodeHash === partnerRegistry.runtimeCodeHash &&
     authorized.topic0 === EVENT_TOPIC.partnerFactoryAuthorized &&
     sourceBound.topic0 === EVENT_TOPIC.partnerFactorySourceBound &&
-    BigInt(authorized.blockNumber) <= BigInt(origin.blockNumber) &&
-    BigInt(sourceBound.blockNumber) <= BigInt(origin.blockNumber) &&
+    BigInt(authorized.blockNumber) <=
+      BigInt(record.registryOrigin.registrationBlockNumber) &&
+    BigInt(sourceBound.blockNumber) <=
+      BigInt(record.registryOrigin.registrationBlockNumber) &&
     BigInt(authorization.stateObservedAtBlock) >=
       BigInt(sourceBound.blockNumber) &&
-    BigInt(authorization.stateObservedAtBlock) <= BigInt(origin.blockNumber);
+    BigInt(authorization.stateObservedAtBlock) <=
+      BigInt(record.registryOrigin.registrationBlockNumber);
+}
+
+function finalityShape(finality, projected = false) {
+  const keys = [
+    "status", "transactionHash", "blockHash", "blockNumber",
+    "transactionIndex", "logIndex", "onchainTimestamp", "observedAt",
+    "confirmedAt", "finalizedAt", "orphanedAt", "finalityEvidenceHash",
+    "verificationAuthorityHash",
+  ];
+  if (projected) keys.push("canonicalHeadBlock", "canonicalHeadHash");
+  if (!exactKeys(finality, keys) || !FINALITY_STATUSES.has(finality.status) ||
+    !HASH32.test(finality.transactionHash ?? "") ||
+    !HASH32.test(finality.blockHash ?? "") ||
+    !DECIMAL.test(finality.blockNumber ?? "") ||
+    !DECIMAL.test(finality.transactionIndex ?? "") ||
+    !DECIMAL.test(finality.logIndex ?? "") ||
+    !DIGEST.test(finality.finalityEvidenceHash ?? "") ||
+    !DIGEST.test(finality.verificationAuthorityHash ?? "") ||
+    !timestampOrder([
+      finality.onchainTimestamp,
+      finality.observedAt,
+      finality.confirmedAt,
+      finality.finalizedAt,
+      finality.orphanedAt,
+    ])) return false;
+  if ((finality.status === "observed" &&
+      [finality.confirmedAt, finality.finalizedAt, finality.orphanedAt]
+        .some((value) => value !== null)) ||
+    (finality.status === "confirmed" &&
+      (finality.confirmedAt === null || finality.finalizedAt !== null ||
+        finality.orphanedAt !== null)) ||
+    (finality.status === "finalized" &&
+      (finality.confirmedAt === null || finality.finalizedAt === null ||
+        finality.orphanedAt !== null)) ||
+    (finality.status === "orphaned" && finality.orphanedAt === null)) {
+    return false;
+  }
+  return !projected || (
+    DECIMAL.test(finality.canonicalHeadBlock ?? "") &&
+    HASH32.test(finality.canonicalHeadHash ?? "")
+  );
+}
+
+function lifecycleShape(lifecycle) {
+  if (!exactKeys(lifecycle, [
+    "status", "registryGeneration", "registeredAt", "supersededBy",
+    "revokedAt", "revocationEvidenceHash",
+  ]) || !LIFECYCLE_STATUSES.has(lifecycle.status) ||
+    lifecycle.registryGeneration !== CUSTOM_REGISTRY_GENERATION_2 ||
+    !timestamp(lifecycle.registeredAt)) return false;
+  if (lifecycle.status === "active") {
+    return lifecycle.supersededBy === null && lifecycle.revokedAt === null &&
+      lifecycle.revocationEvidenceHash === null;
+  }
+  if (lifecycle.status === "superseded") {
+    return DIGEST.test(lifecycle.supersededBy ?? "") &&
+      lifecycle.revokedAt === null && lifecycle.revocationEvidenceHash === null;
+  }
+  if (lifecycle.status === "revoked") {
+    return lifecycle.supersededBy === null && timestamp(lifecycle.revokedAt) &&
+      DIGEST.test(lifecycle.revocationEvidenceHash ?? "");
+  }
+  return lifecycle.supersededBy === null && lifecycle.revokedAt === null &&
+    lifecycle.revocationEvidenceHash === null;
+}
+
+function finalityAndLifecycleMatch(record, projection) {
+  const raw = record.finality;
+  const finality = projection.registryFinality;
+  const lifecycle = projection.lifecycle;
+  const origin = record.registryOrigin;
+  if (!finalityShape(raw) || !finalityShape(finality, true) ||
+    !lifecycleShape(record.lifecycle) || !lifecycleShape(lifecycle) ||
+    raw.transactionHash !== origin.registrationTransactionHash ||
+    raw.blockHash !== origin.registrationBlockHash ||
+    raw.blockNumber !== origin.registrationBlockNumber ||
+    raw.transactionIndex !== origin.registrationTransactionIndex ||
+    raw.logIndex !== origin.registrationLogIndex ||
+    raw.onchainTimestamp !== origin.registrationOnchainTimestamp ||
+    ["transactionHash", "blockHash", "blockNumber", "transactionIndex",
+      "logIndex", "onchainTimestamp", "finalityEvidenceHash",
+      "verificationAuthorityHash"].some((field) => finality[field] !== raw[field]) ||
+    ["confirmedAt", "finalizedAt", "orphanedAt"].some((field) =>
+      raw[field] !== null && finality[field] !== raw[field]) ||
+    finality.verificationAuthorityHash !==
+      record.finalityPolicy.verificationAuthorityHash ||
+    Date.parse(lifecycle.registeredAt) < Date.parse(finality.observedAt)) {
+    return false;
+  }
+  const rawRank = { observed: 0, confirmed: 1, finalized: 2 };
+  const projectedRank = { observed: 0, confirmed: 1, finalized: 2 };
+  if (raw.status === "orphaned" && finality.status !== "orphaned") return false;
+  if (raw.status !== "orphaned" && finality.status !== "orphaned" &&
+    rawRank[raw.status] > projectedRank[finality.status]) return false;
+  if (finality.status === "orphaned") {
+    return lifecycle.status === "orphaned";
+  }
+  const head = BigInt(finality.canonicalHeadBlock);
+  const registration = BigInt(origin.registrationBlockNumber);
+  if (head < registration) return false;
+  const depth = head - registration + 1n;
+  const confirmationDepth = BigInt(record.finalityPolicy.confirmationDepth);
+  const finalityDepth = origin.chainId === "1"
+    ? ETHEREUM_GEN2_FINALITY_DEPTH
+    : confirmationDepth;
+  const expected = depth >= finalityDepth
+    ? "finalized"
+    : depth >= confirmationDepth ? "confirmed" : "observed";
+  if (finality.status !== expected) return false;
+  if (projection.origin.operation === "finalized" &&
+    (raw.status !== "finalized" || finality.status !== "finalized" ||
+      finality.finalizedAt !== projection.origin.onchainTimestamp)) return false;
+  if (projection.origin.operation === "revoked") {
+    return lifecycle.status === "revoked" &&
+      lifecycle.revokedAt === projection.origin.onchainTimestamp;
+  }
+  if (projection.origin.operation === "registered" &&
+    lifecycle.status !== "active") return false;
+  if (projection.origin.operation === "corrected" &&
+    finality.status !== "finalized") return false;
+  return lifecycle.status !== "revoked";
+}
+
+function eventStateMatches(record, projection) {
+  const origin = projection.origin;
+  const payload = origin.eventPayload;
+  const preimage = record.registeredRecordPreimage;
+  const payloadKeys = {
+    registered: [
+      "kind", "registrationSequence", "chainId", "registryGeneration",
+      "approvalId", "deploymentId", "primaryContract", "launchWallet",
+      "identityHash", "registeredRecordCommitment", "observedAtBlock",
+    ],
+    finalized: [
+      "kind", "observedTransactionHash", "finalityEvidenceHash",
+      "transitionSequence", "observedBlockNumber", "observedBlockHash",
+      "observedTransactionIndex", "observedLogIndex",
+      "confirmedHeadBlockNumber", "confirmedHeadBlockHash",
+      "finalityPolicyHash", "finalizedAtBlock", "finalizedAtTimestamp",
+    ],
+    corrected: [
+      "kind", "revision", "correctedRecordHash", "transitionSequence",
+      "previousRecordHash", "reasonCode", "evidenceHash",
+    ],
+    revoked: [
+      "kind", "reasonCode", "evidenceHash", "transitionSequence",
+      "latestRecordRevision", "latestRecordHash", "revokedAtBlock",
+      "revokedAtTimestamp",
+    ],
+  };
+  if (!payload || payload.kind !== origin.operation ||
+    !exactKeys(payload, payloadKeys[origin.operation] ?? []) ||
+    origin.transactionHash?.match(HASH32) === null ||
+    origin.blockHash?.match(HASH32) === null ||
+    !DECIMAL.test(origin.blockNumber ?? "") ||
+    !Number.isSafeInteger(origin.transactionIndex) ||
+    origin.transactionIndex < 0 ||
+    !Number.isSafeInteger(origin.logIndex) || origin.logIndex < 0 ||
+    !timestamp(origin.onchainTimestamp) ||
+    Date.parse(origin.onchainTimestamp) <
+      Date.parse(origin.registrationOnchainTimestamp) ||
+    !DECIMAL.test(origin.latestRecordRevision ?? "") ||
+    !HASH32.test(origin.latestRecordHash ?? "")) return false;
+  const abiProof = registryEventAbiProof(record, payload);
+  if (!equalJson(origin.eventIndexedTopics, abiProof.indexedTopics) ||
+    origin.eventData !== abiProof.data) return false;
+  if (origin.operation === "registered") {
+    return origin.transactionHash === record.registryOrigin.registrationTransactionHash &&
+      origin.blockHash === record.registryOrigin.registrationBlockHash &&
+      origin.blockNumber === record.registryOrigin.registrationBlockNumber &&
+      origin.transactionIndex === Number(record.registryOrigin.registrationTransactionIndex) &&
+      origin.logIndex === Number(record.registryOrigin.registrationLogIndex) &&
+      origin.onchainTimestamp === record.registryOrigin.registrationOnchainTimestamp &&
+      payload.registrationSequence !== "0" && DECIMAL.test(payload.registrationSequence ?? "") &&
+      payload.chainId === preimage.chainId &&
+      payload.registryGeneration === preimage.registryGeneration &&
+      payload.approvalId === preimage.approvalId &&
+      payload.deploymentId === preimage.deploymentId &&
+      payload.primaryContract?.toLowerCase() === preimage.primaryContract.toLowerCase() &&
+      payload.launchWallet?.toLowerCase() === preimage.launchWallet.toLowerCase() &&
+      payload.identityHash === record.registrationBindingHash &&
+      payload.registeredRecordCommitment === record.registeredRecordCommitment &&
+      payload.observedAtBlock === origin.blockNumber &&
+      origin.latestRecordRevision === "1" &&
+      origin.latestRecordHash === record.registeredRecordCommitment &&
+      origin.transitionSequence === null && origin.transitionCheckpoint === null;
+  }
+  const checkpoint = origin.transitionCheckpoint;
+  if (!DECIMAL.test(origin.transitionSequence ?? "") ||
+    origin.transitionSequence === "0" || !exactKeys(checkpoint, [
+      "chainId", "caip2", "registryGeneration", "registryAddress",
+      "lastTransitionSequence",
+    ]) ||
+    checkpoint.chainId !== record.registryOrigin.chainId ||
+    checkpoint.caip2 !== record.registryOrigin.caip2 ||
+    checkpoint.registryGeneration !== CUSTOM_REGISTRY_GENERATION_2 ||
+    checkpoint.registryAddress?.toLowerCase() !==
+      origin.registryAddress.toLowerCase() ||
+    !DECIMAL.test(checkpoint.lastTransitionSequence ?? "") ||
+    BigInt(origin.transitionSequence) !==
+      BigInt(checkpoint.lastTransitionSequence) + 1n ||
+    payload.transitionSequence !== origin.transitionSequence) return false;
+  if (origin.operation === "finalized") {
+    return payload.observedTransactionHash ===
+        record.registryOrigin.registrationTransactionHash &&
+      payload.observedBlockNumber === record.registryOrigin.registrationBlockNumber &&
+      payload.observedBlockHash === record.registryOrigin.registrationBlockHash &&
+      payload.observedTransactionIndex ===
+        Number(record.registryOrigin.registrationTransactionIndex) &&
+      payload.observedLogIndex === Number(record.registryOrigin.registrationLogIndex) &&
+      payload.finalityPolicyHash === preimage.finalityPolicyHash &&
+      payload.finalizedAtBlock === origin.blockNumber &&
+      Number(payload.finalizedAtTimestamp) * 1000 === Date.parse(origin.onchainTimestamp) &&
+      origin.latestRecordRevision === "1" &&
+      origin.latestRecordHash === record.registeredRecordCommitment;
+  }
+  if (origin.operation === "corrected") {
+    const rawRecordHash = canonicalSha256(REGISTRY_V4_PRODUCER_SCHEMA, record);
+    return BigInt(payload.revision ?? "0") >= 2n &&
+      payload.revision === origin.latestRecordRevision &&
+      payload.correctedRecordHash === origin.latestRecordHash &&
+      payload.correctedRecordHash === `0x${rawRecordHash.slice("sha256:".length)}` &&
+      payload.previousRecordHash !== payload.correctedRecordHash &&
+      HASH32.test(payload.previousRecordHash ?? "") &&
+      HASH32.test(payload.reasonCode ?? "") && payload.reasonCode !== ZERO_HASH &&
+      HASH32.test(payload.evidenceHash ?? "") && payload.evidenceHash !== ZERO_HASH;
+  }
+  const expectedLatestHash = origin.latestRecordRevision === "1"
+    ? record.registeredRecordCommitment
+    : `0x${canonicalSha256(REGISTRY_V4_PRODUCER_SCHEMA, record)
+      .slice("sha256:".length)}`;
+  return payload.latestRecordRevision === origin.latestRecordRevision &&
+    payload.latestRecordHash === origin.latestRecordHash &&
+    payload.latestRecordHash === expectedLatestHash &&
+    HASH32.test(payload.reasonCode ?? "") && payload.reasonCode !== ZERO_HASH &&
+    HASH32.test(payload.evidenceHash ?? "") && payload.evidenceHash !== ZERO_HASH &&
+    payload.revokedAtBlock === origin.blockNumber &&
+    Number(payload.revokedAtTimestamp) * 1000 === Date.parse(origin.onchainTimestamp);
 }
 
 function publicProjectionMatches(record, projection) {
@@ -317,8 +808,8 @@ function publicProjectionMatches(record, projection) {
     onchainFeePolicy: record.onchainFeePolicy,
     verifiedReview: record.verifiedReview,
     postLaunchAuthorityInventory: record.postLaunchAuthorityInventory,
-    finality: record.finality,
-    lifecycle: record.lifecycle,
+    finality: projection.registryFinality,
+    lifecycle: projection.lifecycle,
     presentationVersion: record.presentationVersion,
     presentationBindingHash: record.presentationBindingHash,
     presentation: record.presentation,
@@ -391,6 +882,8 @@ export function validateRegistryProjectionEnvelopeV4(envelope) {
         envelope.rawRecord.registrationBindingHash ||
       !trustRootMatches(envelope.rawRecord, envelope.projection) ||
       !proofMatches(envelope.rawRecord, envelope.projection) ||
+      !eventStateMatches(envelope.rawRecord, envelope.projection) ||
+      !finalityAndLifecycleMatch(envelope.rawRecord, envelope.projection) ||
       !publicProjectionMatches(envelope.rawRecord, envelope.projection)) {
       return false;
     }
@@ -472,7 +965,7 @@ export function normalizeRegistryCustomItemV4(item) {
   const revoked = projection.lifecycle.status === "revoked" ||
     raw.verifiedReview.status === "revoked";
   const programmableVerified = !revoked &&
-    projection.lifecycle.status === "finalized" &&
+    projection.lifecycle.status === "active" &&
     projection.registryFinality.status === "finalized" &&
     raw.verifiedReview.status === "verified";
   const publicRecord = {
@@ -501,8 +994,23 @@ export function normalizeRegistryCustomItemV4(item) {
     rawRecordHash: envelope.rawRecordHash,
     registryRuntimeCodeHash: origin.registryRuntimeCodeHash,
     registryWriter: origin.registryWriter,
+    authorizedWriters: structuredClone(origin.authorizedWriters),
+    registrationOnchainTimestamp: origin.registrationOnchainTimestamp,
     operation: origin.operation,
     eventTopic0: origin.eventTopic0,
+    eventIndexedTopics: structuredClone(origin.eventIndexedTopics),
+    eventData: origin.eventData,
+    eventPayload: structuredClone(origin.eventPayload),
+    latestRecordRevision: origin.latestRecordRevision,
+    latestRecordHash: origin.latestRecordHash,
+    transitionSequence: origin.transitionSequence,
+    transitionCheckpoint: structuredClone(origin.transitionCheckpoint),
+    transactionHash: origin.transactionHash,
+    blockNumber: origin.blockNumber,
+    blockHash: origin.blockHash,
+    transactionIndex: origin.transactionIndex,
+    logIndex: origin.logIndex,
+    onchainTimestamp: origin.onchainTimestamp,
     registryFinality: structuredClone(projection.registryFinality),
     projectionLifecycle: structuredClone(projection.lifecycle),
     programmableVerified,
@@ -556,10 +1064,10 @@ export function normalizeRegistryCustomItemV4(item) {
       finality: projection.registryFinality.status,
       launchWallet: record.launchingWallet.value,
       observedAt: projection.registryFinality.observedAt,
-      confirmedAt: null,
-      finalizedAt: null,
-      orphanedAt: null,
-      revokedAt: record.lifecycle.revokedAt,
+      confirmedAt: projection.registryFinality.confirmedAt,
+      finalizedAt: projection.registryFinality.finalizedAt,
+      orphanedAt: projection.registryFinality.orphanedAt,
+      revokedAt: projection.lifecycle.revokedAt,
     },
     verification: {
       sourceId: REGISTRY_V4_FEED_SOURCE_ID,
@@ -580,7 +1088,7 @@ export function normalizeRegistryCustomItemV4(item) {
     feePolicy: structuredClone(record.feePolicy),
     onchainFeePolicy: structuredClone(record.onchainFeePolicy),
     finalityPolicy: structuredClone(raw.finalityPolicy),
-    finalityEvidence: structuredClone(record.finality),
+    finalityEvidence: structuredClone(projection.registryFinality),
     presentation,
     registryOrigin: structuredClone(raw.registryOrigin),
     launchingWallet: structuredClone(record.launchingWallet),
@@ -592,7 +1100,7 @@ export function normalizeRegistryCustomItemV4(item) {
     advertisesToken: record.advertisesToken,
     assetIdentitySetHash: record.assetIdentitySetHash,
     marketSetHash: record.marketSetHash,
-    lifecycle: structuredClone(record.lifecycle),
+    lifecycle: structuredClone(projection.lifecycle),
     presentationVersion: record.presentationVersion,
     presentationBindingHash: record.presentationBindingHash,
     capabilities: structuredClone(record.capabilities),

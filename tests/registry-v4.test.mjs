@@ -486,11 +486,11 @@ describe("Registry generation 2 contract parity", () => {
     );
     assert.equal(
       registryV4Envelope.rawRecordHash,
-      "sha256:5e519273e471d6ed4f910e3fc8841bdffb94467a5b6a865acc5e394f467aff1a",
+      "sha256:6f581863290b23305995768520b43fa497d37f25ee297127ce21e122fd0d6de1",
     );
     assert.equal(
       registryV4Envelope.projectionDigest,
-      "sha256:a3a5dd73dace05984494c01a7e92d8984e3e9f4bcd3256b7cce5ad0d43277595",
+      "sha256:6e2a0df93b2fbc764b631f9fac7b8288e892d33b5ca8167486698233cb87c9b2",
     );
   });
 
@@ -506,6 +506,22 @@ describe("Registry generation 2 contract parity", () => {
     assert.equal(normalized.registryOrigin.registryGeneration, "2");
     assert.equal(normalized.launch.finality, "observed");
     assert.equal(normalized.launch.confirmedAt, null);
+    assert.deepEqual(
+      normalized.extensions["programmable/registry-v4"].eventIndexedTopics,
+      item.projection.origin.eventIndexedTopics,
+    );
+    assert.deepEqual(
+      normalized.extensions["programmable/registry-v4"].eventPayload,
+      item.projection.origin.eventPayload,
+    );
+    assert.equal(
+      normalized.extensions["programmable/registry-v4"].latestRecordHash,
+      item.projection.origin.latestRecordHash,
+    );
+    assert.equal(
+      normalized.extensions["programmable/registry-v4"].transitionCheckpoint,
+      null,
+    );
     assert.equal(isV2PublicLaunch(normalized, v4Manifest()), true);
     const schemas = await createSchemaRegistry("v2");
     const validate = schemas.validator("launch.schema.json");
@@ -527,6 +543,39 @@ describe("Registry generation 2 contract parity", () => {
       }],
       ["event topic", (value) => {
         value.projection.origin.eventTopic0 = hash(982);
+      }],
+      ["indexed event proof", (value) => {
+        value.projection.origin.eventIndexedTopics[0] = hash(983);
+      }],
+      ["event data proof", (value) => {
+        value.projection.origin.eventData = `${value.projection.origin.eventData.slice(0, -2)}00`;
+      }],
+      ["event payload", (value) => {
+        value.projection.origin.eventPayload.approvalId = hash(984);
+      }],
+      ["event payload extension", (value) => {
+        value.projection.origin.eventPayload.untrusted = true;
+      }],
+      ["duplicate writer", (value) => {
+        value.projection.origin.authorizedWriters.finalizers.push(
+          value.projection.origin.authorizedWriters.finalizers[0],
+        );
+      }],
+      ["latest revision", (value) => {
+        value.projection.origin.latestRecordRevision = "2";
+      }],
+      ["latest record hash", (value) => {
+        value.projection.origin.latestRecordHash = hash(985);
+      }],
+      ["registration transition checkpoint", (value) => {
+        value.projection.origin.transitionSequence = "1";
+        value.projection.origin.transitionCheckpoint = {
+          chainId: "1",
+          caip2: "eip155:1",
+          registryGeneration: "2",
+          registryAddress: value.projection.origin.registryAddress,
+          lastTransitionSequence: "0",
+        };
       }],
       ["public projection", (value) => {
         value.projection.publicProjection.model.id = "forged-model";

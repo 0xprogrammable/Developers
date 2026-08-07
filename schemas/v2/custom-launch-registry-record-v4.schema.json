@@ -813,6 +813,7 @@
         "registryEventSetId",
         "registryEventSetBytesSha256",
         "feePolicyDomain",
+        "registrationOnchainTimestamp",
         "releaseContracts",
         "eventBindings",
         "registryLaunchIdRaw",
@@ -865,6 +866,9 @@
         },
         "feePolicyDomain": {
           "const": "programmable.custom-fee-policy.v2"
+        },
+        "registrationOnchainTimestamp": {
+          "$ref": "#/definitions/timestamp"
         },
         "releaseContracts": {
           "$ref": "#/definitions/releaseContracts"
@@ -1958,6 +1962,100 @@
         },
         "verificationAuthorityHash": {
           "$ref": "#/definitions/digest"
+        }
+      }
+    },
+    "projectedFinality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "transactionHash",
+        "blockHash",
+        "blockNumber",
+        "transactionIndex",
+        "logIndex",
+        "onchainTimestamp",
+        "observedAt",
+        "confirmedAt",
+        "finalizedAt",
+        "orphanedAt",
+        "finalityEvidenceHash",
+        "verificationAuthorityHash",
+        "canonicalHeadBlock",
+        "canonicalHeadHash"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "observed",
+            "confirmed",
+            "finalized",
+            "orphaned"
+          ]
+        },
+        "transactionHash": {
+          "$ref": "#/definitions/hash32"
+        },
+        "blockHash": {
+          "$ref": "#/definitions/hash32"
+        },
+        "blockNumber": {
+          "$ref": "#/definitions/nonnegativeDecimal"
+        },
+        "transactionIndex": {
+          "$ref": "#/definitions/nonnegativeDecimal"
+        },
+        "logIndex": {
+          "$ref": "#/definitions/nonnegativeDecimal"
+        },
+        "onchainTimestamp": {
+          "$ref": "#/definitions/timestamp"
+        },
+        "observedAt": {
+          "$ref": "#/definitions/timestamp"
+        },
+        "confirmedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/timestamp"
+            }
+          ]
+        },
+        "finalizedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/timestamp"
+            }
+          ]
+        },
+        "orphanedAt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/timestamp"
+            }
+          ]
+        },
+        "finalityEvidenceHash": {
+          "$ref": "#/definitions/digest"
+        },
+        "verificationAuthorityHash": {
+          "$ref": "#/definitions/digest"
+        },
+        "canonicalHeadBlock": {
+          "$ref": "#/definitions/nonnegativeDecimal"
+        },
+        "canonicalHeadHash": {
+          "$ref": "#/definitions/hash32"
         }
       }
     },

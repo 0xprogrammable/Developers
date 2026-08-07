@@ -7,7 +7,10 @@ import {
   launchFeedPayload,
 } from "../api/v1/launches.js";
 import { createLaunchDetailHandler } from "../api/v1/launches/[chainId]/[tokenAddress].js";
-import { tokenListPayload } from "../api/v1/token-list.js";
+import {
+  createTokenListHandler,
+  tokenListPayload,
+} from "../api/v1/token-list.js";
 import {
   LAUNCH_DISCOVERY_FILTER,
   RELEASE_BY_ID,
@@ -412,7 +415,7 @@ describe("server cursor contract", () => {
     assert.equal(retried.body.page.resumeCursor, first.body.page.resumeCursor);
   });
 
-  test("keeps complete Classic discovery available while Custom Registry freshness fails closed", async () => {
+  test("keeps frozen v1 feeds available while the v2 Registry source fails closed", async () => {
     const classic = { ...record(103, 0, 0, "d"), category: "classic" };
     const current = dataset(
       [classic],
@@ -429,12 +432,18 @@ describe("server cursor contract", () => {
     assert.deepEqual(classicResponse.body.items.map((item) => item.id), [classic.id]);
 
     const customResponse = await callHandler(handler, { category: "custom" });
-    assert.equal(customResponse.status, 503);
-    assert.equal(customResponse.body.code, "index-coverage-incomplete");
+    assert.equal(customResponse.status, 200);
+    assert.deepEqual(customResponse.body.items, []);
 
     const combinedResponse = await callHandler(handler);
-    assert.equal(combinedResponse.status, 503);
-    assert.equal(combinedResponse.body.code, "index-coverage-incomplete");
+    assert.equal(combinedResponse.status, 200);
+    assert.deepEqual(combinedResponse.body.items.map((item) => item.id), [classic.id]);
+
+    const tokenListResponse = await callHandler(
+      createTokenListHandler(async () => current),
+    );
+    assert.equal(tokenListResponse.status, 200);
+    assert.deepEqual(tokenListResponse.body.tokens, []);
   });
 
   test("returns 200 when a publishable serverless subset no longer contains the page anchor", async () => {

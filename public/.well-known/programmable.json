@@ -27,9 +27,9 @@
       "discoveryStatus": "live"
     },
     "custom": {
-      "discoveryStatus": "prelaunch",
+      "discoveryStatus": "live",
       "publicSubmissionStatus": "prelaunch",
-      "note": "Only approved Custom Registry launches qualify. No registry deployment is published yet."
+      "note": "Registry discovery is live for finalized approved launches. General public submissions remain prelaunch."
     }
   },
   "compatibility": {

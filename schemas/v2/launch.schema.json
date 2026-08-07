@@ -207,6 +207,9 @@
           "$ref": "#/$defs/registryV3Finality"
         },
         {
+          "$ref": "custom-launch-registry-record-v4.schema.json#/definitions/projectedFinality"
+        },
+        {
           "type": "null"
         }
       ]
