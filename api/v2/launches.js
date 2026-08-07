@@ -33,8 +33,7 @@ function currentSnapshot(dataset) {
     blockHash: checkpoint.blockHash,
     indexedAt: dataset.status.generatedAt,
     finality: checkpoint.finality,
-    customRegistryHighWaterGeneration:
-      dataset.status.customRegistry?.highWaterGeneration ?? null,
+    customRegistryHighWaterGeneration: currentRegistryHighWater(dataset),
   };
 }
 
@@ -52,9 +51,17 @@ function greatestGeneration(left, right) {
 }
 
 function currentRegistryHighWater(dataset) {
-  const value = dataset.status.customRegistry?.highWaterGeneration;
-  if (typeof value === "string" && /^(0|[1-9]\d*)$/.test(value)) return value;
-  return "0";
+  const sourceValue = dataset.status.customRegistry?.highWaterGeneration;
+  let highest = typeof sourceValue === "string" && /^(0|[1-9]\d*)$/.test(sourceValue)
+    ? sourceValue
+    : "0";
+  for (const record of dataset.records) {
+    const generation = registryGeneration(record);
+    if (generation !== null && BigInt(generation) > BigInt(highest)) {
+      highest = generation;
+    }
+  }
+  return highest;
 }
 
 function withinRegistryHighWater(record, highWaterGeneration) {

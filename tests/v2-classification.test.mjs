@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import path from "node:path";
 
 import { launchFeedPayload } from "../api/v2/launches.js";
+import { decodeResumeCursor } from "../server/http.js";
 import { readJson, REPOSITORY_ROOT } from "../scripts/lib/files.mjs";
 import { createSchemaRegistry, assertValid } from "../scripts/lib/schema.mjs";
 import {
@@ -201,6 +202,36 @@ describe("version 2 classification", () => {
     const publicStatus = serviceStatusV2(projected.status, manifest);
     assert.equal(publicStatus.custom.status, "live");
     assert.equal(publicStatus.customRegistry.status, "unavailable");
+  });
+
+  test("pages the Gen1 baseline when the real Registry source is unconfigured", async () => {
+    const manifest = await developerManifestV2();
+    const sourceStatus = {
+      configured: false,
+      status: "unconfigured",
+      sourceId: null,
+      completeness: null,
+      freshness: null,
+      highWaterGeneration: null,
+    };
+    const projected = projectV2Dataset(seedCustomRegistryBaseline({
+      records: [internalRecord(classic, "0001")],
+      status: { ...status(), customRegistry: sourceStatus },
+    }), manifest);
+    assert.deepEqual(projected.status.customRegistry, sourceStatus);
+
+    const custom = launchFeedPayload(projected, {
+      category: "custom",
+      limit: 100,
+    });
+    assert.deepEqual(custom.items.map((record) => record.launchId), [
+      genesisCanary.launchId,
+    ]);
+    assert.equal(custom.snapshot.customRegistryHighWaterGeneration, "1");
+    assert.equal(
+      decodeResumeCursor(custom.page.resumeCursor).registryHighWaterGeneration,
+      "1",
+    );
   });
 
   test("keeps Registry discovery independent from the general submission intake", async () => {
