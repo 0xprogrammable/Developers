@@ -4,6 +4,7 @@ import { API_V2_SCHEMA_VERSION } from "./constants.js";
 import { feedStatus, getDataset } from "./dataset.js";
 import {
   CUSTOM_REGISTRY_GENESIS_CANARY,
+  CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
   isExactCustomRegistryGenesisCanary,
 } from "./genesis-canary.js";
 
@@ -122,6 +123,13 @@ export function publicLaunchV2(record) {
   return publicRecord;
 }
 
+export function customRegistryGenesisCanaryRecord() {
+  return {
+    ...CUSTOM_REGISTRY_GENESIS_CANARY,
+    sortKey: CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
+  };
+}
+
 export function projectV2Dataset(dataset, manifest = null) {
   const customRegistryLive = manifest?.customRegistry?.status === "live";
   const publicSubmissionsEnabled =
@@ -167,7 +175,7 @@ export async function getV2Dataset() {
   const seeded = {
     ...dataset,
     records: [
-      CUSTOM_REGISTRY_GENESIS_CANARY,
+      customRegistryGenesisCanaryRecord(),
       ...dataset.records.filter((record) =>
         record.launchId !== CUSTOM_REGISTRY_GENESIS_CANARY.launchId),
     ],
