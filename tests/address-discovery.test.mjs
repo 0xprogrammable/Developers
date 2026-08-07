@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { describe, test } from "node:test";
 import path from "node:path";
@@ -8,6 +9,16 @@ import { hardcodedDeploymentFindings } from "../scripts/lib/source-scan.mjs";
 const FEE_RECIPIENT = "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
 
 describe("documentation contract", () => {
+  test("keeps the frozen v2 launch and compatibility contracts byte-identical", async () => {
+    for (const [file, expected] of [
+      ["schemas/v2/launch.schema.json", "1cc15f9b63d26a6b2422862f02e601207da7495237354137a1f2fd88bb2bf05f"],
+      ["compatibility/core-v2.json", "fa3e8da7da7dace4b72b8319bea9a2c97809a06187348bea9df897358f6d0fe5"],
+    ]) {
+      const bytes = await readFile(path.join(REPOSITORY_ROOT, file));
+      assert.equal(createHash("sha256").update(bytes).digest("hex"), expected, file);
+    }
+  });
+
   test("does not hardcode any launcher, hook, coordinator, or registry address", async () => {
     assert.deepEqual(await hardcodedDeploymentFindings(), []);
   });
