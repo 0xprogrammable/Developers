@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/custom-launch-registry-contract-record-v4.schema.json",
+  "title": "Programmable Custom Registry generation 2 contract record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "chainId",
+    "registryGeneration",
+    "registeredRecordPreimage",
+    "registeredRecordComponentHashes",
+    "registeredRecordCommitment",
+    "registrationBindingHash",
+    "feePolicy",
+    "partnerFactoryAuthorization"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://developers.programmable.family/schemas/v2/custom-launch-registry-contract-record-v4.schema.json"
+    },
+    "schemaVersion": {
+      "const": "programmable.custom-launch-registry-contract-record.v4"
+    },
+    "chainId": {
+      "$ref": "#/$defs/positiveDecimal"
+    },
+    "registryGeneration": {
+      "const": "2"
+    },
+    "registeredRecordPreimage": {
+      "$ref": "#/$defs/registeredRecordPreimage"
+    },
+    "registeredRecordComponentHashes": {
+      "$ref": "#/$defs/componentHashes"
+    },
+    "registeredRecordCommitment": {
+      "$ref": "#/$defs/hash32"
+    },
+    "registrationBindingHash": {
+      "$ref": "#/$defs/hash32"
+    },
+    "feePolicy": {
+      "$ref": "#/$defs/feePolicy"
+    },
+    "partnerFactoryAuthorization": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/partnerFactoryAuthorization"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "positiveDecimal": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "maxLength": 78
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 78
+    },
+    "hash32": {
+      "type": "string",
+      "pattern": "^0x[0-9a-f]{64}$"
+    },
+    "address": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "registeredRecordPreimage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chainId",
+        "registryGeneration",
+        "launchId",
+        "projectId",
+        "approvalId",
+        "approvalBindingHash",
+        "repositoryId",
+        "commitId",
+        "sourceCommitment",
+        "buildCommitment",
+        "artifactSetHash",
+        "deploymentConfigurationHash",
+        "configurationHash",
+        "permissionsHash",
+        "deploymentId",
+        "deploymentSetHash",
+        "runtimeCodeSetHash",
+        "primaryContract",
+        "primaryRuntimeCodeHash",
+        "launchWallet",
+        "modelId",
+        "modelVersion",
+        "templateId",
+        "templateVersion",
+        "providerId",
+        "builderAttributionHash",
+        "originHash",
+        "assetSetHash",
+        "marketSetHash",
+        "marketPathId",
+        "capabilitySetHash",
+        "reviewPolicyHash",
+        "securityReviewHash",
+        "reviewResultId",
+        "reviewDeploymentBindingHash",
+        "feePolicyHash",
+        "finalityPolicyHash"
+      ],
+      "properties": {
+        "chainId": {
+          "$ref": "#/$defs/positiveDecimal"
+        },
+        "registryGeneration": {
+          "const": "2"
+        },
+        "primaryContract": {
+          "$ref": "#/$defs/address"
+        },
+        "launchWallet": {
+          "$ref": "#/$defs/address"
+        },
+        "launchId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "projectId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "approvalId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "approvalBindingHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "repositoryId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "commitId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "sourceCommitment": {
+          "$ref": "#/$defs/hash32"
+        },
+        "buildCommitment": {
+          "$ref": "#/$defs/hash32"
+        },
+        "artifactSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "deploymentConfigurationHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "configurationHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "permissionsHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "deploymentId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "deploymentSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "runtimeCodeSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "primaryRuntimeCodeHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "providerId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "builderAttributionHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "originHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "assetSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "marketSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "marketPathId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "capabilitySetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "reviewPolicyHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "securityReviewHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "reviewResultId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "reviewDeploymentBindingHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "feePolicyHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "finalityPolicyHash": {
+          "$ref": "#/$defs/hash32"
+        }
+      }
+    },
+    "componentHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scopeAndApprovalHash",
+        "sourceAndDeploymentHash",
+        "attributionHash",
+        "reviewHash",
+        "feePolicyHash",
+        "finalityPolicyHash"
+      ],
+      "properties": {
+        "scopeAndApprovalHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "sourceAndDeploymentHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "attributionHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "reviewHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "feePolicyHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "finalityPolicyHash": {
+          "$ref": "#/$defs/hash32"
+        }
+      }
+    },
+    "feeLeg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shareBps",
+        "recipient",
+        "currency",
+        "chargeModeId",
+        "basisId",
+        "roundingId",
+        "accrualId",
+        "claimId",
+        "claimRightId",
+        "controlEvidenceHash"
+      ],
+      "properties": {
+        "shareBps": {
+          "$ref": "#/$defs/decimal"
+        },
+        "recipient": {
+          "$ref": "#/$defs/address"
+        },
+        "currency": {
+          "$ref": "#/$defs/address"
+        },
+        "chargeModeId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "basisId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "roundingId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "accrualId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "claimId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "claimRightId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "controlEvidenceHash": {
+          "$ref": "#/$defs/hash32"
+        }
+      }
+    },
+    "feePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "providerId",
+        "partnerStatusId",
+        "modelId",
+        "modelVersion",
+        "templateId",
+        "templateVersion",
+        "marketPathId",
+        "partnerRepositoryId",
+        "partnerCommitId",
+        "partnerRuntimeCodeSetHash",
+        "totalFeeBps",
+        "nativeCustomFeeBps",
+        "partner",
+        "programmable",
+        "activationVersion",
+        "activationBlock",
+        "paused",
+        "retired",
+        "publicPolicyBindingHash",
+        "claimIsolationEvidenceHash",
+        "accountingSafetyEvidenceHash",
+        "verificationEvidenceHash"
+      ],
+      "properties": {
+        "kind": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "providerId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "partnerStatusId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "marketPathId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "partnerRepositoryId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "partnerCommitId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "partnerRuntimeCodeSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "totalFeeBps": {
+          "$ref": "#/$defs/decimal"
+        },
+        "nativeCustomFeeBps": {
+          "$ref": "#/$defs/decimal"
+        },
+        "partner": {
+          "$ref": "#/$defs/feeLeg"
+        },
+        "programmable": {
+          "$ref": "#/$defs/feeLeg"
+        },
+        "activationVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "activationBlock": {
+          "$ref": "#/$defs/decimal"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "retired": {
+          "type": "boolean"
+        },
+        "publicPolicyBindingHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "claimIsolationEvidenceHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "accountingSafetyEvidenceHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "verificationEvidenceHash": {
+          "$ref": "#/$defs/hash32"
+        }
+      }
+    },
+    "partnerFactoryAuthorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chainId",
+        "registryGeneration",
+        "configurationHash",
+        "providerId",
+        "modelId",
+        "modelVersion",
+        "templateId",
+        "templateVersion",
+        "modelRepositoryId",
+        "modelSourceCommitId",
+        "factorySourceRepositoryId",
+        "factorySourceCommitId",
+        "factory",
+        "factoryRuntimeCodeHash",
+        "launchRuntimeCodeSetHash",
+        "permissionsHash",
+        "feePolicyHash",
+        "validAfterBlock",
+        "expiresAtBlock",
+        "evidenceHash"
+      ],
+      "properties": {
+        "chainId": {
+          "$ref": "#/$defs/positiveDecimal"
+        },
+        "registryGeneration": {
+          "const": "2"
+        },
+        "factory": {
+          "$ref": "#/$defs/address"
+        },
+        "validAfterBlock": {
+          "$ref": "#/$defs/positiveDecimal"
+        },
+        "expiresAtBlock": {
+          "$ref": "#/$defs/positiveDecimal"
+        },
+        "configurationHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "providerId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "templateVersion": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelRepositoryId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "modelSourceCommitId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "factorySourceRepositoryId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "factorySourceCommitId": {
+          "$ref": "#/$defs/hash32"
+        },
+        "factoryRuntimeCodeHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "launchRuntimeCodeSetHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "permissionsHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "feePolicyHash": {
+          "$ref": "#/$defs/hash32"
+        },
+        "evidenceHash": {
+          "$ref": "#/$defs/hash32"
+        }
+      }
+    }
+  }
+}

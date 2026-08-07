@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
+import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
 
 let manifestPromise = null;
@@ -24,8 +25,12 @@ export function registryOriginMatchesManifest(record, manifest) {
   const evidence = record?.extensions?.["programmable/registry-v3"];
   if (!origin) return false;
   return canonicalRegistryDeployments(manifest).some(
-    (registry) =>
-      String(registry.chainId) === origin.chainId &&
+    (registry) => {
+      const event = registry.events?.[evidence?.operation];
+      const generation2Matches = registry.generation !== "2" ||
+        (event?.emitterRole === "registry" &&
+          gen2ContractSetMatchesEvidence(registry, evidence));
+      return String(registry.chainId) === origin.chainId &&
       registry.caip2 === origin.caip2 &&
       registry.address.toLowerCase() === origin.registryAddress.toLowerCase() &&
       registry.startBlock === origin.registryStartBlock &&
@@ -35,10 +40,12 @@ export function registryOriginMatchesManifest(record, manifest) {
       Array.isArray(registry.authorizedWriters) &&
       registry.authorizedWriters.some((writer) =>
         writer.toLowerCase() === evidence?.registryWriter?.toLowerCase()) &&
-      registry.events?.[evidence?.operation]?.topic0 === evidence?.eventTopic0 &&
+      event?.topic0 === evidence?.eventTopic0 &&
       BigInt(origin.registrationBlockNumber) >= BigInt(registry.startBlock) &&
       (registry.endBlock === null ||
-        BigInt(origin.registrationBlockNumber) <= BigInt(registry.endBlock)),
+        BigInt(origin.registrationBlockNumber) <= BigInt(registry.endBlock)) &&
+      generation2Matches;
+    },
   );
 }
 

@@ -1,0 +1,515 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { describe, test } from "node:test";
+
+import {
+  deriveGen2ApprovalBindingHash,
+  deriveGen2FeePolicyHash,
+  deriveGen2PartnerConfigurationHash,
+  deriveGen2RegisteredRecordCommitment,
+  deriveGen2RegisteredRecordComponentHashes,
+  deriveGen2RegistrationBindingHash,
+  deriveGen2ReviewDeploymentBindingHash,
+  GEN2_FEE_POLICY_KIND,
+  PARTNER_STATUS_ACTIVE_ID,
+  REGISTRY_GEN2_BINDING_FIELDS,
+  validateGen2PartnerFactoryAuthorization,
+} from "../server/custom-registry-gen2.js";
+import {
+  REGISTRY_V4_PRODUCER_SCHEMA,
+  validateRegistryContractRecordV4,
+} from "../server/registry-v4.js";
+import { registryOriginMatchesManifest } from "../server/v2-dataset.js";
+import { createSchemaRegistry } from "../scripts/lib/schema.mjs";
+import { validateManifestSemantics } from "../scripts/lib/semantics.mjs";
+import atomicRegistrarAbi from
+  "../abis/candidates/programmable-custom-atomic-registrar-v2.json" with { type: "json" };
+import feePolicyVerifierAbi from
+  "../abis/candidates/programmable-custom-fee-policy-verifier-v2.json" with { type: "json" };
+import partnerFactoryRegistryAbi from
+  "../abis/candidates/programmable-custom-partner-factory-registry-v2.json" with { type: "json" };
+import registryAbi from
+  "../abis/candidates/programmable-custom-registry-v2.json" with { type: "json" };
+import registryEventSet from
+  "../fixtures/v2/custom-registry-event-set-v2.candidate.json" with { type: "json" };
+import registryReleaseCandidate from
+  "../fixtures/v2/custom-registry-generation-2.release-candidate.json" with { type: "json" };
+import { canonicalSha256 } from "../server/canonical.js";
+import { keccak256 } from "../server/keccak.js";
+
+const ZERO_HASH = `0x${"0".repeat(64)}`;
+const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
+const PROGRAMMABLE_RECIPIENT =
+  "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
+
+function hash(number) {
+  return `0x${number.toString(16).padStart(64, "0")}`;
+}
+
+function address(number) {
+  return `0x${number.toString(16).padStart(40, "0")}`;
+}
+
+function leg(shareBps, recipient, claimRightId) {
+  return {
+    shareBps: String(shareBps),
+    recipient,
+    currency: ZERO_ADDRESS,
+    chargeModeId: hash(80),
+    basisId: hash(81),
+    roundingId: hash(82),
+    accrualId: hash(83),
+    claimId: hash(84),
+    claimRightId,
+    controlEvidenceHash: hash(85),
+  };
+}
+
+function partnerPolicy(providerId = hash(24)) {
+  return {
+    kind: GEN2_FEE_POLICY_KIND.PartnerTemplate,
+    providerId,
+    partnerStatusId: PARTNER_STATUS_ACTIVE_ID,
+    modelId: hash(20),
+    modelVersion: hash(21),
+    templateId: hash(22),
+    templateVersion: hash(23),
+    marketPathId: hash(25),
+    partnerRepositoryId: hash(26),
+    partnerCommitId: hash(27),
+    partnerRuntimeCodeSetHash: hash(28),
+    totalFeeBps: "20",
+    nativeCustomFeeBps: "0",
+    partner: leg(15, address(200), hash(86)),
+    programmable: leg(5, PROGRAMMABLE_RECIPIENT, hash(87)),
+    activationVersion: hash(88),
+    activationBlock: "1",
+    paused: false,
+    retired: false,
+    publicPolicyBindingHash: hash(89),
+    claimIsolationEvidenceHash: hash(90),
+    accountingSafetyEvidenceHash: hash(91),
+    verificationEvidenceHash: hash(92),
+  };
+}
+
+function partnerRecord() {
+  const feePolicy = partnerPolicy();
+  const feePolicyHash = deriveGen2FeePolicyHash(feePolicy);
+  const authorization = {
+    chainId: "1",
+    registryGeneration: "2",
+    configurationHash: ZERO_HASH,
+    providerId: feePolicy.providerId,
+    modelId: feePolicy.modelId,
+    modelVersion: feePolicy.modelVersion,
+    templateId: feePolicy.templateId,
+    templateVersion: feePolicy.templateVersion,
+    modelRepositoryId: hash(7),
+    modelSourceCommitId: hash(8),
+    factorySourceRepositoryId: hash(101),
+    factorySourceCommitId: hash(102),
+    factory: address(103),
+    factoryRuntimeCodeHash: hash(104),
+    launchRuntimeCodeSetHash: hash(17),
+    permissionsHash: hash(14),
+    feePolicyHash,
+    validAfterBlock: "1",
+    expiresAtBlock: "1000",
+    evidenceHash: hash(105),
+  };
+  authorization.configurationHash = deriveGen2PartnerConfigurationHash(
+    authorization,
+  );
+  const preimage = {
+    chainId: "1",
+    registryGeneration: "2",
+    launchId: hash(1),
+    projectId: hash(2),
+    approvalId: hash(3),
+    approvalBindingHash: ZERO_HASH,
+    repositoryId: authorization.modelRepositoryId,
+    commitId: authorization.modelSourceCommitId,
+    sourceCommitment: hash(9),
+    buildCommitment: hash(10),
+    artifactSetHash: hash(11),
+    deploymentConfigurationHash: hash(12),
+    configurationHash: authorization.configurationHash,
+    permissionsHash: authorization.permissionsHash,
+    deploymentId: hash(15),
+    deploymentSetHash: hash(16),
+    runtimeCodeSetHash: authorization.launchRuntimeCodeSetHash,
+    primaryContract: address(18),
+    primaryRuntimeCodeHash: hash(19),
+    launchWallet: address(19),
+    modelId: feePolicy.modelId,
+    modelVersion: feePolicy.modelVersion,
+    templateId: feePolicy.templateId,
+    templateVersion: feePolicy.templateVersion,
+    providerId: feePolicy.providerId,
+    builderAttributionHash: hash(29),
+    originHash: hash(30),
+    assetSetHash: hash(31),
+    marketSetHash: hash(32),
+    marketPathId: feePolicy.marketPathId,
+    capabilitySetHash: hash(33),
+    reviewPolicyHash: hash(34),
+    securityReviewHash: hash(35),
+    reviewResultId: hash(36),
+    reviewDeploymentBindingHash: ZERO_HASH,
+    feePolicyHash,
+    finalityPolicyHash: hash(37),
+  };
+  preimage.approvalBindingHash = deriveGen2ApprovalBindingHash(preimage);
+  preimage.reviewDeploymentBindingHash =
+    deriveGen2ReviewDeploymentBindingHash(preimage);
+  const registeredRecordCommitment =
+    deriveGen2RegisteredRecordCommitment(preimage);
+  return {
+    $schema:
+      "https://developers.programmable.family/schemas/v2/custom-launch-registry-contract-record-v4.schema.json",
+    schemaVersion: REGISTRY_V4_PRODUCER_SCHEMA,
+    chainId: "1",
+    registryGeneration: "2",
+    registeredRecordPreimage: preimage,
+    registeredRecordComponentHashes:
+      deriveGen2RegisteredRecordComponentHashes(preimage),
+    registeredRecordCommitment,
+    registrationBindingHash: deriveGen2RegistrationBindingHash(preimage),
+    feePolicy,
+    partnerFactoryAuthorization: authorization,
+  };
+}
+
+const GEN2_EVENT_EMITTERS = {
+  approvalAuthorized: "registry",
+  partnerFactoryAuthorized: "partnerFactoryRegistry",
+  partnerFactorySourceBound: "partnerFactoryRegistry",
+  partnerFactoryRevoked: "partnerFactoryRegistry",
+  registered: "registry",
+  provenance: "registry",
+  review: "registry",
+  attribution: "registry",
+  feePolicy: "registry",
+  feeScope: "registry",
+  feeEvidence: "registry",
+  atomicExecuted: "atomicRegistrar",
+  finalized: "registry",
+  corrected: "registry",
+  revoked: "registry",
+};
+
+function gen2Generation() {
+  const contractSet = {
+    registry: {
+      address: address(301),
+      runtimeCodeKeccak256: hash(301),
+      abiUrl: "https://developers.programmable.family/abis/programmable-custom-registry-v2.json",
+    },
+    partnerFactoryRegistry: {
+      address: address(302),
+      runtimeCodeKeccak256: hash(302),
+      abiUrl: "https://developers.programmable.family/abis/programmable-custom-partner-factory-registry-v2.json",
+    },
+    feePolicyVerifier: {
+      address: address(303),
+      runtimeCodeKeccak256: hash(303),
+      abiUrl: "https://developers.programmable.family/abis/programmable-custom-fee-policy-verifier-v2.json",
+    },
+    atomicRegistrar: {
+      address: address(304),
+      runtimeCodeKeccak256: hash(304),
+      abiUrl: "https://developers.programmable.family/abis/programmable-custom-atomic-registrar-v2.json",
+    },
+  };
+  const events = Object.fromEntries(
+    Object.entries(GEN2_EVENT_EMITTERS).map(([id, emitterRole], index) => [
+      id,
+      {
+        signature: `${id}(bytes32)`,
+        topic0: hash(400 + index),
+        emitterRole,
+      },
+    ]),
+  );
+  return {
+    chainId: 1,
+    caip2: "eip155:1",
+    generation: "2",
+    status: "live",
+    address: contractSet.registry.address,
+    runtimeCodeKeccak256: contractSet.registry.runtimeCodeKeccak256,
+    startBlock: "1",
+    endBlock: null,
+    authorizedWriters: [address(305)],
+    registryEventSetHash: `sha256:${"4".repeat(64)}`,
+    events,
+    abiUrl: contractSet.registry.abiUrl,
+    contractSet,
+    finalityConfirmations: 2,
+  };
+}
+
+describe("Registry generation 2 contract parity", () => {
+  test("pins the final Contract RC ABIs and canonical 15-event set", async () => {
+    const artifacts = {
+      registry: {
+        abi: registryAbi,
+        file: "../abis/candidates/programmable-custom-registry-v2.json",
+        sha256: "7c5fe7d25cc874a319c3621435c31cd8f531a7abfcd7d5073fc163d10d60524f",
+      },
+      partnerFactoryRegistry: {
+        abi: partnerFactoryRegistryAbi,
+        file: "../abis/candidates/programmable-custom-partner-factory-registry-v2.json",
+        sha256: "054b5d2740314335d202e37d405273cbb9d0922398cbc2909e7cb7cee845061e",
+      },
+      feePolicyVerifier: {
+        abi: feePolicyVerifierAbi,
+        file: "../abis/candidates/programmable-custom-fee-policy-verifier-v2.json",
+        sha256: "0bc9bdda4a1e78e2c498568ddfa164b35c3cb5c297f563dd4771935e75304f62",
+      },
+      atomicRegistrar: {
+        abi: atomicRegistrarAbi,
+        file: "../abis/candidates/programmable-custom-atomic-registrar-v2.json",
+        sha256: "a053f14e59c3c54a0dad47e6e772ba411c7659a46eab3313a6c124260ebcff1f",
+      },
+    };
+    for (const [role, artifact] of Object.entries(artifacts)) {
+      const bytes = await readFile(new URL(artifact.file, import.meta.url));
+      assert.equal(
+        createHash("sha256").update(bytes).digest("hex"),
+        artifact.sha256,
+        role,
+      );
+    }
+    const eventBytes = await readFile(new URL(
+      "../fixtures/v2/custom-registry-event-set-v2.candidate.json",
+      import.meta.url,
+    ));
+    assert.equal(
+      createHash("sha256").update(eventBytes).digest("hex"),
+      "0c6c32e0db5eb55b8e0bd148a6206e0c0ab8605cda75338f3a556e75cd3eff1a",
+    );
+    assert.equal(registryEventSet.events.length, 15);
+    assert.equal(
+      registryEventSet.eventSetHash,
+      "sha256:bcff2958529fecaa7ef8c4c654389829bfb7dd61a3246f0d681cf7db0a42a58c",
+    );
+    assert.equal(
+      registryEventSet.eventSetHash,
+      canonicalSha256(registryEventSet.domain, { events: registryEventSet.events }),
+    );
+    for (const event of registryEventSet.events) {
+      const abiEvent = artifacts[event.emitter].abi.find((entry) =>
+        entry.type === "event" &&
+        entry.name === event.signature.slice(0, event.signature.indexOf("("))
+      );
+      assert.ok(abiEvent, event.id);
+      const signature = `${abiEvent.name}(${abiEvent.inputs
+        .map(({ type }) => type)
+        .join(",")})`;
+      assert.equal(signature, event.signature, event.id);
+      assert.equal(
+        keccak256(new TextEncoder().encode(signature)),
+        event.topic0,
+        event.id,
+      );
+    }
+
+    const tuple = registryAbi.find((entry) =>
+      entry.type === "function" &&
+      entry.name === "computeRegisteredRecordCommitment"
+    ).inputs[0].components;
+    const expectedFixedFields = REGISTRY_GEN2_BINDING_FIELDS
+      .filter((field) => field !== "feePolicyHash")
+      .concat("registeredRecordCommitment");
+    assert.equal(tuple.length, 38);
+    assert.deepEqual(
+      tuple.slice(0, 37).map(({ name }) => name),
+      expectedFixedFields,
+    );
+    assert.equal(tuple[37].name, "feePolicy");
+    assert.equal(tuple[37].type, "tuple");
+    assert.ok(feePolicyVerifierAbi.some((entry) =>
+      entry.type === "function" && entry.name === "verify"));
+    assert.equal(registryReleaseCandidate.status, "release_candidate");
+    assert.equal(registryReleaseCandidate.registryGeneration, 2);
+    assert.equal(registryReleaseCandidate.contractIntegrationAbiVersion, 1);
+    assert.equal(registryReleaseCandidate.minimumSupportedPublicApiVersion, 2);
+    assert.equal(registryReleaseCandidate.registryRecordProducerVersion, 4);
+    assert.equal(
+      registryReleaseCandidate.release.publicSubmissionsEnabled,
+      false,
+    );
+    assert.ok(Object.values(registryReleaseCandidate.contracts).every(
+      (contract) => contract.address === null && contract.startBlock === null &&
+        contract.deploymentTransactionHash === null &&
+        contract.runtimeCodeHash === null && contract.sourceVerified === false,
+    ));
+  });
+
+  test("validates the explicit v4 producer schema and all exact bindings", async () => {
+    const record = partnerRecord();
+    assert.equal(REGISTRY_GEN2_BINDING_FIELDS.length, 37);
+    assert.equal(validateRegistryContractRecordV4(record), true);
+    const schemas = await createSchemaRegistry("v2");
+    const validate = schemas.validator(
+      "custom-launch-registry-contract-record-v4.schema.json",
+    );
+    assert.equal(validate(record), true, JSON.stringify(validate.errors));
+  });
+
+  test("changes the commitment for every one of the 37 preimage words", () => {
+    const baseline = partnerRecord().registeredRecordPreimage;
+    const commitment = deriveGen2RegisteredRecordCommitment(baseline);
+    const addressFields = new Set(["primaryContract", "launchWallet"]);
+    const decimalFields = new Set(["chainId", "registryGeneration"]);
+    for (const field of REGISTRY_GEN2_BINDING_FIELDS) {
+      const changed = structuredClone(baseline);
+      changed[field] = addressFields.has(field)
+        ? address(999)
+        : decimalFields.has(field)
+          ? field === "registryGeneration" ? "3" : "8453"
+          : hash(999);
+      assert.notEqual(
+        deriveGen2RegisteredRecordCommitment(changed),
+        commitment,
+        field,
+      );
+    }
+  });
+
+  test("enforces provider-neutral 20 = 15 + 5 without a native overlay", () => {
+    assert.match(deriveGen2FeePolicyHash(partnerPolicy(hash(500))), /^0x/);
+    assert.match(deriveGen2FeePolicyHash(partnerPolicy(hash(501))), /^0x/);
+    const mutations = [
+      ["zero provider", (value) => { value.providerId = ZERO_HASH; }],
+      ["wrong total", (value) => { value.totalFeeBps = "21"; }],
+      ["wrong partner share", (value) => { value.partner.shareBps = "14"; }],
+      ["wrong Programmable share", (value) => {
+        value.programmable.shareBps = "6";
+      }],
+      ["native overlay", (value) => { value.nativeCustomFeeBps = "10"; }],
+      ["shared recipient", (value) => {
+        value.partner.recipient = PROGRAMMABLE_RECIPIENT;
+      }],
+      ["different basis", (value) => { value.partner.basisId = hash(700); }],
+      ["shared claim right", (value) => {
+        value.partner.claimRightId = value.programmable.claimRightId;
+      }],
+      ["paused", (value) => { value.paused = true; }],
+    ];
+    for (const [name, mutate] of mutations) {
+      const changed = partnerPolicy();
+      mutate(changed);
+      assert.throws(() => deriveGen2FeePolicyHash(changed), undefined, name);
+    }
+  });
+
+  test("binds provider factory configuration to chain and Registry generation", () => {
+    const record = partnerRecord();
+    const authorization = record.partnerFactoryAuthorization;
+    const baseline = deriveGen2PartnerConfigurationHash(authorization);
+    assert.equal(validateGen2PartnerFactoryAuthorization(authorization), true);
+    for (const [name, mutate] of [
+      ["chain", (value) => { value.chainId = "8453"; }],
+      ["provider", (value) => { value.providerId = hash(800); }],
+      ["factory", (value) => { value.factory = address(801); }],
+      ["factory runtime", (value) => { value.factoryRuntimeCodeHash = hash(802); }],
+      ["launch runtime", (value) => { value.launchRuntimeCodeSetHash = hash(803); }],
+      ["permissions", (value) => { value.permissionsHash = hash(804); }],
+      ["fee", (value) => { value.feePolicyHash = hash(805); }],
+    ]) {
+      const changed = structuredClone(authorization);
+      mutate(changed);
+      assert.notEqual(deriveGen2PartnerConfigurationHash(changed), baseline, name);
+    }
+    const wrongGeneration = structuredClone(authorization);
+    wrongGeneration.registryGeneration = "1";
+    assert.throws(() => deriveGen2PartnerConfigurationHash(wrongGeneration));
+    for (const mutate of [
+      (value) => { value.factory = ZERO_ADDRESS; },
+      (value) => { value.evidenceHash = ZERO_HASH; },
+      (value) => { value.validAfterBlock = "0"; },
+      (value) => { value.expiresAtBlock = "0"; },
+      (value) => { value.validAfterBlock = "1001"; },
+    ]) {
+      const invalid = structuredClone(authorization);
+      mutate(invalid);
+      assert.equal(validateGen2PartnerFactoryAuthorization(invalid), false);
+    }
+  });
+
+  test("fails publication closed without the exact four-contract Gen2 set", async () => {
+    const generation = gen2Generation();
+    const manifest = JSON.parse(await readFile(
+      new URL("../deployments/ethereum-v2.json", import.meta.url),
+      "utf8",
+    ));
+    manifest.customRegistry.status = "live";
+    manifest.customRegistry.publicSubmissionsEnabled = true;
+    manifest.customRegistry.address = generation.address;
+    manifest.customRegistry.startBlock = generation.startBlock;
+    manifest.customRegistry.generation = "2";
+    manifest.customRegistry.eventSignature = generation.events.registered.signature;
+    manifest.customRegistry.eventTopic = generation.events.registered.topic0;
+    manifest.customRegistry.abiUrl = generation.abiUrl;
+    manifest.customRegistry.finalityConfirmations = 2;
+    manifest.registryGenerations = [generation];
+    assert.deepEqual(validateManifestSemantics(manifest), []);
+    const schemas = await createSchemaRegistry("v2");
+    const validateManifest = schemas.validator("manifest.schema.json");
+    assert.equal(
+      validateManifest(manifest),
+      true,
+      JSON.stringify(validateManifest.errors),
+    );
+
+    const record = {
+      registryOrigin: {
+        chainId: "1",
+        caip2: "eip155:1",
+        registryAddress: generation.address,
+        registryStartBlock: "1",
+        registryGeneration: "2",
+        registryEventSetHash: generation.registryEventSetHash,
+        registrationBlockNumber: "2",
+      },
+      extensions: {
+        "programmable/registry-v3": {
+          registryRuntimeCodeHash: generation.runtimeCodeKeccak256,
+          registryWriter: generation.authorizedWriters[0],
+          operation: "registered",
+          eventTopic0: generation.events.registered.topic0,
+          registryGenerationContractSet: structuredClone(generation.contractSet),
+        },
+      },
+    };
+    assert.equal(registryOriginMatchesManifest(record, manifest), true);
+
+    for (const [name, mutate] of [
+      ["missing factory Registry", (value) => {
+        delete value.contractSet.partnerFactoryRegistry;
+      }],
+      ["wrong Registry runtime", (value) => {
+        value.contractSet.registry.runtimeCodeKeccak256 = hash(900);
+      }],
+      ["wrong event emitter", (value) => {
+        value.events.registered.emitterRole = "atomicRegistrar";
+      }],
+    ]) {
+      const changed = structuredClone(generation);
+      mutate(changed);
+      const changedManifest = structuredClone(manifest);
+      changedManifest.registryGenerations = [changed];
+      assert.ok(validateManifestSemantics(changedManifest).length > 0, name);
+    }
+
+    const wrongEvidence = structuredClone(record);
+    wrongEvidence.extensions["programmable/registry-v3"]
+      .registryGenerationContractSet.partnerFactoryRegistry.runtimeCodeKeccak256 =
+        hash(901);
+    assert.equal(registryOriginMatchesManifest(wrongEvidence, manifest), false);
+  });
+});

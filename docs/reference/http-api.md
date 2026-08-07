@@ -197,6 +197,7 @@ Public response schemas live in `schemas/v2/`:
 - `launch-feed.schema.json`
 - `launch.schema.json`
 - `custom-launch-registry-record-v3.schema.json`, advertised by the v2 schema index as `canonical-custom-registry-record-v3`
+- `custom-launch-registry-contract-record-v4.schema.json`, the Generation 2 37-word contract-parity producer record; it does not redefine v3
 - `token-list.schema.json`
 - `problem.schema.json`
 

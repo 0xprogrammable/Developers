@@ -37,6 +37,10 @@ Prelaunch means the integration contract is available for client development, bu
 
 At present, the v2 manifest reports `customRegistry.status: "prelaunch"`, `publicSubmissionsEnabled: false`, `address: null`, and `startBlock: null`. The filtered v2 Custom feed contains no items. These values are the controlling public state; draft contracts and fixtures cannot override them.
 
+The local Generation 2 release candidate defines the stronger four-contract Registry, PartnerFactory Registry, fee-policy verifier, and atomic registrar trust root plus the 15-event integration set and 37-word v4 producer commitment. This is contract and integration evidence, not deployment evidence. A prior Generation 1 deployment is quarantined and is not published because its deployed source/runtime cannot establish compatibility with this interface.
+
+Custom remains prelaunch until a reproducible Generation 2 deployment publishes exact addresses, runtime hashes, start block, ABI and event-set hash, authorized roles, Approval-producer parity, and a real canary record. The v4 contract-record schema and validator do not by themselves authorize public ingestion: the Approval producer must emit that exact record and the read model must verify it before projection. Candidate artifacts never change `publicSubmissionsEnabled` and do not enter `registryGenerations`.
+
 ## Feature support
 
 Every registered launch is discoverable. Feature availability is separate:
