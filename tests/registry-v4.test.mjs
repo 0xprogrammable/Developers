@@ -17,10 +17,17 @@ import {
   validateGen2PartnerFactoryAuthorization,
 } from "../server/custom-registry-gen2.js";
 import {
+  normalizeRegistryCustomItemV4,
   REGISTRY_V4_PRODUCER_SCHEMA,
   validateRegistryContractRecordV4,
+  validateRegistryCustomFeedItemV4,
+  validateRegistryProjectionEnvelopeV4,
 } from "../server/registry-v4.js";
-import { registryOriginMatchesManifest } from "../server/v2-dataset.js";
+import {
+  isV2PublicLaunch,
+  publicLaunchV2,
+  registryOriginMatchesManifest,
+} from "../server/v2-dataset.js";
 import { createSchemaRegistry } from "../scripts/lib/schema.mjs";
 import { validateManifestSemantics } from "../scripts/lib/semantics.mjs";
 import atomicRegistrarAbi from
@@ -35,6 +42,8 @@ import registryEventSet from
   "../fixtures/v2/custom-registry-event-set-v2.candidate.json" with { type: "json" };
 import registryReleaseCandidate from
   "../fixtures/v2/custom-registry-generation-2.release-candidate.json" with { type: "json" };
+import registryV4Envelope from
+  "../fixtures/v2/custom-launch-registry-projection-envelope-v4-gen2.json" with { type: "json" };
 import { canonicalSha256 } from "../server/canonical.js";
 import { keccak256 } from "../server/keccak.js";
 
@@ -85,6 +94,49 @@ function partnerPolicy(providerId = hash(24)) {
     programmable: leg(5, PROGRAMMABLE_RECIPIENT, hash(87)),
     activationVersion: hash(88),
     activationBlock: "1",
+    paused: false,
+    retired: false,
+    publicPolicyBindingHash: hash(89),
+    claimIsolationEvidenceHash: hash(90),
+    accountingSafetyEvidenceHash: hash(91),
+    verificationEvidenceHash: hash(92),
+  };
+}
+
+function zeroLeg() {
+  return {
+    shareBps: "0",
+    recipient: ZERO_ADDRESS,
+    currency: ZERO_ADDRESS,
+    chargeModeId: ZERO_HASH,
+    basisId: ZERO_HASH,
+    roundingId: ZERO_HASH,
+    accrualId: ZERO_HASH,
+    claimId: ZERO_HASH,
+    claimRightId: ZERO_HASH,
+    controlEvidenceHash: ZERO_HASH,
+  };
+}
+
+function noMarketPolicy() {
+  return {
+    kind: GEN2_FEE_POLICY_KIND.NoQualifyingMarket,
+    providerId: ZERO_HASH,
+    partnerStatusId: ZERO_HASH,
+    modelId: ZERO_HASH,
+    modelVersion: ZERO_HASH,
+    templateId: ZERO_HASH,
+    templateVersion: ZERO_HASH,
+    marketPathId: ZERO_HASH,
+    partnerRepositoryId: ZERO_HASH,
+    partnerCommitId: ZERO_HASH,
+    partnerRuntimeCodeSetHash: ZERO_HASH,
+    totalFeeBps: "0",
+    nativeCustomFeeBps: "0",
+    partner: zeroLeg(),
+    programmable: zeroLeg(),
+    activationVersion: ZERO_HASH,
+    activationBlock: "0",
     paused: false,
     retired: false,
     publicPolicyBindingHash: hash(89),
@@ -168,7 +220,7 @@ function partnerRecord() {
     deriveGen2RegisteredRecordCommitment(preimage);
   return {
     $schema:
-      "https://developers.programmable.family/schemas/v2/custom-launch-registry-contract-record-v4.schema.json",
+      "https://developers.programmable.family/schemas/v2/custom-launch-registry-record-v4.schema.json",
     schemaVersion: REGISTRY_V4_PRODUCER_SCHEMA,
     chainId: "1",
     registryGeneration: "2",
@@ -180,6 +232,33 @@ function partnerRecord() {
     feePolicy,
     partnerFactoryAuthorization: authorization,
   };
+}
+
+function resealContractRecord(record) {
+  const preimage = record.registeredRecordPreimage;
+  preimage.approvalBindingHash = deriveGen2ApprovalBindingHash(preimage);
+  preimage.reviewDeploymentBindingHash =
+    deriveGen2ReviewDeploymentBindingHash(preimage);
+  record.registeredRecordComponentHashes =
+    deriveGen2RegisteredRecordComponentHashes(preimage);
+  record.registeredRecordCommitment =
+    deriveGen2RegisteredRecordCommitment(preimage);
+  record.registrationBindingHash = deriveGen2RegistrationBindingHash(preimage);
+  return record;
+}
+
+function noMarketProviderRecord() {
+  const record = partnerRecord();
+  record.feePolicy = noMarketPolicy();
+  const feePolicyHash = deriveGen2FeePolicyHash(record.feePolicy);
+  record.registeredRecordPreimage.feePolicyHash = feePolicyHash;
+  record.registeredRecordPreimage.marketPathId = ZERO_HASH;
+  record.partnerFactoryAuthorization.feePolicyHash = feePolicyHash;
+  record.partnerFactoryAuthorization.configurationHash =
+    deriveGen2PartnerConfigurationHash(record.partnerFactoryAuthorization);
+  record.registeredRecordPreimage.configurationHash =
+    record.partnerFactoryAuthorization.configurationHash;
+  return resealContractRecord(record);
 }
 
 const GEN2_EVENT_EMITTERS = {
@@ -248,6 +327,45 @@ function gen2Generation() {
     abiUrl: contractSet.registry.abiUrl,
     contractSet,
     finalityConfirmations: 2,
+  };
+}
+
+function v4FeedItem(envelope = registryV4Envelope) {
+  return {
+    generation: "1",
+    projectionKey:
+      `custom:${envelope.rawRecord.registryOrigin.caip2}:${envelope.projection.launchId}`,
+    ...structuredClone(envelope),
+  };
+}
+
+function v4Manifest(envelope = registryV4Envelope) {
+  const origin = envelope.projection.origin;
+  const contractSet = Object.fromEntries(Object.entries(origin.releaseContracts)
+    .map(([role, contract]) => [role, {
+      address: contract.address,
+      runtimeCodeKeccak256: contract.runtimeCodeHash,
+    }]));
+  return {
+    registryGenerations: [{
+      status: "live",
+      chainId: Number(envelope.rawRecord.registryOrigin.chainId),
+      caip2: envelope.rawRecord.registryOrigin.caip2,
+      address: origin.registryAddress,
+      runtimeCodeKeccak256: origin.registryRuntimeCodeHash,
+      startBlock: origin.registryStartBlock,
+      endBlock: null,
+      generation: origin.registryGeneration,
+      registryEventSetHash: origin.registryEventSetHash,
+      authorizedWriters: [origin.registryWriter],
+      events: {
+        [origin.operation]: {
+          emitterRole: "registry",
+          topic0: origin.eventTopic0,
+        },
+      },
+      contractSet,
+    }],
   };
 }
 
@@ -350,14 +468,128 @@ describe("Registry generation 2 contract parity", () => {
   });
 
   test("validates the explicit v4 producer schema and all exact bindings", async () => {
-    const record = partnerRecord();
     assert.equal(REGISTRY_GEN2_BINDING_FIELDS.length, 37);
-    assert.equal(validateRegistryContractRecordV4(record), true);
+    assert.equal(validateRegistryContractRecordV4(partnerRecord()), true);
+    assert.equal(
+      validateRegistryContractRecordV4(registryV4Envelope.rawRecord),
+      true,
+    );
+    assert.equal(validateRegistryProjectionEnvelopeV4(registryV4Envelope), true);
     const schemas = await createSchemaRegistry("v2");
     const validate = schemas.validator(
-      "custom-launch-registry-contract-record-v4.schema.json",
+      "custom-launch-registry-record-v4.schema.json",
     );
-    assert.equal(validate(record), true, JSON.stringify(validate.errors));
+    assert.equal(
+      validate(registryV4Envelope.rawRecord),
+      true,
+      JSON.stringify(validate.errors),
+    );
+    assert.equal(
+      registryV4Envelope.rawRecordHash,
+      "sha256:5e519273e471d6ed4f910e3fc8841bdffb94467a5b6a865acc5e394f467aff1a",
+    );
+    assert.equal(
+      registryV4Envelope.projectionDigest,
+      "sha256:a3a5dd73dace05984494c01a7e92d8984e3e9f4bcd3256b7cce5ad0d43277595",
+    );
+  });
+
+  test("ingests the exact Read Model v4 envelope without re-deriving public fields", async () => {
+    const item = v4FeedItem();
+    assert.equal(validateRegistryCustomFeedItemV4(item), true);
+    const normalized = normalizeRegistryCustomItemV4(item);
+    assert.deepEqual(normalized.assets, item.projection.publicProjection.assets);
+    assert.deepEqual(normalized.capabilities,
+      item.projection.publicProjection.capabilities);
+    assert.equal(normalized.registryRecordSchemaVersion,
+      "programmable.custom-launch-registry-record.v4");
+    assert.equal(normalized.registryOrigin.registryGeneration, "2");
+    assert.equal(normalized.launch.finality, "observed");
+    assert.equal(normalized.launch.confirmedAt, null);
+    assert.equal(isV2PublicLaunch(normalized, v4Manifest()), true);
+    const schemas = await createSchemaRegistry("v2");
+    const validate = schemas.validator("launch.schema.json");
+    assert.equal(
+      validate(publicLaunchV2(normalized)),
+      true,
+      JSON.stringify(validate.errors),
+    );
+  });
+
+  test("fails closed on malformed v4 trust roots, proofs and public projections", () => {
+    for (const [name, mutate] of [
+      ["runtime", (value) => {
+        value.rawRecord.registryOrigin.releaseContracts.registry
+          .runtimeCodeHash = hash(980);
+      }],
+      ["atomic proof", (value) => {
+        value.rawRecord.atomicExecutionProof.requestHash = ZERO_HASH;
+      }],
+      ["event topic", (value) => {
+        value.projection.origin.eventTopic0 = hash(982);
+      }],
+      ["public projection", (value) => {
+        value.projection.publicProjection.model.id = "forged-model";
+      }],
+    ]) {
+      const changed = structuredClone(registryV4Envelope);
+      mutate(changed);
+      const {
+        schemaVersion: _schemaVersion,
+        envelopeDigest: _envelopeDigest,
+        ...producerPreimage
+      } = changed.rawRecord;
+      void _schemaVersion;
+      void _envelopeDigest;
+      changed.rawRecord.envelopeDigest = canonicalSha256(
+        "programmable.custom-launch-registry-envelope-digest.v4",
+        producerPreimage,
+      );
+      changed.rawRecordHash = canonicalSha256(
+        changed.producerSchemaVersion,
+        changed.rawRecord,
+      );
+      changed.projection.rawProducerRecord = structuredClone(changed.rawRecord);
+      changed.projection.producerBinding.envelopeDigest =
+        changed.rawRecord.envelopeDigest;
+      changed.projection.producerBinding.rawRecordHash = changed.rawRecordHash;
+      changed.projectionDigest = canonicalSha256(
+        changed.projectionSchemaVersion,
+        changed.projection,
+      );
+      assert.equal(validateRegistryProjectionEnvelopeV4(changed), false, name);
+    }
+  });
+
+  test("keeps v3 on Gen1 and v4 on Gen2 without cross-generation acceptance", () => {
+    const v4 = normalizeRegistryCustomItemV4(v4FeedItem());
+    const manifestV4 = v4Manifest();
+    assert.equal(isV2PublicLaunch(v4, manifestV4), true);
+
+    const v3 = structuredClone(v4);
+    delete v3.registryV4Envelope;
+    v3.registryRecordSchemaVersion =
+      "programmable.custom-launch-registry-record.v3";
+    v3.registryOrigin.registryGeneration = "1";
+    v3.extensions["programmable/registry-v3"] =
+      v3.extensions["programmable/registry-v4"];
+    delete v3.extensions["programmable/registry-v4"];
+    const manifestV3 = structuredClone(manifestV4);
+    manifestV3.registryGenerations[0].generation = "1";
+    assert.equal(isV2PublicLaunch(v3, manifestV3), true);
+
+    const v4OnGen1 = structuredClone(v4);
+    v4OnGen1.registryOrigin.registryGeneration = "1";
+    assert.equal(isV2PublicLaunch(v4OnGen1, manifestV3), false);
+
+    const v3OnGen2 = structuredClone(v3);
+    v3OnGen2.registryOrigin.registryGeneration = "2";
+    assert.equal(isV2PublicLaunch(v3OnGen2, manifestV4), false);
+
+    const malformedV4 = structuredClone(v4);
+    malformedV4.registryV4Envelope.projectionDigest =
+      `sha256:${"0".repeat(64)}`;
+    assert.equal(isV2PublicLaunch(malformedV4, manifestV4), false);
   });
 
   test("changes the commitment for every one of the 37 preimage words", () => {
@@ -405,6 +637,41 @@ describe("Registry generation 2 contract parity", () => {
       mutate(changed);
       assert.throws(() => deriveGen2FeePolicyHash(changed), undefined, name);
     }
+  });
+
+  test("keeps no-market economics at zero while authenticating provider attribution", () => {
+    const providerRecord = noMarketProviderRecord();
+    assert.notEqual(providerRecord.registeredRecordPreimage.providerId, ZERO_HASH);
+    assert.equal(providerRecord.feePolicy.providerId, ZERO_HASH);
+    assert.equal(validateRegistryContractRecordV4(providerRecord), true);
+
+    const directRecord = noMarketProviderRecord();
+    directRecord.registeredRecordPreimage.providerId = ZERO_HASH;
+    directRecord.partnerFactoryAuthorization = null;
+    resealContractRecord(directRecord);
+    assert.equal(validateRegistryContractRecordV4(directRecord), true);
+
+    const missingAuthorization = noMarketProviderRecord();
+    missingAuthorization.partnerFactoryAuthorization = null;
+    assert.equal(validateRegistryContractRecordV4(missingAuthorization), false);
+
+    const fakeProvider = noMarketProviderRecord();
+    fakeProvider.partnerFactoryAuthorization.providerId = hash(950);
+    fakeProvider.partnerFactoryAuthorization.configurationHash =
+      deriveGen2PartnerConfigurationHash(fakeProvider.partnerFactoryAuthorization);
+    assert.equal(validateRegistryContractRecordV4(fakeProvider), false);
+
+    const wrongFactoryFee = noMarketProviderRecord();
+    wrongFactoryFee.partnerFactoryAuthorization.feePolicyHash = hash(951);
+    wrongFactoryFee.partnerFactoryAuthorization.configurationHash =
+      deriveGen2PartnerConfigurationHash(
+        wrongFactoryFee.partnerFactoryAuthorization,
+      );
+    assert.equal(validateRegistryContractRecordV4(wrongFactoryFee), false);
+
+    const wrongConfiguration = noMarketProviderRecord();
+    wrongConfiguration.partnerFactoryAuthorization.configurationHash = hash(952);
+    assert.equal(validateRegistryContractRecordV4(wrongConfiguration), false);
   });
 
   test("binds provider factory configuration to chain and Registry generation", () => {

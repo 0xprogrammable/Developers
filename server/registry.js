@@ -16,6 +16,12 @@ import {
   REGISTRY_V3_FEED_SOURCE_ID,
   validateRegistryCustomFeedItemV3,
 } from "./registry-v3.js";
+import {
+  normalizeRegistryCustomItemV4,
+  REGISTRY_V4_ENVELOPE_SCHEMA,
+  REGISTRY_V4_FEED_SOURCE_ID,
+  validateRegistryCustomFeedItemV4,
+} from "./registry-v4.js";
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/;
@@ -504,15 +510,13 @@ function validateCheckpoint(value) {
     throw new TypeError("Registry custom-feed checkpoint is invalid");
   }
   let expected = 1n;
-  let feedGeneration = null;
+  let feedSourceId = null;
   for (const item of value.records) {
-    const current = "projectionDigest" in item ? "v3" : "v2";
-    feedGeneration ??= current;
-    if (feedGeneration !== current ||
+    const currentSourceId = registryFeedSourceIdForItem(item);
+    feedSourceId ??= currentSourceId;
+    if (feedSourceId !== currentSourceId ||
       !safeDecimal(item.generation, true) || BigInt(item.generation) !== expected ||
-      !validateRegistryFeedItem(item, current === "v3"
-        ? REGISTRY_V3_FEED_SOURCE_ID
-        : FEED_SOURCE_ID)) {
+      !validateRegistryFeedItem(item, currentSourceId)) {
       throw new TypeError("Registry custom-feed checkpoint is invalid");
     }
     expected += 1n;
@@ -521,6 +525,15 @@ function validateCheckpoint(value) {
     throw new TypeError("Registry custom-feed checkpoint is incomplete");
   }
   return value;
+}
+
+function registryFeedSourceIdForItem(item) {
+  if (item?.schemaVersion === REGISTRY_V4_ENVELOPE_SCHEMA) {
+    return REGISTRY_V4_FEED_SOURCE_ID;
+  }
+  return "projectionDigest" in (item ?? {})
+    ? REGISTRY_V3_FEED_SOURCE_ID
+    : FEED_SOURCE_ID;
 }
 
 async function subjectToken(configuration) {
@@ -598,7 +611,11 @@ function validateRequestBoundAccessToken(token, configuration, request) {
 function validateFeedPage(page, previous, now) {
   if (!exactKeys(page, ["schemaVersion", "source", "snapshot", "items", "page"]) || page.schemaVersion !== FEED_SCHEMA ||
     !exactKeys(page.source, ["sourceId", "status", "completeness", "freshness", "checkedAt", "latestAcceptedAt"]) ||
-    ![FEED_SOURCE_ID, REGISTRY_V3_FEED_SOURCE_ID].includes(page.source.sourceId) ||
+    ![
+      FEED_SOURCE_ID,
+      REGISTRY_V3_FEED_SOURCE_ID,
+      REGISTRY_V4_FEED_SOURCE_ID,
+    ].includes(page.source.sourceId) ||
     page.source.status !== "ready" ||
     page.source.completeness !== "complete" || page.source.freshness !== "current" ||
     !canonicalInstant(page.source.checkedAt) || (page.source.latestAcceptedAt !== null && !canonicalInstant(page.source.latestAcceptedAt)) ||
@@ -626,6 +643,9 @@ function validateFeedPage(page, previous, now) {
 }
 
 function validateRegistryFeedItem(item, sourceId) {
+  if (sourceId === REGISTRY_V4_FEED_SOURCE_ID) {
+    return validateRegistryCustomFeedItemV4(item);
+  }
   if (sourceId === REGISTRY_V3_FEED_SOURCE_ID) {
     return validateRegistryCustomFeedItemV3(item);
   }
@@ -654,9 +674,7 @@ export async function readRegistryCustomFeed(options = {}) {
   const records = checkpoint === null ? [] : [...checkpoint.records];
   const checkpointSourceId = records.length === 0
     ? null
-    : "projectionDigest" in records[0]
-      ? REGISTRY_V3_FEED_SOURCE_ID
-      : FEED_SOURCE_ID;
+    : registryFeedSourceIdForItem(records[0]);
   let cursor = checkpoint?.resumeCursor ?? null;
   let previous = null;
   let expectedGeneration = BigInt(checkpoint?.highWaterGeneration ?? "0") + 1n;
@@ -846,6 +864,9 @@ function publicMarket(record, market, assets) {
 }
 
 export function normalizeRegistryCustomItem(item) {
+  if (item?.schemaVersion === REGISTRY_V4_ENVELOPE_SCHEMA) {
+    return normalizeRegistryCustomItemV4(item);
+  }
   if ("projectionDigest" in (item ?? {})) {
     return normalizeRegistryCustomItemV3(item);
   }

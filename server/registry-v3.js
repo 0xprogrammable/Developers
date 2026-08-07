@@ -811,7 +811,7 @@ export function validateRegistryCustomFeedItemV3(item) {
   return true;
 }
 
-function primaryToken(record) {
+export function publicRegistryPrimaryToken(record) {
   const primary = record.assets.find((asset) =>
     asset.role === "primary-token" && ADDRESS.test(asset.address ?? ""),
   );
@@ -850,7 +850,7 @@ function availability(value) {
   return "unknown";
 }
 
-function publicMarket(record, market, verified) {
+export function publicRegistryMarket(record, market, verified) {
   const assets = new Map(record.assets.map((asset) => [asset.assetId, asset]));
   return {
     marketId: market.marketId,
@@ -892,7 +892,7 @@ function publicMarket(record, market, verified) {
   };
 }
 
-function publicFees(policy, revoked) {
+export function publicRegistryFees(policy, revoked) {
   if (policy.mode === "no-qualifying-market") return [];
   const verificationStatus = revoked ? "revoked" : "verified";
   const fee = (share, rateBps, recipient) => ({
@@ -918,7 +918,7 @@ function publicFees(policy, revoked) {
   ];
 }
 
-function launchStatus(record) {
+export function publicRegistryLaunchStatus(record) {
   if (record.lifecycle.status === "revoked") return "revoked";
   if (record.lifecycle.status === "orphaned") return "retired";
   if (record.registryFinality.status === "observed" ||
@@ -939,9 +939,13 @@ export function normalizeRegistryCustomItemV3(item) {
   }
   const revoked = record.lifecycle.status === "revoked" ||
     raw.verifiedReview.status === "revoked";
-  const token = primaryToken(record);
+  const token = publicRegistryPrimaryToken(record);
   const markets = record.markets.map((market) =>
-    publicMarket(record, market, record.programmableVerified && !revoked),
+    publicRegistryMarket(
+      record,
+      market,
+      record.programmableVerified && !revoked,
+    ),
   );
   const presentation = record.presentation === null
     ? null
@@ -984,7 +988,7 @@ export function normalizeRegistryCustomItemV3(item) {
     token,
     assets: structuredClone(raw.discoverableAssets),
     launch: {
-      status: launchStatus(record),
+      status: publicRegistryLaunchStatus(record),
       origin: "programmable-custom-registry-v3",
       modelId: raw.model.id,
       modelVersion: raw.model.version,
@@ -1041,7 +1045,7 @@ export function normalizeRegistryCustomItemV3(item) {
     capabilities: structuredClone(record.capabilities),
     mechanisms: structuredClone(record.mechanisms),
     markets,
-    fees: publicFees(raw.feePolicy, revoked),
+    fees: publicRegistryFees(raw.feePolicy, revoked),
     extensions: {
       "programmable/registry-v3": {
         generation: item.generation,

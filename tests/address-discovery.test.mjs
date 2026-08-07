@@ -86,7 +86,7 @@ describe("documentation contract", () => {
       [
         "common",
         "canonical-custom-registry-record-v3",
-        "custom-registry-contract-record-v4",
+        "canonical-custom-registry-record-v4",
         "launch-feed",
         "launch",
         "manifest",

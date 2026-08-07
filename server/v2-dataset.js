@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
 import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
+import {
+  REGISTRY_V4_PRODUCER_SCHEMA,
+  validateRegistryProjectionEnvelopeV4,
+} from "./registry-v4.js";
 
 let manifestPromise = null;
 
@@ -22,7 +26,8 @@ function canonicalRegistryDeployments(manifest) {
 
 export function registryOriginMatchesManifest(record, manifest) {
   const origin = record?.registryOrigin;
-  const evidence = record?.extensions?.["programmable/registry-v3"];
+  const evidence = record?.extensions?.["programmable/registry-v4"] ??
+    record?.extensions?.["programmable/registry-v3"];
   if (!origin) return false;
   return canonicalRegistryDeployments(manifest).some(
     (registry) => {
@@ -50,9 +55,23 @@ export function registryOriginMatchesManifest(record, manifest) {
 }
 
 function isRegisteredCustom(record, manifest) {
-  return Boolean(
-    record?.registryRecordSchemaVersion ===
+  const registryGeneration = record?.registryOrigin?.registryGeneration;
+  const v3Binding = record?.registryRecordSchemaVersion ===
       "programmable.custom-launch-registry-record.v3" &&
+    registryGeneration === "1";
+  const v4Envelope = record?.registryV4Envelope;
+  const v4Binding = record?.registryRecordSchemaVersion ===
+      REGISTRY_V4_PRODUCER_SCHEMA &&
+    registryGeneration === "2" &&
+    validateRegistryProjectionEnvelopeV4(v4Envelope) &&
+    v4Envelope.rawRecord.envelopeDigest === record.producerEnvelopeDigest &&
+    v4Envelope.projectionDigest === record.projectionDigest &&
+    v4Envelope.rawRecord.registeredRecordCommitment ===
+      record.registeredRecordCommitment &&
+    v4Envelope.rawRecord.registrationBindingHash ===
+      record.registrationBindingHash;
+  return Boolean(
+    (v3Binding || v4Binding) &&
       /^0x[0-9a-f]{64}$/.test(record.registeredRecordHash ?? "") &&
       /^sha256:[0-9a-f]{64}$/.test(record.projectionDigest ?? "") &&
       record.platformId === "programmable" &&
@@ -114,7 +133,11 @@ export function projectV2Record(record) {
 }
 
 export function publicLaunchV2(record) {
-  const { sortKey: _sortKey, ...publicRecord } = record;
+  const {
+    sortKey: _sortKey,
+    registryV4Envelope: _registryV4Envelope,
+    ...publicRecord
+  } = record;
   return publicRecord;
 }
 
