@@ -139,6 +139,23 @@ Integrators must obtain the exact versioned Registry ABI and event topics throug
 
 The Registry record supports projects with no token, one token, or multiple assets and markets. Do not build against a token-only draft event or infer a Registry interface from a fixture. Direct ingestion is enabled only for the exact live generation published by the manifest.
 
+## Provider-neutral Generation 2 binding
+
+Generation 2 does not reserve special code paths for Basebit, Aion, or any future provider. Any nonzero `providerId` must be backed by an active authorization in the manifest-bound PartnerFactory Registry. That authorization binds the exact chain and Registry generation, provider, model and version, template and version, model repository revision, factory repository revision, factory address and runtime, launch runtime set, `configurationHash`, `permissionsHash`, fee-policy hash, validity window, and evidence hash.
+
+The launch registration must repeat the matching provider, model, template, market path, configuration, permissions, source revision, runtime set, and fee-policy commitments. A copied template identifier, self-declared provider ID, correct factory on a different chain, changed runtime, or changed configuration fails closed.
+
+For any authorized nonzero provider with a qualifying fee-bearing market path, the structural policy is exactly:
+
+- `totalFeeBps: 20`;
+- partner share `15`;
+- Programmable share `5` to `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`;
+- `nativeCustomFeeBps: 0`;
+- one currency, charge mode, basis, and rounding rule for both shares; and
+- distinct recipients and claim rights.
+
+This rule is provider-neutral. Programmable verifies the provider-owned template; it does not rewrite that template. Native Custom remains exactly 10 bps on its verified official market path. A no-qualifying-market record carries zero fee economics. Paused, retired, unverifiable, overlaid, or internally inconsistent policies are rejected.
+
 ## Registry invariants
 
 - Each authenticated token asset can be bound to at most one canonical launch per chain.

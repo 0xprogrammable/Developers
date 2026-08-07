@@ -54,10 +54,9 @@ function greatestGeneration(left, right) {
 function currentRegistryHighWater(dataset, scope) {
   if (scope === "classic") return null;
   const statusValue = dataset.status.customRegistry?.highWaterGeneration;
-  if (typeof statusValue !== "string" || !/^(0|[1-9]\d*)$/.test(statusValue)) {
-    throw new Error("current Custom Registry generation is unavailable");
-  }
-  return statusValue;
+  return typeof statusValue === "string" && /^(0|[1-9]\d*)$/.test(statusValue)
+    ? statusValue
+    : "0";
 }
 
 function withinRegistryHighWater(record, highWaterGeneration) {
@@ -218,7 +217,7 @@ export function createLaunchesHandler(loadDataset = getDataset) {
         "INDEX_COVERAGE_INCOMPLETE",
         category === "classic"
           ? "The Classic launch feed is waiting for complete chain coverage"
-          : "The launch feed is waiting for complete Classic coverage and a current, complete Custom Registry feed",
+          : "The v1 launch feed is waiting for complete Classic chain coverage",
       );
       return;
     }

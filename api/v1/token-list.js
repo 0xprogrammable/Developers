@@ -63,7 +63,8 @@ export function tokenListPayload(records, generatedAt, category = null) {
   };
 }
 
-export default async function handler(req, res) {
+export function createTokenListHandler(loadDataset = getDataset) {
+  return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET, OPTIONS");
@@ -86,7 +87,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const dataset = await getDataset();
+    const dataset = await loadDataset();
     if (!isDatasetPublishable(dataset, category)) {
       error(
         req,
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
         "INDEX_COVERAGE_INCOMPLETE",
         category === "classic"
           ? "The Classic token list is waiting for complete chain coverage"
-          : "The token list is waiting for complete Classic coverage and a current, complete Custom Registry feed",
+          : "The v1 token list is waiting for complete Classic chain coverage",
       );
       return;
     }
@@ -115,4 +116,7 @@ export default async function handler(req, res) {
       "The token list could not be produced",
     );
   }
+  };
 }
+
+export default createTokenListHandler();

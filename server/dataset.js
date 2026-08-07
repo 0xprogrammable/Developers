@@ -576,20 +576,14 @@ export function feedStatus(status) {
 
 export function feedStatusForCategory(dataset, category = null) {
   if (!isDatasetPublishable(dataset, category)) return "unavailable";
-  if (category === "classic") return feedStatus(dataset.status.status);
-  return dataset.status.customRegistry?.status === "ready" &&
-    feedStatus(dataset.status.status) === "ready"
-    ? "ready"
-    : "degraded";
+  return feedStatus(dataset.status.status);
 }
 
 export function isDatasetPublishable(dataset, category = null) {
   const classicReady = Boolean(
     dataset && dataset.status?.coverage?.status === "complete" && dataset.status?.coverage?.checkpoint,
   );
-  if (!classicReady) return false;
-  if (category === "classic") return true;
-  return dataset.status?.customRegistry?.status === "ready";
+  return classicReady;
 }
 
 export function serviceStatus(status) {
@@ -598,11 +592,7 @@ export function serviceStatus(status) {
   );
   const classicFeed = classicAvailable ? feedStatus(status.status) : "unavailable";
   const customFeed = status.customRegistry?.status === "ready" ? "ready" : "unavailable";
-  const feeds = classicFeed === "unavailable" || customFeed === "unavailable"
-    ? "unavailable"
-    : classicFeed === "ready" && customFeed === "ready"
-      ? "ready"
-      : "degraded";
+  const feeds = classicFeed;
   return {
     schemaVersion: API_SCHEMA_VERSION,
     service:
@@ -616,8 +606,8 @@ export function serviceStatus(status) {
     custom: {
       status: customFeed === "ready" ? "live" : "unavailable",
       note: customFeed === "ready"
-        ? "Authenticated finalized Registry launches and existing first-party Custom launches are discoverable."
-        : "Custom publication is fail-closed until the authenticated Registry feed is configured, complete, and current.",
+        ? "Authenticated finalized Registry launches and existing first-party Custom launches are discoverable in API v2."
+        : "The frozen v1 feed remains available for Classic and legacy first-party records; Registry launches require API v2.",
     },
     feeds: {
       manifest: "ready",

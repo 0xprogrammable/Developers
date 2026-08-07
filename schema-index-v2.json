@@ -12,6 +12,10 @@
       "url": "https://developers.programmable.family/schemas/v2/custom-launch-registry-record-v3.schema.json"
     },
     {
+      "name": "canonical-custom-registry-record-v4",
+      "url": "https://developers.programmable.family/schemas/v2/custom-launch-registry-record-v4.schema.json"
+    },
+    {
       "name": "launch-feed",
       "url": "https://developers.programmable.family/schemas/v2/launch-feed.schema.json"
     },

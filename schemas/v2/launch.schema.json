@@ -42,7 +42,10 @@
       "maxLength": 256
     },
     "registryRecordSchemaVersion": {
-      "const": "programmable.custom-launch-registry-record.v3"
+      "enum": [
+        "programmable.custom-launch-registry-record.v3",
+        "programmable.custom-launch-registry-record.v4"
+      ]
     },
     "producerEnvelopeDigest": {
       "$ref": "#/$defs/sha256Digest"
@@ -52,7 +55,14 @@
       "description": "Immutable record hash carried by the canonical Registry registration event."
     },
     "registeredRecordPreimage": {
-      "$ref": "#/$defs/registryV3RegisteredRecordPreimage"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/registryV3RegisteredRecordPreimage"
+        },
+        {
+          "$ref": "custom-launch-registry-record-v4.schema.json#/definitions/registeredRecordPreimage"
+        }
+      ]
     },
     "registeredRecordComponentHashes": {
       "$ref": "#/$defs/registryV3RegisteredRecordComponentHashes"
@@ -179,7 +189,14 @@
       "$ref": "#/$defs/registryV3FeePolicy"
     },
     "onchainFeePolicy": {
-      "$ref": "#/$defs/registryV3OnchainFeePolicy"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/registryV3OnchainFeePolicy"
+        },
+        {
+          "$ref": "custom-launch-registry-record-v4.schema.json#/definitions/onchainFeePolicy"
+        }
+      ]
     },
     "finalityPolicy": {
       "$ref": "#/$defs/registryV3FinalityPolicy"
@@ -188,6 +205,9 @@
       "oneOf": [
         {
           "$ref": "#/$defs/registryV3Finality"
+        },
+        {
+          "$ref": "custom-launch-registry-record-v4.schema.json#/definitions/projectedFinality"
         },
         {
           "type": "null"
@@ -208,6 +228,9 @@
       "oneOf": [
         {
           "$ref": "#/$defs/registryV3Origin"
+        },
+        {
+          "$ref": "custom-launch-registry-record-v4.schema.json#/definitions/registryOrigin"
         },
         {
           "type": "null"

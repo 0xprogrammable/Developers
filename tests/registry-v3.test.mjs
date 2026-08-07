@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { canonicalSha256 } from "../server/canonical.js";
+import { canonicalSha256, canonicalizeJson } from "../server/canonical.js";
 import { keccak256 } from "../server/keccak.js";
+import {
+  createMemoryRegistryCheckpointStore,
+  readRegistryCustomFeed,
+} from "../server/registry.js";
 import {
   deriveOnchainFeePolicyHashV1,
   derivePublicFeePolicyBindingV1,
@@ -20,6 +24,18 @@ import registryAbi from
   "../abis/candidates/programmable-custom-registry-v1.json" with { type: "json" };
 import registryEventSet from
   "../fixtures/v2/custom-registry-event-set-v1.candidate.json" with { type: "json" };
+import registryV4Envelope from
+  "../fixtures/v2/custom-launch-registry-projection-envelope-v4-gen2.json" with { type: "json" };
+
+const feedConfiguration = Object.freeze({
+  feedUrl: "https://registry.example/v2/custom-launch-feed",
+  audience: "programmable-developer-feed",
+  targetBindingHash: `sha256:${"1".repeat(64)}`,
+  tokenEndpoint: "https://identity.example/token",
+  issuer: "programmable-workload-issuer",
+  subject: "programmable-developer-api",
+  subjectToken: { kind: "inline", value: "unused-test-subject-token-0001" },
+});
 
 function projectionItem(producerValue = goldenRecord) {
   const producer = structuredClone(producerValue);
@@ -206,6 +222,104 @@ function resealProjectionItem(item) {
 }
 
 describe("Canonical Custom Registry v3 seam", () => {
+  test("resumes without loss across the Gen1 v3 to Gen2 v4 feed migration", async () => {
+    const v3Item = projectionItem();
+    const v4Item = {
+      generation: "2",
+      projectionKey:
+        `custom:${registryV4Envelope.rawRecord.registryOrigin.caip2}:${registryV4Envelope.projection.launchId}`,
+      ...structuredClone(registryV4Envelope),
+    };
+    const page = (sourceId, highWaterGeneration, items, resumeCursor) => ({
+      schemaVersion: "programmable.custom-launch-registry-feed.v1",
+      source: {
+        sourceId,
+        status: "ready",
+        completeness: "complete",
+        freshness: "current",
+        checkedAt: "2026-08-07T10:00:00.000Z",
+        latestAcceptedAt: "2026-08-07T09:59:00.000Z",
+      },
+      snapshot: {
+        highWaterGeneration,
+        indexedAt: "2026-08-07T10:00:00.000Z",
+      },
+      items,
+      page: { nextCursor: null, resumeCursor, hasMore: false },
+    });
+    const checkpointStore = createMemoryRegistryCheckpointStore();
+    const read = (body, cursor) => readRegistryCustomFeed({
+      configuration: feedConfiguration,
+      checkpointStore,
+      now: () => Date.parse("2026-08-07T10:00:30.000Z"),
+      accessToken: async () => "test-registry-feed-token-0001",
+      fetchImplementation: async (url) => {
+        assert.equal(url.searchParams.get("cursor"), cursor);
+        return new Response(canonicalizeJson(body), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+    const first = await read(page(
+      "programmable-custom-launch-registry-v3",
+      "1",
+      [v3Item],
+      "registry-resume-gen1-v3-0001",
+    ), null);
+    assert.deepEqual(first.records.map((item) => item.generation), ["1"]);
+
+    const resumed = await read(page(
+      "programmable-custom-launch-registry-v4",
+      "2",
+      [v4Item],
+      "registry-resume-gen2-v4-0002",
+    ), "registry-resume-gen1-v3-0001");
+    assert.deepEqual(
+      resumed.records.map((item) => [
+        item.generation,
+        item.schemaVersion ?? item.record?.schemaVersion,
+      ]),
+      [
+        ["1", "programmable.custom-launch-projection-record.v3"],
+        ["2", "programmable.custom-launch-projection-envelope.v4"],
+      ],
+    );
+    assert.equal(resumed.snapshot.highWaterGeneration, "2");
+
+    const downgraded = projectionItem();
+    downgraded.generation = "3";
+    await assert.rejects(
+      () => read(page(
+        "programmable-custom-launch-registry-v3",
+        "3",
+        [downgraded],
+        "registry-resume-downgraded-v3-0003",
+      ), "registry-resume-gen2-v4-0002"),
+      /item is invalid/,
+    );
+
+    const substituted = structuredClone(v4Item);
+    substituted.generation = "1";
+    await assert.rejects(
+      () => readRegistryCustomFeed({
+        configuration: feedConfiguration,
+        now: () => Date.parse("2026-08-07T10:00:30.000Z"),
+        accessToken: async () => "test-registry-feed-token-0001",
+        fetchImplementation: async () => new Response(canonicalizeJson(page(
+          "programmable-custom-launch-registry-v3",
+          "1",
+          [substituted],
+          "registry-resume-substituted-0001",
+        )), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      }),
+      /item is invalid/,
+    );
+  });
+
   test("pins the non-live Registry candidate ABI to its ordered event set", () => {
     assert.equal(registryEventSet.events.length, 10);
     assert.equal(

@@ -6,7 +6,7 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
-An unreleased ten-event candidate set exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan it or the draft interface in `proposals/custom-registry/` as though either were deployed. A direct Custom indexer cannot be activated until the manifest publishes an evidenced registry generation.
+Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
 ## Trust root
 
@@ -57,6 +57,21 @@ After activation, a Custom launch is Programmable only when all of these checks 
 
 A pull request, approval result, provider API response, webhook, token tag, copied event, matching logo, or creator field cannot create the `Programmable Custom` label.
 
+### Generation 2 contract set
+
+Generation 2 is a four-contract trust root, not one address inferred from an event name:
+
+| Manifest role | Required verification |
+| --- | --- |
+| `registry` | Exact chain, generation `2`, address, start block, runtime-code Keccak-256, Registry ABI, writers, and Registry event emitters |
+| `partnerFactoryRegistry` | Exact address and runtime; authorized provider factory configuration and source events |
+| `feePolicyVerifier` | Exact address and runtime; native and provider-template structural fee policy |
+| `atomicRegistrar` | Exact address and runtime; atomic launch/registration evidence |
+
+All four identities must be present and mutually consistent before the generation is live. For every launch record, verify the Registry event against the `registry` identity and reconcile any provider factory authorization against the exact `partnerFactoryRegistry` identity. A same-named contract, copied event, or correct runtime on the wrong chain or Registry generation does not qualify.
+
+The Generation 2 integration event set contains 15 events across the Registry, PartnerFactory Registry, and atomic registrar. The manifest binds every event to its emitter role. The fee-policy verifier has no discovery event and is authenticated through its contract identity and the Registry binding. Derive topics from the published ABI and compare the complete canonical event-set hash; do not accept a partial topic list.
+
 ## Commitment domains
 
 Keep the immutable Registry commitment separate from the mutable read-model projection:
@@ -74,6 +89,17 @@ A new observation, finality state, correction, or revocation can change `envelop
 The public Custom `launchId` uses the `sha256:` form while its Registry event binding carries the corresponding raw bytes32 identity. Require a byte-for-byte mapping between the two representations; do not hash either representation again or accept a caller-supplied string that merely looks similar.
 
 Validate the complete registration receipt against the manifest-published event set for that Registry generation. One registration-looking log without its required binding evidence is not a complete launch proof.
+
+The compatibility producer `programmable.custom-launch-registry-record.v3` remains frozen at its published 34-word contract seam. It must not be silently reinterpreted for Generation 2. Generation 2 uses `programmable.custom-launch-registry-record.v4`, whose exact 37-word commitment preimage adds `configurationHash`, `permissionsHash`, and `marketPathId`, replaces the old partner-specific slot with provider-neutral `providerId`, and retains model and template IDs plus versions. The v4 validator recomputes:
+
+- the Generation 2 fee-policy hash;
+- the provider-factory `configurationHash` where a provider is present;
+- approval and review-deployment bindings;
+- the six registered-record component hashes;
+- `registeredRecordCommitment`; and
+- the launch identity/registration binding.
+
+An indexer must reject a record if any recomputed value differs. This producer-record version is independent of the public HTTP API major version.
 
 ## Atomic and staged launches
 

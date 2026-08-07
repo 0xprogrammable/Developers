@@ -240,6 +240,69 @@
     },
     "registryGeneration": {
       "type": "object",
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "required": [
+              "generation"
+            ],
+            "properties": {
+              "generation": {
+                "const": "2"
+              }
+            }
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "contractSet"
+            ],
+            "properties": {
+              "contractSet": {
+                "$ref": "#/$defs/registryContractSet"
+              },
+              "events": {
+                "type": "object",
+                "required": [
+                  "registered",
+                  "approvalAuthorized",
+                  "partnerFactoryAuthorized",
+                  "partnerFactorySourceBound",
+                  "partnerFactoryRevoked",
+                  "provenance",
+                  "review",
+                  "attribution",
+                  "feePolicy",
+                  "feeScope",
+                  "feeEvidence",
+                  "atomicExecuted",
+                  "finalized",
+                  "corrected",
+                  "revoked"
+                ],
+                "properties": {
+                  "registered": true,
+                  "approvalAuthorized": true,
+                  "partnerFactoryAuthorized": true,
+                  "partnerFactorySourceBound": true,
+                  "partnerFactoryRevoked": true,
+                  "provenance": true,
+                  "review": true,
+                  "attribution": true,
+                  "feePolicy": true,
+                  "feeScope": true,
+                  "feeEvidence": true,
+                  "atomicExecuted": true,
+                  "finalized": true,
+                  "corrected": true,
+                  "revoked": true
+                }
+              }
+            }
+          }
+        }
+      ],
       "required": [
         "chainId",
         "caip2",
@@ -340,6 +403,18 @@
             "feeEvidence": {
               "$ref": "#/$defs/registryEvent"
             },
+            "partnerFactoryAuthorized": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "partnerFactorySourceBound": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "partnerFactoryRevoked": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "atomicExecuted": {
+              "$ref": "#/$defs/registryEvent"
+            },
             "finalized": {
               "$ref": "#/$defs/registryEvent"
             },
@@ -354,6 +429,9 @@
         },
         "abiUrl": {
           "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "contractSet": {
+          "$ref": "#/$defs/registryContractSet"
         },
         "finalityConfirmations": {
           "type": "integer",
@@ -376,6 +454,57 @@
         },
         "topic0": {
           "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "emitterRole": {
+          "enum": [
+            "registry",
+            "partnerFactoryRegistry",
+            "atomicRegistrar"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryContractSet": {
+      "type": "object",
+      "required": [
+        "registry",
+        "partnerFactoryRegistry",
+        "feePolicyVerifier",
+        "atomicRegistrar"
+      ],
+      "properties": {
+        "registry": {
+          "$ref": "#/$defs/registryContractIdentity"
+        },
+        "partnerFactoryRegistry": {
+          "$ref": "#/$defs/registryContractIdentity"
+        },
+        "feePolicyVerifier": {
+          "$ref": "#/$defs/registryContractIdentity"
+        },
+        "atomicRegistrar": {
+          "$ref": "#/$defs/registryContractIdentity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryContractIdentity": {
+      "type": "object",
+      "required": [
+        "address",
+        "runtimeCodeKeccak256",
+        "abiUrl"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "runtimeCodeKeccak256": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
         }
       },
       "additionalProperties": false

@@ -10,6 +10,31 @@ const EXECUTABLE_KEY =
 const MAX_METADATA_DEPTH = 32;
 const MAX_METADATA_NODES = 4_096;
 const MAX_METADATA_CHILDREN = 256;
+const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
+const ZERO_HASH32 = `0x${"0".repeat(64)}`;
+const GEN2_EVENT_EMITTERS = Object.freeze({
+  approvalAuthorized: "registry",
+  partnerFactoryAuthorized: "partnerFactoryRegistry",
+  partnerFactorySourceBound: "partnerFactoryRegistry",
+  partnerFactoryRevoked: "partnerFactoryRegistry",
+  registered: "registry",
+  provenance: "registry",
+  review: "registry",
+  attribution: "registry",
+  feePolicy: "registry",
+  feeScope: "registry",
+  feeEvidence: "registry",
+  atomicExecuted: "atomicRegistrar",
+  finalized: "registry",
+  corrected: "registry",
+  revoked: "registry",
+});
+const GEN2_CONTRACT_ROLES = Object.freeze([
+  "registry",
+  "partnerFactoryRegistry",
+  "feePolicyVerifier",
+  "atomicRegistrar",
+]);
 
 function finding(code, path, message) {
   return { code, path, message };
@@ -901,12 +926,45 @@ export function validateManifestSemantics(manifest) {
     const topics = Object.values(generation.events ?? {})
       .map((event) => event.topic0?.toLowerCase())
       .filter(Boolean);
-    if (topics.length !== 11 || new Set(topics).size !== topics.length) {
+    const expectedTopicCount = generation.generation === "2" ? 15 : 11;
+    if (topics.length !== expectedTopicCount || new Set(topics).size !== topics.length) {
       findings.push(finding(
         "REGISTRY_EVENT_SET",
         `/registryGenerations/${index}/events`,
-        "A Registry generation must publish eleven distinct canonical event topics",
+        `Registry generation ${generation.generation} must publish ${expectedTopicCount} distinct canonical event topics`,
       ));
+    }
+    if (generation.generation === "2") {
+      const contracts = generation.contractSet;
+      const completeContractSet = GEN2_CONTRACT_ROLES.every((role) =>
+        contracts?.[role]?.address &&
+        contracts[role].address.toLowerCase() !== ZERO_ADDRESS &&
+        contracts[role].runtimeCodeKeccak256 &&
+        contracts[role].runtimeCodeKeccak256 !== ZERO_HASH32 &&
+        contracts[role].abiUrl
+      );
+      const addresses = completeContractSet
+        ? GEN2_CONTRACT_ROLES.map((role) => contracts[role].address.toLowerCase())
+        : [];
+      if (!completeContractSet || new Set(addresses).size !== addresses.length ||
+        contracts.registry.address.toLowerCase() !== generation.address.toLowerCase() ||
+        contracts.registry.runtimeCodeKeccak256 !== generation.runtimeCodeKeccak256 ||
+        contracts.registry.abiUrl !== generation.abiUrl) {
+        findings.push(finding(
+          "REGISTRY_GEN2_CONTRACT_SET",
+          `/registryGenerations/${index}/contractSet`,
+          "Generation 2 must bind four distinct official contracts and exact Registry address, runtime, and ABI",
+        ));
+      }
+      for (const [eventId, emitterRole] of Object.entries(GEN2_EVENT_EMITTERS)) {
+        if (generation.events?.[eventId]?.emitterRole !== emitterRole) {
+          findings.push(finding(
+            "REGISTRY_GEN2_EVENT_EMITTER",
+            `/registryGenerations/${index}/events/${eventId}`,
+            `Generation 2 event ${eventId} must bind emitter role ${emitterRole}`,
+          ));
+        }
+      }
     }
   }
   for (const duplicate of duplicateValues(registryKeys)) {

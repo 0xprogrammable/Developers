@@ -16,6 +16,12 @@ import {
   REGISTRY_V3_FEED_SOURCE_ID,
   validateRegistryCustomFeedItemV3,
 } from "./registry-v3.js";
+import {
+  normalizeRegistryCustomItemV4,
+  REGISTRY_V4_ENVELOPE_SCHEMA,
+  REGISTRY_V4_FEED_SOURCE_ID,
+  validateRegistryCustomFeedItemV4,
+} from "./registry-v4.js";
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/;
@@ -504,23 +510,40 @@ function validateCheckpoint(value) {
     throw new TypeError("Registry custom-feed checkpoint is invalid");
   }
   let expected = 1n;
-  let feedGeneration = null;
+  let schemaRank = 0;
   for (const item of value.records) {
-    const current = "projectionDigest" in item ? "v3" : "v2";
-    feedGeneration ??= current;
-    if (feedGeneration !== current ||
-      !safeDecimal(item.generation, true) || BigInt(item.generation) !== expected ||
-      !validateRegistryFeedItem(item, current === "v3"
-        ? REGISTRY_V3_FEED_SOURCE_ID
-        : FEED_SOURCE_ID)) {
+    const currentSourceId = registryFeedSourceIdForItem(item);
+    const currentSchemaRank = registryFeedSchemaRank(item);
+    if (!safeDecimal(item.generation, true) ||
+      BigInt(item.generation) !== expected ||
+      currentSchemaRank < schemaRank ||
+      !validateRegistryFeedItem(item, currentSourceId)) {
       throw new TypeError("Registry custom-feed checkpoint is invalid");
     }
+    schemaRank = currentSchemaRank;
     expected += 1n;
   }
   if (expected - 1n !== BigInt(value.highWaterGeneration)) {
     throw new TypeError("Registry custom-feed checkpoint is incomplete");
   }
   return value;
+}
+
+function registryFeedSourceIdForItem(item) {
+  if (item?.schemaVersion === REGISTRY_V4_ENVELOPE_SCHEMA) {
+    return REGISTRY_V4_FEED_SOURCE_ID;
+  }
+  return "projectionDigest" in (item ?? {})
+    ? REGISTRY_V3_FEED_SOURCE_ID
+    : FEED_SOURCE_ID;
+}
+
+function registryFeedSchemaRank(item) {
+  return {
+    [FEED_SOURCE_ID]: 2,
+    [REGISTRY_V3_FEED_SOURCE_ID]: 3,
+    [REGISTRY_V4_FEED_SOURCE_ID]: 4,
+  }[registryFeedSourceIdForItem(item)];
 }
 
 async function subjectToken(configuration) {
@@ -598,7 +621,11 @@ function validateRequestBoundAccessToken(token, configuration, request) {
 function validateFeedPage(page, previous, now) {
   if (!exactKeys(page, ["schemaVersion", "source", "snapshot", "items", "page"]) || page.schemaVersion !== FEED_SCHEMA ||
     !exactKeys(page.source, ["sourceId", "status", "completeness", "freshness", "checkedAt", "latestAcceptedAt"]) ||
-    ![FEED_SOURCE_ID, REGISTRY_V3_FEED_SOURCE_ID].includes(page.source.sourceId) ||
+    ![
+      FEED_SOURCE_ID,
+      REGISTRY_V3_FEED_SOURCE_ID,
+      REGISTRY_V4_FEED_SOURCE_ID,
+    ].includes(page.source.sourceId) ||
     page.source.status !== "ready" ||
     page.source.completeness !== "complete" || page.source.freshness !== "current" ||
     !canonicalInstant(page.source.checkedAt) || (page.source.latestAcceptedAt !== null && !canonicalInstant(page.source.latestAcceptedAt)) ||
@@ -626,7 +653,12 @@ function validateFeedPage(page, previous, now) {
 }
 
 function validateRegistryFeedItem(item, sourceId) {
-  if (sourceId === REGISTRY_V3_FEED_SOURCE_ID) {
+  const itemSourceId = registryFeedSourceIdForItem(item);
+  if (sourceId !== FEED_SOURCE_ID && sourceId !== itemSourceId) return false;
+  if (itemSourceId === REGISTRY_V4_FEED_SOURCE_ID) {
+    return validateRegistryCustomFeedItemV4(item);
+  }
+  if (itemSourceId === REGISTRY_V3_FEED_SOURCE_ID) {
     return validateRegistryCustomFeedItemV3(item);
   }
   return exactKeys(item, ["generation", "projectionKey", "recordHash", "record"]) &&
@@ -652,14 +684,12 @@ export async function readRegistryCustomFeed(options = {}) {
     ? null
     : validateCheckpoint(await checkpointStore.load(stateKey));
   const records = checkpoint === null ? [] : [...checkpoint.records];
-  const checkpointSourceId = records.length === 0
-    ? null
-    : "projectionDigest" in records[0]
-      ? REGISTRY_V3_FEED_SOURCE_ID
-      : FEED_SOURCE_ID;
   let cursor = checkpoint?.resumeCursor ?? null;
   let previous = null;
   let expectedGeneration = BigInt(checkpoint?.highWaterGeneration ?? "0") + 1n;
+  let schemaRank = records.length === 0
+    ? 0
+    : registryFeedSchemaRank(records.at(-1));
   const checkpointHighWater = expectedGeneration - 1n;
   const seenCursors = new Set();
   const now = typeof options.now === "function" ? options.now : () => Date.now();
@@ -699,12 +729,6 @@ export async function readRegistryCustomFeed(options = {}) {
       }
       const page = parseCanonicalJson(await readBoundedText(response, REQUEST_LIMITS.registryResponseBytes, "Registry custom-feed response"));
       validateFeedPage(page, previous, now());
-      if (
-        checkpointSourceId !== null &&
-        checkpointSourceId !== page.source.sourceId
-      ) {
-        throw new TypeError("Registry custom-feed source changed across checkpoint");
-      }
       if (BigInt(page.snapshot.highWaterGeneration) < checkpointHighWater) {
         throw new TypeError("Registry custom-feed snapshot rolled back");
       }
@@ -716,11 +740,14 @@ export async function readRegistryCustomFeed(options = {}) {
         snapshot: page.snapshot,
       };
       for (const item of page.items) {
+        const currentSchemaRank = registryFeedSchemaRank(item);
         if (!safeDecimal(item.generation, true) ||
           BigInt(item.generation) !== expectedGeneration ||
+          currentSchemaRank < schemaRank ||
           !validateRegistryFeedItem(item, page.source.sourceId)) {
           throw new TypeError("Registry custom-feed item is invalid");
         }
+        schemaRank = currentSchemaRank;
         expectedGeneration += 1n;
         records.push(item);
         if (records.length > REQUEST_LIMITS.registryMaximumLaunches) throw new TypeError("Registry custom feed exceeds launch limit");
@@ -846,6 +873,9 @@ function publicMarket(record, market, assets) {
 }
 
 export function normalizeRegistryCustomItem(item) {
+  if (item?.schemaVersion === REGISTRY_V4_ENVELOPE_SCHEMA) {
+    return normalizeRegistryCustomItemV4(item);
+  }
   if ("projectionDigest" in (item ?? {})) {
     return normalizeRegistryCustomItemV3(item);
   }

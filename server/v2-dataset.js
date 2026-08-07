@@ -1,12 +1,17 @@
 import { readFile } from "node:fs/promises";
 
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
+import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
 import {
   CUSTOM_REGISTRY_GENESIS_CANARY,
   CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
   isExactCustomRegistryGenesisCanary,
 } from "./genesis-canary.js";
+import {
+  REGISTRY_V4_PRODUCER_SCHEMA,
+  validateRegistryProjectionEnvelopeV4,
+} from "./registry-v4.js";
 
 let manifestPromise = null;
 
@@ -24,40 +29,97 @@ function canonicalRegistryDeployments(manifest) {
   );
 }
 
+function generationWriterEvidenceMatches(record, registry, evidence) {
+  if (registry.generation !== "2") {
+    return Array.isArray(registry.authorizedWriters) &&
+      registry.authorizedWriters.some((writer) =>
+        writer.toLowerCase() === evidence?.registryWriter?.toLowerCase());
+  }
+  const writerSet = evidence?.authorizedWriterSetEvidence;
+  if (!writerSet || writerSet.eventCaller !== null ||
+    writerSet.callerIdentityStatus !== "not-emitted-by-registry-abi" ||
+    !Array.isArray(writerSet.authorizedAddresses) ||
+    writerSet.authorizedAddresses.length === 0) return false;
+  if (evidence.operation === "registered") {
+    if (writerSet.operationRole === "atomicRegistrar") {
+      const atomic = registry.contractSet?.atomicRegistrar?.address;
+      return writerSet.authorizationBasis ===
+          "atomic-registrar-runtime-and-same-transaction-event" &&
+        typeof atomic === "string" && writerSet.authorizedAddresses.length === 1 &&
+        writerSet.authorizedAddresses[0].toLowerCase() === atomic.toLowerCase();
+    }
+    const factory = record.registryV4Envelope?.rawRecord
+      ?.partnerFactoryAuthorization?.factory;
+    return writerSet.operationRole === "providerFactory" &&
+      writerSet.authorizationBasis === "partner-factory-state-and-registry-runtime" &&
+      typeof factory === "string" && writerSet.authorizedAddresses.length === 1 &&
+      writerSet.authorizedAddresses[0].toLowerCase() === factory.toLowerCase();
+  }
+  const expectedRole = {
+    finalized: "finalizer",
+    corrected: "corrector",
+    revoked: "revoker",
+  }[evidence.operation];
+  return writerSet.operationRole === expectedRole &&
+    writerSet.authorizationBasis === "registry-role-guard-and-manifest-allowlist" &&
+    Array.isArray(registry.authorizedWriters) &&
+    writerSet.authorizedAddresses.every((address) =>
+      registry.authorizedWriters.some((writer) =>
+        writer.toLowerCase() === address.toLowerCase()));
+}
+
 export function registryOriginMatchesManifest(record, manifest) {
   const origin = record?.registryOrigin;
-  const evidence = record?.extensions?.["programmable/registry-v3"];
+  const evidence = record?.extensions?.["programmable/registry-v4"] ??
+    record?.extensions?.["programmable/registry-v3"];
   if (!origin) return false;
   return canonicalRegistryDeployments(manifest).some(
-    (registry) =>
-      String(registry.chainId) === origin.chainId &&
+    (registry) => {
+      const event = registry.events?.[evidence?.operation];
+      const generation2Matches = registry.generation !== "2" ||
+        (event?.emitterRole === "registry" &&
+          gen2ContractSetMatchesEvidence(registry, evidence));
+      return String(registry.chainId) === origin.chainId &&
       registry.caip2 === origin.caip2 &&
       registry.address.toLowerCase() === origin.registryAddress.toLowerCase() &&
       registry.startBlock === origin.registryStartBlock &&
       registry.generation === origin.registryGeneration &&
       registry.registryEventSetHash === origin.registryEventSetHash &&
       evidence?.registryRuntimeCodeHash === registry.runtimeCodeKeccak256 &&
-      Array.isArray(registry.authorizedWriters) &&
-      registry.authorizedWriters.some((writer) =>
-        writer.toLowerCase() === evidence?.registryWriter?.toLowerCase()) &&
-      registry.events?.[evidence?.operation]?.topic0 === evidence?.eventTopic0 &&
+      generationWriterEvidenceMatches(record, registry, evidence) &&
+      event?.topic0 === evidence?.eventTopic0 &&
       BigInt(origin.registrationBlockNumber) >= BigInt(registry.startBlock) &&
       (registry.endBlock === null ||
-        BigInt(origin.registrationBlockNumber) <= BigInt(registry.endBlock)),
+        BigInt(origin.registrationBlockNumber) <= BigInt(registry.endBlock)) &&
+      generation2Matches;
+    },
   );
 }
 
 function isRegisteredCustom(record, manifest) {
   if (isExactCustomRegistryGenesisCanary(record)) {
-    return manifest?.customRegistry?.status === "live"
-      && manifest.customRegistry.address?.toLowerCase()
-        === record.verification.registryAddress.toLowerCase()
-      && manifest.customRegistry.generation
-        === record.verification.registryGeneration;
+    return canonicalRegistryDeployments(manifest).some((registry) =>
+      registry.generation === record.verification.registryGeneration &&
+      registry.address.toLowerCase() ===
+        record.verification.registryAddress.toLowerCase());
   }
-  return Boolean(
-    record?.registryRecordSchemaVersion ===
+  const registryGeneration = record?.registryOrigin?.registryGeneration;
+  const v3Binding = record?.registryRecordSchemaVersion ===
       "programmable.custom-launch-registry-record.v3" &&
+    registryGeneration === "1";
+  const v4Envelope = record?.registryV4Envelope;
+  const v4Binding = record?.registryRecordSchemaVersion ===
+      REGISTRY_V4_PRODUCER_SCHEMA &&
+    registryGeneration === "2" &&
+    validateRegistryProjectionEnvelopeV4(v4Envelope) &&
+    v4Envelope.rawRecord.envelopeDigest === record.producerEnvelopeDigest &&
+    v4Envelope.projectionDigest === record.projectionDigest &&
+    v4Envelope.rawRecord.registeredRecordCommitment ===
+      record.registeredRecordCommitment &&
+    v4Envelope.rawRecord.registrationBindingHash ===
+      record.registrationBindingHash;
+  return Boolean(
+    (v3Binding || v4Binding) &&
       /^0x[0-9a-f]{64}$/.test(record.registeredRecordHash ?? "") &&
       /^sha256:[0-9a-f]{64}$/.test(record.projectionDigest ?? "") &&
       record.platformId === "programmable" &&
@@ -119,7 +181,11 @@ export function projectV2Record(record) {
 }
 
 export function publicLaunchV2(record) {
-  const { sortKey: _sortKey, ...publicRecord } = record;
+  const {
+    sortKey: _sortKey,
+    registryV4Envelope: _registryV4Envelope,
+    ...publicRecord
+  } = record;
   return publicRecord;
 }
 
@@ -130,11 +196,63 @@ export function customRegistryGenesisCanaryRecord() {
   };
 }
 
+function activeRegistryGeneration(manifest) {
+  const generations = canonicalRegistryDeployments(manifest)
+    .filter((registry) =>
+      registry.status === "live" && /^[1-9][0-9]*$/.test(registry.generation))
+    .map((registry) => BigInt(registry.generation));
+  return generations.length === 0
+    ? null
+    : generations.reduce((highest, generation) =>
+        generation > highest ? generation : highest);
+}
+
+function registrySourceCoverageReady(dataset, manifest, generation) {
+  const source = dataset.status?.customRegistry;
+  if (source?.status !== "ready" || source.completeness !== "complete" ||
+    source.freshness !== "current" ||
+    typeof source.highWaterGeneration !== "string" ||
+    !/^[1-9][0-9]*$/.test(source.highWaterGeneration)) return false;
+  if (generation === null || generation < 2n) return true;
+  const accepted = dataset.records.filter((record) =>
+    record?.registryOrigin?.registryGeneration === String(generation) &&
+    typeof record.extensions?.["programmable/registry-v4"]?.generation ===
+      "string" &&
+    /^[1-9][0-9]*$/.test(
+      record.extensions["programmable/registry-v4"].generation,
+    ) &&
+    isV2PublicLaunch(record, manifest));
+  return accepted.length > 0 && accepted.every((record) =>
+    BigInt(record.extensions["programmable/registry-v4"].generation) <=
+      BigInt(source.highWaterGeneration));
+}
+
+export function seedCustomRegistryBaseline(dataset) {
+  return {
+    ...dataset,
+    records: [
+      customRegistryGenesisCanaryRecord(),
+      ...dataset.records.filter((record) =>
+        record.launchId !== CUSTOM_REGISTRY_GENESIS_CANARY.launchId),
+    ],
+  };
+}
+
 export function projectV2Dataset(dataset, manifest = null) {
   const customRegistryLive = manifest?.customRegistry?.status === "live";
   const publicSubmissionsEnabled =
     manifest?.customRegistry?.publicSubmissionsEnabled === true;
-  const customSourceReady = dataset.status?.customRegistry?.status === "ready";
+  const activeGeneration = activeRegistryGeneration(manifest);
+  const requiresLiveSource = activeGeneration !== null && activeGeneration >= 2n;
+  const baselineReady = activeGeneration === 1n && dataset.records.some((record) =>
+    isExactCustomRegistryGenesisCanary(record) &&
+    isRegisteredCustom(record, manifest));
+  const customSourceReady = activeGeneration !== null &&
+    (baselineReady || registrySourceCoverageReady(
+      dataset,
+      manifest,
+      activeGeneration,
+    ));
   const records = dataset.records
     .filter((record) =>
       isV2PublicLaunch(record, manifest) &&
@@ -155,6 +273,10 @@ export function projectV2Dataset(dataset, manifest = null) {
         status: customRegistryLive ? "live" : "prelaunch",
         publicSubmissionsEnabled,
         sourceReady: customSourceReady,
+        activeGeneration: activeGeneration === null
+          ? null
+          : activeGeneration.toString(),
+        requiresLiveSource,
         publishedRegistries: canonicalRegistryDeployments(manifest).length,
       },
       supportedChainIds: Array.isArray(manifest?.chains)
@@ -172,31 +294,7 @@ export async function getV2Dataset() {
     getDataset(),
     developerManifestV2(),
   ]);
-  const seeded = {
-    ...dataset,
-    records: [
-      customRegistryGenesisCanaryRecord(),
-      ...dataset.records.filter((record) =>
-        record.launchId !== CUSTOM_REGISTRY_GENESIS_CANARY.launchId),
-    ],
-    status: {
-      ...dataset.status,
-      customRegistry: {
-        ...dataset.status.customRegistry,
-        configured: true,
-        status: "ready",
-        sourceId: "programmable-custom-registry-genesis-release-v1",
-        completeness: "finalized-release-bound",
-        freshness: "immutable",
-        checkedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
-        latestAcceptedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
-        highWaterGeneration: "1",
-        indexedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
-        launches: Math.max(1, dataset.status.customRegistry?.launches ?? 0),
-      },
-    },
-  };
-  return projectV2Dataset(seeded, manifest);
+  return projectV2Dataset(seedCustomRegistryBaseline(dataset), manifest);
 }
 
 export function isV2DatasetPublishable(dataset, category = null) {
@@ -208,6 +306,8 @@ export function isV2DatasetPublishable(dataset, category = null) {
   if (category === "classic") return true;
   const publication = dataset.status.customRegistryPublication;
   if (publication?.status !== "live") return true;
+  if (publication.requiresLiveSource === true &&
+    publication.sourceReady !== true) return false;
   if (category === "custom") return publication.sourceReady === true;
   return true;
 }
@@ -238,7 +338,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
   const feeds = routesAvailable ? feedStatus(status.status) : "unavailable";
   const customLive = customRegistryStatus === "live";
   const customFeed = customLive
-    ? status.customRegistry?.status === "ready"
+    ? status.customRegistryPublication?.sourceReady === true
       ? feeds
       : "unavailable"
     : "ready";

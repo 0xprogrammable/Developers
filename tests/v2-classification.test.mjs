@@ -10,6 +10,7 @@ import {
   developerManifestV2,
   isV2PublicLaunch,
   projectV2Dataset,
+  seedCustomRegistryBaseline,
   serviceStatusV2,
 } from "../server/v2-dataset.js";
 
@@ -172,6 +173,34 @@ describe("version 2 classification", () => {
     assert.equal(payload.items.length, 1);
     assert.equal(payload.items[0].launchId, genesisCanary.launchId);
     assert.equal("sortKey" in payload.items[0], false);
+  });
+
+  test("seeds the Gen1 baseline without rewriting real Registry coverage", async () => {
+    const manifest = await developerManifestV2();
+    const sourceStatus = {
+      status: "unavailable",
+      completeness: "incomplete",
+      freshness: "stale",
+      highWaterGeneration: "8",
+      checkedAt: "2026-08-07T09:00:00.000Z",
+    };
+    const original = {
+      records: [internalRecord(classic, "0001")],
+      status: { ...status(), customRegistry: sourceStatus },
+    };
+    const seeded = seedCustomRegistryBaseline(original);
+    assert.deepEqual(seeded.status.customRegistry, sourceStatus);
+    const projected = projectV2Dataset(seeded, manifest);
+    assert.deepEqual(projected.status.customRegistry, sourceStatus);
+    assert.equal(projected.status.customRegistryPublication.activeGeneration, "1");
+    assert.equal(
+      projected.status.customRegistryPublication.requiresLiveSource,
+      false,
+    );
+    assert.equal(projected.status.customRegistryPublication.sourceReady, true);
+    const publicStatus = serviceStatusV2(projected.status, manifest);
+    assert.equal(publicStatus.custom.status, "live");
+    assert.equal(publicStatus.customRegistry.status, "unavailable");
   });
 
   test("keeps Registry discovery independent from the general submission intake", async () => {
