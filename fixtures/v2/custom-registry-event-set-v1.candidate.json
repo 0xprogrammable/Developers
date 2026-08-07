@@ -1,0 +1,56 @@
+{
+  "domain": "programmable.custom-registry-event-set.v1",
+  "eventSetHash": "sha256:85bcd07116ef99121de9bced9f278bc4e0abee0b7da4faeacc825bf791d03530",
+  "events": [
+    {
+      "id": "registered",
+      "signature": "CustomLaunchRegisteredV1(bytes32,bytes32,address,uint64,uint256,uint64,bytes32,bytes32,address,bytes32,bytes32,uint64)",
+      "topic0": "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a"
+    },
+    {
+      "id": "approvalAuthorized",
+      "signature": "CustomLaunchApprovalAuthorizedV1(bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint64,bytes32)",
+      "topic0": "0xb4fff32917416e7b84b1f40456921599cddfdcc057c9ad278706c5828b18c50b"
+    },
+    {
+      "id": "provenance",
+      "signature": "CustomLaunchProvenanceBoundV1(bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
+      "topic0": "0x9593acf43b1c8e03c6742d49b67008f3c05841d3cfa43389d12f98e8b9c66cb9"
+    },
+    {
+      "id": "review",
+      "signature": "CustomLaunchReviewBoundV1(bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
+      "topic0": "0xb5db50dfea0e7ff29b1ddee247a008e857b05d2b4bc2b780de5717b7f1881b63"
+    },
+    {
+      "id": "attribution",
+      "signature": "CustomLaunchAttributionBoundV1(bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
+      "topic0": "0x708979fdabf381966a12b694977fd8be5a7035aa4e232705e81afacc5bf2af32"
+    },
+    {
+      "id": "feePolicy",
+      "signature": "CustomLaunchFeePolicyBoundV1(bytes32,bytes32,bytes32,uint8,bytes32,bytes32,bytes32,uint16,uint16,uint16,uint16,address,address)",
+      "topic0": "0x1d241c246173eeeaf8ca0289b2046da927c2a24f5cf63ee8963268deeeb0898d"
+    },
+    {
+      "id": "feeEvidence",
+      "signature": "CustomLaunchFeeEvidenceBoundV1(bytes32,bytes32,bytes32,address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32)",
+      "topic0": "0xe647c474a92f722808930d32d310f47d0e3a4faf393255e0dea4b272588babb0"
+    },
+    {
+      "id": "finalized",
+      "signature": "CustomLaunchFinalizedV1(bytes32,bytes32,bytes32,uint64,uint64,bytes32,uint32,uint32,uint64,bytes32,bytes32,uint64,uint64)",
+      "topic0": "0xab930c1c165bba36257b8079ae38b6869f604910f6ffa40c956e31eb1b8ce38f"
+    },
+    {
+      "id": "corrected",
+      "signature": "CustomLaunchRecordCorrectedV1(bytes32,uint64,bytes32,uint64,bytes32,bytes32,bytes32)",
+      "topic0": "0xa13c4392e0c64159cee078ced2b7157bc99993da4517b87fd0bd26b137600b78"
+    },
+    {
+      "id": "revoked",
+      "signature": "CustomLaunchRevokedV1(bytes32,bytes32,bytes32,uint64,uint64,bytes32,uint64,uint64)",
+      "topic0": "0x195a188d2c49d5e643afbcfd959edbf2ed1d6cd9216c5d99f3ad08c1010a9744"
+    }
+  ]
+}

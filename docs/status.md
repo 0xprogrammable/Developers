@@ -15,6 +15,8 @@ GET https://developers.programmable.family/api/v2/manifest
 | Programmable Custom intake | `custom` | Ethereum | Prelaunch | Approved submissions are not yet a live launch source |
 | Custom Registry | `custom` | Ethereum | Prelaunch | No registry address should be assumed until the v2 manifest marks it active |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
+| Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
+| Aion partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner recipient, accepted template, Registry record, or live fee path is published; similarly named code is not evidence |
 | Other networks | — | — | Not declared | Support exists only when a network appears as active in the manifest |
 
 ## What `custom` means today
@@ -33,6 +35,8 @@ Prelaunch means the integration contract is available for client development, bu
 - a Custom record appears as a launch only after the recognized onchain launch evidence exists;
 - no fee path should be labeled onchain-verified before deployment and verification.
 
+At present, the v2 manifest reports `customRegistry.status: "prelaunch"`, `publicSubmissionsEnabled: false`, `address: null`, and `startBlock: null`. The filtered v2 Custom feed contains no items. These values are the controlling public state; draft contracts and fixtures cannot override them.
+
 ## Feature support
 
 Every registered launch is discoverable. Feature availability is separate:
@@ -40,6 +44,7 @@ Every registered launch is discoverable. Feature availability is separate:
 | Feature | Requirement |
 | --- | --- |
 | Identity and launch provenance | Registered launch record |
+| Programmable Verified | Effective structured review bound to the exact deployed revision |
 | Token metadata | Metadata available, with its trust state preserved |
 | Market discovery | Registered market record |
 | Chart and volume | Verified activity normalizer or adapter |
@@ -62,3 +67,5 @@ Missing ERC-20 metadata, supply, or a block timestamp alone does not make a reco
 ## No partner implication
 
 The API and documentation are available to terminals, scanners, wallets, indexers, bots, and apps. Publication does not mean that a named third party has already integrated or endorsed Programmable.
+
+Likewise, a partner name in planning or research does not prove an approved partner, recipient, template, fee split, or live Registry path. Activation requires the exact evidence in the [launch provider guide](guides/launch-providers.md).

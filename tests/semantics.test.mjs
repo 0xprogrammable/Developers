@@ -49,6 +49,28 @@ describe("semantic conformance", () => {
     assert.deepEqual(validateLaunchSemantics(launch), []);
   });
 
+  test("requires canonical platform identity on official producer records", async () => {
+    const launch = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v2/launches/classic-v4-pool.json"),
+    );
+    delete launch.platformId;
+    assert.ok(
+      validateLaunchSemantics(launch).some(
+        (finding) => finding.code === "PLATFORM_IDENTITY",
+      ),
+    );
+
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+    );
+    manifest.platformId = "untrusted";
+    assert.ok(
+      validateManifestSemantics(manifest).some(
+        (finding) => finding.code === "PLATFORM_IDENTITY",
+      ),
+    );
+  });
+
   test("rejects every malicious fixture at its declared layer", async () => {
     const validate = registry.validator("launch.schema.json");
     const cases = await listFiles(
@@ -100,6 +122,28 @@ describe("semantic conformance", () => {
       path.join(REPOSITORY_ROOT, "deployments/ethereum.json"),
     );
     assert.deepEqual(validateManifestSemantics(manifest), []);
+  });
+
+  test("fails Custom Registry activation closed without one exact live generation", async () => {
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+    );
+    manifest.customRegistry.status = "live";
+    manifest.customRegistry.publicSubmissionsEnabled = true;
+    manifest.customRegistry.address =
+      "0x1111111111111111111111111111111111111111";
+    manifest.customRegistry.startBlock = "1";
+    manifest.customRegistry.generation = "1";
+    manifest.customRegistry.eventSignature = "CustomLaunchRegisteredV1(...)";
+    manifest.customRegistry.eventTopic = `0x${"1".repeat(64)}`;
+    manifest.customRegistry.abiUrl =
+      "https://developers.programmable.family/abis/custom-registry-v1.json";
+    manifest.customRegistry.finalityConfirmations = 1;
+    assert.ok(
+      validateManifestSemantics(manifest).some(
+        (finding) => finding.code === "LIVE_REGISTRY_BINDING",
+      ),
+    );
   });
 
   test("rejects executable wallet requests in manifest extensions", async () => {

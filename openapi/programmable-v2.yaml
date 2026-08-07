@@ -103,11 +103,11 @@ paths:
       operationId: getDeploymentManifest
       summary: Resolve current and historical deployments
       description: |
-        Returns the dynamic Ethereum deployment manifest. Historical
-        deployments remain present for backfills. New deployments are added
-        here so clients do not need a code change. A prelaunch deployment can
-        carry null address and start-block fields; clients must never replace
-        those nulls with guessed values.
+        Returns active, historical and prelaunch chain/deployment profiles.
+        Historical deployments remain present for backfills. New EVM chains
+        and Registry generations are added here so clients do not need a code
+        change. A prelaunch Registry carries null address and start-block
+        fields; clients must never replace those nulls with guessed values.
       responses:
         "200":
           description: Current deployment manifest.
@@ -207,6 +207,41 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /api/v2/launches/{launchId}:
+    get:
+      tags: [Launches]
+      operationId: getLaunchById
+      summary: Get one launch by canonical launch ID
+      description: |
+        Returns any Programmable launch, including project-only and multi-token
+        launches that do not have one canonical ERC-20 lookup address.
+      parameters:
+        - $ref: "#/components/parameters/LaunchIdPath"
+      responses:
+        "200":
+          description: Normalized launch record.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Launch"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
   /api/v2/token-list:
     get:
       tags: [Compatibility]
@@ -218,6 +253,7 @@ paths:
         capabilities, provenance, finality and complete fee disclosure.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
+        - $ref: "#/components/parameters/CategoryQuery"
       responses:
         "200":
           description: Token-list compatibility document.
@@ -251,6 +287,8 @@ components:
       $ref: ../schemas/v2/launch-feed.schema.json
     Launch:
       $ref: ../schemas/v2/launch.schema.json
+    CanonicalCustomRegistryRecordV3:
+      $ref: ../schemas/v2/custom-launch-registry-record-v3.schema.json
     TokenList:
       $ref: ../schemas/v2/token-list.schema.json
     Problem:
@@ -260,6 +298,7 @@ components:
       additionalProperties: false
       required:
         - schemaVersion
+        - platformId
         - name
         - description
         - apiVersion
@@ -279,6 +318,8 @@ components:
       properties:
         schemaVersion:
           const: 2.0.0
+        platformId:
+          const: programmable
         name:
           type: string
         description:
@@ -321,11 +362,13 @@ components:
             required: [chainId, caip2, name, explorerUrl, status]
             properties:
               chainId:
-                const: 1
+                type: integer
+                minimum: 1
               caip2:
-                const: eip155:1
+                type: string
+                pattern: ^eip155:[1-9][0-9]*$
               name:
-                const: Ethereum Mainnet
+                type: string
               explorerUrl:
                 type: string
                 format: uri
@@ -342,14 +385,14 @@ components:
               required: [discoveryStatus]
               properties:
                 discoveryStatus:
-                  const: prelaunch
+                  const: live
             custom:
               type: object
               additionalProperties: false
               required: [discoveryStatus, publicSubmissionStatus, note]
               properties:
                 discoveryStatus:
-                  const: live
+                  const: prelaunch
                 publicSubmissionStatus:
                   const: prelaunch
                 note:
@@ -390,11 +433,10 @@ components:
       name: chainId
       in: query
       required: false
-      description: EIP-155 chain ID. v2 currently supports Ethereum Mainnet only.
+      description: Optional EIP-155 chain ID from the manifest. Omit to read every active chain.
       schema:
         type: integer
-        enum: [1]
-        default: 1
+        minimum: 1
     CategoryQuery:
       name: category
       in: query
@@ -437,10 +479,10 @@ components:
       name: chainId
       in: path
       required: true
-      description: EIP-155 chain ID. v2 currently supports Ethereum Mainnet only.
+      description: Active EIP-155 chain ID from the manifest.
       schema:
         type: integer
-        enum: [1]
+        minimum: 1
     TokenAddressPath:
       name: tokenAddress
       in: path
@@ -449,6 +491,16 @@ components:
       schema:
         type: string
         pattern: ^0x[a-fA-F0-9]{40}$
+    LaunchIdPath:
+      name: launchId
+      in: path
+      required: true
+      description: Canonical opaque launch ID. Do not derive identity from a token name, symbol or logo.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 256
+        pattern: ^[A-Za-z0-9][A-Za-z0-9._:@/+~-]{0,255}$
 
   headers:
     CacheControl:

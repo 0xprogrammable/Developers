@@ -1,6 +1,7 @@
 export const API_SCHEMA_VERSION = "1.0.0";
 export const LAUNCH_SCHEMA_VERSION = "1.0.0";
 export const API_V2_SCHEMA_VERSION = "2.0.0";
+export const PLATFORM_ID = "programmable";
 
 export const CHAIN_ID = 1;
 export const CHAIN_NAME = "Ethereum";
@@ -173,4 +174,9 @@ export const REQUEST_LIMITS = Object.freeze({
   defaultPageSize: 100,
   maximumPageSize: 100,
   cacheMs: 15_000,
+  registryTimeoutMs: 8_000,
+  registryResponseBytes: 8_388_608,
+  registryPageSize: 100,
+  registryMaximumPages: 1_000,
+  registryMaximumLaunches: 100_000,
 });

@@ -34,6 +34,7 @@ if (!requestedAddress) {
 
     for (const launch of launchRecords(feed)) {
       const identity = launchIdentity(launch);
+      if (identity.platformId !== "programmable") continue;
       if (
         normalizedAddress(identity.token.address) === requestedAddress &&
         (!requestedChain || identity.chainId === String(requestedChain))

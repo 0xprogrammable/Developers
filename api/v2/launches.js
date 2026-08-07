@@ -1,11 +1,12 @@
-import { API_V2_SCHEMA_VERSION, CHAIN_ID } from "../../server/constants.js";
+import { API_V2_SCHEMA_VERSION } from "../../server/constants.js";
 import {
-  feedStatus,
-  isDatasetPublishable,
-} from "../../server/dataset.js";
-import { getV2Dataset } from "../../server/v2-dataset.js";
+  feedStatusV2,
+  getV2Dataset,
+  isV2DatasetPublishable,
+  publicLaunchV2,
+} from "../../server/v2-dataset.js";
 import {
-  cursorScope,
+  cursorScopeV2,
   decodePageCursor,
   decodeResumeCursor,
   encodePageCursor,
@@ -14,14 +15,12 @@ import {
   handleOptions,
   json,
   paginate,
-  parseChainId,
+  parseEvmChainId,
   parseCategory,
   parseLimit,
   queryParametersAllowed,
   queryValue,
-  recordsAfter,
 } from "../../server/http.js";
-import { publicLaunch } from "../../server/normalize.js";
 
 const EMPTY_HIGH_WATER =
   "0000000000000000:0000000000:0000000000:0x0000000000000000000000000000000000000000";
@@ -34,7 +33,39 @@ function currentSnapshot(dataset) {
     blockHash: checkpoint.blockHash,
     indexedAt: dataset.status.generatedAt,
     finality: checkpoint.finality,
+    customRegistryHighWaterGeneration:
+      dataset.status.customRegistry?.highWaterGeneration ?? null,
   };
+}
+
+function registryGeneration(record) {
+  const value = record.lifecycle?.registryGeneration;
+  return typeof value === "string" && /^(0|[1-9]\d*)$/.test(value)
+    ? value
+    : null;
+}
+
+function greatestGeneration(left, right) {
+  if (left === null) return right;
+  if (right === null) return left;
+  return BigInt(left) > BigInt(right) ? left : right;
+}
+
+function currentRegistryHighWater(dataset) {
+  const value = dataset.status.customRegistry?.highWaterGeneration;
+  if (typeof value === "string" && /^(0|[1-9]\d*)$/.test(value)) return value;
+  return "0";
+}
+
+function withinRegistryHighWater(record, highWaterGeneration) {
+  const generation = registryGeneration(record);
+  return generation === null || BigInt(generation) <= BigInt(highWaterGeneration);
+}
+
+function afterBoundary(record, sortHighWater, registryHighWaterGeneration) {
+  const generation = registryGeneration(record);
+  return record.sortKey > sortHighWater ||
+    (generation !== null && BigInt(generation) > BigInt(registryHighWaterGeneration));
 }
 
 function greatestSortKey(left, right) {
@@ -52,38 +83,53 @@ function greatestSortKey(left, right) {
  */
 export function launchFeedPayload(
   dataset,
-  { category = null, limit, cursor = null, after = null },
+  { category = null, chainId = null, limit, cursor = null, after = null },
 ) {
-  const scope = cursorScope(category);
-  const baseRecords = category
-    ? dataset.records.filter((record) => record.category === category)
-    : dataset.records;
+  const scope = cursorScopeV2(category, chainId);
+  const baseRecords = dataset.records.filter(
+    (record) =>
+      (category === null || record.category === category) &&
+      (chainId === null || record.chainId === chainId),
+  );
   const newestSortKey = baseRecords[0]?.sortKey ?? EMPTY_HIGH_WATER;
+  const currentGeneration = currentRegistryHighWater(dataset);
   const highWater = cursor
     ? cursor.highWater
     : greatestSortKey(newestSortKey, after?.highWater);
   const traversalSnapshot = cursor?.snapshot ?? currentSnapshot(dataset);
   const lowerBound = cursor?.after ?? after?.highWater ?? null;
-  const traversalRecords = recordsAfter(
-    baseRecords.filter((record) => record.sortKey <= highWater),
-    lowerBound,
+  const lowerRegistryBound = cursor?.afterRegistryHighWaterGeneration ??
+    after?.registryHighWaterGeneration ??
+    "0";
+  const registryHighWaterGeneration = cursor?.registryHighWaterGeneration ??
+    greatestGeneration(currentGeneration, after?.registryHighWaterGeneration ?? null);
+  const traversalRecords = baseRecords.filter(
+    (record) =>
+      record.sortKey <= highWater &&
+      withinRegistryHighWater(record, registryHighWaterGeneration) &&
+      (lowerBound === null ||
+        afterBoundary(record, lowerBound, lowerRegistryBound)),
   );
   const page = paginate(traversalRecords, {
     limit,
     cursor: cursor?.position ?? null,
   });
 
-  const resumeCursor = encodeResumeCursor(highWater, scope);
+  const resumeCursor = encodeResumeCursor(
+    highWater,
+    scope,
+    registryHighWaterGeneration,
+  );
   return {
     schemaVersion: API_V2_SCHEMA_VERSION,
-    status: feedStatus(dataset.status.status),
+    status: feedStatusV2(dataset, category),
     snapshot: traversalSnapshot
       ? {
           ...traversalSnapshot,
           cursor: resumeCursor,
         }
       : null,
-    items: page.selected.map(publicLaunch),
+    items: page.selected.map(publicLaunchV2),
     page: {
       nextCursor:
         page.pagination.nextPosition === null
@@ -92,9 +138,11 @@ export function launchFeedPayload(
               highWater,
               page.pagination.nextPosition,
               scope,
-              traversalSnapshot,
-              lowerBound,
-            ),
+            traversalSnapshot,
+            lowerBound,
+            registryHighWaterGeneration,
+            lowerRegistryBound,
+          ),
       resumeCursor,
       hasMore: page.pagination.hasMore,
     },
@@ -126,11 +174,12 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
     error(req, res, 400, "INVALID_LIMIT", "limit must be from 1 to 100");
     return;
   }
-  if (parseChainId(queryValue(req, "chainId"), CHAIN_ID) === null) {
-    error(req, res, 400, "CHAIN_NOT_SUPPORTED", "Only Ethereum Mainnet is supported");
+  const chainId = parseEvmChainId(queryValue(req, "chainId"));
+  if (chainId === undefined) {
+    error(req, res, 400, "INVALID_CHAIN_ID", "chainId must be a positive EVM chain id");
     return;
   }
-  const scope = cursorScope(category);
+  const scope = cursorScopeV2(category, chainId);
   const cursor = decodePageCursor(queryValue(req, "cursor"));
   const after = decodeResumeCursor(queryValue(req, "after"));
   if (cursor === undefined || after === undefined) {
@@ -154,7 +203,14 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
 
   try {
     const dataset = await loadDataset();
-    if (!isDatasetPublishable(dataset)) {
+    if (
+      chainId !== null &&
+      !dataset.status.supportedChainIds?.includes(chainId)
+    ) {
+      error(req, res, 400, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
+      return;
+    }
+    if (!isV2DatasetPublishable(dataset, category)) {
       error(
         req,
         res,
@@ -166,6 +222,7 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
     }
     const payload = launchFeedPayload(dataset, {
       category,
+      chainId,
       limit,
       cursor,
       after,
@@ -176,7 +233,7 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
       res,
       200,
       payload,
-      { apiStatus: feedStatus(dataset.status.status) },
+      { apiStatus: feedStatusV2(dataset, category) },
     );
   } catch {
     error(

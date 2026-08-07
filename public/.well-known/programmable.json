@@ -1,5 +1,6 @@
 {
   "schemaVersion": "2.0.0",
+  "platformId": "programmable",
   "name": "Programmable Developer Platform",
   "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches.",
   "apiVersion": "2",

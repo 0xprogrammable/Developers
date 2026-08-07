@@ -132,10 +132,10 @@ if (feedResult.value.page.hasMore) {
 
 if (feedResult.value.items[0]) {
   const launch = feedResult.value.items[0];
-  const detailResult = await boundedJson(
-    `/launches/${launch.chainId}/${encodeURIComponent(launch.token.address)}`,
-    "launch.schema.json",
-  );
+  const detailPath = launch.token
+    ? `/launches/${launch.chainId}/${encodeURIComponent(launch.token.address)}`
+    : `/launches/${encodeURIComponent(launch.launchId)}`;
+  const detailResult = await boundedJson(detailPath, "launch.schema.json");
   if (detailResult.value.launchId !== launch.launchId) {
     throw new Error("launch detail does not match the feed record");
   }

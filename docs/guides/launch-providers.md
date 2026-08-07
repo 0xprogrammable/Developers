@@ -28,8 +28,8 @@ Canonical provenance requires one of two atomic paths:
 ### Programmable adapter
 
 1. An approved Programmable adapter calls the provider factory.
-2. The adapter obtains the created token, hook and market from the call result or emitted logs.
-3. The adapter validates the provider factory, template, runtime code and returned addresses.
+2. The adapter obtains the created project assets, contracts, hooks, controllers, and markets from the call result or emitted logs.
+3. The adapter validates the provider factory, template, public `runtimeCodeKeccak256` identities, configuration, and returned addresses.
 4. The adapter registers the launch before the same transaction completes.
 
 ### Provider factory callback
@@ -50,9 +50,9 @@ Provide the following before an adapter or factory is approved.
 | Identity | Provider ID, legal or operational contact, supported chain IDs |
 | Deployments | Factory, template registry, implementation and admin addresses |
 | Source | Verified source URLs, ABI, deployment transaction, start block |
-| Runtime | Runtime code hash for every approved factory and implementation |
+| Runtime | Public `runtimeCodeKeccak256` (`0x` bytes32) for every approved factory and implementation; separate `runtimeCodeSha256` (`sha256:`) evidence when supplied |
 | Template | Stable ID, version, configuration hash and upgrade policy |
-| Launch output | Receipt mapping for token, hook, pool or market, creator and external launch ID |
+| Launch output | Receipt mapping for project, zero or more tokens and contracts, hooks, controllers, pools or markets, creator and external launch ID |
 | Hook policy | PoolManager, hook flags, router assumptions, callbacks, return deltas and external calls |
 | Economics | All fee rates, recipients, caps, charge modes and withdrawal authority |
 | Market support | Discovery, charting, quote, simulation and execution support separately |
@@ -70,86 +70,84 @@ Provider contracts may differ on every integration. Token and hook addresses nor
 | Terminal classification | `custom` and `Programmable Custom` | Never |
 | Provider identity | Approved provider ID | New provider requires onboarding |
 | Template | Approved template ID and immutable version | New version requires review |
-| Runtime | Approved factory and implementation code hashes | Any code change requires review |
+| Runtime | Approved factory and implementation `runtimeCodeKeccak256` identities | Any code change requires review |
 | Launch | Registry event shape and uniqueness rules | Token, hook, market, creator and configuration |
 
 After activation, terminals poll one feed. They do not add a new contract list for every provider or launch.
 
 ## Per-launch requirements
 
-Every accepted launch must produce one authenticated registry event in the same transaction as the provider launch. The registry record must bind:
+Every accepted launch must produce one authenticated Registry finalization event through an approved atomic or staged path. For an atomic launch, that event occurs in the same transaction as deployment and initialization. For a staged launch, it occurs only after every required deployment and configuration value has been verified. The Registry record must bind:
 
 - the approved provider, factory, template and template version;
-- the created token and deployed hook, when a hook exists;
-- the canonical pool or market identifier, when a market exists;
+- the project ID and authenticated asset graph, including zero, one, or several tokens and contracts;
+- deployed hooks, controllers, or external dependencies when they exist;
+- canonical pool, contract-market, or asset-referenced market identities when markets exist;
 - the creator or beneficiary established by the launch path;
 - a configuration hash covering behavior and economic parameters;
 - the registry transaction, block, log index and finality used by indexers.
 
 If any required value cannot be established, the launch remains unclassified. A later support message, webhook or metadata edit does not upgrade it to Programmable Custom.
 
-## Draft registry interface
+## Approval is not launch
 
-The review interface is kept under [`proposals/custom-registry`](../../proposals/custom-registry/IProgrammableCustomRegistryV1.sol). It is not a deployed ABI.
+The approval path binds one exact candidate release:
 
-```solidity
-interface IProgrammableCustomRegistryV1 {
-    event ProgrammableCustomTemplateConfigured(
-        bytes32 indexed providerId,
-        bytes32 indexed templateId,
-        bytes32 indexed templateVersion,
-        address factory,
-        bytes32 factoryRuntimeCodeHash,
-        bytes32 implementationRuntimeCodeHash,
-        bytes32 reviewCommitment,
-        bool active
-    );
-
-    event ProgrammableCustomLaunchRegistered(
-        bytes32 indexed launchId,
-        bytes32 indexed providerId,
-        address indexed token,
-        address factory,
-        address hook,
-        bytes32 marketId,
-        bytes32 templateId,
-        bytes32 templateVersion,
-        bytes32 configurationHash,
-        address creator
-    );
-
-    function isApprovedTemplate(bytes32 providerId, bytes32 templateId, bytes32 templateVersion)
-        external view returns (bool);
-
-    function registeredToken(bytes32 launchId) external view returns (address token);
-}
+```text
+approved repository revision
+→ reproducible build
+→ wallet launch through the authorized Programmable path
+→ actual deployment artifacts and configuration
+→ runtime-code comparison
+→ canonical Custom Registry event
+→ Developer API projection
 ```
 
-### Field rules
+Approval alone produces no public launch record. Registration is allowed only when the launched chain, commit, source commitment, build commitment, artifacts, configuration, contracts, `runtimeCodeKeccak256` identities, launch wallet, transaction, and review evidence match the approved candidate.
 
-| Field | Rule |
-| --- | --- |
-| `launchId` | Deterministic unique ID committed by the registry |
-| `providerId` | Stable `bytes32` provider identifier bound to approved factories |
-| `token` | Created token address; unique within the registry on that chain |
-| `factory` | Actual authenticated provider factory, not a frontend or API account |
-| `hook` | Deployed hook, or zero only when the reviewed template has no hook |
-| `marketId` | Canonical pool or market identifier; zero only when no market exists |
-| `templateId` | Stable mechanic identifier, independent of marketing name |
-| `templateVersion` | Immutable reviewed version identifier |
-| `configurationHash` | Commitment to launch parameters that affect behavior or economics |
-| `creator` | End-user or beneficiary identity established by the launch path |
+A changed commit, artifact, runtime, configuration, chain, template, authority, or launch wallet does not inherit the earlier approval or `Programmable Verified` state.
 
-Chain ID, registry address, block, transaction hash and log index come from the event location. They are not duplicated as caller-controlled event fields.
+For atomic integrations, deployment, initialization, and registration succeed or revert together. A staged integration remains private or pending until a final registration binds every required deployment and configuration value. A partially completed deployment must not appear as a public launch.
+
+## Partnership-template fee policy
+
+A partnership template owns and implements its fee logic. Programmable verifies the exact release but does not rewrite partner-owned source without authorization. Partner attribution can exist without a qualifying fee path; in that state the record uses `no-qualifying-market` and zero shares.
+
+An accepted partnership fee path requires exactly:
+
+```text
+total:        20 bps
+partner:      15 bps
+Programmable:  5 bps
+```
+
+The Programmable recipient is the canonical address published in the manifest. Both shares use the same defined basis. The normal Native Custom 10 bps must not be added on top of the 20 bps partnership fee.
+
+If the reviewed template already has the partner's 15 bps, the partner keeps it and adds the 5 bps Programmable share. If no fee path exists, the partner implements both shares. The partner recipient may be derived from reviewed code, immutable deployment configuration, or verified onchain state, but it must be unambiguous before activation.
+
+Fail closed if either share or recipient is unverified, the total differs from 20 bps, the basis or currency differs between shares, a recipient can drift outside the reviewed authority policy, Native Custom 10 bps is also charged, or one party can claim the other's accrual.
+
+Document exact fee currency, charge mode, rounding, accrual, withdrawal or claim mechanism, pause behavior, retirement behavior, and evidence against replay, double claim, and reentrancy. See [Platform fees](../reference/fees.md).
+
+No Basebit or Aion provider release, recipient, template, Registry record, or live 15/5 fee path is currently evidenced by the public v2 manifest. Do not treat similarly named code, generic owner-fee logic, or research input as partner activation evidence.
+
+## Registry ABI authority
+
+No Custom Registry ABI is published as live. Files under `proposals/` are design inputs only; they are not a normative interface, a deployed ABI, or permission to submit a transaction.
+
+After deployment, integrators must obtain the exact versioned Registry ABI and event topics through the public manifest and its immutable evidence links. Accept logs only from the manifest-listed chain, Registry generation, address, start block, and event set.
+
+The eventual Registry record must support projects with no token, one token, or multiple assets and markets. Do not build against a token-only draft event or infer a Registry interface from a fixture. Until the manifest publishes the real ABI, direct Custom ingestion remains disabled.
 
 ## Registry invariants
 
-- A token can be registered once per chain.
+- Each authenticated token asset can be bound to at most one canonical launch per chain.
 - A `launchId` cannot be replayed.
 - Only an approved adapter or factory can register.
 - An approved caller is bound to one provider ID and reviewed runtime code.
 - A template version cannot silently change implementation or configuration semantics.
 - Registration records are immutable provenance.
+- Corrections and revocations are append-only state transitions that preserve the original event.
 - Suspending a provider or template blocks future registrations but does not erase historical events.
 - Provider approval, template review, audit evidence and market support remain separate states.
 - Unknown or unsupported markets remain discoverable and fail closed for charting or execution.
@@ -167,38 +165,33 @@ For Uniswap v4 templates, the handoff must list every enabled hook permission. R
 - token-level transfer, pause, blocklist and mint controls are disclosed;
 - `beforeSwapReturnDelta` is disabled unless its custom-accounting design is specifically reviewed and audited.
 
-The `custom` category does not imply that these checks passed. Template-specific evidence must be carried and rendered separately.
+The `custom` category does not imply that these checks passed. Template-specific evidence and any `Programmable Verified` review must be carried and rendered separately.
 
 ## Feed projection
 
-After a registry deployment is live and a partner launch is finalized, the v2 feed projects it as a normal launch record:
+After a Registry deployment is live and a partner launch is canonically registered, the v2 feed can project it as `observed`, then advance it through `confirmed` and `finalized` or correct it to `orphaned`:
 
-```json
-{
-  "category": "custom",
-  "launch": {
-    "origin": "partner-provider",
-    "modelId": "provider-template",
-    "modelVersion": "1"
-  },
-  "verification": {
-    "sourceId": "custom-registry/example-provider/example-template/1",
-    "registryAddress": "0x...",
-    "provenanceStatus": "verified"
-  },
-  "extensions": {
-    "programmable/provider": {
-      "providerId": "example-provider",
-      "factoryAddress": "0x...",
-      "templateId": "example-template",
-      "templateVersion": "1",
-      "configurationHash": "0x..."
-    }
-  }
-}
+```text
+platformId: programmable
+category: custom
+publicLabel: Programmable Custom
+projectId: <Registry-bound project ID>
+model: <model ID and version>
+template: <reviewed template, repository, commit, runtimes and evidence>
+partner: <verified partner identity, recipient, lifecycle and evidence>
+registryOrigin: <chain, Registry generation, transaction, block and log evidence>
+approvalBinding: <repository revision, build, artifacts and configuration>
+deploymentBinding: <launch wallet, contracts, runtime and evidence>
+verifiedReview: <policy, findings, authorities, dependencies and effective state>
+feePolicy.mode: partner-template
+feePolicy.totalFeeBps: 20
+feePolicy.partnerShareBps: 15
+feePolicy.programmableShareBps: 5
+feePolicy.normalProgrammableTenBpsApplied: false
+finalityEvidence: <observed, confirmed, finalized or orphaned evidence>
 ```
 
-These values are illustrative until the registry is deployed. Never replace prelaunch nulls with guessed addresses.
+This is a semantic excerpt, not a fixture or an active record. Every value remains prelaunch until the Registry is deployed. Never replace nulls with guessed addresses or partner data; use the normative JSON Schema for the complete field contract.
 
 ## Terminal behavior
 
@@ -207,7 +200,7 @@ Terminals ingest every registered launch through `/api/v2/launches?category=cust
 The minimum display is:
 
 - `Programmable Custom` label;
-- chain and token address;
+- chain plus project ID and authenticated token or contract addresses;
 - launch time and finality;
 - provider attribution when present;
 - supported market actions only.
@@ -219,7 +212,7 @@ Do not convert provider registration into a universal `safe`, `audited`, `sellab
 A provider integration is ready for activation only when:
 
 1. the handoff package is complete;
-2. factory and implementation code hashes match the reviewed release;
+2. factory and implementation `runtimeCodeKeccak256` identities match the reviewed release;
 3. positive and negative receipt mappings pass;
 4. duplicate, replay and unauthorized registration tests pass;
 5. hook permissions and economic controls are documented;
@@ -227,6 +220,8 @@ A provider integration is ready for activation only when:
 7. the registry deployment and start block are published in the manifest;
 8. a live canary appears as `category=custom` in the feed;
 9. unsupported market features fail closed;
-10. the terminal fixtures and machine-readable docs match the live record.
+10. the terminal fixtures and machine-readable docs match the live record;
+11. any active fee-bearing partnership-template path proves the exact 20 bps total, 15/5 split, recipients, common basis, currency, accrual, and claims with no additional Native Custom fee, while a no-qualifying-market record keeps every share at zero; and
+12. the deployed review record remains effective, not superseded or revoked.
 
-Until all ten conditions are satisfied, keep the provider integration prelaunch.
+Until all twelve conditions are satisfied, keep the provider integration prelaunch.

@@ -1,8 +1,16 @@
 {
   "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "publicLabel": "Programmable Classic",
   "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
   "category": "classic",
   "chainId": 1,
+  "caip2": "eip155:1",
+  "projectId": null,
+  "model": {
+    "id": "classic",
+    "version": "3"
+  },
   "token": {
     "address": "0x1111111111111111111111111111111111111111",
     "identityStatus": "complete",

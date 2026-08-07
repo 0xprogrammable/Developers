@@ -90,7 +90,9 @@ export function normalizedAddress(value) {
 }
 
 export function launchCategory(launch) {
-  const category = text(object(launch).category)?.toLowerCase();
+  const record = object(launch);
+  if (text(record.platformId)?.toLowerCase() !== "programmable") return "unknown";
+  const category = text(record.category)?.toLowerCase();
   return category === "classic" || category === "custom" ? category : "unknown";
 }
 
@@ -111,19 +113,36 @@ export function tokenSummary(launch) {
 export function launchIdentity(launch) {
   const record = object(launch);
   const token = tokenSummary(record);
+  const assets = Array.isArray(record.assets)
+    ? record.assets.filter(
+        (value) => value !== null && typeof value === "object" && !Array.isArray(value),
+      )
+    : [];
   const chainId =
     typeof record.chainId === "string" || Number.isSafeInteger(record.chainId)
       ? String(record.chainId)
       : "unknown";
 
   return {
+    platformId: text(record.platformId),
     launchId: text(
       record.launchId,
       `${chainId}:${token.address ?? "unknown-token"}`,
     ),
     chainId,
     category: launchCategory(record),
+    platformId: text(record.platformId),
+    publicLabel: text(
+      record.publicLabel,
+      launchCategory(record) === "classic"
+        ? "Programmable Classic"
+        : launchCategory(record) === "custom"
+          ? "Programmable Custom"
+          : "Unknown launch",
+    ),
+    projectId: text(record.projectId),
     token,
+    assets,
   };
 }
 

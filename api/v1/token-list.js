@@ -1,6 +1,6 @@
 import { API_SCHEMA_VERSION, CHAIN_ID } from "../../server/constants.js";
 import {
-  feedStatus,
+  feedStatusForCategory,
   getDataset,
   isDatasetPublishable,
 } from "../../server/dataset.js";
@@ -13,11 +13,14 @@ import {
   queryParametersAllowed,
   queryValue,
 } from "../../server/http.js";
+import { isV1PublicLaunch } from "../../server/normalize.js";
 
 export function tokenListPayload(records, generatedAt, category = null) {
   const finalizedRecords = records.filter(
     (record) =>
+      isV1PublicLaunch(record) &&
       record.launch.finality === "finalized" &&
+      record.token !== null &&
       record.token.identityStatus === "complete",
   );
   const selectedRecords = category
@@ -32,6 +35,7 @@ export function tokenListPayload(records, generatedAt, category = null) {
     logoURI: record.token.metadata.imageUrl,
     extensions: {
       programmable: {
+        platformId: "programmable",
         launchId: record.launchId,
         category: record.category,
         provenanceStatus: record.verification.provenanceStatus,
@@ -53,7 +57,7 @@ export function tokenListPayload(records, generatedAt, category = null) {
     schemaVersion: API_SCHEMA_VERSION,
     name: "Programmable",
     timestamp: generatedAt,
-    version: { major: 1, minor: 0, patch: 0 },
+    version: { major: 1, minor: 1, patch: 0 },
     keywords: ["programmable", "uniswap-v4", "ethereum"],
     tokens,
   };
@@ -83,13 +87,15 @@ export default async function handler(req, res) {
 
   try {
     const dataset = await getDataset();
-    if (!isDatasetPublishable(dataset)) {
+    if (!isDatasetPublishable(dataset, category)) {
       error(
         req,
         res,
         503,
         "INDEX_COVERAGE_INCOMPLETE",
-        "The token list is waiting for complete chain coverage",
+        category === "classic"
+          ? "The Classic token list is waiting for complete chain coverage"
+          : "The token list is waiting for complete Classic coverage and a current, complete Custom Registry feed",
       );
       return;
     }
@@ -98,7 +104,7 @@ export default async function handler(req, res) {
       res,
       200,
       tokenListPayload(dataset.records, dataset.status.generatedAt, category),
-      { apiStatus: feedStatus(dataset.status.status) },
+      { apiStatus: feedStatusForCategory(dataset, category) },
     );
   } catch {
     error(

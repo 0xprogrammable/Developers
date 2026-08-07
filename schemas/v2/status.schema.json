@@ -5,9 +5,11 @@
   "type": "object",
   "required": [
     "schemaVersion",
+    "apiVersion",
     "service",
     "checkedAt",
     "chainId",
+    "chains",
     "classic",
     "custom",
     "feeds"
@@ -15,6 +17,9 @@
   "properties": {
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "apiVersion": {
+      "const": "2"
     },
     "service": {
       "enum": [
@@ -29,6 +34,36 @@
     "chainId": {
       "type": "integer",
       "minimum": 1
+    },
+    "chains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "chainId",
+          "caip2",
+          "status"
+        ],
+        "properties": {
+          "chainId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "caip2": {
+            "type": "string",
+            "pattern": "^eip155:[1-9][0-9]*$"
+          },
+          "status": {
+            "enum": [
+              "live",
+              "prelaunch",
+              "retired"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
     },
     "classic": {
       "$ref": "#/$defs/categoryStatus"

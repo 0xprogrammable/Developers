@@ -11,7 +11,7 @@ Both paths must use the same identities and lifecycle rules.
 3. Check `/api/v2/status` for freshness and lifecycle.
 4. Fetch `/api/v2/launches` and use `page.nextCursor` to complete the current traversal.
 5. Upsert records by `launchId`.
-6. Key assets by chain ID and token address.
+6. Key token assets by chain ID and address; key project-only records by `projectId` and `launchId` and preserve their asset graph.
 7. After the traversal is durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.
 8. Process finality changes and any `orphaned` correction the API returns.
 9. Reconcile non-final records periodically from a prior finalized boundary.
@@ -32,12 +32,15 @@ For each recognized event, retain enough evidence to reproduce ordering and dete
 - block number and block hash;
 - log index;
 - launch ID;
-- token address;
+- token address when a primary token exists;
+- project ID and authenticated asset references when the launch is project-only;
 - runtime and provenance verification state where provided.
 
 Pair related events according to the documented deployment contract. An event with the right name from an unrecognized contract is not a Programmable launch.
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
+
+The Custom Registry is currently prelaunch, so there is no live Custom registry address, start block, event topic, or canary to scan. Keep the Custom direct path inactive until those values are published in the manifest. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
 
 ## Ordering and identity
 
@@ -52,7 +55,8 @@ Do not use API receipt time, database insertion time, or token metadata timestam
 Use:
 
 - `launchId` for launch deduplication;
-- chain ID plus token address for asset identity;
+- `projectId` for project identity;
+- chain ID plus asset address or stable asset ID for asset identity;
 - `marketId` for a market;
 - chain ID plus transaction hash plus log index for an event.
 
@@ -92,6 +96,8 @@ Treat manifest versions as monotonic. On a newer valid manifest:
 - apply activation or retirement state;
 - record which manifest version supported verification.
 
+For a new chain, create a distinct backfill, cursor scope, and reorg state. Do not reuse a cursor or finality policy from another network. See [Multi-chain discovery](../concepts/multi-chain.md).
+
 An unexplained rollback or conflicting manifest with the same version should stop automatic advancement and alert an operator.
 
 ## Markets and activity
@@ -113,6 +119,7 @@ Monitor:
 - reorg corrections;
 - schema-validation failures;
 - adapter availability.
+- onchain-to-indexer and indexer-to-API latency.
 
 An HTTP 200 response can still contain stale or prelaunch state. Use the status payload and response snapshot.
 
@@ -128,3 +135,5 @@ Keep enough raw evidence to rebuild projections. Back up:
 - reconciliation logs.
 
 Test restoration and backfill before depending on the feed for public new-launch alerts.
+
+At scale, include at least 100,000 simulated launches, an insertion during a multi-page traversal, cursor replay, bounded retry behavior, and reorg recovery in the test corpus.

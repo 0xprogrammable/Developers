@@ -2,12 +2,18 @@ const KNOWN_MARKETS = new Set(["uniswap-v4", "contract-priced-market"]);
 
 export function terminalRow(launch) {
   const markets = Array.isArray(launch?.markets) ? launch.markets : [];
+  const trustedPlatform = launch?.platformId === "programmable";
   return {
+    platformId: trustedPlatform ? "programmable" : null,
     launchId: launch?.launchId ?? null,
     category:
-      launch?.category === "classic"
+      !trustedPlatform
+        ? "Unrecognized"
+        : launch?.category === "classic"
         ? "Programmable Classic"
-        : "Programmable Custom",
+        : launch?.category === "custom"
+          ? "Programmable Custom"
+          : "Unrecognized",
     chainId: launch?.chainId ?? null,
     tokenAddress: launch?.token?.address ?? null,
     name: launch?.token?.name ?? null,

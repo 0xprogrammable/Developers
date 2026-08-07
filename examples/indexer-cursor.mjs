@@ -58,8 +58,10 @@ for (;;) {
         operation: "upsert",
         key: identity.launchId,
         launchId: identity.launchId,
+        projectId: identity.projectId,
         chainId: identity.chainId,
         tokenAddress: identity.token.address,
+        assetCount: identity.assets.length,
         record: launch,
       }),
     );

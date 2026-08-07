@@ -4,15 +4,16 @@ The v2 model separates a launch from its markets. This lets the same integration
 
 ## Identity
 
-Use three different identities for three different jobs:
+Use four different identities for four different jobs:
 
-- **Asset identity:** `chainId` plus `token.address`
+- **Token asset identity:** `chainId` plus token contract address
+- **Project identity:** `projectId`
 - **Launch identity:** `launchId`, derived from canonical chain and event provenance for Classic or committed by the Custom Registry
 - **Market identity:** `market.marketId`
 
 Names and tickers are display metadata. They are not unique identifiers.
 
-An asset may have one recognized Programmable launch and zero, one, or several registered markets. A market may become active after the launch. Do not collapse these identities into a pool address.
+A project may have no token, one token, or several assets, plus zero, one, or several registered markets. A market may become active after the launch. Do not collapse project, launch, asset, and market identities into a pool address.
 
 ## Launch record
 
@@ -24,7 +25,7 @@ Every record has the same top-level keys:
 | `launchId` | Stable Programmable launch identity derived from canonical provenance or committed by the Custom Registry |
 | `category` | `classic` or `custom` |
 | `chainId` | EVM chain ID |
-| `token` | Token contract identity and basic metadata |
+| `token` | Primary ERC-20 convenience view, or null for a project-only launch |
 | `launch` | Launch model, transaction, block, timestamp, and finality |
 | `verification` | Recognized source, launcher or registry, and provenance state |
 | `capabilities` | Extensible declared or verified product features |
@@ -32,9 +33,59 @@ Every record has the same top-level keys:
 | `fees` | Fee disclosures with verification state |
 | `extensions` | Bounded namespaced additional data |
 
+Registry-backed records can add these v2 fields without changing the API major version or historical record meaning:
+
+| Field | Purpose |
+| --- | --- |
+| `platformId` | Stable origin namespace; official records use `programmable` |
+| `publicLabel` | Derived label: `Programmable Classic` or `Programmable Custom` |
+| `caip2` | Globally scoped chain identity |
+| `projectId` | Stable project identity distinct from a token or market |
+| `model` | Open model ID and version |
+| `template` | Reviewed template identity and revision, or null |
+| `partner` | Verified partner attribution and lifecycle, or null |
+| `builder` | Builder attribution separate from creator metadata |
+| `assets` | Authenticated asset and contract graph |
+| `approvalBinding` | Exact approval, repository, commit, source, build, artifact, and configuration binding |
+| `deploymentBinding` | Chain, wallet, transaction, address, runtime, and initialization binding |
+| `verifiedReview` | Structured Programmable review and effective status |
+| `feePolicy` | Closed Native Custom, partnership-template, or no-qualifying-market policy |
+| `finalityEvidence` | Observed, confirmed, finalized, or orphaned chain evidence |
+| `presentation` | Creator-facing description, image, website, and social links with explicit trust boundary |
+| `registryOrigin` | Registry record generation, source, and origin evidence |
+| `launchingWallet` | Namespaced wallet identity bound to the launch |
+| `postLaunchAuthorityInventory` | Effective post-launch roles and authority evidence |
+| `lifecycle` | Launch, correction, supersession, and revocation lifecycle |
+| `mechanisms` | Open, versioned mechanism declarations |
+
+These are additive public v2 fields. A Custom Registry record-generation identifier is not “API v3.” Historical v2 records remain valid without the richer fields, and consumers must continue to accept them.
+
+## Platform, project, model, template, and partner
+
+`platformId`, `category`, and `publicLabel` come from the official projection. Creator metadata and extensions cannot set or override them.
+
+Use:
+
+- `projectId` for the project;
+- `launchId` for one launch event;
+- `model.id` and `model.version` for the launch model;
+- `template` for the exact reviewed template when one exists;
+- `partner` for verified partner attribution; and
+- `builder` for builder attribution.
+
+A Basebit, Aion, or future partner launch remains `category: "custom"` and `publicLabel: "Programmable Custom"`. Partner, template, and model never become new public categories. At present, no Basebit or Aion partner record is verified by the public v2 manifest.
+
+## Assets and mechanisms
+
+The `assets` graph carries any number of unique authenticated assets. `assets[].role` is an open identifier. Canonical examples include `root`, `primary-token`, `secondary-token`, `market-contract`, `pool`, `hook`, `controller`, `oracle`, `bridge`, and `reward`; unknown future roles remain valid. Use each declared role and provenance rather than inferring function from an address or creator label.
+
+`mechanisms` is an open list of versioned behavior declarations. Dynamic supply, burns, rewards, games, delayed activation, bridges, or future mechanics belong here or in namespaced extensions when they do not change the stable core. Unknown mechanisms remain visible as unsupported data and never become executable instructions.
+
+Creator-controlled `presentation` can describe these assets, but it cannot override chain, address, runtime, origin, fee, security, finality, or authority evidence.
+
 ## Token
 
-`token` contains:
+When present, `token` contains:
 
 | Field | Meaning |
 | --- | --- |
@@ -52,13 +103,15 @@ Key the asset by chain and address. Treat name and symbol as untrusted display v
 
 A recognized launch event stays discoverable when an ERC-20 metadata or supply call fails. In that case, identity can be `partial`, individual fields remain null, supply can be `unavailable`, and metadata trust can be `unavailable`. Do not fill those values with guesses or remove the launch.
 
+`token: null` is valid for a project-only launch. Preserve its `projectId`, `launchId`, `assets`, mechanisms, provenance, review, fee policy, lifecycle, and markets. Do not fabricate an ERC-20 or include the project in a token-list projection.
+
 ## Launch provenance
 
 `launch` contains the public lifecycle and original onchain evidence:
 
 | Field | Meaning |
 | --- | --- |
-| `status` | Current launch lifecycle state |
+| `status` | `prelaunch`, `observed`, `live`, `paused`, `retired`, or `revoked` |
 | `origin` | Normalized origin class |
 | `modelId` / `modelVersion` | Source launch model and release |
 | `publicSubmission` | Whether the source was a public submission path |
@@ -85,6 +138,16 @@ Legacy indexer records can have `partial` provenance because they do not carry e
 
 The API is a projection. Consumers that require independent verification should reproduce the event and runtime checks against the manifest and chain.
 
+`approvalBinding` and `deploymentBinding` keep approval separate from launch. A reviewed repository revision is not a public launch until the deployed chain, wallet, transaction, configuration, addresses, initialization, artifacts, and runtime match. `deploymentBinding.runtimeMatch: "exact"` is the required exact-runtime state. `verification.approvalMatch` and `verification.runtimeMatch` use `matched`, `mismatch`, `unavailable`, or `revoked`; preserve those states without converting them to a loose boolean.
+
+`finalityEvidence.status` uses `observed`, `confirmed`, `finalized`, or `orphaned`. It supplements the compact launch finality with evidence coordinates; it does not replace reorg reconciliation.
+
+`verifiedReview.status` uses `verified`, `superseded`, or `revoked`. Only an effective `verified` record with exact deployment binding can support the `Programmable Verified` presentation. See [Programmable Verified](programmable-verified.md).
+
+`registryOrigin` binds chain ID, CAIP-2, registry address and start block, Registry generation, event-set hash, registration transaction, block, transaction index, log index, and evidence hash. `lifecycle.status` uses `active`, `superseded`, or `revoked` and preserves registration plus supersession or revocation evidence. These fields make corrections append-only instead of silently redefining the original launch.
+
+`launchingWallet` and `postLaunchAuthorityInventory` keep the wallet used for launch separate from the roles that remain after launch. Consumers should surface effective upgrade, ownership, pause, custody, mint, withdrawal, and fee authority rather than assuming the launching wallet still controls every contract.
+
 ## Categories
 
 v2 has exactly two public categories:
@@ -102,10 +165,10 @@ Each capability contains:
 | --- | --- |
 | `id` | Extensible capability identifier |
 | `version` | Capability contract version |
-| `status` | `active`, `conditional`, or `inactive` |
+| `status` | Registry-backed support uses `supported`, `unsupported`, `unknown`, or `not_applicable`; historical Classic records can use `active`, `conditional`, or `inactive` |
 | `parameters` | Bounded capability-specific data |
 
-Capability identifiers are open to future additions. Unknown IDs must not hide or invalidate a launch. Display the known core record, ignore unsupported capability behavior, and preserve the raw capability if your storage model allows it.
+Capability identifiers are open to future additions. Unknown IDs or status values must not hide or invalidate a launch. Treat `supported` and legacy `active` as positive only for the exact understood capability version; treat `unsupported`, `unknown`, `not_applicable`, and unknown values as non-actionable. Display the known core record and preserve the raw capability if your storage model allows it.
 
 Capability data is feature detection, not executable code. Never treat metadata, extension text, or capability parameters as agent instructions or transaction calldata.
 
@@ -117,17 +180,19 @@ Each market contains:
 | --- | --- |
 | `marketId` | Stable market identity |
 | `kind` | Extensible market type |
-| `status` | Current market lifecycle state |
+| `status` | `planned`, `delayed`, `active`, `paused`, `closed`, or `unknown` |
 | `baseTokenAddress` / `quoteTokenAddress` | Market currencies when applicable |
 | `protocol` | Protocol or settlement family |
 | `poolId` / `poolAddress` | Pool identifiers when the market has a pool |
+| `marketContractAddress` | Contract-market address when applicable |
+| `assetReferences` | `marketAssetId`, `baseAssetId`, and `quoteAssetId` references into the authenticated asset graph |
 | `hookAddress` | Hook address when applicable |
 | `support` | Separate discovery, charting, quote, simulation, and execution support |
 | `adapter` | Verified normalization or action adapter when available |
 
 `markets: []` is valid. It means there is no registered market in this record. Keep the launch discoverable and omit market-only UI.
 
-A market can exist without a pool. In that case, pool fields remain absent or null according to the schema. Never create a synthetic pair or substitute the market contract as a pool address.
+A market can exist without a pool or ERC-20 pair. In that case, pool and token-address fields remain absent or null according to the schema. A project-only contract market may use `marketContractAddress` plus `assetReferences`. Never create a synthetic pair or substitute the market contract as a pool address.
 
 Unknown market kinds use a generic fallback:
 
@@ -168,6 +233,16 @@ Each fee disclosure contains:
 | `verificationStatus` | Whether the fee path has been verified |
 
 Do not infer fees from category or marketing text. Read the record and its verification state. See [Fees](../reference/fees.md).
+
+Registry-backed records also expose a closed `feePolicy.mode`:
+
+| Kind | Required policy |
+| --- | --- |
+| `native` | 10 bps total and 10 bps Programmable; `chargeMode: "verified-official-market-path-only"`; `normalProgrammableTenBpsApplied: true` |
+| `partner-template` | Active fee-bearing partnership path: 20 bps total, 15 bps partner, 5 bps Programmable; `chargeMode: "verified-official-market-path-only"`; `normalProgrammableTenBpsApplied: false` |
+| `no-qualifying-market` | No qualifying official market path, including a partner-attributed project without one; all shares stay zero and no volume fee is fabricated |
+
+Partner and template attribution are independent from `feePolicy.mode`. The policy is not proof of accrual, claimability, payment, or correct runtime behavior. Those states require the corresponding evidence.
 
 ## Extensions
 

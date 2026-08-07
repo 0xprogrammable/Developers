@@ -1,18 +1,18 @@
-import { CHAIN_ID } from "../../../../server/constants.js";
 import {
-  feedStatus,
-  isDatasetPublishable,
-} from "../../../../server/dataset.js";
-import { getV2Dataset } from "../../../../server/v2-dataset.js";
+  feedStatusV2,
+  getV2Dataset,
+  isV2DatasetPublishable,
+  publicLaunchV2,
+} from "../../../../server/v2-dataset.js";
 import {
   error,
   handleOptions,
   json,
   parseAddress,
+  parseEvmChainId,
   queryParametersAllowed,
   routeValue,
 } from "../../../../server/http.js";
-import { publicLaunch } from "../../../../server/normalize.js";
 
 export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
   return async function handler(req, res) {
@@ -27,10 +27,10 @@ export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
     return;
   }
 
-  const chainId = routeValue(req, "chainId");
+  const chainId = parseEvmChainId(routeValue(req, "chainId"));
   const address = parseAddress(routeValue(req, "tokenAddress"));
-  if (String(chainId) !== String(CHAIN_ID)) {
-    error(req, res, 404, "CHAIN_NOT_SUPPORTED", "Only Ethereum Mainnet is supported");
+  if (chainId === undefined || chainId === null) {
+    error(req, res, 400, "INVALID_CHAIN_ID", "chainId must be a positive EVM chain id");
     return;
   }
   if (!address) {
@@ -40,10 +40,16 @@ export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
 
   try {
     const dataset = await loadDataset();
+    if (!dataset.status.supportedChainIds?.includes(chainId)) {
+      error(req, res, 404, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
+      return;
+    }
     const launch = dataset.records.find(
-      (record) => record.token.address.toLowerCase() === address,
+      (record) =>
+        record.chainId === chainId &&
+        record.token?.address?.toLowerCase() === address,
     );
-    if (!launch && !isDatasetPublishable(dataset)) {
+    if (!launch && !isV2DatasetPublishable(dataset, "custom")) {
       error(
         req,
         res,
@@ -61,8 +67,8 @@ export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
       req,
       res,
       200,
-      publicLaunch(launch),
-      { apiStatus: feedStatus(dataset.status.status) },
+      publicLaunchV2(launch),
+      { apiStatus: feedStatusV2(dataset) },
     );
   } catch {
     error(

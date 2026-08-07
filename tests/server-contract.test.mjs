@@ -41,6 +41,14 @@ function record(block, transaction, log, addressByte) {
   return { sortKey, id: `${block}:${transaction}:${log}`, launch: {} };
 }
 
+function classicV3Pool() {
+  return {
+    poolId: `0x${"c".repeat(64)}`,
+    hookAddress: RELEASE_BY_ID.get("classic-v3").hook,
+    quoteAssetAddress: null,
+  };
+}
+
 function dataset(records, block, hashByte, generatedAt) {
   return {
     records,
@@ -54,6 +62,14 @@ function dataset(records, block, hashByte, generatedAt) {
           blockHash: `0x${hashByte.repeat(64)}`,
           finality: "confirmed",
         },
+      },
+      customRegistry: {
+        configured: true,
+        status: "ready",
+        sourceId: "programmable-custom-launch-registry-v2",
+        completeness: "complete",
+        freshness: "current",
+        highWaterGeneration: "0",
       },
     },
   };
@@ -104,7 +120,7 @@ describe("server cursor contract", () => {
     assert.equal(
       decodeResumeCursor(
         Buffer.from(
-          JSON.stringify({ v: 1, t: "r", h: key, c: "all", extra: true }),
+          JSON.stringify({ v: 2, t: "r", h: key, c: "all", g: "0", extra: true }),
         ).toString("base64url"),
       ),
       undefined,
@@ -317,6 +333,42 @@ describe("server cursor contract", () => {
     );
   });
 
+  test("polling observes a newly accepted Registry launch even when its finalized sort key is old", () => {
+    const newest = record(200, 0, 0, "e");
+    const oldCustom = {
+      ...record(100, 0, 0, "c"),
+      category: "custom",
+      extensions: {
+        "programmable/registry-v2": { registryGeneration: "1" },
+      },
+    };
+    const firstDataset = dataset(
+      [newest],
+      200,
+      "e",
+      "2026-08-04T08:00:00.000Z",
+    );
+    const first = launchFeedPayload(firstDataset, { limit: 10 });
+
+    const changedDataset = dataset(
+      [newest, oldCustom],
+      200,
+      "e",
+      "2026-08-04T08:00:12.000Z",
+    );
+    changedDataset.status.customRegistry.highWaterGeneration = "1";
+    const polled = launchFeedPayload(changedDataset, {
+      limit: 10,
+      after: decodeResumeCursor(first.page.resumeCursor),
+    });
+
+    assert.deepEqual(polled.items.map((item) => item.id), [oldCustom.id]);
+    assert.equal(
+      decodeResumeCursor(polled.page.resumeCursor).registryHighWaterGeneration,
+      "1",
+    );
+  });
+
   test("returns 503 instead of publishing an incomplete dataset between pages", async () => {
     const records = [
       record(103, 0, 0, "d"),
@@ -358,6 +410,31 @@ describe("server cursor contract", () => {
     assert.equal(retried.status, 200);
     assert.deepEqual(retried.body.items.map((item) => item.id), ["101:0:0"]);
     assert.equal(retried.body.page.resumeCursor, first.body.page.resumeCursor);
+  });
+
+  test("keeps complete Classic discovery available while Custom Registry freshness fails closed", async () => {
+    const classic = { ...record(103, 0, 0, "d"), category: "classic" };
+    const current = dataset(
+      [classic],
+      103,
+      "d",
+      "2026-08-04T08:00:00.000Z",
+    );
+    current.status.customRegistry.status = "unavailable";
+    current.status.customRegistry.freshness = "stale";
+    const handler = createLaunchesHandler(async () => current);
+
+    const classicResponse = await callHandler(handler, { category: "classic" });
+    assert.equal(classicResponse.status, 200);
+    assert.deepEqual(classicResponse.body.items.map((item) => item.id), [classic.id]);
+
+    const customResponse = await callHandler(handler, { category: "custom" });
+    assert.equal(customResponse.status, 503);
+    assert.equal(customResponse.body.code, "index-coverage-incomplete");
+
+    const combinedResponse = await callHandler(handler);
+    assert.equal(combinedResponse.status, 503);
+    assert.equal(combinedResponse.body.code, "index-coverage-incomplete");
   });
 
   test("returns 200 when a publishable serverless subset no longer contains the page anchor", async () => {
@@ -506,6 +583,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "normalized legacy launch");
+    assert.equal(publicRecord.platformId, undefined);
     assert.equal("sortKey" in publicRecord, false);
     assert.equal("transactionIndex" in publicRecord.launch, false);
     assert.equal(publicRecord.token.identityStatus, "complete");
@@ -552,6 +630,7 @@ describe("server normalization contract", () => {
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
     assertValid(registry.validator("launch.schema.json"), publicRecord, "partial identity launch");
+    assert.equal(publicRecord.platformId, undefined);
     assert.equal(publicRecord.token.identityStatus, "partial");
     assert.equal(publicRecord.token.name, null);
     assert.equal(publicRecord.token.supplyStatus, "unavailable");
@@ -611,6 +690,7 @@ describe("server normalization contract", () => {
         website: "http://example.com",
         github: "https://github.com/example/project",
       },
+      canonicalPool: classicV3Pool(),
       launch: {
         modelId: "classic",
         modelVersion: "classic-v3",
@@ -627,6 +707,55 @@ describe("server normalization contract", () => {
     assert.equal(
       normalized.token.metadata.links.github,
       "https://github.com/example/project",
+    );
+  });
+
+  test("does not assign Programmable origin to an unmatched legacy record", () => {
+    const normalized = normalizeLegacyToken({
+      chainId: 1,
+      address: "0x1111111111111111111111111111111111111111",
+      name: "Forged Origin",
+      symbol: "FAKE",
+      decimals: 18,
+      launch: {
+        modelId: "custom",
+        modelVersion: "creator-defined-model",
+        transactionHash: `0x${"a".repeat(64)}`,
+        blockNumber: "25650000",
+        launchedAt: "2026-08-04T08:00:00.000Z",
+      },
+    });
+    assert.equal(normalized, null);
+  });
+
+  test("derives legacy release labels from canonical hook evidence, never the declared model version", () => {
+    const forged = normalizeLegacyToken({
+      chainId: 1,
+      address: "0x1111111111111111111111111111111111111111",
+      name: "Forged Classic",
+      symbol: "FORGED",
+      decimals: 18,
+      canonicalPool: {
+        poolId: `0x${"c".repeat(64)}`,
+        hookAddress: RELEASE_BY_ID.get("stock-paired-v1").hook,
+        quoteAssetAddress: "0x2222222222222222222222222222222222222222",
+      },
+      launch: {
+        modelId: "classic",
+        modelVersion: "classic-v3",
+        transactionHash: `0x${"a".repeat(64)}`,
+        blockNumber: String(RELEASE_BY_ID.get("stock-paired-v1").startBlock),
+        launchedAt: "2026-08-04T08:00:00.000Z",
+      },
+    });
+    assert.ok(forged);
+    assert.equal(forged.category, "custom");
+    assert.equal(forged.launch.modelId, "stock-paired");
+    assert.equal(forged.launch.modelVersion, "1");
+    assert.equal(forged.verification.sourceId, "ethereum-stock-paired-v1");
+    assert.equal(
+      forged.extensions["programmable/release"].legacyModelVersion,
+      "classic-v3",
     );
   });
 });
@@ -674,6 +803,7 @@ describe("server projections", () => {
     );
     assert.deepEqual(await developerManifest(), canonical);
     assert.deepEqual(await developerManifest(), canonical);
+    assert.equal(canonical.platformId, undefined);
   });
 
   test("matches normalized source IDs to the canonical deployment manifest", async () => {
@@ -711,6 +841,7 @@ describe("server projections", () => {
       name: "Final Token",
       symbol: "FINAL",
       decimals: 18,
+      canonicalPool: classicV3Pool(),
       launch: {
         modelId: "classic",
         modelVersion: "classic-v3",
@@ -739,6 +870,10 @@ describe("server projections", () => {
       payload.tokens.map((token) => token.address),
       [source.address],
     );
+    assert.equal(
+      payload.tokens[0].extensions.programmable.platformId,
+      "programmable",
+    );
     const registry = await createSchemaRegistry();
     assertValid(
       registry.validator("token-list.schema.json"),
@@ -754,6 +889,7 @@ describe("server projections", () => {
       name: "Known Token",
       symbol: "KNOWN",
       decimals: 18,
+      canonicalPool: classicV3Pool(),
       launch: {
         modelId: "classic",
         modelVersion: "classic-v3",

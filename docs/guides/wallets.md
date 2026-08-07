@@ -8,7 +8,9 @@ Use the token-list endpoint for a compact finalized inventory. Use the launch fe
 curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 
-The token list is a convenience projection of finalized registered launches with complete token identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
+The token list is a convenience projection of finalized registered launches with complete token identity. Its `extensions.programmable.platformId` value mirrors the canonical detailed-record identity. It does not replace the detailed record. Use the launch feed to retain recognized launches whose identity enrichment is still partial.
+
+Project-only launches with `token: null` belong in the general launch feed, not the token list. A wallet can show their authenticated contract or external-asset graph in a project view without fabricating a coin balance.
 
 ## Identity
 
@@ -24,7 +26,7 @@ Display the checksummed contract address where people make trust-sensitive decis
 
 ## Programmable provenance
 
-A Programmable label should mean that the detailed record traces the asset to a recognized source deployment in the active manifest.
+A Programmable label should mean that the detailed record has `platformId: "programmable"` and traces the asset to a recognized source deployment or authenticated finalized Registry record. The platform ID is assigned by the trusted projection, never read from creator metadata.
 
 It should not mean:
 
@@ -36,6 +38,8 @@ It should not mean:
 - the token cannot lose value or contain economic risk.
 
 Link the label to provenance details: launch transaction, block, source deployment, category, and verification state.
+
+Render `Programmable Verified` as a separate review state only when an effective structured review is cryptographically bound to the deployed revision. Registry provenance alone does not create that badge. See [Programmable Verified](../concepts/programmable-verified.md).
 
 ## Metadata
 
@@ -78,3 +82,4 @@ When a price is unavailable:
 - Add newly finalized tokens idempotently.
 - Preserve an explicit retired or orphaned state rather than silently reassigning identity.
 - Use the detailed record to explain why a token is observed, confirmed, orphaned, or unavailable.
+- Partition identity, caches, and cursors by chain; the same address on another chain is a different asset.

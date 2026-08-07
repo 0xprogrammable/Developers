@@ -24,6 +24,22 @@ Do not open a public issue for a suspected vulnerability. Follow [SECURITY.md](S
 
 Clear commit messages are preferred. A pull request should be understandable without relying on private discussions.
 
+## Validate the repository
+
+```bash
+npm ci
+npm run build
+npm run check
+```
+
+The default gates are offline. Use the read-only live smoke only when the current production API is the intentional target:
+
+```bash
+PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
+```
+
+A live HTTP response is not deployment, Registry, canary, or onchain proof. Record those evidence classes separately in the pull request.
+
 ## Compatibility checklist
 
 Version 1 changes must follow [VERSIONING.md](VERSIONING.md). Before submitting a schema or API change, confirm that it:

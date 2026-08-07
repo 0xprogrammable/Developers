@@ -1,6 +1,8 @@
 # Programmable integration reference
 
-Public, read-only contracts and ingestion rules for trading terminals, scanners, wallets, indexers, bots, and apps.
+**Integrate once. Discover every Programmable launch.**
+
+Public, read-only contracts and ingestion rules for trading terminals, launch trackers, scanners, wallets, indexers, bots, and apps.
 
 ## Terminal labels
 
@@ -18,7 +20,9 @@ Use exactly these two public labels:
 
 The public category is always `classic` or `custom`. Provider names, factories, hook addresses and template versions remain per-launch provenance. They never create additional terminal categories. A Custom launch may have no market, one market, or several markets. The v2 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
 
-[Terminal guide](docs/guides/terminals-and-scanners.md) · [Launch provider guide](docs/guides/launch-providers.md) · [Minimal API example](docs/quickstart.md) · [Developer site](https://developers.programmable.family)
+A full Registry-backed Custom record uses `platformId: "programmable"`, `category: "custom"`, and `publicLabel: "Programmable Custom"`. These values come from the trusted projection, never creator metadata.
+
+[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
 
 ## Minimal API consumer
 
@@ -31,6 +35,10 @@ curl -fsSL https://developers.programmable.family/api/v2/manifest
 curl -fsSL https://developers.programmable.family/api/v2/launches
 ```
 
+If status reports the Custom Registry unavailable, request
+`/api/v1/launches?category=classic`; the unfiltered feed intentionally waits
+for complete source coverage instead of silently omitting Custom launches.
+
 ```js
 const baseUrl = "https://developers.programmable.family"
 
@@ -42,12 +50,15 @@ const [status, manifest, launches] = await Promise.all([
 
 for (const record of launches.items) {
   console.log({
+    platformId: record.platformId,
     launchId: record.launchId,
+    projectId: record.projectId ?? null,
     category: record.category,
     chainId: record.chainId,
     token: record.token,
+    assetCount: record.assets?.length ?? 0,
     marketCount: record.markets.length,
-    finality: record.launch.finality,
+    finality: record.finalityEvidence?.status ?? record.launch.finality,
   })
 }
 
@@ -60,7 +71,7 @@ function requireOk(response) {
 A conforming v2 client must:
 
 1. Read active deployments from the manifest instead of hard-coding contract addresses.
-2. Identify an asset by `chainId` and token address, and deduplicate launches by `launchId`.
+2. Deduplicate launches by `launchId`. When `token` is present, identify that ERC-20 by `chainId` and address; otherwise preserve `projectId`, `launchId`, and the authenticated `assets` graph without inventing a token.
 3. Accept `markets: []`; never invent a pool, price, volume, or trade route.
 4. Treat capabilities and market types as extensible. Keep an unknown launch visible and hide unsupported features.
 5. Use `page.nextCursor` only to finish the current traversal, then persist `page.resumeCursor` and send it back as `after` when polling.
@@ -82,10 +93,12 @@ Every launch record uses the same top-level shape:
 
 ```text
 schemaVersion
+platformId
 launchId
 category
 chainId
 token
+assets
 launch
 verification
 capabilities
@@ -93,6 +106,12 @@ markets
 fees
 extensions
 ```
+
+`platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while the model remains open-ended. These fields come from verified launch provenance, never from a creator-editable token tag.
+
+Full Registry-backed records also carry `publicLabel`, `caip2`, `projectId`, model, template, partner, builder, approval and deployment bindings, structured review, fee policy, finality evidence, presentation, Registry origin, launching wallet, post-launch authorities, lifecycle, and mechanisms. Historical v2 records need not carry the richer fields. Their addition does not create “API v3”; the v2 envelope and historical record meanings remain stable.
+
+`token` can be null for a project-only launch. `assets` can preserve multiple tokens, contracts, hooks, controllers, oracles, bridges, rewards, and unknown future roles. Markets can refer to those assets without fabricating an ERC-20 pair or pool.
 
 The envelope is stable even when the product is unfamiliar. Market-specific information stays inside `markets`, optional capabilities advertise support, and namespaced extensions carry additional data without redefining trusted core fields.
 
@@ -104,26 +123,29 @@ Onchain launch provenance is authoritative. The API is a normalized projection d
 
 Legacy indexer records can have partial provenance. Recognized onchain events remain discoverable when metadata, supply, or block-timestamp enrichment is unavailable; affected fields stay partial, unavailable, or null and the feed can report `degraded`. Incomplete event-log coverage is different: launch-list and token-list routes return a retryable `503` rather than presenting an incomplete list as complete.
 
-Creator-supplied names, descriptions, images, and links are metadata. They do not inherit the trust level of launch provenance. Integrators should display metadata trust state, sanitize rich content, and keep chain and token address visible.
+Creator-supplied names, descriptions, images, and links are metadata. They do not inherit the trust level of launch provenance. Integrators should display metadata trust state, sanitize rich content, and keep chain, launch ID, and authenticated project and asset identities visible. A token address exists only when the record actually advertises a token.
 
 Registration means that a launch can be traced to a recognized Programmable deployment. It is not an unconditional statement that a token, external service, market, or economic outcome is safe or independently audited.
 
 Read [The data model](docs/concepts/data-model.md) and [Operations](docs/operations.md) before enabling production ingestion.
 
-## Platform fee
+## Fee policies
 
-The Programmable platform fee is 10 basis points, or 0.1%, on supported official Programmable market paths. The recipient is:
+The Native Programmable platform fee is 10 basis points, or 0.1%, on supported official Programmable market paths. The recipient is:
 
 ```text
 0x4957f49620AFf3Adbbe8195a4f633E49cc93376c
 ```
 
 - Current Classic paths include the 10 bps platform share within their configured trading fee.
-- Future Custom paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified.
+- Native Custom paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified.
+- An active fee-bearing partnership-template path implements exactly 20 bps in the partner template: 15 bps for the partner and 5 bps for Programmable. It does not also add the Native Custom 10 bps.
 - A launch with no executed trade has no trading volume and therefore no volume fee.
 - Normal token transfers, game rewards, and independently created third-party pools are outside this fee path.
 
-Never infer fee behavior from `category`; read the manifest and each market's verified fee disclosure. See [Fees](docs/reference/fees.md).
+Partner attribution is independent of market and fee state. A verified partner-attributed project with no qualifying official market path uses `feePolicy.mode: "no-qualifying-market"` and zero shares; it does not pretend that 20 bps is active. An active fee-bearing partnership-template path remains disabled until the template proves one fee basis, both recipients, the exact split, currency, accrual, claim rights, and protection against one party claiming the other's share. No Basebit or Aion partner recipient or live fee path is currently published through the v2 manifest.
+
+Never infer fee behavior from `category`, partner name, or template metadata; read the manifest and each market's verified fee disclosure. See [Fees](docs/reference/fees.md).
 
 ## API and machine-readable resources
 
@@ -133,12 +155,33 @@ Never infer fee behavior from `category`; read the manifest and each market's ve
 | `GET /api/v2/status` | API, indexing, freshness, and lifecycle status |
 | `GET /api/v2/manifest` | Active deployments, start blocks, fee policy, and endpoint discovery |
 | `GET /api/v2/launches` | Paginated normalized launch feed |
+| `GET /api/v2/launches/{launchId}` | One launch by globally scoped launch ID, including project-only and multi-asset records |
 | `GET /api/v2/launches/{chainId}/{tokenAddress}` | One asset's Programmable launch record |
 | `GET /api/v2/token-list` | Wallet-friendly finalized token list |
 | [`llms.txt`](llms.txt) | Compact agent index |
 | [`llms-full.txt`](llms-full.txt) | Complete agent-oriented integration contract |
 
 The [HTTP API reference](docs/reference/http-api.md) describes response handling and errors. JSON Schemas and the OpenAPI contract are normative machine-readable resources in this repository.
+
+Use [Direct onchain verification](docs/reference/onchain-verification.md) to reproduce provenance and [Programmable Verified](docs/concepts/programmable-verified.md) to keep review, deployment binding, finality, authorities, dependencies, market support, and metadata trust separate.
+
+## Validation commands
+
+Run the offline repository gates before opening a pull request:
+
+```bash
+npm ci
+npm run build
+npm run check
+```
+
+Run the bounded read-only production smoke only when live verification is intentional:
+
+```bash
+PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
+```
+
+The live smoke proves that the currently published HTTP surface answers and conforms to its expected baseline. It does not prove that an unreleased Registry, launch-ID route, Custom canary, deployment, or fee path is live.
 
 ## Repository map
 
@@ -150,7 +193,7 @@ deployments/    Reproducible deployment evidence and source records
 abis/           Contract interfaces used for direct verification
 fixtures/       Classic, Custom, no-market, multi-market, and forward-compatibility cases
 examples/       Copy-paste integration examples
-proposals/      Explicitly prelaunch registry interfaces and provider handoff examples
+proposals/      Non-normative prelaunch design inputs; never deployed ABI authority
 compatibility/  Frozen public consumer contracts
 scripts/        Build, conformance, and live-smoke commands
 tests/          Offline schema, semantic, consumer, and server checks
@@ -163,10 +206,12 @@ llms-full.txt   Complete agent integration context
 - Classic launch discovery is live on Ethereum.
 - Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty until a registry deployment is published.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
+- Ethereum Mainnet is the only currently advertised chain. Multi-chain support becomes live per chain only through the well-known document and manifest.
+- No Basebit or Aion partnership, template, recipient, Registry record, or live fee path is currently verified by the public v2 surface.
 - A registered launch is always discoverable. Chart, quote, simulation, and execution support remain explicit per market.
 - No named terminal, scanner, wallet, or data provider is implied to have integrated Programmable.
 
-Read the [FAQ](docs/faq.md) for common integration questions.
+Read the [FAQ](docs/faq.md) for common integration questions and use the [production integration checklist](docs/integration-checklist.md) before release.
 
 Existing v1 consumers can follow the [v1 to v2 migration guide](docs/migrations/v1-to-v2.md). API v1 remains supported and has no retirement date.
 

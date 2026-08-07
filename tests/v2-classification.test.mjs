@@ -15,10 +15,10 @@ import {
 const classic = await readJson(
   path.join(REPOSITORY_ROOT, "fixtures/v2/launches/classic-v4-pool.json"),
 );
-const registeredCustom = await readJson(
+const prelaunchCustom = await readJson(
   path.join(
     REPOSITORY_ROOT,
-    "fixtures/v2/launches/custom-registered-no-market.json",
+    "fixtures/v2/launches/custom-project-only-prelaunch.json",
   ),
 );
 
@@ -52,57 +52,28 @@ function status() {
 }
 
 describe("version 2 classification", () => {
-  test("publishes only recognized Classic and registry-backed Custom launches", () => {
-    const stock = {
-      ...structuredClone(registeredCustom),
-      launch: {
-        ...registeredCustom.launch,
-        modelId: "stock-paired",
-        publicSubmission: false,
-      },
-    };
-    const unregistered = {
-      ...structuredClone(registeredCustom),
-      verification: {
-        ...registeredCustom.verification,
-        registryAddress: null,
-      },
-    };
-
+  test("publishes recognized Classic but not a prelaunch Custom fixture", () => {
     assert.equal(isV2PublicLaunch(classic), true);
-    assert.equal(isV2PublicLaunch(registeredCustom), true);
-    assert.equal(isV2PublicLaunch(stock), false);
-    assert.equal(isV2PublicLaunch(unregistered), false);
+    assert.equal(isV2PublicLaunch(prelaunchCustom), false);
   });
 
-  test("filters Stock-Paired without changing the legacy v1 dataset", () => {
+  test("filters prelaunch Custom without changing the legacy v1 dataset", () => {
     const records = [
       internalRecord(classic, "0003"),
-      internalRecord(registeredCustom, "0002"),
-      internalRecord(
-        {
-          ...registeredCustom,
-          launch: {
-            ...registeredCustom.launch,
-            modelId: "stock-paired",
-            publicSubmission: false,
-          },
-        },
-        "0001",
-      ),
+      internalRecord(prelaunchCustom, "0002"),
     ];
     const legacy = { records, status: status() };
     const projected = projectV2Dataset(legacy);
 
-    assert.equal(legacy.records.length, 3);
+    assert.equal(legacy.records.length, 2);
     assert.deepEqual(
       projected.records.map((record) => record.launch.modelId),
-      ["classic", "custom-hook"],
+      ["classic"],
     );
     assert.deepEqual(projected.status.counts, {
-      total: 2,
+      total: 1,
       classic: 1,
-      custom: 1,
+      custom: 0,
     });
   });
 
@@ -110,7 +81,6 @@ describe("version 2 classification", () => {
     const projected = projectV2Dataset({
       records: [
         internalRecord(classic, "0002"),
-        internalRecord(registeredCustom, "0001"),
       ],
       status: status(),
     });
@@ -124,12 +94,6 @@ describe("version 2 classification", () => {
           category: "classic",
           label: "Programmable Classic",
           basis: "recognized-classic-launcher-event",
-        },
-        {
-          namespace: "programmable",
-          category: "custom",
-          label: "Programmable Custom",
-          basis: "programmable-custom-registry-event",
         },
       ],
     );
@@ -166,6 +130,6 @@ describe("version 2 classification", () => {
     const registry = await createSchemaRegistry("v2");
     const validate = registry.validator("launch.schema.json");
     assertValid(validate, classic, "Classic v2 fixture");
-    assertValid(validate, registeredCustom, "Custom v2 fixture");
+    assertValid(validate, prelaunchCustom, "Custom v2 fixture");
   });
 });

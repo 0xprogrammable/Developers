@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       req,
       res,
       200,
-      serviceStatusV2(dataset.status, manifest.customRegistry.status),
+      serviceStatusV2(dataset.status, manifest),
       {
       cacheControl: "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
       apiStatus: feedStatus(dataset.status.status),

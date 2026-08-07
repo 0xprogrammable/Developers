@@ -8,11 +8,12 @@ verification rules for that exact field.
 
 | Version | Security updates |
 | --- | --- |
+| Integration API and schemas v2 | Supported; canonical for new integrations |
 | Integration API and schemas v1 | Supported |
 | Pre-release and unreleased drafts | Not supported |
 
 Breaking changes require a new major version. Security corrections may tighten validation without changing the
-meaning of valid v1 records.
+meaning of valid records within a supported major version.
 
 ## Report a vulnerability
 
@@ -35,8 +36,11 @@ The canonical proof of a Programmable launch is its supported-chain registry eve
 event. The hosted API, this repository, deployment manifests, GitHub labels, pull-request status, token names, symbols,
 and project websites are not sufficient provenance by themselves.
 
-Consumers should verify the chain ID, registry address, launch ID, transaction hash, block number and block hash,
-transaction and log indexes, approval digest, and relevant runtime code hashes. A record that cannot be reproduced from
+Consumers should verify the chain ID and CAIP-2 identity, registry address and generation, launch ID, transaction hash,
+block number and block hash, transaction and log indexes, approval and build commitments, deployment configuration,
+launch wallet, and relevant EVM `runtimeCodeKeccak256` identities computed as `keccak256(runtime bytecode)` and encoded
+as `0x` bytes32 values. A separately published `runtimeCodeSha256` uses the `sha256:` form and must not be substituted
+for the EVM identity. A record that cannot be reproduced from
 the declared registry must fail closed. A similar contract, copied event, matching token symbol, or matching bytecode at
 another address does not inherit Programmable provenance.
 
@@ -81,6 +85,16 @@ simulation, or execution is supported. Offchain and hybrid markets must disclose
 self-reported data is not onchain-verified data. Transfers must not be classified as trades without market-specific
 evidence.
 
+### Fees and claims
+
+Fee policy is verified per official market path, not inferred from category, partner name, or template metadata. Verify
+rate, basis, currency, recipients, rounding, accrual, claim authority, pause state, and effective runtime. A declared fee
+is not proof that it accrued, is claimable, or was paid.
+
+For a partnership template, the accepted policy is exactly 20 bps on one defined basis: 15 bps for the partner and 5 bps
+for Programmable, with no additional Native Custom 10 bps. Fail closed if a recipient is not evidenced, one party can
+claim the other's share, or replay, double-claim, or reentrancy protections cannot be established.
+
 ### Transaction safety
 
 Launch-feed records, metadata, capabilities, extensions, examples, and project-owned URLs are read-only integration
@@ -88,7 +102,7 @@ data. They are not executable transaction payloads. This repository does not aut
 swap, deposit, claim, or other value-moving action.
 
 Never copy an arbitrary `to`, calldata, spender, approval, or value from metadata or an extension into a wallet request.
-An execution integration must independently verify the chain, registered adapter and runtime hash, decode the action,
+An execution integration must independently verify the chain, registered adapter and public `runtimeCodeKeccak256` identity, decode the action,
 enforce a deadline and slippage or output bounds, limit allowances, simulate against fresh state, and show the decoded
 intent before signature. Unsupported markets must remain discovery-only.
 
@@ -98,6 +112,11 @@ Passing schemas, conformance tests, automated review, source verification, or re
 audit, an investment recommendation, a guarantee of liquidity or price accuracy, an endorsement by Uniswap, or a
 guarantee that a project cannot fail or cause loss. Security statements must identify the exact source, deployment,
 configuration, evidence, and lifecycle state they describe.
+
+`Programmable Verified` means: “Reviewed against the published Programmable security policy and cryptographically
+bound to the exact deployed contract revision.” It is not a `safe: true` field. Keep origin, review, build and runtime
+binding, finality, authorities, dependencies, market support, fee verification, metadata trust, supersession, and
+revocation separate. See [Programmable Verified](docs/concepts/programmable-verified.md).
 
 ## Repository and workflow safety
 

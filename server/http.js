@@ -7,13 +7,14 @@ import {
 
 import {
   API_SCHEMA_VERSION,
+  API_V2_SCHEMA_VERSION,
   REQUEST_LIMITS,
 } from "./constants.js";
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
-const SORT_KEY_PATTERN = /^\d{16}:\d{10}:\d{10}:0x[0-9a-f]{40}$/;
+const SORT_KEY_PATTERN = /^\d{16}:\d{10}:\d{10}:(?:0x[0-9a-f]{40}|[0-9a-f]{64})$/;
 const OPAQUE_CURSOR_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-const CURSOR_VERSION = 1;
+const CURSOR_VERSION = 2;
 const MAX_CURSOR_LENGTH = 1_024;
 const LOCAL_CURSOR_SIGNING_KEY =
   "programmable-local-cursor-signing-key-not-for-production";
@@ -54,7 +55,10 @@ export function json(req, res, statusCode, payload, options = {}) {
   const requestId = options.requestId ?? randomUUID();
 
   applyCors(res);
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader(
+    "Content-Type",
+    options.contentType ?? "application/json; charset=utf-8",
+  );
   res.setHeader("ETag", etag);
   res.setHeader("X-Request-Id", requestId);
   res.setHeader(
@@ -85,7 +89,9 @@ export function error(req, res, statusCode, code, message, details) {
     res,
     statusCode,
     {
-      schemaVersion: API_SCHEMA_VERSION,
+      schemaVersion: String(req?.url ?? "").includes("/api/v2/")
+        ? API_V2_SCHEMA_VERSION
+        : API_SCHEMA_VERSION,
       type: `https://developers.programmable.family/problems/${normalizedCode}`,
       title: message,
       status: statusCode,
@@ -96,7 +102,12 @@ export function error(req, res, statusCode, code, message, details) {
         ? {}
         : { extensions: { "programmable/details": details } }),
     },
-    { cacheControl: "no-store", apiStatus: "error", requestId },
+    {
+      cacheControl: "no-store",
+      apiStatus: "error",
+      contentType: "application/problem+json; charset=utf-8",
+      requestId,
+    },
   );
 }
 
@@ -160,6 +171,13 @@ export function parseChainId(value, supportedChainId) {
     : null;
 }
 
+export function parseEvmChainId(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (!/^[1-9]\d*$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
 export function parseLimit(value) {
   if (value === null || value === undefined || value === "") {
     return REQUEST_LIMITS.defaultPageSize;
@@ -177,7 +195,8 @@ export function parseLimit(value) {
 }
 
 function validScope(value) {
-  return value === "all" || value === "classic" || value === "custom";
+  return value === "all" || value === "classic" || value === "custom" ||
+    /^v2:(?:all|classic|custom):(?:all|[1-9]\d*)$/.test(value);
 }
 
 function cursorSigningKey() {
@@ -250,8 +269,16 @@ function decodeOpaqueCursor(value) {
 
 function validSnapshot(snapshot) {
   if (snapshot === null) return true;
+  const legacyKeys = ["blockHash", "blockNumber", "finality", "indexedAt"];
+  const registryAwareKeys = [
+    "blockHash",
+    "blockNumber",
+    "customRegistryHighWaterGeneration",
+    "finality",
+    "indexedAt",
+  ];
   return Boolean(
-    hasExactKeys(snapshot, ["blockHash", "blockNumber", "finality", "indexedAt"]) &&
+    (hasExactKeys(snapshot, legacyKeys) || hasExactKeys(snapshot, registryAwareKeys)) &&
       typeof snapshot.blockNumber === "string" &&
       snapshot.blockNumber.length <= 78 &&
       /^(0|[1-9]\d*)$/.test(snapshot.blockNumber) &&
@@ -261,7 +288,17 @@ function validSnapshot(snapshot) {
         snapshot.indexedAt,
       ) &&
       Number.isFinite(Date.parse(snapshot.indexedAt)) &&
-      ["observed", "confirmed", "finalized"].includes(snapshot.finality),
+      ["observed", "confirmed", "finalized"].includes(snapshot.finality) &&
+      (!Object.hasOwn(snapshot, "customRegistryHighWaterGeneration") ||
+        validRegistryGeneration(snapshot.customRegistryHighWaterGeneration)),
+  );
+}
+
+function validRegistryGeneration(value) {
+  return value === null || (
+    typeof value === "string" &&
+    value.length <= 78 &&
+    /^(0|[1-9]\d*)$/.test(value)
   );
 }
 
@@ -269,26 +306,50 @@ export function cursorScope(category) {
   return category ?? "all";
 }
 
-export function encodeResumeCursor(highWater, scope = "all") {
-  if (!SORT_KEY_PATTERN.test(highWater) || !validScope(scope)) {
+export function cursorScopeV2(category, chainId = null) {
+  return `v2:${category ?? "all"}:${chainId ?? "all"}`;
+}
+
+export function encodeResumeCursor(
+  highWater,
+  scope = "all",
+  registryHighWaterGeneration = scope === "classic" ? null : "0",
+) {
+  if (
+    !SORT_KEY_PATTERN.test(highWater) ||
+    !validScope(scope) ||
+    !validRegistryGeneration(registryHighWaterGeneration)
+  ) {
     throw new Error("invalid resume cursor components");
   }
-  return encodeOpaqueCursor({ v: CURSOR_VERSION, t: "r", h: highWater, c: scope });
+  return encodeOpaqueCursor({
+    v: CURSOR_VERSION,
+    t: "r",
+    h: highWater,
+    c: scope,
+    g: registryHighWaterGeneration,
+  });
 }
 
 export function decodeResumeCursor(value) {
   const parsed = decodeOpaqueCursor(value);
   if (parsed === null || parsed === undefined) return parsed;
   if (
-    !hasExactKeys(parsed, ["c", "h", "t", "v"]) ||
+    !hasExactKeys(parsed, ["c", "g", "h", "t", "v"]) ||
     parsed.v !== CURSOR_VERSION ||
     parsed.t !== "r" ||
     !SORT_KEY_PATTERN.test(parsed.h) ||
-    !validScope(parsed.c)
+    !validScope(parsed.c) ||
+    !validRegistryGeneration(parsed.g) ||
+    (parsed.c === "classic" ? parsed.g !== null : parsed.g === null)
   ) {
     return undefined;
   }
-  return { highWater: parsed.h, scope: parsed.c };
+  return {
+    highWater: parsed.h,
+    scope: parsed.c,
+    registryHighWaterGeneration: parsed.g,
+  };
 }
 
 export function encodePageCursor(
@@ -297,12 +358,22 @@ export function encodePageCursor(
   scope,
   snapshot,
   after = null,
+  registryHighWaterGeneration = scope === "classic" ? null : "0",
+  afterRegistryHighWaterGeneration = scope === "classic" ? null : "0",
 ) {
   if (
     !SORT_KEY_PATTERN.test(highWater) ||
     !SORT_KEY_PATTERN.test(position) ||
     !validScope(scope) ||
     !validSnapshot(snapshot) ||
+    !validRegistryGeneration(registryHighWaterGeneration) ||
+    !validRegistryGeneration(afterRegistryHighWaterGeneration) ||
+    (scope === "classic"
+      ? registryHighWaterGeneration !== null || afterRegistryHighWaterGeneration !== null
+      : registryHighWaterGeneration === null || afterRegistryHighWaterGeneration === null) ||
+    (registryHighWaterGeneration !== null &&
+      afterRegistryHighWaterGeneration !== null &&
+      BigInt(registryHighWaterGeneration) < BigInt(afterRegistryHighWaterGeneration)) ||
     (after !== null && !SORT_KEY_PATTERN.test(after)) ||
     (after !== null && position <= after)
   ) {
@@ -316,6 +387,8 @@ export function encodePageCursor(
     c: scope,
     s: snapshot,
     a: after,
+    g: registryHighWaterGeneration,
+    ag: afterRegistryHighWaterGeneration,
   });
 }
 
@@ -323,7 +396,7 @@ export function decodePageCursor(value) {
   const parsed = decodeOpaqueCursor(value);
   if (parsed === null || parsed === undefined) return parsed;
   if (
-    !hasExactKeys(parsed, ["a", "c", "h", "p", "s", "t", "v"]) ||
+    !hasExactKeys(parsed, ["a", "ag", "c", "g", "h", "p", "s", "t", "v"]) ||
     parsed.v !== CURSOR_VERSION ||
     parsed.t !== "p" ||
     !SORT_KEY_PATTERN.test(parsed.h) ||
@@ -331,6 +404,12 @@ export function decodePageCursor(value) {
     parsed.h < parsed.p ||
     !validScope(parsed.c) ||
     !validSnapshot(parsed.s) ||
+    !validRegistryGeneration(parsed.g) ||
+    !validRegistryGeneration(parsed.ag) ||
+    (parsed.c === "classic"
+      ? parsed.g !== null || parsed.ag !== null
+      : parsed.g === null || parsed.ag === null) ||
+    (parsed.g !== null && parsed.ag !== null && BigInt(parsed.g) < BigInt(parsed.ag)) ||
     (parsed.a !== null && !SORT_KEY_PATTERN.test(parsed.a)) ||
     (parsed.a !== null && parsed.p <= parsed.a)
   ) {
@@ -342,6 +421,8 @@ export function decodePageCursor(value) {
     scope: parsed.c,
     snapshot: parsed.s,
     after: parsed.a,
+    registryHighWaterGeneration: parsed.g,
+    afterRegistryHighWaterGeneration: parsed.ag,
   };
 }
 

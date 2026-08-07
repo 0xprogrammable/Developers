@@ -24,6 +24,9 @@
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
     },
+    "platformId": {
+      "const": "programmable"
+    },
     "manifestVersion": {
       "type": "string",
       "pattern": "^[1-9][0-9]*$"
@@ -35,6 +38,13 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 9007199254740991
+    },
+    "chains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/chainProfile"
+      }
     },
     "network": {
       "type": "object",
@@ -97,6 +107,18 @@
     },
     "customRegistry": {
       "$ref": "#/$defs/customRegistry"
+    },
+    "registryGenerations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/registryGeneration"
+      }
+    },
+    "partnerTemplates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/partnerTemplate"
+      }
     },
     "platformFee": {
       "$ref": "#/$defs/platformFee"
@@ -179,6 +201,298 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "chainProfile": {
+      "type": "object",
+      "required": [
+        "chainId",
+        "caip2",
+        "name",
+        "status",
+        "manifestUrl"
+      ],
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch",
+            "retired"
+          ]
+        },
+        "manifestUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryGeneration": {
+      "type": "object",
+      "required": [
+        "chainId",
+        "caip2",
+        "generation",
+        "status",
+        "address",
+        "runtimeCodeKeccak256",
+        "startBlock",
+        "endBlock",
+        "authorizedWriters",
+        "registryEventSetHash",
+        "events",
+        "abiUrl",
+        "finalityConfirmations"
+      ],
+      "properties": {
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "generation": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "status": {
+          "enum": [
+            "live",
+            "paused",
+            "retired"
+          ]
+        },
+        "address": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "runtimeCodeKeccak256": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "endBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "authorizedWriters": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/evmAddress"
+          }
+        },
+        "registryEventSetHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "events": {
+          "type": "object",
+          "required": [
+            "registered",
+            "approvalAuthorized",
+            "provenance",
+            "review",
+            "attribution",
+            "feePolicy",
+            "feeEvidence",
+            "finalized",
+            "corrected",
+            "revoked"
+          ],
+          "properties": {
+            "registered": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "approvalAuthorized": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "provenance": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "review": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "attribution": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "feePolicy": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "feeEvidence": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "finalized": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "corrected": {
+              "$ref": "#/$defs/registryEvent"
+            },
+            "revoked": {
+              "$ref": "#/$defs/registryEvent"
+            }
+          },
+          "additionalProperties": false
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "finalityConfirmations": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryEvent": {
+      "type": "object",
+      "required": [
+        "signature",
+        "topic0"
+      ],
+      "properties": {
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "topic0": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        }
+      },
+      "additionalProperties": false
+    },
+    "partnerTemplate": {
+      "type": "object",
+      "required": [
+        "partnerId",
+        "partnerName",
+        "status",
+        "recipient",
+        "chainId",
+        "templateId",
+        "templateVersion",
+        "repository",
+        "commit",
+        "runtimeHashes",
+        "totalPartnershipFeeBps",
+        "partnerShareBps",
+        "programmableShareBps",
+        "programmableRecipient",
+        "chargeMode",
+        "basis",
+        "currency",
+        "accrual",
+        "claim",
+        "activationBlock",
+        "paused",
+        "retired",
+        "verificationEvidenceHash"
+      ],
+      "properties": {
+        "partnerId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "partnerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "active",
+            "paused",
+            "retired"
+          ]
+        },
+        "recipient": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "chainId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "templateId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "templateVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "repository": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "runtimeHashes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "common.schema.json#/$defs/hash32"
+          }
+        },
+        "totalPartnershipFeeBps": {
+          "const": 20
+        },
+        "partnerShareBps": {
+          "const": 15
+        },
+        "programmableShareBps": {
+          "const": 5
+        },
+        "programmableRecipient": {
+          "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+        },
+        "chargeMode": {
+          "const": "partner-template-enforced"
+        },
+        "basis": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "currency": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "accrual": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "claim": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "activationBlock": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "retired": {
+          "type": "boolean"
+        },
+        "verificationEvidenceHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
     "categoryState": {
       "type": "object",
       "required": [
@@ -359,6 +673,29 @@
         "startBlock": {
           "$ref": "common.schema.json#/$defs/nullableDecimalString"
         },
+        "generation": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "eventSignature": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "eventTopic": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/nullableHttpsUrl"
+        },
+        "finalityConfirmations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
         "note": {
           "type": "string",
           "minLength": 1
@@ -395,6 +732,58 @@
         },
         "customPublicSubmissions": {
           "$ref": "#/$defs/feeState"
+        },
+        "nativeCustom": {
+          "type": "object",
+          "required": [
+            "totalFeeBps",
+            "programmableShareBps",
+            "scope"
+          ],
+          "properties": {
+            "totalFeeBps": {
+              "const": 10
+            },
+            "programmableShareBps": {
+              "const": 10
+            },
+            "scope": {
+              "const": "verified-official-market-path-only"
+            }
+          },
+          "additionalProperties": false
+        },
+        "partnerTemplate": {
+          "type": "object",
+          "required": [
+            "totalFeeBps",
+            "partnerShareBps",
+            "programmableShareBps",
+            "programmableRecipient",
+            "chargeMode",
+            "additionalNativeFeeBps"
+          ],
+          "properties": {
+            "totalFeeBps": {
+              "const": 20
+            },
+            "partnerShareBps": {
+              "const": 15
+            },
+            "programmableShareBps": {
+              "const": 5
+            },
+            "programmableRecipient": {
+              "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+            },
+            "chargeMode": {
+              "const": "partner-template-enforced"
+            },
+            "additionalNativeFeeBps": {
+              "const": 0
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -422,6 +811,7 @@
           "enum": [
             "included",
             "added-on-top",
+            "policy-specific-no-overlay",
             null
           ]
         }

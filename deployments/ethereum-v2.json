@@ -1,9 +1,19 @@
 {
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
+  "platformId": "programmable",
   "manifestVersion": "2",
   "generatedAt": "2026-08-06T00:00:00Z",
   "chainId": 1,
+  "chains": [
+    {
+      "chainId": 1,
+      "caip2": "eip155:1",
+      "name": "Ethereum Mainnet",
+      "status": "live",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest"
+    }
+  ],
   "network": {
     "name": "Ethereum Mainnet",
     "caip2": "eip155:1",
@@ -101,8 +111,15 @@
     "publicSubmissionsEnabled": false,
     "address": null,
     "startBlock": null,
+    "generation": null,
+    "eventSignature": null,
+    "eventTopic": null,
+    "abiUrl": null,
+    "finalityConfirmations": null,
     "note": "No Custom Registry address or start block has been published. Custom feed results remain empty until an evidenced registry deployment is listed here."
   },
+  "registryGenerations": [],
+  "partnerTemplates": [],
   "platformFee": {
     "ratePpm": "1000",
     "rateBps": "10",
@@ -114,7 +131,20 @@
     },
     "customPublicSubmissions": {
       "status": "prelaunch",
-      "chargeMode": "added-on-top"
+      "chargeMode": "policy-specific-no-overlay"
+    },
+    "nativeCustom": {
+      "totalFeeBps": 10,
+      "programmableShareBps": 10,
+      "scope": "verified-official-market-path-only"
+    },
+    "partnerTemplate": {
+      "totalFeeBps": 20,
+      "partnerShareBps": 15,
+      "programmableShareBps": 5,
+      "programmableRecipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "chargeMode": "partner-template-enforced",
+      "additionalNativeFeeBps": 0
     }
   },
   "endpoints": {
