@@ -3,14 +3,14 @@ import {
   getV2Dataset,
   isV2DatasetPublishable,
   publicLaunchV2,
-} from "../../../server/v2-dataset.js";
+} from "../../server/v2-dataset.js";
 import {
   error,
   handleOptions,
   json,
   queryParametersAllowed,
   routeValue,
-} from "../../../server/http.js";
+} from "../../server/http.js";
 
 const LAUNCH_ID = /^[A-Za-z0-9][A-Za-z0-9._:@/+~-]{0,255}$/;
 

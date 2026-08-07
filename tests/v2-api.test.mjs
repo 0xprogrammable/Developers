@@ -6,7 +6,7 @@ import {
   createLaunchesHandler,
   launchFeedPayload,
 } from "../api/v2/launches.js";
-import { createLaunchIdDetailHandler } from "../api/v2/launches/[launchId].js";
+import { createLaunchIdDetailHandler } from "../api/v2/launch-detail.js";
 import { createLaunchDetailHandler } from
   "../api/v2/launches/[chainId]/[tokenAddress].js";
 import {
