@@ -2,7 +2,7 @@
   "$schema": "https://developers.programmable.family/schemas/v1/manifest.schema.json",
   "schemaVersion": "1.0.0",
   "manifestVersion": "1",
-  "generatedAt": "2026-08-04T00:44:31Z",
+  "generatedAt": "2026-08-07T07:10:23Z",
   "chainId": 1,
   "network": {
     "name": "Ethereum Mainnet",
@@ -17,7 +17,7 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "prelaunch",
-      "note": "Existing Custom records are first-party Stock-Paired launches. The public Custom submission registry is not deployed."
+      "note": "Finalized approved Custom Registry launches and existing first-party Custom records are discoverable. General public submissions remain prelaunch."
     }
   },
   "deployments": [
@@ -175,11 +175,11 @@
   "customRegistry": {
     "category": "custom",
     "modelId": "open-custom",
-    "status": "prelaunch",
+    "status": "live",
     "publicSubmissionsEnabled": false,
-    "address": null,
-    "startBlock": null,
-    "note": "No Custom registry address or start block has been published. Null values are intentional and must not be replaced with placeholders."
+    "address": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
+    "startBlock": "25701139",
+    "note": "Registry discovery is live for finalized approved launches. General public submissions remain prelaunch."
   },
   "platformFee": {
     "ratePpm": "1000",

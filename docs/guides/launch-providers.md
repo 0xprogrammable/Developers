@@ -4,7 +4,7 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-This is a **prelaunch integration specification**. The open Programmable Custom Registry is not deployed. No registry address, ABI, or write endpoint in this document is live until it appears in `GET /api/v2/manifest` with deployment evidence.
+Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. General public intake remains prelaunch and `publicSubmissionsEnabled` remains `false`.
 
 ## Public classification
 
@@ -133,11 +133,11 @@ No Basebit or Aion provider release, recipient, template, Registry record, or li
 
 ## Registry ABI authority
 
-No Custom Registry ABI is published as live. Files under `proposals/` are design inputs only; they are not a normative interface, a deployed ABI, or permission to submit a transaction.
+The generation 1 Registry ABI is published at `https://developers.programmable.family/abis/ethereum/programmable-custom-registry-v1.json`; its canonical event set and hash specification are published beside it. Files under `proposals/` remain design inputs only; they are not the normative deployed interface or permission to submit a transaction.
 
-After deployment, integrators must obtain the exact versioned Registry ABI and event topics through the public manifest and its immutable evidence links. Accept logs only from the manifest-listed chain, Registry generation, address, start block, and event set.
+Integrators must obtain the exact versioned Registry ABI and event topics through the public manifest and its immutable evidence links. Accept logs only from the manifest-listed chain, Registry generation, address, start block, and event set.
 
-The eventual Registry record must support projects with no token, one token, or multiple assets and markets. Do not build against a token-only draft event or infer a Registry interface from a fixture. Until the manifest publishes the real ABI, direct Custom ingestion remains disabled.
+The Registry record supports projects with no token, one token, or multiple assets and markets. Do not build against a token-only draft event or infer a Registry interface from a fixture. Direct ingestion is enabled only for the exact live generation published by the manifest.
 
 ## Provider-neutral Generation 2 binding
 

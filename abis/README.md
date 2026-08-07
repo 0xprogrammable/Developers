@@ -11,6 +11,12 @@ integration to one launcher address.
 | `ethereum/classic-v3-launcher.json` | Classic v3 launch events |
 | `ethereum/stock-paired-launcher.json` | Stock-Paired v1, v2, and v3 launch events |
 | `ethereum/stock-paired-coordinator.json` | Stock-Paired ETH coordinator event |
+| `ethereum/programmable-custom-registry-v1.json` | Full normative Custom Registry V1 ABI |
+
+The Custom Registry ABI is intentionally full rather than event-only because
+approval and registration integrations must use its canonical hash helpers.
+Resolve its address, start block, runtime hash, event-set pin, and generation
+from the version 2 manifest.
 
 ## Prelaunch Custom Generation 2 candidates
 

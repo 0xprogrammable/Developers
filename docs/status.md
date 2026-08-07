@@ -13,7 +13,7 @@ GET https://developers.programmable.family/api/v2/manifest
 | --- | --- | --- | --- | --- |
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Programmable Custom intake | `custom` | Ethereum | Prelaunch | Approved submissions are not yet a live launch source |
-| Custom Registry | `custom` | Ethereum | Prelaunch | No registry address should be assumed until the v2 manifest marks it active |
+| Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active; general public intake remains prelaunch |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
 | Aion partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner recipient, accepted template, Registry record, or live fee path is published; similarly named code is not evidence |
@@ -35,7 +35,7 @@ Prelaunch means the integration contract is available for client development, bu
 - a Custom record appears as a launch only after the recognized onchain launch evidence exists;
 - no fee path should be labeled onchain-verified before deployment and verification.
 
-At present, the v2 manifest reports `customRegistry.status: "prelaunch"`, `publicSubmissionsEnabled: false`, `address: null`, and `startBlock: null`. The filtered v2 Custom feed contains no items. These values are the controlling public state; draft contracts and fixtures cannot override them.
+The v2 manifest reports `customRegistry.status: "live"`, `publicSubmissionsEnabled: false`, and the exact active address, generation, and start block. The filtered v2 Custom feed begins with the finalized project-only genesis canary. These values are the controlling public state; provider catalogs and intake drafts cannot override them.
 
 The local Generation 2 release candidate defines the stronger four-contract Registry, PartnerFactory Registry, fee-policy verifier, and atomic registrar trust root plus the 15-event integration set and 37-word v4 producer commitment. This is contract and integration evidence, not deployment evidence. A prior Generation 1 deployment is quarantined and is not published because its deployed source/runtime cannot establish compatibility with this interface.
 

@@ -4,7 +4,7 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 ## Current boundary
 
-Ethereum is the only active chain in the current discovery document. Classic deployments are published in the v2 manifest. The Programmable Custom Registry is **prelaunch**: its address and start block are `null`, public submissions are disabled, no Custom event topic is published as live, and the v2 Custom feed is empty.
+Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
 An unreleased Generation 2 candidate set exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though any were deployed. A prior Generation 1 deployment is quarantined because its deployed source and runtime are not verified against the stronger interface; its address is intentionally not a public trust root. A direct Custom indexer cannot be activated until the manifest publishes an evidenced Generation 2 deployment.
 

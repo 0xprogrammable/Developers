@@ -60,7 +60,7 @@ compatibility
 
 The manifest is the canonical integration inventory for active and prelaunch deployments. Read deployment arrays and lifecycle state. Never hard-code a single registry or launcher address as the entire Programmable source.
 
-The current v2 Custom Registry state is prelaunch with public submissions disabled and no address or start block. A client must keep the Custom integration inactive while those values remain unpublished.
+The v2 Custom Registry state is live with public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, and finality policy from the manifest; they must not infer that live discovery enables general submission intake.
 
 Clients should reject an unexplained manifest rollback and alert on conflicting data for the same manifest version.
 

@@ -4,6 +4,11 @@ import { API_V2_SCHEMA_VERSION } from "./constants.js";
 import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
 import {
+  CUSTOM_REGISTRY_GENESIS_CANARY,
+  CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
+  isExactCustomRegistryGenesisCanary,
+} from "./genesis-canary.js";
+import {
   REGISTRY_V4_PRODUCER_SCHEMA,
   validateRegistryProjectionEnvelopeV4,
 } from "./registry-v4.js";
@@ -55,6 +60,13 @@ export function registryOriginMatchesManifest(record, manifest) {
 }
 
 function isRegisteredCustom(record, manifest) {
+  if (isExactCustomRegistryGenesisCanary(record)) {
+    return manifest?.customRegistry?.status === "live"
+      && manifest.customRegistry.address?.toLowerCase()
+        === record.verification.registryAddress.toLowerCase()
+      && manifest.customRegistry.generation
+        === record.verification.registryGeneration;
+  }
   const registryGeneration = record?.registryOrigin?.registryGeneration;
   const v3Binding = record?.registryRecordSchemaVersion ===
       "programmable.custom-launch-registry-record.v3" &&
@@ -141,9 +153,17 @@ export function publicLaunchV2(record) {
   return publicRecord;
 }
 
+export function customRegistryGenesisCanaryRecord() {
+  return {
+    ...CUSTOM_REGISTRY_GENESIS_CANARY,
+    sortKey: CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
+  };
+}
+
 export function projectV2Dataset(dataset, manifest = null) {
-  const customRegistryLive = manifest?.customRegistry?.status === "live" &&
-    manifest.customRegistry.publicSubmissionsEnabled === true;
+  const customRegistryLive = manifest?.customRegistry?.status === "live";
+  const publicSubmissionsEnabled =
+    manifest?.customRegistry?.publicSubmissionsEnabled === true;
   const customSourceReady = dataset.status?.customRegistry?.status === "ready";
   const records = dataset.records
     .filter((record) =>
@@ -163,7 +183,7 @@ export function projectV2Dataset(dataset, manifest = null) {
       schemaVersion: API_V2_SCHEMA_VERSION,
       customRegistryPublication: {
         status: customRegistryLive ? "live" : "prelaunch",
-        publicSubmissionsEnabled: customRegistryLive,
+        publicSubmissionsEnabled,
         sourceReady: customSourceReady,
         publishedRegistries: canonicalRegistryDeployments(manifest).length,
       },
@@ -182,7 +202,31 @@ export async function getV2Dataset() {
     getDataset(),
     developerManifestV2(),
   ]);
-  return projectV2Dataset(dataset, manifest);
+  const seeded = {
+    ...dataset,
+    records: [
+      customRegistryGenesisCanaryRecord(),
+      ...dataset.records.filter((record) =>
+        record.launchId !== CUSTOM_REGISTRY_GENESIS_CANARY.launchId),
+    ],
+    status: {
+      ...dataset.status,
+      customRegistry: {
+        ...dataset.status.customRegistry,
+        configured: true,
+        status: "ready",
+        sourceId: "programmable-custom-registry-genesis-release-v1",
+        completeness: "finalized-release-bound",
+        freshness: "immutable",
+        checkedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        latestAcceptedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        highWaterGeneration: "1",
+        indexedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        launches: Math.max(1, dataset.status.customRegistry?.launches ?? 0),
+      },
+    },
+  };
+  return projectV2Dataset(seeded, manifest);
 }
 
 export function isV2DatasetPublishable(dataset, category = null) {

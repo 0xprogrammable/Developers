@@ -1,0 +1,101 @@
+{
+  "domain": "programmable.custom-registry-hash-spec.v1",
+  "encoding": {
+    "address": "Solidity ABI address, left-padded to one 32-byte word",
+    "hashFunction": "keccak256",
+    "mode": "abi.encode",
+    "packedEncodingAllowed": false,
+    "publicStringEncoding": "UTF-8 with no surrounding whitespace"
+  },
+  "identifiers": {
+    "commitId": "keccak256(utf8(\"git-sha1:\" + lowercase40HexObjectId)) for SHA-1 repositories, or the corresponding git-sha256 form with 64 lowercase hex characters",
+    "deployedRuntimeCodeHash": "EVM EXTCODEHASH of the exact deployed address",
+    "providerModelTemplateAndVersion": "keccak256(utf8(exactPublicString))",
+    "repositoryId": "keccak256(utf8(canonicalHttpsRepositoryUrl))"
+  },
+  "launchApprovalAndRegistration": {
+    "canonicalHelpers": [
+      "computeFeePolicyHash",
+      "computeApprovalBindingHash",
+      "computeRegistrationBindingHash",
+      "computeRegisteredRecordCommitment",
+      "computeReviewDeploymentBindingHash"
+    ],
+    "launchId": "Projection V2 SHA-256/RFC 8785 ID carried onchain as raw bytes32",
+    "normativeAbi": "https://developers.programmable.family/abis/ethereum/programmable-custom-registry-v1.json",
+    "requirements": "Integrations MUST call the canonical helpers or produce byte-identical abi.encode output. Approval is exact-revision and one-use."
+  },
+  "partnerConfiguration": {
+    "configurationDomain": "0xe10be03c13fd6d46240ec9a5c30c425320fb17ed96290a55b43f43ac63db5d8b",
+    "configurationDomainPreimage": "programmable.custom-partner-configuration.v1",
+    "configurationHash": "keccak256(abi.encode(CONFIGURATION_DOMAIN, modelHash, factoryHash, bytes32 permissionsHash, bytes32 feePolicyHash))",
+    "factoryHash": "keccak256(abi.encode(bytes32 factorySourceRepositoryId, bytes32 factorySourceCommitId, uint256 chainId, address factory, bytes32 factoryRuntimeCodeHash, bytes32 launchRuntimeCodeSetHash))",
+    "goldenVector": {
+      "configurationHash": "0xd0f7b1d29ce6a59052ca9d3b773183a3a3cc40e408fc7cf3ca3beeb20535359b",
+      "factory": "0x3333333333333333333333333333333333333333",
+      "factoryHash": "0x4e170deadd76b14a9f99e6d8901e93f021bdfa8cb54c32ea06e580218b9700fa",
+      "factoryRuntimeCodeHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+      "factorySourceCommitIdPreimage": "git-sha1:2222222222222222222222222222222222222222",
+      "factorySourceRepositoryIdPreimage": "https://github.com/aeon/example-factory",
+      "feePolicyHash": "0x7777777777777777777777777777777777777777777777777777777777777777",
+      "launchRuntimeCodeSetHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+      "modelHash": "0xb382f36b08e82a0ecfa5b71412d67a5ff1e6830ef72caaeb2cbb26a0f1d32291",
+      "modelIdPreimage": "aeon.example-model",
+      "modelRepositoryIdPreimage": "https://github.com/0xprogrammable/aeon-launch-models",
+      "modelSourceCommitIdPreimage": "git-sha1:1111111111111111111111111111111111111111",
+      "modelVersionPreimage": "1.0.0",
+      "permissionsHash": "0x6666666666666666666666666666666666666666666666666666666666666666",
+      "providerIdPreimage": "aeon",
+      "templateIdPreimage": "aeon.example-template",
+      "templateVersionPreimage": "1.0.0"
+    },
+    "modelHash": "keccak256(abi.encode(bytes32 providerId, bytes32 modelId, bytes32 modelVersion, bytes32 templateId, bytes32 templateVersion, bytes32 modelRepositoryId, bytes32 modelSourceCommitId))",
+    "requirements": {
+      "launchRuntimeCodeSetHash": "Approved sorted duplicate-free set of every runtime-code hash reachable in the launch plan",
+      "permissionsHash": "All owner, admin, upgrade, pause, custody, oracle, bridge and claim authorities"
+    }
+  },
+  "providerBindings": {
+    "aeon": {
+      "providerId": "aeon",
+      "providerIdHash": "0x21579779d75cbc7029824d5bc06ea23ba34cbe06f6014c2dc184f0cc32d84ab9"
+    }
+  },
+  "source": {
+    "abiPath": "contracts/abi/ProgrammableCustomRegistryV1.json",
+    "abiSha256": "270d186ceb684d2c44f144de6d63a3b278081ca476d537b3a7fcd8952ce8d74e",
+    "commit": "aaf1dd5b4f5483eb9cd5eb9c10386dd9c4b1d633",
+    "path": "docs/security/CUSTOM_REGISTRY_HASH_SPEC_V1.md",
+    "repository": "https://github.com/0xprogrammable/programmable"
+  },
+  "feePolicy": {
+    "activeCases": {
+      "aeonPartnerCustom": {
+        "additionalNativeFeeBps": 0,
+        "nativeCustomFeeBps": 0,
+        "partnerShareBps": 15,
+        "programmableRecipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+        "programmableShareBps": 5,
+        "totalFeeBps": 20
+      },
+      "noQualifyingMarket": {
+        "feeLegs": [],
+        "totalFeeBps": 0
+      },
+      "programmableNativeCustom": {
+        "partnerLeg": null,
+        "programmableRecipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+        "programmableShareBps": 10,
+        "totalFeeBps": 10
+      }
+    },
+    "attributionHash": "keccak256(abi.encode(uint8 kind, bytes32 providerId, bytes32 partnerStatusId, bytes32 modelId, bytes32 modelVersion, bytes32 templateId, bytes32 templateVersion, bytes32 marketPathId, bytes32 partnerRepositoryId, bytes32 partnerCommitId, bytes32 partnerRuntimeCodeSetHash))",
+    "economicsHash": "keccak256(abi.encode(uint16 totalFeeBps, uint16 nativeCustomFeeBps, bytes32 partnerLegHash, bytes32 programmableLegHash))",
+    "feePolicyDomain": "0xdb5d9c91e077fe6740f11d93a1a77c29d8d46e282332119a2b3bb27d96d1a653",
+    "feePolicyDomainPreimage": "programmable.custom-fee-policy.v1",
+    "feePolicyHash": "keccak256(abi.encode(FEE_POLICY_DOMAIN, attributionHash, economicsHash, lifecycleAndEvidenceHash))",
+    "legHash": "keccak256(abi.encode(uint16 shareBps, address recipient, address currency, bytes32 chargeModeId, bytes32 basisId, bytes32 roundingId, bytes32 accrualId, bytes32 claimId, bytes32 claimRightId, bytes32 controlEvidenceHash))",
+    "lifecycleAndEvidenceHash": "keccak256(abi.encode(bytes32 activationVersion, uint64 activationBlock, bool paused, bool retired, bytes32 publicPolicyBindingHash, bytes32 claimIsolationEvidenceHash, bytes32 accountingSafetyEvidenceHash, bytes32 verificationEvidenceHash))",
+    "requirements": "There is no global partner surcharge and no fallback 10-bps fee. A non-AEON partner entry is not launchable under PartnerTemplate until a published verifier version defines its exact fee plan."
+  }
+}

@@ -1,3 +1,6 @@
+import { isExactCustomRegistryGenesisCanary } from
+  "../../server/genesis-canary.js";
+
 export const PLATFORM_FEE_RECIPIENT =
   "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
 export const PLATFORM_ID = "programmable";
@@ -331,7 +334,9 @@ function validateV2IdentityAndReview(launch) {
     ));
   }
 
+  const exactGenesisCanary = isExactCustomRegistryGenesisCanary(launch);
   const materializedCustom = launch.category === "custom" &&
+    !exactGenesisCanary &&
     ["observed", "live", "paused", "retired", "revoked"].includes(
       launch.launch?.status,
     );
@@ -858,7 +863,7 @@ export function validateManifestSemantics(manifest) {
       ),
     );
   }
-  if (registry?.status === "live") {
+  if (registry?.status === "live" && manifest.schemaVersion === "2.0.0") {
     const liveGeneration = (manifest.registryGenerations ?? []).find(
       (generation) =>
         generation.status === "live" &&
@@ -867,7 +872,6 @@ export function validateManifestSemantics(manifest) {
         generation.generation === registry.generation,
     );
     if (
-      registry.publicSubmissionsEnabled !== true ||
       registry.address === null ||
       registry.startBlock === null ||
       registry.generation === null ||
@@ -880,9 +884,18 @@ export function validateManifestSemantics(manifest) {
       findings.push(finding(
         "LIVE_REGISTRY_BINDING",
         "/customRegistry",
-        "A live Registry must bind the complete active generation and public submission state",
+        "A live Registry must bind the complete active generation",
       ));
     }
+  }
+  if (registry?.status === "live" && manifest.schemaVersion === "1.0.0"
+    && (registry.address === null || registry.startBlock === null
+      || registry.publicSubmissionsEnabled !== false)) {
+    findings.push(finding(
+      "LIVE_REGISTRY_BINDING",
+      "/customRegistry",
+      "A live v1 Registry must publish its address and start block while public intake remains disabled",
+    ));
   }
   const chainIds = new Set((manifest.chains ?? []).map((chain) => chain.chainId));
   const registryKeys = [];

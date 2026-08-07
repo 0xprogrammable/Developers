@@ -73,6 +73,45 @@
       ]
     },
     {
+      "source": "/abis/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/event-sets/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/specifications/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
       "source": "/openapi/(.*)",
       "headers": [
         {
@@ -143,6 +182,10 @@
     {
       "source": "/v2/launches/:chainId/:tokenAddress",
       "destination": "/api/v2/launches/:chainId/:tokenAddress"
+    },
+    {
+      "source": "/api/v2/launches/:launchId",
+      "destination": "/api/v2/launch-detail?launchId=:launchId"
     },
     {
       "source": "/v2/token-list",

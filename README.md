@@ -204,7 +204,7 @@ llms-full.txt   Complete agent integration context
 ## Current boundaries
 
 - Classic launch discovery is live on Ethereum.
-- Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty until a registry deployment is published.
+- Custom Registry discovery is live on Ethereum Mainnet. General Custom intake remains prelaunch; the v2 Custom feed publishes only finalized, exact-revision Registry records.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
 - Ethereum Mainnet is the only currently advertised chain. Multi-chain support becomes live per chain only through the well-known document and manifest.
 - No Basebit or Aion partnership, template, recipient, Registry record, or live fee path is currently verified by the public v2 surface.
