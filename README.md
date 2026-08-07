@@ -69,6 +69,8 @@ function requireOk(response) {
 }
 ```
 
+That short snippet inspects only the first page. Production consumers should use the [bounded full-traversal reference](docs/quickstart.md#5-consume-the-feed-in-javascript), which includes replay deduplication, page and retry limits, timeout, jitter, `Retry-After`, cursor-loop rejection, durable commit ordering, and the next `after` poll.
+
 A conforming v2 client must:
 
 1. Read active deployments from the manifest instead of hard-coding contract addresses.
@@ -110,7 +112,9 @@ extensions
 
 `platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while the model remains open-ended. These fields come from verified launch provenance, never from a creator-editable token tag.
 
-Full Registry-backed records also carry `publicLabel`, `caip2`, `projectId`, model, template, partner, builder, approval and deployment bindings, structured review, fee policy, finality evidence, presentation, Registry origin, launching wallet, post-launch authorities, lifecycle, and mechanisms. Historical v2 records need not carry the richer fields. Their addition does not create “API v3”; the v2 envelope and historical record meanings remain stable.
+Full Registry-backed records also carry `publicLabel`, `caip2`, `projectId`, model, template, partner, optional provider attribution, builder, approval and deployment bindings, structured review, fee policy, finality evidence, presentation, Registry origin, launching wallet, post-launch authorities, lifecycle, and mechanisms. Historical v2 records need not carry the richer fields. Their addition does not create “API v3”; the v2 envelope and historical record meanings remain stable.
+
+`provider` is the normative optional location for launch-provider attribution. `verificationStatus: "registry-bound"` is valid only with its Registry evidence hash. `display-only` provider data and unfamiliar provider extensions may be shown as secondary attribution, but they never establish Programmable identity, partner status, fee verification, template approval, security review, or executable support.
 
 `token` can be null for a project-only launch. `assets` can preserve multiple tokens, contracts, hooks, controllers, oracles, bridges, rewards, and unknown future roles. Markets can refer to those assets without fabricating an ERC-20 pair or pool.
 

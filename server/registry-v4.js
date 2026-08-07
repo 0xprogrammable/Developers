@@ -1119,6 +1119,22 @@ function generationContractSet(releaseContracts) {
   ));
 }
 
+export function publicProviderAttributionV4(record, revoked = false) {
+  const providerId = record?.registeredRecordPreimage?.providerId;
+  if (providerId === ZERO_HASH) return null;
+  const evidenceHash = record?.partnerFactoryAuthorization?.evidenceHash;
+  if (!HASH32.test(providerId ?? "") || !HASH32.test(evidenceHash ?? "")) {
+    throw new TypeError("Registry custom v4 provider attribution is unbound");
+  }
+  return {
+    id: providerId,
+    displayName: null,
+    verificationStatus: revoked ? "revoked" : "registry-bound",
+    evidenceHash,
+    extensions: {},
+  };
+}
+
 export function normalizeRegistryCustomItemV4(item) {
   if (!validateRegistryCustomFeedItemV4(item)) {
     throw new TypeError("Registry custom v4 launch item is invalid");
@@ -1230,6 +1246,7 @@ export function normalizeRegistryCustomItemV4(item) {
     model: structuredClone(record.model),
     template: structuredClone(record.template),
     partner: structuredClone(record.partner),
+    provider: publicProviderAttributionV4(raw, revoked),
     builder: null,
     token: publicRegistryPrimaryToken(publicRecord),
     assets: structuredClone(record.assets),

@@ -120,6 +120,17 @@
         }
       ]
     },
+    "provider": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/providerAttribution"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Optional launch-provider attribution. It never establishes Programmable origin, category, partner fee state, template approval, review status, or executable support. Only verificationStatus=registry-bound with a non-null evidenceHash is authenticated provider provenance."
+    },
     "builder": {
       "oneOf": [
         {
@@ -955,6 +966,93 @@
           "$ref": "common.schema.json#/$defs/decimalString"
         }
       },
+      "additionalProperties": false
+    },
+    "providerAttribution": {
+      "type": "object",
+      "required": [
+        "id",
+        "displayName",
+        "verificationStatus",
+        "evidenceHash",
+        "extensions"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "verificationStatus": {
+          "enum": [
+            "registry-bound",
+            "display-only",
+            "revoked"
+          ]
+        },
+        "evidenceHash": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "$ref": "common.schema.json#/$defs/extensions"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "verificationStatus": {
+                "enum": [
+                  "registry-bound",
+                  "revoked"
+                ]
+              }
+            },
+            "required": [
+              "verificationStatus"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceHash": {
+                "$ref": "common.schema.json#/$defs/hash32"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "verificationStatus": {
+                "const": "display-only"
+              }
+            },
+            "required": [
+              "verificationStatus"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceHash": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     },
     "registryV3ApprovalBinding": {

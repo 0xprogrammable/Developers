@@ -39,6 +39,32 @@ describe("documentation contract", () => {
     assert.match(reference, /neither authorizes nor constructs/i);
   });
 
+  test("publishes one bounded ingestion reference and explicit manifest precedence", async () => {
+    const quickstart = await readFile(
+      path.join(REPOSITORY_ROOT, "docs/quickstart.md"),
+      "utf8",
+    );
+    const reference = await readFile(
+      path.join(REPOSITORY_ROOT, "docs/reference/http-api.md"),
+      "utf8",
+    );
+    for (const contract of [
+      /maximumPages = 1_000/,
+      /AbortSignal\.timeout\(10_000\)/,
+      /attempt <= 3/,
+      /retry-after/,
+      /Page cursor loop detected/,
+      /recordsByLaunchId\.set\(record\.launchId, record\)/,
+      /commitRecordsAndCursor\(backfill\)/,
+      /ingestTraversal\(durableResumeCursor\)/,
+    ]) {
+      assert.match(quickstart, contract);
+    }
+    assert.match(reference, /operational presentation mirror/i);
+    assert.match(reference, /Developer manifest.*takes precedence/i);
+    assert.match(reference, /must not be resolved by merging fields/i);
+  });
+
   test("all local Markdown links resolve", async () => {
     const files = [
       path.join(REPOSITORY_ROOT, "README.md"),

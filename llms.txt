@@ -15,6 +15,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Ethereum Mainnet is the only chain currently advertised by the well-known document.
 - No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is currently verified by the public v2 manifest.
+- `provider` is optional secondary attribution. Only `registry-bound` with its evidence hash is authenticated provider provenance; unfamiliar or `display-only` provider data never upgrades origin, fees, review, or execution.
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
 - The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
@@ -58,6 +59,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - [Discovery document](https://developers.programmable.family/.well-known/programmable.json): Stable bootstrap document.
 - [Status](https://developers.programmable.family/api/v2/status): Service and feed lifecycle.
 - [Manifest](https://developers.programmable.family/api/v2/manifest): Deployments, start blocks, Custom Registry state, fee policy, endpoints, and compatibility.
+- The Developer v2 manifest above is the canonical integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational mirror and never overrides or supplements it.
 - [Launch feed](https://developers.programmable.family/api/v2/launches): Cursor-paginated Classic and Custom launch records.
 - Launch detail: `GET /api/v2/launches/{launchId}` for project-only, token-backed, and multi-asset records.
 - Token detail: `GET /api/v2/launches/{chainId}/{tokenAddress}` for token-backed records.

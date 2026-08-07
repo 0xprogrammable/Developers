@@ -73,6 +73,8 @@ Root fields:
 
 The manifest supplies deployment IDs, categories, model IDs and versions, origins, public-submission state, lifecycle, discovery state, start and end blocks, and contract addresses. Historical deployments remain available for backfill. New compatible deployments are appended to arrays.
 
+`https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
+
 The live Custom Registry and the still-prelaunch public intake are represented separately. A prelaunch intake state never carries or guesses a different Registry address.
 
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
@@ -143,6 +145,8 @@ Use separate identities:
 Classic `launchId` values derive from canonical chain and launcher-event provenance. A Custom `launchId` is committed by the Custom Registry. Do not describe a Classic launch ID as Registry-issued or a Custom launch as accepted without registry evidence.
 
 Names, symbols, images, websites, creators, and social links are display or attribution data. They are not unique identity.
+
+Optional `provider` is the normative launch-provider attribution location. Only `verificationStatus: registry-bound` with its evidence hash is authenticated provider provenance. `display-only` attribution or unfamiliar namespaced provider extensions may be preserved and shown secondarily, but never upgrade platform identity, category, partner status, fees, review, market support, or execution.
 
 `token` can be null for a project-only record. Preserve its project ID, launch ID, authenticated assets, mechanisms, provenance, review, fee policy, lifecycle, and markets. Never fabricate a token, pair, or pool.
 

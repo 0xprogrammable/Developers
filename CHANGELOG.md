@@ -15,6 +15,9 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Publish stable prelaunch Generation 2 event-set and release-candidate metadata URLs without adding them to the live manifest.
+- Add the optional provider-attribution schema and fail-closed trust semantics.
+- Add a bounded full-traversal JavaScript reference and define Developer-manifest precedence over the Website operational mirror.
 - Add direct onchain verification, Programmable Verified, multi-chain, and production integration guides.
 - Document the additive Registry-backed v2 project, multi-asset, approval, deployment, review, fee, finality, authority, lifecycle, and presentation fields plus launch-ID detail lookup.
 - Define Native Custom and partnership-template fee semantics, including the exact 20 bps total and 15/5 partner/Programmable split without an additional Native Custom fee.

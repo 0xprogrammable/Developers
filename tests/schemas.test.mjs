@@ -117,6 +117,34 @@ describe("JSON Schema registry", () => {
     assert.match(validationSummary(validateV2), /const/);
   });
 
+  test("defines provider attribution without upgrading display-only data", async () => {
+    const validate = registryV2.validator("launch.schema.json");
+    const fixture = await readJson(
+      path.join(REPOSITORY_ROOT, "fixtures/v2/launches/classic-v4-pool.json"),
+    );
+    fixture.provider = {
+      id: "future-provider-v99",
+      displayName: "Future Provider",
+      verificationStatus: "display-only",
+      evidenceHash: null,
+      extensions: {
+        "future-provider/display": { unfamiliar: true },
+      },
+    };
+    assertValid(validate, fixture, "display-only provider attribution");
+
+    fixture.provider.verificationStatus = "registry-bound";
+    assert.equal(validate(fixture), false);
+    assert.match(validationSummary(validate), /type/);
+
+    fixture.provider.evidenceHash = `0x${"1".repeat(64)}`;
+    assertValid(validate, fixture, "registry-bound provider attribution");
+
+    fixture.provider.untrustedAuthority = true;
+    assert.equal(validate(fixture), false);
+    assert.match(validationSummary(validate), /additionalProperties/);
+  });
+
   test("round-trips the exact Approval v3 producer fixture and hash domains", async () => {
     const validate = registryV2.validator(
       "custom-launch-registry-record-v3.schema.json",

@@ -20,6 +20,7 @@ import {
   deriveRegistryPartnerFactoryAuthorizedAbiProofV4,
   deriveRegistryPartnerFactorySourceBoundAbiProofV4,
   normalizeRegistryCustomItemV4,
+  publicProviderAttributionV4,
   REGISTRY_V4_PRODUCER_SCHEMA,
   validateRegistryContractRecordV4,
   validateRegistryCustomFeedItemV4,
@@ -491,6 +492,11 @@ describe("Registry generation 2 contract parity", () => {
       "../fixtures/v2/custom-registry-event-set-v2.candidate.json",
       import.meta.url,
     ));
+    const publishedEventBytes = await readFile(new URL(
+      "../event-sets/candidates/programmable-custom-registry-v2.json",
+      import.meta.url,
+    ));
+    assert.deepEqual(publishedEventBytes, eventBytes);
     assert.equal(
       createHash("sha256").update(eventBytes).digest("hex"),
       "0c6c32e0db5eb55b8e0bd148a6206e0c0ab8605cda75338f3a556e75cd3eff1a",
@@ -550,6 +556,11 @@ describe("Registry generation 2 contract parity", () => {
       "../fixtures/v2/custom-registry-generation-2.release-candidate.json",
       import.meta.url,
     ));
+    const publishedReleaseCandidateBytes = await readFile(new URL(
+      "../specifications/custom-registry-generation-2.release-candidate.json",
+      import.meta.url,
+    ));
+    assert.deepEqual(publishedReleaseCandidateBytes, publicReleaseCandidateBytes);
     assert.equal(
       createHash("sha256").update(publicReleaseCandidateBytes).digest("hex"),
       "ab460890036d37fadb07770a52225a8bff49f8506b40fcf46bf857792bae1af0",
@@ -945,12 +956,24 @@ describe("Registry generation 2 contract parity", () => {
     assert.notEqual(providerRecord.registeredRecordPreimage.providerId, ZERO_HASH);
     assert.equal(providerRecord.feePolicy.providerId, ZERO_HASH);
     assert.equal(validateRegistryContractRecordV4(providerRecord), true);
+    assert.deepEqual(publicProviderAttributionV4(providerRecord), {
+      id: providerRecord.registeredRecordPreimage.providerId,
+      displayName: null,
+      verificationStatus: "registry-bound",
+      evidenceHash: providerRecord.partnerFactoryAuthorization.evidenceHash,
+      extensions: {},
+    });
+    assert.equal(
+      publicProviderAttributionV4(providerRecord, true).verificationStatus,
+      "revoked",
+    );
 
     const directRecord = noMarketProviderRecord();
     directRecord.registeredRecordPreimage.providerId = ZERO_HASH;
     directRecord.partnerFactoryAuthorization = null;
     resealContractRecord(directRecord);
     assert.equal(validateRegistryContractRecordV4(directRecord), true);
+    assert.equal(publicProviderAttributionV4(directRecord), null);
 
     const missingAuthorization = noMarketProviderRecord();
     missingAuthorization.partnerFactoryAuthorization = null;

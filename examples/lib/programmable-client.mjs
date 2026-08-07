@@ -441,7 +441,8 @@ function retryDelayMs(retryAfter, attempt) {
     }
   }
 
-  return Math.min(250 * 2 ** (attempt - 1), 2_000);
+  const ceiling = Math.min(250 * 2 ** (attempt - 1), 2_000);
+  return Math.floor(Math.random() * (ceiling + 1));
 }
 
 function wait(milliseconds) {
