@@ -18,14 +18,14 @@ describe("launch-provider documentation", () => {
     assert.match(guide, /do not create additional public categories/i);
   });
 
-  test("requires atomic provenance and states that the registry is prelaunch", async () => {
+  test("requires atomic provenance and separates live discovery from prelaunch intake", async () => {
     const guide = await read("docs/guides/launch-providers.md");
     const proposal = await read(
       "proposals/custom-registry/IProgrammableCustomRegistryV1.sol",
     );
 
-    assert.match(guide, /prelaunch integration specification/i);
-    assert.match(guide, /open Programmable Custom Registry is not deployed/i);
+    assert.match(guide, /Custom Registry generation 1 is live/i);
+    assert.match(guide, /General public intake remains prelaunch/i);
     assert.match(guide, /Programmable adapter/);
     assert.match(guide, /Provider factory callback/);
     assert.match(guide, /webhook.*does not prove/is);

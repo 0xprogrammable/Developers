@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-No. Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty.
+No. Custom Registry discovery is live, but general Custom intake remains prelaunch. The v2 Custom feed contains only finalized approved Registry records.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 

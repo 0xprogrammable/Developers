@@ -91,6 +91,6 @@ When the structured review record is absent or incomplete, omit the Verified bad
 
 ## Current status
 
-The public v2 Custom Registry is prelaunch and the v2 Custom feed is empty. Therefore no live Custom launch can currently claim a Registry-backed Programmable Verified state through this surface. Draft fixtures and provider examples are not production review records.
+The public v2 Custom Registry is live and its project-only genesis canary proves the finalized lifecycle. Provider catalogs and draft fixtures are still not approval records: every future live Custom record must carry its own exact source, runtime, review, fee, and finality bindings.
 
 See [Direct onchain verification](../reference/onchain-verification.md), [Security policy](../../SECURITY.md), and [Platform fees](../reference/fees.md).

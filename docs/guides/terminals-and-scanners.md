@@ -21,7 +21,7 @@ The manifest records the historical Classic V2 hook and the current Classic V3 h
 
 ## Current Custom boundary
 
-Programmable Custom intake and the Custom Registry are prelaunch. The v2 Custom feed is intentionally empty until the manifest publishes an evidenced registry address and start block.
+Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. General Custom intake remains prelaunch and must not be inferred from discovery state.
 
 Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 

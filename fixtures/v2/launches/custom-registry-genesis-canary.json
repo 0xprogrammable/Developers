@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "publicLabel": "Programmable Custom",
+  "launchId": "sha256:329016f555ac688de1980078680f783b3e9a59f098b054a4d0cb4044a5b5594e",
+  "category": "custom",
+  "chainId": 1,
+  "caip2": "eip155:1",
+  "projectId": "sha256:897608bd2a9e7758334d4fb82153dffdcff016d742b87e0b490e8cf98b63a8ff",
+  "model": {
+    "id": "programmable.registry-genesis-canary",
+    "version": "1.0.0"
+  },
+  "template": null,
+  "partner": null,
+  "builder": null,
+  "token": null,
+  "advertisesToken": false,
+  "launchIdentity": {
+    "namespace": "eip155:1",
+    "value": "0x1d70acbbe83283b1597401569efead0ba5312e28"
+  },
+  "launchingWallet": {
+    "namespace": "eip155-address",
+    "value": "0x2bb333d48dfaf1596d9036671d2e43168994249e"
+  },
+  "assetIdentitySetHash": "sha256:cec907109f686a6a26db5c8db831da3c0466fc04c872cb5e468d1ba71d7b4d63",
+  "marketSetHash": "sha256:ea6258ac5b1a958d2c0a06bff4c4187298ad29e025ccf54b21a95a73ff6fdd26",
+  "assets": [
+    {
+      "assetId": "project-root",
+      "role": "root",
+      "identity": {
+        "namespace": "eip155:1",
+        "value": "0x1d70acbbe83283b1597401569efead0ba5312e28"
+      },
+      "provenance": {
+        "kind": "launch-produced"
+      },
+      "identityEvidenceHash": "sha256:bf443b243d07007abb191445c855ff02c41562bf5a0e539582fb5c921d8a5916",
+      "onchainMetadata": null,
+      "onchainMetadataHash": null
+    }
+  ],
+  "launch": {
+    "status": "live",
+    "origin": "first-party",
+    "modelId": "programmable.registry-genesis-canary",
+    "modelVersion": "1.0.0",
+    "publicSubmission": false,
+    "creatorAddress": "0x2bb333d48dfaf1596d9036671d2e43168994249e",
+    "transactionHash": "0x71efe312d6d74030744174bfe8d5b3d82e6599915eb3108897076b0f392652db",
+    "blockNumber": "25701424",
+    "blockHash": "0x39e1cf216dbaa12313bde3faf93aba607701b68d73a3c9601ffc9eeacec1e046",
+    "transactionIndex": 148,
+    "logIndex": 408,
+    "timestamp": "2026-08-07T06:54:23.000Z",
+    "finality": "finalized",
+    "launchWallet": "0x2bb333d48dfaf1596d9036671d2e43168994249e",
+    "observedAt": "2026-08-07T06:54:23.000Z",
+    "confirmedAt": "2026-08-07T07:10:23.000Z",
+    "finalizedAt": "2026-08-07T07:10:23.000Z",
+    "orphanedAt": null,
+    "revokedAt": null
+  },
+  "verification": {
+    "sourceId": "programmable-custom-registry-v1",
+    "launcherAddress": "0xcc916e5200d2626edfd918dc219bc4296629e997",
+    "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
+    "provenanceStatus": "verified",
+    "sourceUrl": "https://github.com/0xprogrammable/programmable/commit/aaf1dd5b4f5483eb9cd5eb9c10386dd9c4b1d633",
+    "registryGeneration": "1",
+    "registryEventTopic": "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a",
+    "registryLogIndex": 408,
+    "approvalMatch": "matched",
+    "runtimeMatch": "matched",
+    "metadataTrust": "unavailable"
+  },
+  "approvalBinding": null,
+  "deploymentBinding": null,
+  "verifiedReview": null,
+  "feePolicy": {
+    "schemaVersion": "programmable.custom-launch-fee-policy.v3",
+    "mode": "no-qualifying-market",
+    "programmableRecipient": {
+      "namespace": "eip155-address",
+      "value": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+    },
+    "totalFeeBps": 0,
+    "programmableShareBps": 0,
+    "partnerShareBps": 0,
+    "partnerRecipient": null,
+    "chargeMode": "none-no-qualifying-market",
+    "basis": null,
+    "currency": null,
+    "accrual": null,
+    "claim": null,
+    "rounding": null,
+    "claimRights": {
+      "programmable": null,
+      "partner": null,
+      "independentlyClaimable": false,
+      "crossPartyClaimingProhibited": true,
+      "evidenceHash": "sha256:baddb2d1b9b57e3bda35c5bfe4675932bc21bf42eafbefd1148154a23f3a93f2"
+    },
+    "verifiedMarketIds": [],
+    "normalProgrammableTenBpsApplied": false,
+    "verificationStatus": "not_applicable",
+    "verificationAuthorityHash": "sha256:c8506c7c10d13704074333f8fb8da759926922485fbd2149243078296e41e7a7",
+    "verificationEvidenceHash": "sha256:eb7261ca5602d0117228c277eba9a9bcb9d060c9a5e1a1b1a62586a8234eb317",
+    "recipientControlEvidenceHash": "sha256:aa75f4029e37ab47b4fe46eed965c73c0d994b4c27087bc3320c72f40b975d7c",
+    "claimIsolationEvidenceHash": "sha256:bb245a3dac8f164e53eb5ef1f0f2e28d12b1819ba3fe179e69a7ff9c21b86c43",
+    "verifiedAt": "2026-08-07T07:10:23.000Z",
+    "publicPolicyBindingHash": "sha256:60150cbe9585509bbd9f304321e058f4168384bd76081eb13da635a4702f20f9"
+  },
+  "finalityEvidence": {
+    "status": "finalized",
+    "transactionHash": "0x71efe312d6d74030744174bfe8d5b3d82e6599915eb3108897076b0f392652db",
+    "blockHash": "0x39e1cf216dbaa12313bde3faf93aba607701b68d73a3c9601ffc9eeacec1e046",
+    "blockNumber": "25701424",
+    "transactionIndex": "148",
+    "logIndex": "408",
+    "onchainTimestamp": "2026-08-07T06:54:23.000Z",
+    "observedAt": "2026-08-07T06:54:23.000Z",
+    "confirmedAt": "2026-08-07T07:10:23.000Z",
+    "finalizedAt": "2026-08-07T07:10:23.000Z",
+    "orphanedAt": null,
+    "finalityEvidenceHash": "sha256:ab0747cfe5ad5a319c0a2ff271d3d3c7f02883539508f38a05489d9804f9352c",
+    "verificationAuthorityHash": "sha256:5e630c4581f2e09099684c6db55690ebb73cbfd6d00633421968a67582b2236e"
+  },
+  "lifecycle": {
+    "status": "active",
+    "registryGeneration": "1",
+    "registeredAt": "2026-08-07T06:54:23.000Z",
+    "supersededBy": null,
+    "revokedAt": null,
+    "revocationEvidenceHash": null
+  },
+  "presentation": {
+    "description": "Finalized Ethereum Mainnet marker for the Programmable Custom Registry lifecycle.",
+    "image": null,
+    "website": "https://programmable.family",
+    "x": null,
+    "telegram": null,
+    "discord": null,
+    "github": "https://github.com/0xprogrammable/programmable/commit/aaf1dd5b4f5483eb9cd5eb9c10386dd9c4b1d633",
+    "docs": "https://developers.programmable.family/specifications/programmable-custom-registry-hashes-v1.json",
+    "trustStatus": "verified-onchain"
+  },
+  "capabilities": [
+    {
+      "id": "project-only",
+      "version": "1.0.0",
+      "status": "active",
+      "parameters": {}
+    }
+  ],
+  "mechanisms": [
+    {
+      "id": "custom-registry-genesis-canary",
+      "version": "1.0.0",
+      "status": "active",
+      "parameters": {}
+    }
+  ],
+  "markets": [],
+  "fees": [],
+  "extensions": {
+    "programmable/classification": {
+      "namespace": "programmable",
+      "category": "custom",
+      "label": "Programmable Custom",
+      "basis": "programmable-custom-registry-event"
+    },
+    "programmable/genesis-canary-v1": {
+      "sourceCommit": "aaf1dd5b4f5483eb9cd5eb9c10386dd9c4b1d633",
+      "sourceTree": "54ba95aa741b79d4d3e119fe6bf6e578f602f7a3",
+      "configurationHash": "0xac9064bed5278c749616bac7ae3f1de5f8957f075ff847ff1ad62efe395c4f05",
+      "permissionsHash": "0x392d6ddbf3e0b3ca7b9cb33b7a19ca227ab22e63e8e0a11b1b83f2f77eec51e5",
+      "runtimeCodeKeccak256": "0x0a35193128df07793da86d662570c331e61b4e1c3a96dc2378a2660f964eec8a",
+      "runtimeCodeSha256": "sha256:cf0a4d05e9a3cd203cd4b9a82cc74cb96c94fda4ad90b2f699a5cdd598bf4ef7",
+      "approvalId": "0x917b38bfc782a78ef9ae06dddb99d709583ec1fa8c16eb3316208e2ceb26eec1",
+      "approvalBindingHash": "0x7af21731951e46b6ae4404300151e4835f669896ec1b5fb494009ee88797851b",
+      "registeredRecordCommitment": "0xcecd6a9c03afc9ac241f11015579d4ff57aeebf841dca022933c001f2e59b64a",
+      "finalityTransactionHash": "0xe5ee79bdf308f0e3b62854aed8a7209beb7fff811689fe3b0b58fc3837f31775",
+      "finalityBlockNumber": "25701504",
+      "finalityBlockHash": "0x47f276751d8b02fb58a1f99edabd25a91f716d6c2d01ac1250a69b0a8a3b48c4",
+      "confirmedHeadBlockNumber": "25701500",
+      "confirmedHeadBlockHash": "0x6125e46e57172cf9600842dc5337f88f2ad98f01e32be09cb573a9da9d325e0a",
+      "finalityEvidenceHash": "0x6b7f7e4686ce098b3630a5578234c402409caac9134b503abb298c33ba8b6127",
+      "releaseEvidenceHash": "sha256:265d81ed8c5b07d1268ab777aa3f626d40f96a069557b6d74c92a421665f7090"
+    }
+  }
+}

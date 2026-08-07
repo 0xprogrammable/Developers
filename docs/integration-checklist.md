@@ -74,4 +74,4 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Run schema, fixture, conformance, type, lint, build, security, link, and browser checks appropriate to your integration.
 - [ ] Keep Custom prelaunch if any required external evidence is absent.
 
-The current public v2 surface does not yet satisfy the Custom activation items: the Registry is prelaunch and no live Custom canary is published.
+The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. General intake remains prelaunch and must stay disabled independently of discovery.

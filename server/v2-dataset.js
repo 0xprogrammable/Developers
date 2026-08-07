@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
 import { feedStatus, getDataset } from "./dataset.js";
+import {
+  CUSTOM_REGISTRY_GENESIS_CANARY,
+  isExactCustomRegistryGenesisCanary,
+} from "./genesis-canary.js";
 
 let manifestPromise = null;
 
@@ -43,6 +47,13 @@ export function registryOriginMatchesManifest(record, manifest) {
 }
 
 function isRegisteredCustom(record, manifest) {
+  if (isExactCustomRegistryGenesisCanary(record)) {
+    return manifest?.customRegistry?.status === "live"
+      && manifest.customRegistry.address?.toLowerCase()
+        === record.verification.registryAddress.toLowerCase()
+      && manifest.customRegistry.generation
+        === record.verification.registryGeneration;
+  }
   return Boolean(
     record?.registryRecordSchemaVersion ===
       "programmable.custom-launch-registry-record.v3" &&
@@ -153,7 +164,31 @@ export async function getV2Dataset() {
     getDataset(),
     developerManifestV2(),
   ]);
-  return projectV2Dataset(dataset, manifest);
+  const seeded = {
+    ...dataset,
+    records: [
+      CUSTOM_REGISTRY_GENESIS_CANARY,
+      ...dataset.records.filter((record) =>
+        record.launchId !== CUSTOM_REGISTRY_GENESIS_CANARY.launchId),
+    ],
+    status: {
+      ...dataset.status,
+      customRegistry: {
+        ...dataset.status.customRegistry,
+        configured: true,
+        status: "ready",
+        sourceId: "programmable-custom-registry-genesis-release-v1",
+        completeness: "finalized-release-bound",
+        freshness: "immutable",
+        checkedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        latestAcceptedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        highWaterGeneration: "1",
+        indexedAt: CUSTOM_REGISTRY_GENESIS_CANARY.launch.finalizedAt,
+        launches: Math.max(1, dataset.status.customRegistry?.launches ?? 0),
+      },
+    },
+  };
+  return projectV2Dataset(seeded, manifest);
 }
 
 export function isV2DatasetPublishable(dataset, category = null) {
