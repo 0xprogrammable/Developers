@@ -23,7 +23,7 @@ The public category is always `classic` or `custom`. Provider names, factories, 
 
 A full Registry-backed Custom record uses `platformId: "programmable"`, `category: "custom"`, and `publicLabel: "Programmable Custom"`. These values come from the trusted projection, never creator metadata.
 
-[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
+[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Launch stamp](docs/reference/launch-stamp.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
 
 ## Minimal API consumer
 

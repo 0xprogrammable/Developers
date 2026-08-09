@@ -77,6 +77,10 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 The live Custom Registry and the still-prelaunch public intake are represented separately. A prelaunch intake state never carries or guesses a different Registry address.
 
+`customRegistry.launchStamp` publishes the prelaunch verification contract name, minimal ABI URL, event topics, and getter selectors. Its canonical address and start block remain null until deployment evidence exists. After activation, point lookups require only Ethereum JSON-RPC: token, hook, and launch-owned component addresses resolve to a launch ID, while a v4 pool resolves by `PoolManager + PoolId`. The complete identity is `chainId + stamp address + launchId`. Only the exact manifest-listed stamp address is authoritative; an attacker can copy the ABI and events but cannot write canonical stamp storage or emit logs from that address.
+
+The stamp is provenance-only. The parent Registry supplies `observed`, `finalized`, or `revoked` lifecycle. Provenance does not imply safety, audit status, liquidity, sellability, routing support, or third-party integration. A direct point lookup needs no Programmable server or indexer; terminals may scan canonical stamp logs themselves for bulk discovery.
+
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
 
 Clients should retain the highest accepted manifest version. An unexplained rollback or conflicting content for the same version requires operator review.
@@ -600,6 +604,7 @@ Not allowed without separate evidence:
 - API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
 - Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
+- Programmable launch stamp: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
 - Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md
 - Multi-chain discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md
 - Production checklist: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md

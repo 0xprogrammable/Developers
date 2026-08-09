@@ -832,6 +832,289 @@
         "note": {
           "type": "string",
           "minLength": 1
+        },
+        "launchStamp": {
+          "$ref": "#/$defs/launchStamp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "launchStamp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/launchStampActivation"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "version",
+        "status",
+        "provenanceClaim",
+        "provenanceOnly",
+        "verificationMode",
+        "launchIdentityScope",
+        "address",
+        "startBlock",
+        "abiUrl",
+        "contractName",
+        "events",
+        "getters",
+        "lifecycle"
+      ],
+      "properties": {
+        "version": {
+          "const": "1"
+        },
+        "status": {
+          "enum": [
+            "prelaunch",
+            "live",
+            "retired"
+          ]
+        },
+        "provenanceClaim": {
+          "const": "launched-on-programmable"
+        },
+        "provenanceOnly": {
+          "const": true
+        },
+        "verificationMode": {
+          "const": "canonical-stamp-and-registry"
+        },
+        "launchIdentityScope": {
+          "const": "chain-id+stamp-address+launch-id"
+        },
+        "address": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "startBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "abiUrl": {
+          "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "contractName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "events": {
+          "type": "object",
+          "required": [
+            "launchStamped",
+            "componentStamped"
+          ],
+          "properties": {
+            "launchStamped": {
+              "$ref": "#/$defs/nullableEventDescriptor"
+            },
+            "componentStamped": {
+              "$ref": "#/$defs/nullableEventDescriptor"
+            }
+          },
+          "additionalProperties": false
+        },
+        "getters": {
+          "type": "object",
+          "required": [
+            "token",
+            "hook",
+            "pool",
+            "component",
+            "componentRuntimeCodeHash",
+            "record"
+          ],
+          "properties": {
+            "token": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "hook": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "pool": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "component": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "componentRuntimeCodeHash": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "record": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            }
+          },
+          "additionalProperties": false
+        },
+        "lifecycle": {
+          "type": "object",
+          "required": [
+            "contract",
+            "getter",
+            "statusCodes"
+          ],
+          "properties": {
+            "contract": {
+              "const": "customRegistry"
+            },
+            "getter": {
+              "$ref": "#/$defs/nullableGetterDescriptor"
+            },
+            "statusCodes": {
+              "type": "object",
+              "required": [
+                "0",
+                "1",
+                "2",
+                "3"
+              ],
+              "properties": {
+                "0": {
+                  "const": "none"
+                },
+                "1": {
+                  "const": "observed"
+                },
+                "2": {
+                  "const": "finalized"
+                },
+                "3": {
+                  "const": "revoked"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "launchStampActivation": {
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "prelaunch"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "null"
+              },
+              "startBlock": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "live",
+                  "retired"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "$ref": "common.schema.json#/$defs/evmAddress"
+              },
+              "startBlock": {
+                "$ref": "common.schema.json#/$defs/decimalString"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "nullableEventDescriptor": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/eventDescriptor"
+        }
+      ]
+    },
+    "eventDescriptor": {
+      "type": "object",
+      "required": [
+        "name",
+        "signature",
+        "topic0"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1024
+        },
+        "topic0": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        }
+      },
+      "additionalProperties": false
+    },
+    "nullableGetterDescriptor": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/getterDescriptor"
+        }
+      ]
+    },
+    "getterDescriptor": {
+      "type": "object",
+      "required": [
+        "signature",
+        "selector",
+        "result"
+      ],
+      "properties": {
+        "signature": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        },
+        "selector": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{8}$"
+        },
+        "result": {
+          "enum": [
+            "launch-id",
+            "runtime-code-hash",
+            "stamp-record",
+            "launch-state"
+          ]
         }
       },
       "additionalProperties": false

@@ -49,7 +49,19 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
 | [`indexer-cursor.mjs`](indexer-cursor.mjs) | Separates page traversal from a durable high-water cursor and avoids checkpointing degraded data |
 | [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
+| [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Verifies a Custom token, hook, v4 pool, or component directly against the manifest-listed canonical stamp |
 | [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest and paginated launch feed with curl |
+
+## Direct Custom launch-stamp lookup
+
+After the v2 manifest activates the stamp, verify a token or primary contract directly through Ethereum JSON-RPC:
+
+```sh
+PROGRAMMABLE_RPC_URL=https://your-rpc.example \
+  node examples/verify-launch-stamp.mjs token 0x1111111111111111111111111111111111111111
+```
+
+The example discovers the canonical stamp address, start block, and getter selector from the manifest. It contains no Programmable deployment address and fails closed while the stamp is prelaunch. Token, hook, and component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId.
 
 For a durable local indexer checkpoint, choose a path explicitly:
 

@@ -108,6 +108,12 @@ paths:
         and Registry generations are added here so clients do not need a code
         change. A prelaunch Registry carries null address and start-block
         fields; clients must never replace those nulls with guessed values.
+        `customRegistry.launchStamp` publishes
+        the provenance-only direct-verification ABI, event topics, and getter
+        selectors. A point lookup uses Ethereum JSON-RPC and does not depend on
+        a Programmable server or indexer; only the exact manifest-listed
+        stamp address is authoritative for stamp lookups and logs; the parent
+        Registry address is authoritative for launch lifecycle.
       responses:
         "200":
           description: Current deployment manifest.

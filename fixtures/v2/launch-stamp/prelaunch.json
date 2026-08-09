@@ -1,0 +1,70 @@
+{
+  "version": "1",
+  "status": "prelaunch",
+  "provenanceClaim": "launched-on-programmable",
+  "provenanceOnly": true,
+  "verificationMode": "canonical-stamp-and-registry",
+  "launchIdentityScope": "chain-id+stamp-address+launch-id",
+  "address": null,
+  "startBlock": null,
+  "abiUrl": "https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-v1.json",
+  "contractName": "ProgrammableLaunchStampV1",
+  "events": {
+    "launchStamped": {
+      "name": "ProgrammableLaunchStampedV1",
+      "signature": "ProgrammableLaunchStampedV1(bytes32,address,address,address,bytes32,bytes32)",
+      "topic0": "0x6cf479a102f1eebc9244f48f8d68f6aa52b4c5a4516318df58ba46614a5b14f2"
+    },
+    "componentStamped": {
+      "name": "ProgrammableComponentStampedV1",
+      "signature": "ProgrammableComponentStampedV1(bytes32,address,uint8,bytes32)",
+      "topic0": "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b"
+    }
+  },
+  "getters": {
+    "token": {
+      "signature": "launchIdByToken(address)",
+      "selector": "0x1dad847c",
+      "result": "launch-id"
+    },
+    "hook": {
+      "signature": "launchIdByHook(address)",
+      "selector": "0x784c3050",
+      "result": "launch-id"
+    },
+    "pool": {
+      "signature": "launchIdByPool(address,bytes32)",
+      "selector": "0x361df6f3",
+      "result": "launch-id"
+    },
+    "component": {
+      "signature": "launchIdByComponent(address)",
+      "selector": "0x58c5e373",
+      "result": "launch-id"
+    },
+    "componentRuntimeCodeHash": {
+      "signature": "componentRuntimeCodeHash(address)",
+      "selector": "0xc892d353",
+      "result": "runtime-code-hash"
+    },
+    "record": {
+      "signature": "launchStamp(bytes32)",
+      "selector": "0x4c9e4764",
+      "result": "stamp-record"
+    }
+  },
+  "lifecycle": {
+    "contract": "customRegistry",
+    "getter": {
+      "signature": "launchState(bytes32)",
+      "selector": "0x2b76b49c",
+      "result": "launch-state"
+    },
+    "statusCodes": {
+      "0": "none",
+      "1": "observed",
+      "2": "finalized",
+      "3": "revoked"
+    }
+  }
+}

@@ -18,6 +18,9 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Deduplicate by `launchId`; key token assets by chain ID plus address, and project-only launches by `projectId` plus their authenticated asset graph.
 - [ ] Keep provider, partner, template, model, hook, and market type as secondary attribution.
 - [ ] Never trust name, symbol, logo, metadata tag, creator text, or a copied event as origin proof.
+- [ ] For a Custom stamp, require the manifest chain ID, exact canonical stamp address, stamp start block, published getter or event ABI, and a nonzero launch ID scoped with that chain and stamp address.
+- [ ] Bind a v4 pool lookup to both its PoolManager address and PoolId; do not treat PoolId alone as a global identity.
+- [ ] Treat storage or logs from a copied stamp contract at any other address as non-Programmable.
 
 ## Feed ingestion
 

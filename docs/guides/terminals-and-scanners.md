@@ -43,8 +43,10 @@ Do not hard-code launcher or registry addresses. The manifest is what allows com
 For direct onchain consumers, apply this rule exactly:
 
 1. `Programmable Classic` requires a launch event from an enabled Classic launcher in the v2 manifest.
-2. `Programmable Custom` requires a launch event from the Custom Registry in the v2 manifest.
+2. `Programmable Custom` requires Registry-backed lifecycle plus a nonzero lookup or launch event from the canonical launch stamp in the v2 manifest.
 3. No token, hook, factory, frontend, provider API or metadata field can self-assign either label.
+
+For Custom point lookups, use the manifest-advertised launch-stamp getters for a token or primary contract, hook, launch-owned component, or `PoolManager + PoolId`. A nonzero launch ID returned by the exact canonical stamp contract is the origin proof; scope it with the manifest chain ID and stamp address. The point lookup needs an Ethereum RPC endpoint but no Programmable server or indexer. See [Verify “Launched on Programmable” directly onchain](../reference/launch-stamp.md).
 
 ## New-launch card
 

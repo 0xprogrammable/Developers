@@ -12,6 +12,7 @@ integration to one launcher address.
 | `ethereum/stock-paired-launcher.json` | Stock-Paired v1, v2, and v3 launch events |
 | `ethereum/stock-paired-coordinator.json` | Stock-Paired ETH coordinator event |
 | `ethereum/programmable-custom-registry-v1.json` | Full normative Custom Registry V1 ABI |
+| `ethereum/programmable-launch-stamp-v1.json` | Prelaunch Custom stamp events and token, hook, pool, component, codehash, and record lookups; authoritative only after its deployment is activated in the v2 manifest |
 
 The Custom Registry ABI is intentionally full rather than event-only because
 approval and registration integrations must use its canonical hash helpers.
