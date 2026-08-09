@@ -88,6 +88,9 @@ describe("launch stamp documentation", () => {
     assert.match(guide, /PoolManager \+ PoolId/);
     assert.match(guide, /launchId == bytes32\(0\)/);
     assert.match(guide, /does not by itself establish an audit, safety/i);
+    assert.match(guide, /point-in-time launch provenance/i);
+    assert.match(guide, /matching proxy shell hash does not prove/i);
+    assert.match(guide, /implementation, beacon, admin, upgrade authority/i);
   });
 
   test("keeps deployment identity out of the copy-paste verifier", async () => {

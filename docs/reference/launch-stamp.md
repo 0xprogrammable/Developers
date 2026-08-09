@@ -75,7 +75,7 @@ Token, hook, and additional launch-owned component addresses are globally single
 
 `launchId == bytes32(0)` means the queried token, hook, pool, or component is not stamped by that stamp generation. A nonzero result establishes Programmable launch provenance. Treat the complete identity as `chainId + stamp address + launchId`; a bare launch ID is not a global identity. This provenance does not by itself establish an audit, safety, liquidity, price, sellability, router support, or economic outcome.
 
-The ABI also exposes `componentRuntimeCodeHash(address)`. An integrator may compare the recorded value with `EXTCODEHASH` or `eth_getCode` evidence to detect later runtime drift. That is a separate integrity check, not part of the origin label.
+The ABI also exposes `componentRuntimeCodeHash(address)`. This is point-in-time launch provenance: it records the runtime code hash observed when the stamp was written. An integrator may compare it with current `EXTCODEHASH` or `eth_getCode` evidence to detect shell-code drift, but a matching proxy shell hash does not prove that the current implementation, beacon, admin, upgrade authority, or initialization state still matches the launch state. Terminals must perform their own current proxy resolution, authority review, simulation, security checks, and revalidation. None of those current-state checks is implied by the Programmable origin label.
 
 ## Minimal verification algorithm
 

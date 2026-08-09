@@ -48,6 +48,8 @@ For direct onchain consumers, apply this rule exactly:
 
 For Custom point lookups, use the manifest-advertised launch-stamp getters for a token or primary contract, hook, launch-owned component, or `PoolManager + PoolId`. A nonzero launch ID returned by the exact canonical stamp contract is the origin proof; scope it with the manifest chain ID and stamp address. The point lookup needs an Ethereum RPC endpoint but no Programmable server or indexer. See [Verify “Launched on Programmable” directly onchain](../reference/launch-stamp.md).
 
+The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy.
+
 ## New-launch card
 
 A robust minimum card shows:
