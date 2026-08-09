@@ -1,14 +1,34 @@
 # Launch stamp Router verification
 
-`ProgrammableLaunchStampRouterV1` is an onchain provenance interface for future Programmable launches. A valid lookup establishes that a token, v4 pool, or exclusive launch component was created through the canonical Router.
+`ProgrammableLaunchStampRouterV1` is an onchain provenance interface for future Programmable launches. A valid lookup establishes that the exact canonical Router atomically executed and stamped the recorded launch. It also establishes that the recorded v4 pool was uninitialized before route execution and initialized before the stamp was written.
 
-It does not state that a contract is audited, safe, liquid, sellable, tradable, supported by a terminal, or suitable for a transaction.
+It does not universally prove that each Classic component was newly created. It does not establish current pool state or current liquidity, and it does not state that a contract is audited, safe, sellable, tradable, supported by a terminal, or suitable for a transaction.
 
 ## Deployment state
 
-The frozen Router V1 interface and one Ethereum deployment are published. The contract at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` was mined in block `25717612` and observed finalized at block `25717634`. The manifest's `deploymentEvidence` object pins the transaction, both block hashes, runtime identities, immutable getter observations, and evidence hashes.
+The frozen Router V1 interface and one Ethereum deployment are published. The contract at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` was mined in block `25717612` and observed finalized at block `25717634`. The manifest's `deploymentEvidence` object pins the transaction, both block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
 
-The Router is not activated for terminal classification yet. `launchStampRouter.status` remains `prelaunch`, and its activation address, start block, end block, runtime-code hash, finality confirmations, permit-authority binding, Graph Factory binding, and PoolManager binding remain `null`. Consumers must therefore return `unavailable`. The separately published deployment evidence does not fill an activation field or replace the required finalized Classic and Custom canaries.
+Router V1 is live on Ethereum for stamps written at or after block `25717612`. The manifest requires `64` confirmations for an explicit block-number read. Historical launches are not backfilled.
+
+### Active manifest tuple
+
+| Field | Value |
+| --- | --- |
+| `status` | `live` |
+| Manifest `chainId` | `1` |
+| `address` | `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` |
+| `startBlock` | `25717612` |
+| `endBlock` | `null` |
+| `runtimeCodeHash` | `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546` |
+| `abiUrl` | `https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json` |
+| `abiSha256` | `sha256:bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86` |
+| `finalityConfirmations` | `64` |
+| `bindings.permitAuthority` | `0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b` |
+| `bindings.permitAuthorityRuntimeCodeHash` | `0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c` |
+| `bindings.graphFactory` | `0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887` |
+| `bindings.graphFactoryRuntimeCodeHash` | `0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8` |
+| `bindings.poolManager` | `0x000000000004444c5dc75cB358380D2e3dE08A90` |
+| `bindings.poolManagerRuntimeCodeHash` | `0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293` |
 
 ### Finalized deployment evidence
 
@@ -27,11 +47,64 @@ The Router is not activated for terminal classification yet. `launchStampRouter.
 | Getter bundle SHA-256 | `6e6e8a93193bbe2f79f98594a1af32c27bae0746f8297dd13592d9608e2feb20` |
 | Complete evidence SHA-256 | `f9786ebfb74c96a3c225567ad324f0fbecfd8520b8d8addec85ba58cd67e19ff` |
 
-The getter bundle records `CHAIN_ID = 1`, permit authority `0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b`, Graph Factory `0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887`, and PoolManager `0x000000000004444c5dc75cB358380D2e3dE08A90`, together with their runtime-code hashes. Read the exact values from `deploymentEvidence.observedBindings`. These observations are evidence for the deployed bytecode and immutable configuration; they are not the active manifest bindings while status is `prelaunch`.
+The getter bundle records `CHAIN_ID = 1`, permit authority `0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b`, Graph Factory `0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887`, and PoolManager `0x000000000004444c5dc75cB358380D2e3dE08A90`, together with their runtime-code hashes. The active manifest bindings match these observations exactly.
+
+### Finalized PCAN test vector
+
+Activation is bound to the finalized deployment evidence above and one approved finalized Router canary. This is the finalized PCAN test vector. `PCAN` is its human-readable token symbol, not an additional launch or trust identifier. The machine-readable vector is `launchStampRouter.canaryEvidence` in `GET https://developers.programmable.family/api/v2/manifest` (JSON Pointer `/launchStampRouter/canaryEvidence`). The published onchain route coverage is exact: `CustomGraph` is covered; no separate Classic onchain canary is published.
+
+| Field | Value |
+| --- | --- |
+| `finality` | `finalized` |
+| `routeCoverage.customGraphOnchainCanary` | `true` |
+| `routeCoverage.classicOnchainCanary` | `false` |
+| `source.sourceRepository` | `https://github.com/0xprogrammable/programmable` |
+| `source.sourceCommit` | `b3cfed41bb841ae8d6188dbb815eddb5e1440218` |
+| `source.commitSubject` | `Add graph launch stamp canary` |
+| `transactionHash` | `0xc07b4e70233534a1d4f435ffc9a636ed5f542f4aedcde35052c58224f378b612` |
+| `blockNumber` | `25717953` |
+| `blockHash` | `0x97827b6586f0dca00e44801acc529c3961b4c693988dfc9f4b2bb4c3d94632ba` |
+| `launchId` | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` |
+| `stampHash` | `0x06cb71b38d9b8b1dd1ffcdb00f31c774be36f5473979c3831d5fd0c96cdaa579` |
+| `launchKind` | `1` (`CustomGraph`) |
+| `components.initializer` | `0x87B108848B444bC44A01734D62C7be4a2fA64983` |
+| `components.token` | `0x9DEeB39D2590b0cAD5fc473F755C5F97Dcc8f7cE` |
+| `components.hook` | `0xEBa46f25DfF528141dE5317109Acb5A989296044` |
+| `pool.poolManager` | `0x000000000004444c5dc75cB358380D2e3dE08A90` |
+| `pool.poolId` | `0x5c5a3ebee6840640642ba2bea526621a4962d2c89c388c36a2edb4725802a229` |
+| `pool.activeLiquidity` | `31618002430832353916` |
+| `lpPosition.positionManager` | `0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e` |
+| `lpPosition.tokenId` | `367610` |
+| `lpPosition.owner` | `0x2Bb333d48DFAF1596D9036671d2E43168994249E` |
+| `platformFee.feePips` | `1000` |
+| `platformFee.recipient` | `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c` |
+| `tokenTotalSupply` | `1000000000000000000000000` |
+| `evidenceFileSha256` | `sha256:1325d1333b6df9545cb87048e2b8d1c57a63af5b6790c329c0e95157a0d16d2c` |
+| `evidenceLineSha256` | `sha256:615a20b31f454afb020a8fa83653c7685328e3f12ad58d3ac11ddab2d02968b5` |
+
+Each published component proof returns the same launch ID and stamp hash:
+
+| `stampProofs[].component` | `stampProofs[].launchId` | `stampProofs[].stampHash` |
+| --- | --- | --- |
+| `0x87B108848B444bC44A01734D62C7be4a2fA64983` | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` | `0x06cb71b38d9b8b1dd1ffcdb00f31c774be36f5473979c3831d5fd0c96cdaa579` |
+| `0x9DEeB39D2590b0cAD5fc473F755C5F97Dcc8f7cE` | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` | `0x06cb71b38d9b8b1dd1ffcdb00f31c774be36f5473979c3831d5fd0c96cdaa579` |
+| `0xEBa46f25DfF528141dE5317109Acb5A989296044` | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` | `0x06cb71b38d9b8b1dd1ffcdb00f31c774be36f5473979c3831d5fd0c96cdaa579` |
+
+The canary source commit is separate from the deployed Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`; it does not replace the Router artifact binding. The two evidence SHA-256 values are supplied handoff digests, not files downloaded and recomputed in this repository.
+
+The liquidity, LP position, fee, and supply fields are observations at canary block `25717953`. They do not establish current liquidity, safety, audit status, sellability, tradability, route support, or third-party integration. The frozen Router source and tests cover both launch kinds through the same live ABI, but only `CustomGraph` has the published onchain canary. A future Classic launch qualifies only when the live Router writes a consistent `LaunchKindV1.Classic` stamp.
+
+### Guarantee and product boundary
+
+Only a launch with a consistent record written by the exact canonical Router on chain `1` at or after `startBlock` is Programmable through Router V1. The record proves that the Router atomically executed and stamped that launch, with the recorded pool uninitialized before route execution and initialized before the stamp. It does not universally prove that every Classic component was newly created. The same ABI, bytecode, event topics, metadata, logo, signer, or factory result from any other emitter does not qualify. Direct Classic V3 Factory, Graph Factory, and Single Factory calls outside the Router do not qualify.
+
+Publication makes this verification contract available to terminals; it does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. The GitHub approval to permit to wallet self-service launch flow is not live. These docs define read-only detection and verification, not a public launch-authoring flow.
+
+Generic discovery of the PCAN token or v4 pool through GMGN's `uniswap_v4` and `poolId` fields is ordinary token and pool discovery. It is not verification of the canonical Router stamp and does not show that GMGN integrated the Programmable label. Treat third-party market metrics as third-party observations, not canonical onchain evidence. Verify provenance through the Router and read current pool state separately through PoolManager or StateView.
 
 ## Scope
 
-Router V1 covers only launches executed through the activated Router at or after its published start block:
+Router V1 covers only launches executed through the live Router at or after its published start block:
 
 - future Programmable Classic launches;
 - future Programmable Custom launches; and
@@ -76,10 +149,11 @@ Normative ABI: [`abis/ethereum/programmable-launch-stamp-router-v1.json`](../../
 | Binding | Value |
 | --- | --- |
 | Contract | `ProgrammableLaunchStampRouterV1` |
+| Hosted ABI URL | `https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json` |
 | Source commit | `0a7134bbb912222639627fb9078df2f8dd3a6c38` |
 | Source tree | `24ffb0c6b04af7993254560b4f03608de8f52231` |
 | ABI extraction path | `out/ProgrammableLaunchStampRouterV1.sol/ProgrammableLaunchStampRouterV1.json` |
-| Published ABI SHA-256 | `bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86` |
+| Published ABI SHA-256 | `sha256:bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86` |
 
 The ABI hash is over the exact published file bytes, not normalized JSON. The Forge artifact path is an extraction reference. Its generated container is not tracked and its raw hash is intentionally not a trust field; parity is the exact `.abi` plus every `methodIdentifiers` entry at the pinned source commit and tree.
 
@@ -140,7 +214,7 @@ For an address-based lookup, `stampProof(address)` must return the same nonzero 
 
 | State | Meaning |
 | --- | --- |
-| `unavailable` | Router is prelaunch, the chain is inactive, or required manifest activation data is null |
+| `unavailable` | Router is not live for the requested block, the chain is inactive, or required manifest activation data is incomplete |
 | `not-stamped` | A valid canonical lookup returned `bytes32(0)` |
 | `stamped` | A nonzero lookup and its record, proof, identity, and bindings are consistent |
 | `indeterminate` | RPC, ABI, runtime, block, decoding, or cross-check evidence is incomplete or inconsistent |
@@ -153,9 +227,9 @@ Bind all reads in one result to one canonical block:
 
 1. Fetch the official discovery document and manifest.
 2. Require status `live`, or `retired` for a historical read within the published range.
-3. Require the complete trust tuple, deployment bindings, runtime hash, ABI hash, event descriptors, and getter descriptors.
+3. Require the complete trust tuple, finalized canary evidence, deployment bindings, runtime hash, ABI hash, event descriptors, and getter descriptors.
 4. Require `eth_chainId` to equal the manifest `chainId`.
-5. Resolve a finalized block or a caller-supplied canonical block to a concrete block number and hash. Do not mix `latest` reads. Use EIP-1898 `{ blockHash, requireCanonical: true }` for every `eth_getCode` and `eth_call` when the provider supports it. Otherwise use the resolved number for every read, then fetch that height again and require the closing hash to equal the opening hash before returning `stamped` or `not-stamped`.
+5. Resolve a finalized block or a caller-supplied canonical block to a concrete block number and hash. For an explicit block-number read, require the manifest's `64` confirmations. Do not mix `latest` reads. Use EIP-1898 `{ blockHash, requireCanonical: true }` for every `eth_getCode` and `eth_call` when the provider supports it. Otherwise use the resolved number for every read, then fetch that height again and require the closing hash to equal the opening hash before returning `stamped` or `not-stamped`.
 6. Enforce `startBlock` and, if retired, `endBlock`.
 7. Read Router code at that block and require its EVM Keccak-256 to equal `runtimeCodeHash`.
 8. Hash the fetched ABI bytes with SHA-256; validate every advertised selector, topic, and indexed layout against that ABI.
@@ -174,17 +248,20 @@ Runnable implementations:
 - [dependency-light JSON-RPC verifier](../../examples/verify-launch-stamp.mjs)
 - [viem verifier](../../examples/verify-launch-stamp-viem.ts)
 
-## Bulk discovery
+## Onchain backfill and live follow
 
-For `eth_getLogs`, use all of the following:
+Use one gap-free sequence for Router events:
 
-- `address` equals the exact manifest Router address;
-- `topic0` equals one of the manifest topics derived from the pinned ABI;
-- `fromBlock` is the Router start block;
-- `toBlock` respects the Router end block when retired; and
-- each stored log retains block hash, transaction hash, transaction index, and log index.
+1. Resolve the manifest and verify the Router identity, runtime, ABI URL, ABI SHA-256, events, getters, bindings, and finality policy.
+2. Backfill `eth_getLogs` from `startBlock` in bounded chunks. Filter by the exact manifest Router address and the complete manifest `topic0` set; respect `endBlock` if the Router is retired.
+3. Persist block number and hash, transaction hash and index, and log index for every candidate. Use those coordinates as the idempotency key.
+4. At the same canonical block, cross-check the relevant `launchIdByToken`, `launchIdByPool`, or exclusive `launchIdByComponent` result, then `launchStamp`; use `stampProof` for address-based token or component checks.
+5. Advance a durable checkpoint only through the finalized boundary. Apply the manifest's `64` confirmations to an explicit block-number boundary, or use the canonical finalized block.
+6. Replay an overlap window on every run. Deduplicate identical coordinates and apply corrections idempotently.
+7. If a stored block hash no longer matches, orphan affected observations, rewind to the last common finalized checkpoint, and replay before advancing.
+8. After backfill reaches the finalized boundary, begin polling or a subscription from the overlapping checkpoint. Reconcile subscription results through the same log and getter checks so the backfill-to-live handoff has no gap.
 
-Apply an explicit confirmation and reorg policy. A log with the correct topic from any other emitter is not Programmable provenance. Cross-check point getters and the record using hash-bound reads, or bracket number-bound reads with an unchanged block-hash check, before advancing a durable checkpoint.
+A log with the correct topic from any other emitter is not Programmable provenance. A subscription is transport, not evidence; never advance the durable finalized checkpoint from an unverified notification alone.
 
 ## Atomic write path
 

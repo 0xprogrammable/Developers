@@ -37,7 +37,7 @@ describe("launch stamp Router documentation", () => {
 
     assert.ok(router, "top-level launchStampRouter is required");
     assert.equal(manifest.customRegistry.launchStamp, undefined);
-    assert.equal(router.status, "prelaunch");
+    assert.equal(router.status, "live");
     assert.equal(router.scope, "future-launches-only");
     assert.equal(router.supportsFutureClassic, true);
     assert.equal(router.supportsFutureCustom, true);
@@ -93,18 +93,58 @@ describe("launch stamp Router documentation", () => {
       customGraph: 1,
       classic: 2,
     });
-    assert.deepEqual(router, fixture);
-
-    for (const value of [
-      router.address,
-      router.startBlock,
-      router.endBlock,
+    assert.equal(router.address, router.deploymentEvidence.address);
+    assert.equal(router.startBlock, router.deploymentEvidence.deploymentBlockNumber);
+    assert.equal(router.endBlock, null);
+    assert.equal(
       router.runtimeCodeHash,
-      router.finalityConfirmations,
-      ...Object.values(router.bindings),
-    ]) {
-      assert.equal(value, null, "prelaunch activation value must remain null");
+      router.deploymentEvidence.runtimeCodeKeccak256,
+    );
+    assert.equal(router.finalityConfirmations, 64);
+    assert.deepEqual(router.bindings, {
+      permitAuthority: "0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b",
+      permitAuthorityRuntimeCodeHash:
+        "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      graphFactory: "0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887",
+      graphFactoryRuntimeCodeHash:
+        "0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8",
+      poolManager: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      poolManagerRuntimeCodeHash:
+        "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
+    });
+    assert.equal(router.canaryEvidence.finality, "finalized");
+    assert.equal(
+      router.artifact.sourceCommit,
+      "0a7134bbb912222639627fb9078df2f8dd3a6c38",
+    );
+    assert.equal(
+      router.canaryEvidence.source.sourceCommit,
+      "b3cfed41bb841ae8d6188dbb815eddb5e1440218",
+    );
+    assert.notEqual(
+      router.artifact.sourceCommit,
+      router.canaryEvidence.source.sourceCommit,
+      "the canary source commit must not replace the deployed Router artifact source",
+    );
+    assert.deepEqual(router.canaryEvidence.routeCoverage, {
+      customGraphOnchainCanary: true,
+      classicOnchainCanary: false,
+    });
+    assert.equal(router.canaryEvidence.launchKind, router.enumValues.launchKind.customGraph);
+    assert.equal(router.canaryEvidence.pool.poolManager, router.bindings.poolManager);
+    assert.ok(
+      BigInt(router.canaryEvidence.blockNumber) >= BigInt(router.startBlock),
+      "canary must be at or after Router activation",
+    );
+    for (const proof of router.canaryEvidence.stampProofs) {
+      assert.equal(proof.launchId, router.canaryEvidence.launchId);
+      assert.equal(proof.stampHash, router.canaryEvidence.stampHash);
     }
+    assert.deepEqual(
+      router.canaryEvidence.stampProofs.map(({ component }) => component),
+      Object.values(router.canaryEvidence.components),
+    );
+    assert.deepEqual(fixture, prelaunchDescriptor(router));
     assert.match(router.abiSha256, /^sha256:[0-9a-f]{64}$/);
     assert.match(router.atomicSelector, /^0x[0-9a-f]{8}$/);
     assert.ok(Object.values(router.events).every(Boolean));
@@ -118,13 +158,11 @@ describe("launch stamp Router documentation", () => {
 
     assertValid(validate, manifest, "launchStampRouter manifest");
 
-    const falseLive = structuredClone(manifest);
-    falseLive.launchStampRouter.status = "live";
-    assert.equal(
-      validate(falseLive),
-      false,
-      "live Router requires complete deployment evidence",
+    const prelaunch = structuredClone(manifest);
+    prelaunch.launchStampRouter = prelaunchDescriptor(
+      prelaunch.launchStampRouter,
     );
+    assertValid(validate, prelaunch, "prelaunch Router fixture");
 
     for (const mutate of [
       (router) => {
@@ -140,13 +178,46 @@ describe("launch stamp Router documentation", () => {
         router.bindings.permitAuthority =
           "0x1111111111111111111111111111111111111111";
       },
+      (router) => {
+        router.canaryEvidence = {};
+      },
     ]) {
-      const falsePrelaunch = structuredClone(manifest);
+      const falsePrelaunch = structuredClone(prelaunch);
       mutate(falsePrelaunch.launchStampRouter);
       assert.equal(
         validate(falsePrelaunch),
         false,
         "prelaunch Router cannot carry partial activation data",
+      );
+    }
+
+    for (const mutate of [
+      (router) => {
+        router.address = "0x1111111111111111111111111111111111111111";
+      },
+      (router) => {
+        router.startBlock = "1";
+      },
+      (router) => {
+        router.runtimeCodeHash = `0x${"1".repeat(64)}`;
+      },
+      (router) => {
+        router.finalityConfirmations = 63;
+      },
+      (router) => {
+        router.bindings.poolManager =
+          "0x1111111111111111111111111111111111111111";
+      },
+      (router) => {
+        router.canaryEvidence = null;
+      },
+    ]) {
+      const activationDrift = structuredClone(manifest);
+      mutate(activationDrift.launchStampRouter);
+      assert.equal(
+        validate(activationDrift),
+        false,
+        "live Router activation drift must fail schema validation",
       );
     }
 
@@ -174,6 +245,60 @@ describe("launch stamp Router documentation", () => {
         validate(evidenceDrift),
         false,
         "finalized Router deployment evidence drift must fail schema validation",
+      );
+    }
+
+    for (const mutate of [
+      (evidence) => {
+        evidence.finality = "pending";
+      },
+      (evidence) => {
+        evidence.routeCoverage.classicOnchainCanary = true;
+      },
+      (evidence) => {
+        evidence.source.sourceCommit = "1".repeat(40);
+      },
+      (evidence) => {
+        evidence.transactionHash = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.blockNumber = "1";
+      },
+      (evidence) => {
+        evidence.launchId = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.stampHash = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.components.token =
+          "0x1111111111111111111111111111111111111111";
+      },
+      (evidence) => {
+        evidence.pool.activeLiquidity = "1";
+      },
+      (evidence) => {
+        evidence.lpPosition.tokenId = "1";
+      },
+      (evidence) => {
+        evidence.platformFee.feePips = 1;
+      },
+      (evidence) => {
+        evidence.tokenTotalSupply = "1";
+      },
+      (evidence) => {
+        evidence.stampProofs[0].stampHash = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.evidenceFileSha256 = `sha256:${"1".repeat(64)}`;
+      },
+    ]) {
+      const canaryDrift = structuredClone(manifest);
+      mutate(canaryDrift.launchStampRouter.canaryEvidence);
+      assert.equal(
+        validate(canaryDrift),
+        false,
+        "approved finalized Router canary evidence drift must fail schema validation",
       );
     }
 
@@ -338,6 +463,14 @@ describe("launch stamp Router documentation", () => {
       path.join(REPOSITORY_ROOT, "docs/reference/launch-stamp.md"),
       "utf8",
     );
+    const terminalGuide = await readFile(
+      path.join(REPOSITORY_ROOT, "docs/guides/terminals-and-scanners.md"),
+      "utf8",
+    );
+    const faq = await readFile(
+      path.join(REPOSITORY_ROOT, "docs/faq.md"),
+      "utf8",
+    );
     const manifest = await readJson(MANIFEST_PATH);
     const router = manifest.launchStampRouter;
 
@@ -361,12 +494,49 @@ describe("launch stamp Router documentation", () => {
     assert.match(guide, /Single Factory is outside Router V1/i);
     assert.match(guide, /no EOA authority fallback/i);
     assert.match(guide, /proxy or beacon/i);
-    assert.match(guide, /does not state that a contract is audited, safe, liquid, sellable/i);
+    assert.match(guide, /does not establish current pool state or current liquidity/i);
+    assert.match(guide, /does not state that a contract is audited, safe, sellable/i);
     assert.match(guide, /Custom Registry, hosted launch feed, an indexer, Supabase/i);
     assert.match(guide, /generated container is not tracked/i);
     assert.match(guide, /raw hash is intentionally not a trust field/i);
-    assert.match(guide, /not activated for terminal classification yet/i);
-    assert.match(guide, /separately published deployment evidence does not fill an activation field/i);
+    assert.match(guide, /Router V1 is live on Ethereum/i);
+    assert.match(
+      guide,
+      /routeCoverage\.customGraphOnchainCanary`\s*\|\s*`true/,
+    );
+    assert.match(guide, /no separate Classic onchain canary/i);
+    assert.match(guide, /future Classic launch qualifies only when.*stamp/i);
+    assert.match(guide, /requires `64` confirmations/i);
+    assert.match(guide, /finalized PCAN test vector/i);
+    assert.match(guide, /\/launchStampRouter\/canaryEvidence/);
+    assert.match(guide, /PCAN.*not an additional launch or trust identifier/i);
+    assert.match(guide, /eth_getLogs/);
+    assert.match(guide, /bounded chunks/i);
+    assert.match(guide, /durable checkpoint only through the finalized boundary/i);
+    assert.match(guide, /Replay an overlap window/i);
+    assert.match(guide, /orphan affected observations/i);
+    assert.match(guide, /rewind to the last common finalized checkpoint/i);
+    assert.match(guide, /polling or a subscription/i);
+    assert.match(guide, /backfill-to-live handoff has no gap/i);
+    assert.match(guide, /Only a launch with a consistent record written by the exact canonical Router/i);
+    assert.match(guide, /uninitialized before route execution and initialized before the stamp/i);
+    assert.match(guide, /does not universally prove that every Classic component was newly created/i);
+    assert.match(guide, /does not mean GMGN, Axiom, FOMO/i);
+    assert.match(guide, /ordinary token and pool discovery/i);
+    assert.match(guide, /not verification of the canonical Router stamp/i);
+    assert.match(guide, /current pool state separately through PoolManager or StateView/i);
+    assert.match(guide, /not an Explorer source-publication status/i);
+    assert.match(guide, /GitHub approval to permit to wallet self-service launch flow is not live/i);
+    assert.match(terminalGuide, /finalized PCAN test vector/i);
+    assert.match(terminalGuide, /backfill-to-live handoff has no gap/i);
+    assert.match(terminalGuide, /subscription notification alone is not provenance/i);
+    assert.match(terminalGuide, /does not mean GMGN, Axiom, FOMO/i);
+    assert.match(terminalGuide, /ordinary market/i);
+    assert.match(terminalGuide, /read current pool state separately through PoolManager or StateView/i);
+    assert.match(faq, /self-service launch live/i);
+    assert.match(faq, /ordinary token and pool listing/i);
+    assert.match(faq, /not canonical onchain evidence/i);
+    assert.match(faq, /No\./);
     assert.doesNotMatch(guide, /Registry lifecycle/i);
 
     for (const value of [
@@ -380,6 +550,36 @@ describe("launch stamp Router documentation", () => {
       router.deploymentEvidence.runtimeCodeSha256.slice("sha256:".length),
       router.deploymentEvidence.getterBundleSha256.slice("sha256:".length),
       router.deploymentEvidence.evidenceSha256.slice("sha256:".length),
+      router.address,
+      router.startBlock,
+      router.runtimeCodeHash,
+      router.abiUrl,
+      router.canaryEvidence.source.sourceRepository,
+      router.canaryEvidence.source.sourceCommit,
+      router.canaryEvidence.source.commitSubject,
+      router.canaryEvidence.transactionHash,
+      router.canaryEvidence.blockNumber,
+      router.canaryEvidence.blockHash,
+      router.canaryEvidence.launchId,
+      router.canaryEvidence.stampHash,
+      ...Object.values(router.canaryEvidence.components),
+      router.canaryEvidence.pool.poolManager,
+      router.canaryEvidence.pool.poolId,
+      router.canaryEvidence.pool.activeLiquidity,
+      router.canaryEvidence.lpPosition.positionManager,
+      router.canaryEvidence.lpPosition.tokenId,
+      router.canaryEvidence.lpPosition.owner,
+      router.canaryEvidence.platformFee.recipient,
+      router.canaryEvidence.tokenTotalSupply,
+      ...router.canaryEvidence.stampProofs.flatMap(
+        ({ component, launchId, stampHash }) => [
+          component,
+          launchId,
+          stampHash,
+        ],
+      ),
+      router.canaryEvidence.evidenceFileSha256.slice("sha256:".length),
+      router.canaryEvidence.evidenceLineSha256.slice("sha256:".length),
       router.abiSha256.slice("sha256:".length),
       router.atomicSelector,
       router.eip712.permitType,
@@ -493,8 +693,10 @@ describe("launch stamp Router documentation", () => {
       poolManager: addresses.poolManager,
       poolManagerRuntimeCodeHash: runtimeCodeHash,
     });
+    router.canaryEvidence.pool.poolManager = addresses.poolManager;
 
     let servedManifest = { ...publishedManifest, launchStampRouter: router };
+    let chainHead = 100n;
     const canonicalReadParams = [];
     const server = createServer(async (request, response) => {
       response.setHeader("content-type", "application/json");
@@ -528,6 +730,8 @@ describe("launch stamp Router documentation", () => {
         let result;
         if (body.method === "eth_chainId") {
           result = "0x1";
+        } else if (body.method === "eth_blockNumber") {
+          result = `0x${chainHead.toString(16)}`;
         } else if (body.method === "eth_getBlockByNumber") {
           result = { number: "0x64", hash: blockHash };
         } else if (body.method === "eth_getCode") {
@@ -601,6 +805,50 @@ describe("launch stamp Router documentation", () => {
         "router-activation-incomplete",
       );
 
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, finalityConfirmations: 0 },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-activation-incomplete",
+      );
+
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, canaryEvidence: null },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-canary-evidence-incomplete",
+      );
+
+      const falseClassicCoverage = structuredClone(router.canaryEvidence);
+      falseClassicCoverage.routeCoverage.classicOnchainCanary = true;
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: {
+          ...router,
+          canaryEvidence: falseClassicCoverage,
+        },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-canary-evidence-incomplete",
+      );
+
       servedManifest = { ...servedManifest, launchStampRouter: router };
       const insecureRpc = await verifyLaunchStamp({
         kind: "token",
@@ -610,6 +858,27 @@ describe("launch stamp Router documentation", () => {
       });
       assert.equal(insecureRpc.state, "indeterminate");
       assert.equal(insecureRpc.reason, "rpc-url-https-required");
+
+      const insufficientFinality = await verifyLaunchStamp({
+        kind: "token",
+        values: [addresses.token],
+        discoveryUrl,
+        rpcUrl: `http://127.0.0.1:${port}/rpc`,
+        blockTag: "100",
+      });
+      assert.equal(insufficientFinality.state, "indeterminate");
+      assert.equal(insufficientFinality.reason, "block-finality-insufficient");
+
+      chainHead = 101n;
+      const explicitFinalizedZero = await verifyLaunchStamp({
+        kind: "token",
+        values: [addresses.token],
+        discoveryUrl,
+        rpcUrl: `http://127.0.0.1:${port}/rpc`,
+        blockTag: "100",
+      });
+      assert.equal(explicitFinalizedZero.state, "not-stamped");
+      assert.equal(explicitFinalizedZero.reason, "zero-launch-id");
 
       const verifiedZero = await verifyLaunchStamp({
         kind: "token",
@@ -642,12 +911,29 @@ describe("launch stamp Router documentation", () => {
     assert.match(source, /router\.status !== "live" && router\.status !== "retired"/);
     assert.match(source, /typeof router\.finalityConfirmations !== "number"/);
     assert.match(source, /Number\.isInteger\(router\.finalityConfirmations\)/);
-    assert.match(source, /router\.finalityConfirmations < 0/);
+    assert.match(source, /router\.finalityConfirmations <= 0/);
     assert.match(source, /checkedHttpsOrLocalUrl\(rpcUrl\)/);
     assert.match(source, /await requireUnchangedBlock\(client, blockNumber, blockHash\)/);
     assert.match(source, /closingBlock\.hash\.toLowerCase\(\) !== expectedHash\.toLowerCase\(\)/);
   });
 });
+
+function prelaunchDescriptor(router) {
+  const descriptor = structuredClone(router);
+  Object.assign(descriptor, {
+    status: "prelaunch",
+    address: null,
+    startBlock: null,
+    endBlock: null,
+    runtimeCodeHash: null,
+    canaryEvidence: null,
+    finalityConfirmations: null,
+  });
+  for (const key of Object.keys(descriptor.bindings)) {
+    descriptor.bindings[key] = null;
+  }
+  return descriptor;
+}
 
 async function readRequestJson(request) {
   const chunks = [];

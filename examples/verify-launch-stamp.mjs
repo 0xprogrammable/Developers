@@ -73,6 +73,19 @@ async function verifyActiveRouter({
     fail("canonical-block-unavailable");
   }
   const blockNumber = parseQuantity(block.number, "block number");
+  if (requestedBlock !== "finalized") {
+    const chainHead = parseQuantity(
+      await callRpc("eth_blockNumber", []),
+      "chain head",
+    );
+    const requiredConfirmations = BigInt(router.finalityConfirmations);
+    if (
+      chainHead < blockNumber ||
+      chainHead - blockNumber < requiredConfirmations
+    ) {
+      fail("block-finality-insufficient");
+    }
+  }
   const startBlock = BigInt(router.startBlock);
   if (blockNumber < startBlock) fail("block-before-router-start");
   if (
@@ -234,7 +247,7 @@ function activationUnavailableReason(router) {
     !isSha256(router.abiSha256) ||
     !httpsOrLocalUrl(router.abiUrl) ||
     !Number.isInteger(router.finalityConfirmations) ||
-    router.finalityConfirmations < 0 ||
+    router.finalityConfirmations <= 0 ||
     typeof router.atomicSignature !== "string" ||
     !selector(router.atomicSelector)
   ) {
@@ -246,15 +259,11 @@ function activationUnavailableReason(router) {
   ) {
     return "router-retirement-range-invalid";
   }
-  if (
-    !router.bindings ||
-    Object.values(router.bindings).some((value) =>
-      value?.startsWith?.("0x") && value.length === 42
-        ? !address(value)
-        : !isHash32(value),
-    )
-  ) {
+  if (!completeBindings(router.bindings)) {
     return "router-bindings-incomplete";
+  }
+  if (!completeCanaryEvidence(router.canaryEvidence, router)) {
+    return "router-canary-evidence-incomplete";
   }
   const requiredGetters = [
     router.getters?.chainId,
@@ -282,6 +291,103 @@ function activationUnavailableReason(router) {
     return "router-events-incomplete";
   }
   return null;
+}
+
+function completeCanaryEvidence(evidence, router) {
+  if (!evidence || typeof evidence !== "object") return false;
+  if (
+    evidence.finality !== "finalized" ||
+    evidence.routeCoverage?.customGraphOnchainCanary !== true ||
+    evidence.routeCoverage?.classicOnchainCanary !== false ||
+    !evidence.source ||
+    typeof evidence.source !== "object" ||
+    !remoteHttpsUrl(evidence.source.sourceRepository) ||
+    !sourceCommit(evidence.source.sourceCommit) ||
+    typeof evidence.source.commitSubject !== "string" ||
+    evidence.source.commitSubject.trim().length === 0 ||
+    !nonzeroHash32(evidence.transactionHash) ||
+    !decimal(evidence.blockNumber) ||
+    BigInt(evidence.blockNumber) < BigInt(router.startBlock) ||
+    !nonzeroHash32(evidence.blockHash) ||
+    !nonzeroHash32(evidence.launchId) ||
+    !nonzeroHash32(evidence.stampHash) ||
+    evidence.launchKind !== 1 ||
+    !isSha256(evidence.evidenceFileSha256) ||
+    !isSha256(evidence.evidenceLineSha256)
+  ) {
+    return false;
+  }
+
+  const components = evidence.components;
+  const componentAddresses = [
+    components?.initializer,
+    components?.token,
+    components?.hook,
+  ];
+  const normalizedComponents = componentAddresses.map((value) =>
+    nonzeroAddress(value) ? normalizeAddress(value) : null,
+  );
+  if (
+    normalizedComponents.some((value) => value === null) ||
+    new Set(normalizedComponents).size !== 3
+  ) {
+    return false;
+  }
+
+  if (
+    !evidence.pool ||
+    typeof evidence.pool !== "object" ||
+    !nonzeroAddress(evidence.pool.poolManager) ||
+    normalizeAddress(evidence.pool.poolManager) !==
+      normalizeAddress(router.bindings.poolManager) ||
+    !nonzeroHash32(evidence.pool.poolId) ||
+    !positiveDecimal(evidence.pool.activeLiquidity) ||
+    !evidence.lpPosition ||
+    typeof evidence.lpPosition !== "object" ||
+    !nonzeroAddress(evidence.lpPosition.positionManager) ||
+    !positiveDecimal(evidence.lpPosition.tokenId) ||
+    !nonzeroAddress(evidence.lpPosition.owner) ||
+    !evidence.platformFee ||
+    typeof evidence.platformFee !== "object" ||
+    !Number.isSafeInteger(evidence.platformFee.feePips) ||
+    evidence.platformFee.feePips < 0 ||
+    evidence.platformFee.feePips > 1_000_000 ||
+    !nonzeroAddress(evidence.platformFee.recipient) ||
+    !positiveDecimal(evidence.tokenTotalSupply)
+  ) {
+    return false;
+  }
+
+  if (!Array.isArray(evidence.stampProofs) || evidence.stampProofs.length !== 3) {
+    return false;
+  }
+  const proofComponents = [];
+  for (const proof of evidence.stampProofs) {
+    const component = normalizeAddress(proof?.component);
+    if (
+      component === null ||
+      !sameHash32(proof?.launchId, evidence.launchId) ||
+      !sameHash32(proof?.stampHash, evidence.stampHash)
+    ) {
+      return false;
+    }
+    proofComponents.push(component);
+  }
+  return (
+    new Set(proofComponents).size === 3 &&
+    normalizedComponents.every((component) => proofComponents.includes(component))
+  );
+}
+
+function completeBindings(bindings) {
+  return (
+    nonzeroAddress(bindings?.permitAuthority) &&
+    nonzeroHash32(bindings?.permitAuthorityRuntimeCodeHash) &&
+    nonzeroAddress(bindings?.graphFactory) &&
+    nonzeroHash32(bindings?.graphFactoryRuntimeCodeHash) &&
+    nonzeroAddress(bindings?.poolManager) &&
+    nonzeroHash32(bindings?.poolManagerRuntimeCodeHash)
+  );
 }
 
 function validatePublishedAbi(abi, router) {
@@ -663,6 +769,10 @@ function address(value) {
   return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value);
 }
 
+function nonzeroAddress(value) {
+  return address(value) && !/^0x0{40}$/i.test(value);
+}
+
 function normalizeAddress(value) {
   return address(value) ? value.toLowerCase() : null;
 }
@@ -671,8 +781,28 @@ function decimal(value) {
   return typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value);
 }
 
+function positiveDecimal(value) {
+  return decimal(value) && BigInt(value) > 0n;
+}
+
 function isHash32(value) {
   return typeof value === "string" && /^0x[0-9a-f]{64}$/.test(value);
+}
+
+function nonzeroHash32(value) {
+  return isHash32(value) && value !== ZERO_BYTES32;
+}
+
+function sameHash32(left, right) {
+  return (
+    nonzeroHash32(left) &&
+    nonzeroHash32(right) &&
+    left.toLowerCase() === right.toLowerCase()
+  );
+}
+
+function sourceCommit(value) {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
 }
 
 function isSha256(value) {
@@ -708,6 +838,20 @@ function httpsOrLocalUrl(value) {
   try {
     checkedUrl(value, "URL", false);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+function remoteHttpsUrl(value) {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname.length > 0 &&
+      !url.username &&
+      !url.password
+    );
   } catch {
     return false;
   }

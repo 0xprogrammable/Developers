@@ -22,6 +22,23 @@ type Query =
   | { kind: "token" | "component"; address: Address }
   | { kind: "pool"; poolManager: Address; poolId: Hex };
 
+type ReadClient = {
+  call(parameters: {
+    to: Address;
+    data: Hex;
+    blockNumber: bigint;
+  }): Promise<{ data?: Hex }>;
+  getBlock(
+    parameters: { blockTag: "finalized" } | { blockNumber: bigint },
+  ): Promise<{ number: bigint; hash: Hex }>;
+  getBlockNumber(parameters?: { cacheTime?: number }): Promise<bigint>;
+  getBytecode(parameters: {
+    address: Address;
+    blockNumber: bigint;
+  }): Promise<Hex | undefined>;
+  getChainId(): Promise<number>;
+};
+
 type GetterDescriptor = {
   signature: string;
   selector: Hex;
@@ -48,6 +65,52 @@ type ActiveRouterBindings = {
   [Key in keyof RouterBindings]: NonNullable<RouterBindings[Key]>;
 };
 
+type CanaryEvidence = {
+  finality: "finalized";
+  routeCoverage: {
+    customGraphOnchainCanary: boolean;
+    classicOnchainCanary: boolean;
+  };
+  source: {
+    sourceRepository: string;
+    sourceCommit: string;
+    commitSubject: string;
+  };
+  transactionHash: Hex;
+  blockNumber: string;
+  blockHash: Hex;
+  launchId: Hex;
+  stampHash: Hex;
+  launchKind: number;
+  components: {
+    initializer: Address;
+    token: Address;
+    hook: Address;
+  };
+  pool: {
+    poolManager: Address;
+    poolId: Hex;
+    activeLiquidity: string;
+  };
+  lpPosition: {
+    positionManager: Address;
+    tokenId: string;
+    owner: Address;
+  };
+  platformFee: {
+    feePips: number;
+    recipient: Address;
+  };
+  tokenTotalSupply: string;
+  stampProofs: Array<{
+    component: Address;
+    launchId: Hex;
+    stampHash: Hex;
+  }>;
+  evidenceFileSha256: string;
+  evidenceLineSha256: string;
+};
+
 type RouterManifest = {
   status: "prelaunch" | "live" | "retired";
   address: Address | null;
@@ -57,6 +120,7 @@ type RouterManifest = {
   abiUrl: string;
   abiSha256: string | null;
   finalityConfirmations: number | null;
+  canaryEvidence: CanaryEvidence | null;
   atomicSignature: string;
   atomicSelector: Hex;
   bindings: RouterBindings;
@@ -92,7 +156,7 @@ export async function verifyLaunchStampWithViem({
     !router.abiSha256 ||
     typeof router.finalityConfirmations !== "number" ||
     !Number.isInteger(router.finalityConfirmations) ||
-    router.finalityConfirmations < 0 ||
+    router.finalityConfirmations <= 0 ||
     !router.atomicSignature ||
     !router.atomicSelector ||
     !completeBindings(router.bindings) ||
@@ -111,7 +175,8 @@ export async function verifyLaunchStampWithViem({
     !router.getters.component ||
     !router.getters.componentRuntimeCodeHash ||
     !router.getters.record ||
-    !router.getters.stampProof
+    !router.getters.stampProof ||
+    !completeCanaryEvidence(router.canaryEvidence, router)
   ) {
     return result("unavailable", "router-prelaunch-or-incomplete", query);
   }
@@ -123,7 +188,9 @@ export async function verifyLaunchStampWithViem({
   } catch {
     return result("indeterminate", "rpc-https-required", query);
   }
-  const client = createPublicClient({ transport: http(checkedRpcUrl.toString()) });
+  const client = createPublicClient({
+    transport: http(checkedRpcUrl.toString()),
+  }) as unknown as ReadClient;
   try {
     const chainId = await client.getChainId();
     if (chainId !== manifest.chainId) {
@@ -136,6 +203,16 @@ export async function verifyLaunchStampWithViem({
         : await client.getBlock({ blockNumber: block });
     const blockNumber = canonicalBlock.number;
     const blockHash = canonicalBlock.hash;
+    if (block !== "finalized") {
+      const chainHead = await client.getBlockNumber({ cacheTime: 0 });
+      const requiredConfirmations = BigInt(router.finalityConfirmations);
+      if (
+        chainHead < blockNumber ||
+        chainHead - blockNumber < requiredConfirmations
+      ) {
+        return result("indeterminate", "block-finality-insufficient", query);
+      }
+    }
     if (blockNumber < BigInt(router.startBlock)) {
       return result("unavailable", "block-before-router-start", query);
     }
@@ -349,7 +426,7 @@ async function callFunction({
   item,
   args,
 }: {
-  client: ReturnType<typeof createPublicClient>;
+  client: ReadClient;
   router: Address;
   blockNumber: bigint;
   item: AbiFunction;
@@ -424,7 +501,7 @@ async function validateImmutableBindings({
   bindings: ActiveRouterBindings;
   blockNumber: bigint;
   chainId: number;
-  client: ReturnType<typeof createPublicClient>;
+  client: ReadClient;
   router: RouterManifest;
   routerAddress: Address;
 }) {
@@ -500,7 +577,7 @@ async function validateImmutableBindings({
 }
 
 async function requireUnchangedBlock(
-  client: ReturnType<typeof createPublicClient>,
+  client: ReadClient,
   blockNumber: bigint,
   expectedHash: Hex,
 ) {
@@ -556,12 +633,95 @@ function completeBindings(
   bindings: RouterBindings | undefined,
 ): bindings is ActiveRouterBindings {
   return Boolean(
-    bindings?.permitAuthority &&
-      bindings.permitAuthorityRuntimeCodeHash &&
-      bindings.graphFactory &&
-      bindings.graphFactoryRuntimeCodeHash &&
-      bindings.poolManager &&
-      bindings.poolManagerRuntimeCodeHash,
+    nonzeroAddress(bindings?.permitAuthority) &&
+      nonzeroHash32(bindings?.permitAuthorityRuntimeCodeHash) &&
+      nonzeroAddress(bindings?.graphFactory) &&
+      nonzeroHash32(bindings?.graphFactoryRuntimeCodeHash) &&
+      nonzeroAddress(bindings?.poolManager) &&
+      nonzeroHash32(bindings?.poolManagerRuntimeCodeHash),
+  );
+}
+
+function completeCanaryEvidence(
+  value: CanaryEvidence | null | undefined,
+  router: RouterManifest,
+): value is CanaryEvidence {
+  if (!value || typeof value !== "object") return false;
+  const evidence = value as Partial<CanaryEvidence>;
+  if (
+    evidence.finality !== "finalized" ||
+    evidence.routeCoverage?.customGraphOnchainCanary !== true ||
+    evidence.routeCoverage?.classicOnchainCanary !== false ||
+    !remoteHttpsUrl(evidence.source?.sourceRepository) ||
+    !sourceCommit(evidence.source?.sourceCommit) ||
+    typeof evidence.source?.commitSubject !== "string" ||
+    evidence.source.commitSubject.trim().length === 0 ||
+    !nonzeroHash32(evidence.transactionHash) ||
+    !decimal(evidence.blockNumber) ||
+    !decimal(router.startBlock) ||
+    BigInt(evidence.blockNumber) < BigInt(router.startBlock) ||
+    !nonzeroHash32(evidence.blockHash) ||
+    !nonzeroHash32(evidence.launchId) ||
+    !nonzeroHash32(evidence.stampHash) ||
+    evidence.launchKind !== 1 ||
+    !sha256Digest(evidence.evidenceFileSha256) ||
+    !sha256Digest(evidence.evidenceLineSha256)
+  ) {
+    return false;
+  }
+
+  const componentAddresses = [
+    evidence.components?.initializer,
+    evidence.components?.token,
+    evidence.components?.hook,
+  ];
+  const normalizedComponents = componentAddresses.map((component) =>
+    nonzeroAddress(component) ? normalizeAddress(component) : null,
+  );
+  if (
+    normalizedComponents.some((component) => component === null) ||
+    new Set(normalizedComponents).size !== 3
+  ) {
+    return false;
+  }
+
+  if (
+    !nonzeroAddress(evidence.pool?.poolManager) ||
+    normalizeAddress(evidence.pool?.poolManager) !==
+      normalizeAddress(router.bindings.poolManager) ||
+    !nonzeroHash32(evidence.pool?.poolId) ||
+    !positiveDecimal(evidence.pool?.activeLiquidity) ||
+    !nonzeroAddress(evidence.lpPosition?.positionManager) ||
+    !positiveDecimal(evidence.lpPosition?.tokenId) ||
+    !nonzeroAddress(evidence.lpPosition?.owner) ||
+    !Number.isSafeInteger(evidence.platformFee?.feePips) ||
+    (evidence.platformFee?.feePips ?? -1) < 0 ||
+    (evidence.platformFee?.feePips ?? 1_000_001) > 1_000_000 ||
+    !nonzeroAddress(evidence.platformFee?.recipient) ||
+    !positiveDecimal(evidence.tokenTotalSupply) ||
+    !Array.isArray(evidence.stampProofs) ||
+    evidence.stampProofs.length !== 3
+  ) {
+    return false;
+  }
+
+  const proofComponents: string[] = [];
+  for (const proof of evidence.stampProofs) {
+    const component = normalizeAddress(proof?.component);
+    if (
+      component === null ||
+      !sameHash32(proof?.launchId, evidence.launchId) ||
+      !sameHash32(proof?.stampHash, evidence.stampHash)
+    ) {
+      return false;
+    }
+    proofComponents.push(component);
+  }
+  return (
+    new Set(proofComponents).size === 3 &&
+    normalizedComponents.every(
+      (component) => component !== null && proofComponents.includes(component),
+    )
   );
 }
 
@@ -619,12 +779,56 @@ function normalizeAddress(value: unknown) {
     : null;
 }
 
+function nonzeroAddress(value: unknown): value is Address {
+  const normalized = normalizeAddress(value);
+  return normalized !== null && normalized !== `0x${"0".repeat(40)}`;
+}
+
 function nonzeroHash32(value: unknown): value is Hex {
   return (
     typeof value === "string" &&
     /^0x[0-9a-fA-F]{64}$/.test(value) &&
     value.toLowerCase() !== ZERO_BYTES32
   );
+}
+
+function sameHash32(left: unknown, right: unknown) {
+  return (
+    nonzeroHash32(left) &&
+    nonzeroHash32(right) &&
+    left.toLowerCase() === right.toLowerCase()
+  );
+}
+
+function decimal(value: unknown): value is string {
+  return typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value);
+}
+
+function positiveDecimal(value: unknown): value is string {
+  return decimal(value) && BigInt(value) > 0n;
+}
+
+function sourceCommit(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+
+function sha256Digest(value: unknown): value is string {
+  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+}
+
+function remoteHttpsUrl(value: unknown) {
+  if (typeof value !== "string") return false;
+  try {
+    const parsed = new URL(value);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.hostname.length > 0 &&
+      !parsed.username &&
+      !parsed.password
+    );
+  } catch {
+    return false;
+  }
 }
 
 function result(state: string, reason: string, query: Query) {

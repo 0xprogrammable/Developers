@@ -12,6 +12,7 @@ GET https://developers.programmable.family/api/v2/manifest
 | Surface | Category | Network | State | Meaning |
 | --- | --- | --- | --- | --- |
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
+| Router V1 future-launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Programmable Custom intake | `custom` | Ethereum | Prelaunch | Approved submissions are not yet a live launch source |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active; general public intake remains prelaunch |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
@@ -24,6 +25,10 @@ GET https://developers.programmable.family/api/v2/manifest
 `custom` is reserved for accepted Custom Registry launches. It is not a generic label for every launch outside Classic and it does not imply that Custom intake is live.
 
 After registry activation, different providers, factories, templates, token contracts and hook contracts all use the same `custom` category. Their particular behavior is described by provenance, markets, capabilities, verification, fees and extensions rather than additional public categories.
+
+## Router V1 status
+
+The manifest publishes Router V1 as `live` at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`, with runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546` and `64` finality confirmations. Its approved finalized onchain canary covers `CustomGraph`. No separate Classic onchain canary is published; a future Classic launch is recognized only from a consistent stamp written by the same live Router. This is origin evidence, not a safety, audit, liquidity, tradability, or terminal-support claim.
 
 ## What prelaunch means
 

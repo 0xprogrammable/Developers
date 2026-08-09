@@ -53,18 +53,18 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`verify-launch-stamp-viem.ts`](verify-launch-stamp-viem.ts) | Equivalent Router point lookup with viem and the same concrete-block, runtime, and record checks |
 | [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest and paginated launch feed with curl |
 
-## Future launch Router lookup
+## Live future-launch Router lookup
 
-After the v2 manifest activates the stamp, verify a token or primary contract directly through Ethereum JSON-RPC:
+Verify a future token or primary contract stamped at or after Router start block `25717612` directly through Ethereum JSON-RPC:
 
 ```sh
 PROGRAMMABLE_RPC_URL=https://your-rpc.example \
   node examples/verify-launch-stamp.mjs token 0x1111111111111111111111111111111111111111
 ```
 
-The examples discover the canonical Router address, start block, runtime hash, ABI hash, immutable bindings, event layouts, atomic selector, and getter descriptors from top-level `launchStampRouter`. They contain no Programmable deployment address and return `unavailable` while the Router is prelaunch. Token and exclusive-component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId. Historical launches are outside Router V1.
+The examples discover the canonical Router address, start block, runtime hash, ABI hash, finality policy, finalized canary evidence, immutable bindings, event layouts, atomic selector, and getter descriptors from top-level `launchStampRouter`. They contain no Programmable deployment address and return `unavailable` when the Router is inactive or its required manifest evidence is incomplete. Token and exclusive-component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId. Historical launches are outside Router V1.
 
-Both future public labels use the same Router stamp. `LaunchKindV1.CustomGraph = 1` maps to `Programmable Custom`; `LaunchKindV1.Classic = 2` maps to `Programmable Classic`; `Invalid = 0` is rejected. Universal detection uses token or `(PoolManager, PoolId)`. The shared Classic hook never identifies one Classic launch, and the examples never infer a class from metadata, a hook, or a factory call. Address-based lookups also cross-check `stampProof`.
+Both future public labels use the same Router stamp. `LaunchKindV1.CustomGraph = 1` maps to `Programmable Custom`; `LaunchKindV1.Classic = 2` maps to `Programmable Classic`; `Invalid = 0` is rejected. Universal detection uses token or `(PoolManager, PoolId)`. The shared Classic hook never identifies one Classic launch, and the examples never infer a class from metadata, a hook, or a factory call. Address-based lookups also cross-check `stampProof`. The published finalized canary covers `CustomGraph`; no separate Classic onchain canary is published. A future Classic label still requires a consistent live Router stamp.
 
 Install `viem` in an existing TypeScript project to use the typed variant:
 

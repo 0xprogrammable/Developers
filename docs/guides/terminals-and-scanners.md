@@ -40,7 +40,7 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
 
-For direct onchain consumers, keep the existing deployment sources and the future Router source separate:
+For direct onchain consumers, keep the existing deployment sources and the live future-launch Router source separate. The manifest marks Router V1 live from block `25717612` with `64` finality confirmations. Its finalized onchain canary covers `CustomGraph`; no separate Classic onchain canary is published. A future Classic label still requires a consistent stamp from the live Router.
 
 1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
 2. Existing `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
@@ -51,7 +51,13 @@ For an interoperable Router point lookup, use the manifest-advertised getter for
 
 Logs qualify only when both the emitter and `topic0` exactly match the manifest-bound Router and ABI. A copied event from another address, direct Classic V3 Factory or Graph Factory calls, and every Single Factory call are outside Router V1 provenance.
 
+For a direct onchain Router index, backfill `eth_getLogs` from the manifest `startBlock` in finality-bounded chunks, filtered by the exact Router emitter and complete topic set. Persist block hash, transaction hash and index, and log index. Verify every candidate through the matching token, pool, or exclusive-component getter plus `launchStamp` at the same canonical block; require `stampProof` for address-based token and component checks. Advance only a durable finalized checkpoint, replay an overlap idempotently, orphan and rewind on a block-hash change, then poll or subscribe from the overlapping checkpoint so the backfill-to-live handoff has no gap. A subscription notification alone is not provenance. The complete sequence and finalized PCAN test vector are in [Launch stamp Router verification](../reference/launch-stamp.md).
+
 The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy. A stamp does not establish safety, audit status, liquidity, sellability, or execution support.
+
+Only consistent records from the exact canonical Router qualify through Router V1. Publishing this interface does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. The GitHub approval to permit to wallet self-service launch flow is not live; this is a read-only terminal integration surface.
+
+GMGN's generic `uniswap_v4` and `poolId` discovery can identify the PCAN token or pool as an ordinary market. It does not verify the canonical Router stamp or show that GMGN integrated the Programmable label. Do not treat third-party market metrics as canonical onchain evidence. Verify the stamp through the Router, and read current pool state separately through PoolManager or StateView.
 
 ## New-launch card
 
