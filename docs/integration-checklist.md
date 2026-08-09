@@ -20,7 +20,8 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Never trust name, symbol, logo, metadata tag, creator text, or a copied event as origin proof.
 - [ ] Treat top-level `launchStampRouter` as a future-only trust root; never use it to backfill a historical Classic or Custom launch.
 - [ ] Require the manifest chain ID, exact canonical Router address, Router start block, runtime-code hash, ABI hash, and a nonzero launch ID scoped with that chain and Router address.
-- [ ] Resolve one finalized or caller-supplied canonical block and use its concrete number for every Router code read, point lookup, and record cross-check.
+- [ ] Resolve one finalized or caller-supplied canonical block. Bind every Router read to its hash with EIP-1898 and `requireCanonical: true`; if the client cannot do that, use one block number and require the same hash again after the last read.
+- [ ] Use HTTPS for remote RPC endpoints. Permit plaintext HTTP only for loopback development endpoints.
 - [ ] Assign a future class only from the stamp record: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; reject `Invalid = 0`.
 - [ ] Use token or `(PoolManager, PoolId)` for interoperable detection; never identify or classify Classic through its shared hook.
 - [ ] Bind a v4 pool lookup to both its PoolManager address and PoolId; do not treat PoolId alone as a global identity.

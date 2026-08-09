@@ -85,12 +85,14 @@ export async function verifyLaunchStampWithViem({
 
   if (
     !router ||
-    router.status === "prelaunch" ||
+    (router.status !== "live" && router.status !== "retired") ||
     !router.address ||
     !router.startBlock ||
     !router.runtimeCodeHash ||
     !router.abiSha256 ||
-    router.finalityConfirmations === null ||
+    typeof router.finalityConfirmations !== "number" ||
+    !Number.isInteger(router.finalityConfirmations) ||
+    router.finalityConfirmations < 0 ||
     !router.atomicSignature ||
     !router.atomicSelector ||
     !completeBindings(router.bindings) ||
@@ -115,7 +117,13 @@ export async function verifyLaunchStampWithViem({
   }
   if (!rpcUrl) return result("indeterminate", "missing-rpc-url", query);
 
-  const client = createPublicClient({ transport: http(rpcUrl) });
+  let checkedRpcUrl: URL;
+  try {
+    checkedRpcUrl = checkedHttpsOrLocalUrl(rpcUrl);
+  } catch {
+    return result("indeterminate", "rpc-https-required", query);
+  }
+  const client = createPublicClient({ transport: http(checkedRpcUrl.toString()) });
   try {
     const chainId = await client.getChainId();
     if (chainId !== manifest.chainId) {
@@ -127,6 +135,7 @@ export async function verifyLaunchStampWithViem({
         ? await client.getBlock({ blockTag: "finalized" })
         : await client.getBlock({ blockNumber: block });
     const blockNumber = canonicalBlock.number;
+    const blockHash = canonicalBlock.hash;
     if (blockNumber < BigInt(router.startBlock)) {
       return result("unavailable", "block-before-router-start", query);
     }
@@ -175,6 +184,7 @@ export async function verifyLaunchStampWithViem({
     })) as Hex;
 
     if (launchId === ZERO_BYTES32) {
+      await requireUnchangedBlock(client, blockNumber, blockHash);
       return {
         ...result("not-stamped", "zero-launch-id", query),
         chainId,
@@ -297,6 +307,7 @@ export async function verifyLaunchStampWithViem({
       };
     }
 
+    await requireUnchangedBlock(client, blockNumber, blockHash);
     return {
       state: "stamped",
       reason: "canonical-router-record",
@@ -488,6 +499,17 @@ async function validateImmutableBindings({
   }
 }
 
+async function requireUnchangedBlock(
+  client: ReturnType<typeof createPublicClient>,
+  blockNumber: bigint,
+  expectedHash: Hex,
+) {
+  const closingBlock = await client.getBlock({ blockNumber });
+  if (closingBlock.hash.toLowerCase() !== expectedHash.toLowerCase()) {
+    throw new Error("canonical block changed during verification");
+  }
+}
+
 function describedFunction(abi: Abi, descriptor: GetterDescriptor | null) {
   if (!descriptor) throw new Error("missing getter descriptor");
   const item = abi.find(
@@ -575,15 +597,20 @@ async function fetchAbi(url: string) {
 }
 
 async function fetchJson(url: string) {
-  const parsed = new URL(url);
+  const parsed = checkedHttpsOrLocalUrl(url);
+  const response = await fetch(parsed, { signal: AbortSignal.timeout(10_000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+function checkedHttpsOrLocalUrl(value: string) {
+  const parsed = new URL(value);
   const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
   if (parsed.username || parsed.password) throw new Error("credentials in URL");
   if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && local)) {
     throw new Error("HTTPS required");
   }
-  const response = await fetch(parsed, { signal: AbortSignal.timeout(10_000) });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
+  return parsed;
 }
 
 function normalizeAddress(value: unknown) {

@@ -285,7 +285,9 @@ describe("launch stamp Router documentation", () => {
     assert.match(guide, /Classic hook is shared/i);
     assert.match(guide, /chainId \+ Router address \+ launchId/i);
     assert.match(guide, /finalized block or a caller-supplied canonical block/i);
-    assert.match(guide, /same concrete block/i);
+    assert.match(guide, /EIP-1898/);
+    assert.match(guide, /closing hash to equal the opening hash/i);
+    assert.match(guide, /Remote RPC URLs must use HTTPS/i);
     assert.match(guide, /exact manifest router address/i);
     assert.match(guide, /correct topic from any other emitter is not Programmable provenance/i);
     assert.match(guide, /PoolManager \+ PoolId/);
@@ -382,7 +384,228 @@ describe("launch stamp Router documentation", () => {
       );
     }
   });
+
+  test("binds JSON-RPC reads to one canonical block hash and rejects remote plaintext RPC", async () => {
+    const publishedManifest = await readJson(MANIFEST_PATH);
+    const abiBytes = await readFile(ABI_PATH);
+    const code = "0x6000";
+    const runtimeCodeHash = keccak256(Uint8Array.from([0x60, 0x00]));
+    const blockHash = `0x${"a".repeat(64)}`;
+    const addresses = {
+      router: "0x1111111111111111111111111111111111111111",
+      permitAuthority: "0x2222222222222222222222222222222222222222",
+      graphFactory: "0x3333333333333333333333333333333333333333",
+      poolManager: "0x4444444444444444444444444444444444444444",
+      token: "0x5555555555555555555555555555555555555555",
+    };
+    const router = structuredClone(publishedManifest.launchStampRouter);
+    Object.assign(router, {
+      status: "live",
+      address: addresses.router,
+      startBlock: "1",
+      endBlock: null,
+      runtimeCodeHash,
+      finalityConfirmations: 1,
+    });
+    Object.assign(router.bindings, {
+      permitAuthority: addresses.permitAuthority,
+      permitAuthorityRuntimeCodeHash: runtimeCodeHash,
+      graphFactory: addresses.graphFactory,
+      graphFactoryRuntimeCodeHash: runtimeCodeHash,
+      poolManager: addresses.poolManager,
+      poolManagerRuntimeCodeHash: runtimeCodeHash,
+    });
+
+    let servedManifest = { ...publishedManifest, launchStampRouter: router };
+    const canonicalReadParams = [];
+    const server = createServer(async (request, response) => {
+      response.setHeader("content-type", "application/json");
+      const { port } = server.address();
+      if (request.method === "GET" && request.url === "/discovery.json") {
+        response.end(
+          JSON.stringify({
+            manifestUrl: `http://127.0.0.1:${port}/manifest.json`,
+          }),
+        );
+        return;
+      }
+      if (request.method === "GET" && request.url === "/manifest.json") {
+        response.end(
+          JSON.stringify({
+            ...servedManifest,
+            launchStampRouter: {
+              ...servedManifest.launchStampRouter,
+              abiUrl: `http://127.0.0.1:${port}/router-abi.json`,
+            },
+          }),
+        );
+        return;
+      }
+      if (request.method === "GET" && request.url === "/router-abi.json") {
+        response.end(abiBytes);
+        return;
+      }
+      if (request.method === "POST" && request.url === "/rpc") {
+        const body = await readRequestJson(request);
+        let result;
+        if (body.method === "eth_chainId") {
+          result = "0x1";
+        } else if (body.method === "eth_getBlockByNumber") {
+          result = { number: "0x64", hash: blockHash };
+        } else if (body.method === "eth_getCode") {
+          canonicalReadParams.push(body.params[1]);
+          result = code;
+        } else if (body.method === "eth_call") {
+          canonicalReadParams.push(body.params[1]);
+          const selector = body.params[0].data.slice(0, 10);
+          result = immutableCallResult(router, selector);
+        } else {
+          response.end(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: body.id,
+              error: { code: -32601, message: "method not found" },
+            }),
+          );
+          return;
+        }
+        response.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
+        return;
+      }
+      response.statusCode = 404;
+      response.end("{}");
+    });
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+
+    try {
+      const { port } = server.address();
+      const discoveryUrl = `http://127.0.0.1:${port}/discovery.json`;
+
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, status: "paused" },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-status-unsupported",
+      );
+
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, finalityConfirmations: undefined },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-activation-incomplete",
+      );
+
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, finalityConfirmations: -1 },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-activation-incomplete",
+      );
+
+      servedManifest = { ...servedManifest, launchStampRouter: router };
+      const insecureRpc = await verifyLaunchStamp({
+        kind: "token",
+        values: [addresses.token],
+        discoveryUrl,
+        rpcUrl: "http://rpc.example.invalid",
+      });
+      assert.equal(insecureRpc.state, "indeterminate");
+      assert.equal(insecureRpc.reason, "rpc-url-https-required");
+
+      const verifiedZero = await verifyLaunchStamp({
+        kind: "token",
+        values: [addresses.token],
+        discoveryUrl,
+        rpcUrl: `http://127.0.0.1:${port}/rpc`,
+      });
+      assert.equal(verifiedZero.state, "not-stamped");
+      assert.equal(verifiedZero.reason, "zero-launch-id");
+      assert.ok(canonicalReadParams.length > 0);
+      for (const parameter of canonicalReadParams) {
+        assert.deepEqual(parameter, {
+          blockHash,
+          requireCanonical: true,
+        });
+      }
+    } finally {
+      await new Promise((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
+
+  test("keeps the viem example fail-closed across activation, transport and reorgs", async () => {
+    const source = await readFile(
+      path.join(REPOSITORY_ROOT, "examples/verify-launch-stamp-viem.ts"),
+      "utf8",
+    );
+
+    assert.match(source, /router\.status !== "live" && router\.status !== "retired"/);
+    assert.match(source, /typeof router\.finalityConfirmations !== "number"/);
+    assert.match(source, /Number\.isInteger\(router\.finalityConfirmations\)/);
+    assert.match(source, /router\.finalityConfirmations < 0/);
+    assert.match(source, /checkedHttpsOrLocalUrl\(rpcUrl\)/);
+    assert.match(source, /await requireUnchangedBlock\(client, blockNumber, blockHash\)/);
+    assert.match(source, /closingBlock\.hash\.toLowerCase\(\) !== expectedHash\.toLowerCase\(\)/);
+  });
 });
+
+async function readRequestJson(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+function immutableCallResult(router, selector) {
+  const values = new Map([
+    [router.getters.chainId.selector, word(1n)],
+    [router.getters.permitAuthority.selector, word(router.bindings.permitAuthority)],
+    [
+      router.getters.permitAuthorityRuntimeCodeHash.selector,
+      router.bindings.permitAuthorityRuntimeCodeHash,
+    ],
+    [router.getters.graphFactory.selector, word(router.bindings.graphFactory)],
+    [
+      router.getters.graphFactoryRuntimeCodeHash.selector,
+      router.bindings.graphFactoryRuntimeCodeHash,
+    ],
+    [router.getters.poolManager.selector, word(router.bindings.poolManager)],
+    [
+      router.getters.poolManagerRuntimeCodeHash.selector,
+      router.bindings.poolManagerRuntimeCodeHash,
+    ],
+    [router.getters.token.selector, `0x${"0".repeat(64)}`],
+  ]);
+  const value = values.get(selector);
+  assert.ok(value, `unexpected eth_call selector ${selector}`);
+  return value;
+}
+
+function word(value) {
+  if (typeof value === "bigint") return `0x${value.toString(16).padStart(64, "0")}`;
+  return `0x${value.slice(2).toLowerCase().padStart(64, "0")}`;
+}
 
 function canonicalSignature(item) {
   return `${item.name}(${(item.inputs ?? []).map(canonicalType).join(",")})`;

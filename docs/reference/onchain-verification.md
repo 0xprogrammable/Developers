@@ -52,7 +52,8 @@ After activation, accept Router provenance only when all of these checks pass:
 - top-level `launchStampRouter` is `live`, or `retired` for a read inside its published block range;
 - the Router address, start block, runtime-code hash, ABI hash, event descriptors and getter descriptors are non-null and internally consistent;
 - `eth_chainId` equals the manifest chain ID;
-- the selected finalized or caller-supplied canonical block is resolved once and every `eth_getCode` and `eth_call` uses that same concrete block;
+- the selected finalized or caller-supplied canonical block is resolved once; every `eth_getCode` and `eth_call` is bound to its hash with EIP-1898, or number-bound reads are bracketed by an unchanged opening and closing block hash;
+- remote RPC transport uses HTTPS; plaintext HTTP is limited to loopback development;
 - Router bytecode at that block matches the manifest runtime-code hash;
 - a direct token or `PoolManager + PoolId` lookup at the canonical Router returns a nonzero launch ID; hook or component lookups are corroborating evidence only for an exclusive Custom component;
 - the stamp record at the same block agrees with the query and the complete identity `chainId + Router address + launchId`;
@@ -157,7 +158,7 @@ Before displaying a Router-derived Programmable label, require:
 - exact canonical Router address and published start block;
 - Router runtime and ABI hashes matching the manifest;
 - either a nonzero direct getter response with a consistent stamp record, or a valid event from that exact Router plus a direct point-lookup cross-check;
-- one concrete canonical block used for all reads;
+- one canonical block used for all reads, with hash-bound EIP-1898 requests or an unchanged closing header check;
 - a nonzero launch ID scoped with chain ID and Router address; and
 - the recognized record value (`CustomGraph = 1` or `Classic = 2`) before assigning a class.
 

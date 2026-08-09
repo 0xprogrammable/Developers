@@ -130,23 +130,25 @@ Only a successful canonical zero lookup is `not-stamped`. A timeout, pruned bloc
 
 ## Deterministic point lookup
 
-Use the same concrete block for all reads in one result:
+Bind all reads in one result to one canonical block:
 
 1. Fetch the official discovery document and manifest.
 2. Require status `live`, or `retired` for a historical read within the published range.
 3. Require the complete trust tuple, deployment bindings, runtime hash, ABI hash, event descriptors, and getter descriptors.
 4. Require `eth_chainId` to equal the manifest `chainId`.
-5. Resolve a finalized block or a caller-supplied canonical block to a concrete block number and hash. Do not mix `latest` reads.
+5. Resolve a finalized block or a caller-supplied canonical block to a concrete block number and hash. Do not mix `latest` reads. Use EIP-1898 `{ blockHash, requireCanonical: true }` for every `eth_getCode` and `eth_call` when the provider supports it. Otherwise use the resolved number for every read, then fetch that height again and require the closing hash to equal the opening hash before returning `stamped` or `not-stamped`.
 6. Enforce `startBlock` and, if retired, `endBlock`.
 7. Read Router code at that block and require its EVM Keccak-256 to equal `runtimeCodeHash`.
 8. Hash the fetched ABI bytes with SHA-256; validate every advertised selector, topic, and indexed layout against that ABI.
-9. At the same block, call `CHAIN_ID`, all six immutable binding getters, and `eth_getCode` for the permit authority, Graph Factory, and PoolManager. Require exact manifest address and runtime-hash matches.
+9. At the same canonical block, call `CHAIN_ID`, all six immutable binding getters, and `eth_getCode` for the permit authority, Graph Factory, and PoolManager. Require exact manifest address and runtime-hash matches.
 10. Call `launchIdByToken(token)` or `launchIdByPool(poolManager,poolId)`. Use `launchIdByComponent(component)` only for an explicitly exclusive component.
 11. If the result is zero, return `not-stamped`.
-12. Read `launchStamp(launchId)` at the same block. Require a recognized nonzero `kind`, the queried token or pool identity, the immutable PoolManager, and nonzero commitment fields.
+12. Read `launchStamp(launchId)` at the same canonical block. Require a recognized nonzero `kind`, the queried token or pool identity, the immutable PoolManager, and nonzero commitment fields.
 13. For a token or component, require `stampProof(address)` to match both `launchId` and `stampHash`.
 14. For `CustomGraph`, require the record's route launcher and runtime hash to match the immutable Graph Factory binding. For `Classic`, retain the permit-bound route launcher and runtime from the record; do not invent a Classic immutable.
-15. Classify only from `record.kind`.
+15. Complete the closing block-hash check when number-bound reads were used. Classify only from `record.kind`.
+
+Remote RPC URLs must use HTTPS. Plaintext HTTP is accepted only for loopback development endpoints.
 
 Runnable implementations:
 
@@ -163,7 +165,7 @@ For `eth_getLogs`, use all of the following:
 - `toBlock` respects the Router end block when retired; and
 - each stored log retains block hash, transaction hash, transaction index, and log index.
 
-Apply an explicit confirmation and reorg policy. A log with the correct topic from any other emitter is not Programmable provenance. Cross-check point getters and the record at the log's concrete block before advancing a durable checkpoint.
+Apply an explicit confirmation and reorg policy. A log with the correct topic from any other emitter is not Programmable provenance. Cross-check point getters and the record using hash-bound reads, or bracket number-bound reads with an unchanged block-hash check, before advancing a durable checkpoint.
 
 ## Atomic write path
 

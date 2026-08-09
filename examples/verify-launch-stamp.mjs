@@ -81,9 +81,12 @@ async function verifyActiveRouter({
   ) {
     fail("block-outside-router-range");
   }
-  const concreteBlock = quantity(blockNumber);
+  const canonicalBlock = {
+    blockHash: block.hash.toLowerCase(),
+    requireCanonical: true,
+  };
 
-  const runtimeCode = await callRpc("eth_getCode", [router.address, concreteBlock]);
+  const runtimeCode = await callRpc("eth_getCode", [router.address, canonicalBlock]);
   if (!isBytecode(runtimeCode)) fail("router-code-unavailable");
   const runtimeCodeHash = keccak256(hexBytes(runtimeCode));
   if (runtimeCodeHash !== router.runtimeCodeHash.toLowerCase()) {
@@ -99,7 +102,7 @@ async function verifyActiveRouter({
   validatePublishedAbi(abi, router);
   await validateImmutableBindings({
     callRpc,
-    block: concreteBlock,
+    block: canonicalBlock,
     abi,
     manifest,
     router,
@@ -110,7 +113,7 @@ async function verifyActiveRouter({
   const launchId = await readDescribedFunction({
     callRpc,
     address: router.address,
-    block: concreteBlock,
+    block: canonicalBlock,
     abi,
     descriptor: getter,
     args,
@@ -134,7 +137,7 @@ async function verifyActiveRouter({
   const record = await readDescribedFunction({
     callRpc,
     address: router.address,
-    block: concreteBlock,
+    block: canonicalBlock,
     abi,
     descriptor: router.getters.record,
     args: [launchId],
@@ -145,7 +148,7 @@ async function verifyActiveRouter({
 
   const currentRouteCode = await callRpc("eth_getCode", [
     record.routeLauncher,
-    concreteBlock,
+    canonicalBlock,
   ]);
   const observedRouteRuntime =
     isBytecode(currentRouteCode) && currentRouteCode !== "0x"
@@ -157,7 +160,7 @@ async function verifyActiveRouter({
     const proof = await readDescribedFunction({
       callRpc,
       address: router.address,
-      block: concreteBlock,
+      block: canonicalBlock,
       abi,
       descriptor: router.getters.stampProof,
       args: [values[0]],
@@ -168,7 +171,7 @@ async function verifyActiveRouter({
     const recorded = await readDescribedFunction({
       callRpc,
       address: router.address,
-      block: concreteBlock,
+      block: canonicalBlock,
       abi,
       descriptor: router.getters.componentRuntimeCodeHash,
       args: [values[0]],
@@ -176,7 +179,7 @@ async function verifyActiveRouter({
     if (!isHash32(recorded) || recorded === ZERO_BYTES32) {
       fail("component-runtime-record-missing");
     }
-    const currentCode = await callRpc("eth_getCode", [values[0], concreteBlock]);
+    const currentCode = await callRpc("eth_getCode", [values[0], canonicalBlock]);
     componentRuntime = {
       recorded,
       observed:
@@ -231,6 +234,7 @@ function activationUnavailableReason(router) {
     !isSha256(router.abiSha256) ||
     !httpsOrLocalUrl(router.abiUrl) ||
     !Number.isInteger(router.finalityConfirmations) ||
+    router.finalityConfirmations < 0 ||
     typeof router.atomicSignature !== "string" ||
     !selector(router.atomicSelector)
   ) {
@@ -560,7 +564,7 @@ function eventTopic(item) {
 }
 
 function createRpcClient(rpcUrl) {
-  const url = checkedUrl(rpcUrl, "RPC URL", true);
+  const url = checkedUrl(rpcUrl, "RPC URL", false);
   let id = 0;
   return async (method, params) => {
     const response = await fetch(url, {
