@@ -1,8 +1,11 @@
-# Event ABIs
+# Verification ABIs
 
-These minimal event ABIs are the direct-onchain discovery surface for the
-deployments listed in [`deployments/ethereum.json`](../deployments/ethereum.json).
-Resolve addresses and start blocks from the manifest; do not bind an
+This directory contains minimal event ABIs for legacy launch discovery and full
+verification ABIs for current provenance interfaces. Legacy deployment history
+is recorded in [`deployments/ethereum.json`](../deployments/ethereum.json).
+Current version 2 deployment identities are recorded in
+[`deployments/ethereum-v2.json`](../deployments/ethereum-v2.json) and the live
+manifest. Resolve addresses and start blocks from the manifest; do not bind an
 integration to one launcher address.
 
 | File | Deployments |
@@ -17,9 +20,12 @@ integration to one launcher address.
 The Router file is the exact 44-item ABI from Forge artifact commit
 `0a7134bbb912222639627fb9078df2f8dd3a6c38`. Its published ABI-file SHA-256 is
 `bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86`.
-The interface is frozen and the Router is live. Resolve its address, start
-block, runtime identity, finality policy, and immutable production bindings
-from the current version 2 manifest; this ABI file is not deployment authority.
+The interface is frozen and the Router is live. Resolve its current address,
+start block, runtime identity, finality policy, and immutable production
+bindings from the [live version 2 manifest](https://developers.programmable.family/api/v2/manifest).
+The repository snapshot is
+[`deployments/ethereum-v2.json`](../deployments/ethereum-v2.json); this ABI file
+is not deployment authority.
 
 The Custom Registry ABI is intentionally full rather than event-only because
 approval and registration integrations must use its canonical hash helpers.
