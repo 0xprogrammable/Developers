@@ -40,7 +40,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 
 ## Product status in one paragraph
 
-Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Programmable Custom is reserved for finalized accepted Registry launches; general intake remains prelaunch. The separate `launchStampRouter` trust root for future Classic and future Custom launches is also prelaunch and does not cover historical coins. Historical Stock-Paired records are not part of the v2 Custom classification. Every registered v2 launch is discoverable through one envelope; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Programmable Custom is reserved for finalized accepted Registry launches; general intake remains prelaunch. The separate `launchStampRouter` trust root is live for future Classic and future Custom stamps from block `25717612`; historical coins are not backfilled. Its finalized onchain canary covers `CustomGraph`, with no separate Classic onchain canary. Historical Stock-Paired records are not part of the v2 Custom classification. Every registered v2 launch is discoverable through one envelope; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

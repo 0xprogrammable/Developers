@@ -16,6 +16,7 @@ Use exactly these two public labels:
 | Programmable Classic on Ethereum | Live |
 | Programmable Custom Registry discovery | Live on Ethereum |
 | Programmable Custom public intake | Prelaunch |
+| Router V1 future-launch provenance | Live on Ethereum from block `25717612` |
 
 The public category is always `classic` or `custom`. Provider names, factories, hook addresses and template versions remain per-launch provenance. They never create additional terminal categories. A Custom launch may have no market, one market, or several markets. The v2 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
 
@@ -184,7 +185,7 @@ Run the bounded read-only production smoke only when live verification is intent
 PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
 ```
 
-The live smoke proves that the currently published HTTP surface answers and conforms to its expected baseline. It does not prove that an unreleased Registry, launch-ID route, Custom canary, deployment, or fee path is live.
+The live smoke proves that the currently published HTTP surface answers and conforms to its expected baseline. It does not prove a launch, fee path, market, safety property, or third-party integration.
 
 ## Repository map
 
@@ -208,12 +209,13 @@ llms-full.txt   Complete agent integration context
 
 - Classic launch discovery is live on Ethereum.
 - Custom Registry discovery is live on Ethereum Mainnet. General Custom intake remains prelaunch; the v2 Custom feed publishes only finalized, exact-revision Registry records.
-- The separate Router V1 trust root for future Classic and future Custom launches remains prelaunch. Its finalized deployment evidence is published separately, its activation fields remain null until the required canaries, and it does not cover historical coins.
+- The separate Router V1 trust root is live on Ethereum for future Classic and future Custom stamps from block `25717612`. The finalized onchain canary covers `CustomGraph`; no separate Classic onchain canary is published. Historical coins are not backfilled.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
 - Ethereum Mainnet is the only currently advertised chain. Multi-chain support becomes live per chain only through the well-known document and manifest.
 - No Basebit or Aion partnership, template, recipient, Registry record, or live fee path is currently verified by the public v2 surface.
 - A registered launch is always discoverable. Chart, quote, simulation, and execution support remain explicit per market.
 - No named terminal, scanner, wallet, or data provider is implied to have integrated Programmable.
+- The GitHub approval to permit to wallet self-service launch flow is not live. The published Router interface is read-only integration evidence for future stamped launches.
 
 Read the [FAQ](docs/faq.md) for common integration questions and use the [production integration checklist](docs/integration-checklist.md) before release.
 

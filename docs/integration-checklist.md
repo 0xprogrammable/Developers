@@ -26,8 +26,9 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Use token or `(PoolManager, PoolId)` for interoperable detection; never identify or classify Classic through its shared hook.
 - [ ] Bind a v4 pool lookup to both its PoolManager address and PoolId; do not treat PoolId alone as a global identity.
 - [ ] Filter discovery logs by both exact canonical Router address and manifest ABI `topic0`; reject a copied emitter.
+- [ ] Backfill Router logs from `startBlock` in finality-bounded chunks, persist block/transaction/log coordinates, cross-check getters and the record at one canonical block, advance a durable finalized checkpoint, replay an overlap idempotently, and rewind orphaned blocks before live follow.
 - [ ] Treat direct Single Factory, Classic V3 Factory, and Graph Factory calls outside the Router as outside Router V1 provenance.
-- [ ] Keep Router prelaunch fail-closed while its address, start block, runtime, authority, or production bindings are null.
+- [ ] Return Router provenance as unavailable if its address, start block, runtime, finality policy, approved finalized canary, authority, or production bindings are absent or inconsistent.
 - [ ] Treat stamped runtime code hashes as point-in-time evidence; independently resolve and revalidate current proxy implementation, beacon, admin, initialization, and upgrade authority state.
 
 ## Feed ingestion
@@ -78,12 +79,17 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 
 ## Router V1 activation evidence
 
-- [ ] Confirm the canonical Router chain, address, start block, ABI hash, topics, getter selectors, code verification, and runtime-code hash from public evidence.
+- [ ] Confirm the canonical Router chain, address, start block, ABI hash, topics, getter selectors, pinned source commit and tree, and reproducible artifact/runtime exact match from public evidence. Do not infer or claim Explorer source publication.
+- [ ] Before production enablement, require HTTP `200` for the well-known discovery document, its manifest URL, the manifest-listed hosted ABI, and the public Router specification. Hash the exact ABI response bytes and compare `abiSha256`.
 - [ ] Confirm immutable EIP-1271 contract authority, Graph Factory and PoolManager addresses and runtime hashes; reject an EOA authority fallback.
 - [ ] Confirm exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while Classic V3 route and runtime are permit- and record-bound; Single Factory remains outside Router V1.
-- [ ] Confirm frozen `LaunchKindV1.CustomGraph | Classic` record and event behavior with one canary of each class.
-- [ ] Confirm token, `PoolManager + PoolId`, exclusive-component, `stampProof`, record and point-in-time code-hash results at finalized canonical blocks.
-- [ ] Keep Router V1 prelaunch if any required activation evidence is absent.
+- [ ] Require the finalized deployment and one approved finalized Router canary before accepting activation.
+- [ ] Confirm the published `CustomGraph` canary's token, `PoolManager + PoolId`, exclusive-component, `stampProof`, record, and point-in-time code-hash results at its finalized canonical block.
+- [ ] Treat `/launchStampRouter/canaryEvidence` in the v2 manifest as the finalized PCAN test vector; do not invent a separate canary ID.
+- [ ] Record route coverage exactly: `CustomGraph` onchain canary `true`; Classic onchain canary `false`. Do not report a separate Classic canary.
+- [ ] Treat frozen Classic source and tests through the same live ABI as implementation evidence, not an onchain Classic launch. Require a consistent live `LaunchKindV1.Classic` stamp for each future Classic classification.
+- [ ] Apply the manifest's `64`-confirmation policy to explicit block-number reads, or use the canonical finalized block.
+- [ ] Do not present named-terminal adoption or the GitHub approval to permit to wallet self-service flow as live without separate published evidence.
 
 ## Registry and feed release evidence
 

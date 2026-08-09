@@ -8,7 +8,7 @@ Ethereum is the only active chain in the current discovery document. Classic dep
 
 Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
-The future-launch Router remains prelaunch. Its frozen ABI and finalized Ethereum deployment evidence are published, including the deployed address, transaction, deployment and finalized block hashes, exact runtime identities, and immutable getter observations. The activation address, start block, end block, runtime-code hash, finality confirmations, authority and production bindings remain `null`. Until those activation fields and finalized Classic and Custom canaries are published, do not scan Router topics or assign a Router-derived label.
+The future-launch Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
 
 ## Trust root
 
@@ -46,11 +46,12 @@ Multiple enabled deployments can overlap. Deduplicate the normalized launch by `
 
 Router V1 is a separate provenance path for future Classic and future Custom launches. It has no Registry lifecycle and does not change the evidence rules for historical records.
 
-After activation, accept Router provenance only when all of these checks pass:
+Accept Router provenance only when all of these checks pass:
 
 - the chain is advertised by the official discovery document;
 - top-level `launchStampRouter` is `live`, or `retired` for a read inside its published block range;
 - the Router address, start block, runtime-code hash, ABI hash, event descriptors and getter descriptors are non-null and internally consistent;
+- the finalized canary evidence and immutable production bindings are complete and internally consistent;
 - `eth_chainId` equals the manifest chain ID;
 - the selected finalized or caller-supplied canonical block is resolved once; every `eth_getCode` and `eth_call` is bound to its hash with EIP-1898, or number-bound reads are bracketed by an unchanged opening and closing block hash;
 - remote RPC transport uses HTTPS; plaintext HTTP is limited to loopback development;
@@ -58,9 +59,10 @@ After activation, accept Router provenance only when all of these checks pass:
 - a direct token or `PoolManager + PoolId` lookup at the canonical Router returns a nonzero launch ID; hook or component lookups are corroborating evidence only for an exclusive Custom component;
 - the stamp record at the same block agrees with the query and the complete identity `chainId + Router address + launchId`;
 - any discovery log has the exact Router emitter and manifest ABI `topic0`; and
-- the block satisfies the consumer's finality and reorg policy.
+- a caller-supplied block number has at least the manifest's `64` confirmations, or the read uses the canonical finalized block; and
+- the block satisfies the consumer's reorg policy.
 
-The same Router result is the origin proof for both future public labels. Read the stamp record at the same block: `LaunchKindV1.Classic` maps to `Programmable Classic`, and `LaunchKindV1.CustomGraph` maps to `Programmable Custom`. If the value is absent, unknown, or inconsistent, preserve the origin evidence but do not guess a class. The Classic hook is shared and must never identify or classify one launch.
+The same consistent Router record proves atomic Router execution and stamping for both future public labels; it does not universally prove that each Classic component was newly created. Read the stamp record at the same block: `LaunchKindV1.Classic` maps to `Programmable Classic`, and `LaunchKindV1.CustomGraph` maps to `Programmable Custom`. If the value is absent, unknown, or inconsistent, preserve the Router evidence but do not guess a class. The Classic hook is shared and must never identify or classify one launch.
 
 A pull request, permit, approval response, factory response, webhook, token tag, copied event, matching logo, creator field, direct Graph Factory call, or Single Factory call cannot create Router provenance. This check requires an Ethereum RPC endpoint but no Programmable server, database, Registry, indexer, or Supabase project. See [Launch stamp router verification](launch-stamp.md).
 
@@ -164,16 +166,16 @@ Before displaying a Router-derived Programmable label, require:
 
 If one required input is unavailable, malformed, or inconsistent, keep independently known asset data but mark Router provenance `indeterminate` or `unavailable`. Do not convert operational uncertainty into `not-stamped`, and do not guess a class.
 
-## Activation evidence still required for Router V1
+## Published Router V1 activation evidence
 
-Router V1 remains prelaunch until all of the following are public and mutually consistent. The finalized deployment evidence closes the contract deployment, runtime, and observed immutable-getter checks; it does not close the canary or activation checks:
+Router V1 activation binds one finalized deployment and one approved finalized Router canary. The manifest publishes:
 
-- chain, canonical Router address, start block, ABI, ABI hash, event topics, getter selectors and runtime-code hash;
-- verified source, exact deployed runtime and immutable EIP-1271 permit-authority, Graph Factory and PoolManager bindings;
-- exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while the Classic V3 route and runtime are permit- and record-bound; no Single Factory route exists;
-- frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics;
-- future Classic and future Custom canary transactions with launch IDs;
-- successful token, `PoolManager + PoolId`, exclusive-component, `stampProof` and stamp-record cross-checks for those canaries; and
-- finality, reorg and retirement behavior.
+- chain `1`, canonical Router `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, ABI, ABI hash, event topics, getter selectors, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, and `64` finality confirmations;
+- the Router source/artifact binding at commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, the exact deployed runtime, and immutable EIP-1271 permit-authority, Graph Factory, and PoolManager bindings;
+- exactly one generic market-bearing atomic selector, with no route-specific overload: `CustomGraph` uses the immutable Graph Factory binding, while the Classic V3 route and runtime are permit- and record-bound; no Single Factory route exists;
+- frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics; and
+- finalized `CustomGraph` canary transaction `0xc07b4e70233534a1d4f435ffc9a636ed5f542f4aedcde35052c58224f378b612`, launch ID `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92`, and successful token, `PoolManager + PoolId`, exclusive-component, `stampProof`, stamp-record, and point-in-time code-hash cross-checks.
+
+The canary source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from the deployed Router source commit and does not replace it. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. The frozen source and tests cover Classic behavior through the same live ABI, but a future Classic launch has onchain provenance only when the live Router writes a consistent `LaunchKindV1.Classic` stamp. Canary liquidity, LP position, fee, and supply values are block-specific observations, not current market or safety claims.
 
 Read [Programmable Verified](../concepts/programmable-verified.md), [Multi-chain discovery](../concepts/multi-chain.md), and [Production operations](../operations.md) before enabling a production scanner.

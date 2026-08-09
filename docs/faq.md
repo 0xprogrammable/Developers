@@ -103,7 +103,11 @@ Not through the current public discovery document. Ethereum Mainnet is the only 
 
 ## Does publication mean GMGN, Photon, Axiom, FOMO, or another terminal already supports Programmable?
 
-No. The integration is public for any provider to adopt. A named provider should be described as integrated only after that provider confirms it.
+No. The integration is public for any provider to adopt. Generic GMGN `uniswap_v4` and `poolId` discovery is ordinary token and pool listing, not verification of the canonical Router stamp or confirmation that GMGN integrated the Programmable label. Third-party market metrics are not canonical onchain evidence; verify provenance through the Router and read current pool state separately through PoolManager or StateView. Describe a named provider as integrated only after that provider confirms it.
+
+## Is GitHub approval to permit to wallet self-service launch live?
+
+No. The live Router descriptor and verification interface do not activate a public self-service authoring flow. Treat approval, permit issuance, and wallet launch UX as not live until each surface has separate published production evidence.
 
 ## What should an unknown future market look like?
 

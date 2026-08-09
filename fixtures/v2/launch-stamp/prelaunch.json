@@ -48,6 +48,7 @@
     "getterBundleSha256": "sha256:6e6e8a93193bbe2f79f98594a1af32c27bae0746f8297dd13592d9608e2feb20",
     "evidenceSha256": "sha256:f9786ebfb74c96a3c225567ad324f0fbecfd8520b8d8addec85ba58cd67e19ff"
   },
+  "canaryEvidence": null,
   "finalityConfirmations": null,
   "canonicalReadBlock": "finalized-or-explicit-canonical-block",
   "authorityMode": "eip-1271-contract-only",
