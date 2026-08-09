@@ -1,177 +1,110 @@
-# Programmable integration reference
+![Programmable night garden](public/assets/brand/programmable-developers-readme.png)
 
-Public read-only contracts, onchain provenance, and ingestion rules for terminals and other data consumers.
+# Programmable developer reference
 
-## Terminal labels
+Read-only contracts and verification rules for detecting Programmable launches.
 
-Use exactly these two public labels:
+## Start here
 
-| API category | Terminal label | Current boundary |
-| --- | --- | --- |
-| `classic` | `Programmable Classic` | Current and historical Classic releases |
-| `custom` | `Programmable Custom` | Launches accepted through the canonical Custom Registry |
-
-| Surface | Current state |
+| Resource | Use |
 | --- | --- |
-| Programmable Classic on Ethereum | Live |
-| Programmable Custom Registry discovery | Live on Ethereum |
-| Programmable Custom public intake | Prelaunch |
-| Router V1 future-launch provenance | Live on Ethereum from block `25717612` |
+| [Live manifest](https://developers.programmable.family/api/v2/manifest) | Resolve the active chain, Router, start block, runtime hash, ABI hash, events, getters, finality policy, and PCAN canary |
+| [Router ABI](https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json) | Decode Router events and point-lookup results |
+| [Launch stamp specification](docs/reference/launch-stamp.md) | Implement backfill, live follow, reorg handling, and direct verification |
+| [Terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features |
+| [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
+| [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
 
-The public category is always `classic` or `custom`. Provider names, factories, hook addresses and template versions remain per-launch provenance. They never create additional terminal categories. A Custom launch may have no market, one market, or several markets. The v2 API is read-only: support states describe availability but never return transaction payloads or authorize execution.
+The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
 
-A full Registry-backed Custom record uses `platformId: "programmable"`, `category: "custom"`, and `publicLabel: "Programmable Custom"`. These values come from the trusted projection, never creator metadata.
+## Router-first integration
 
-[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Future launch Router](docs/reference/launch-stamp.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
+`ProgrammableLaunchStampRouterV1` is the trust root for future Programmable Classic and Programmable Custom launches on Ethereum. Detection requires the official manifest, an Ethereum RPC endpoint, and the canonical Router.
 
-## Minimal API consumer
+1. Fetch the live manifest and require a complete `launchStampRouter` entry for the selected chain.
+2. Verify the Router runtime and hosted ABI hashes before decoding data.
+3. Backfill the exact manifest-listed events from `startBlock`, then follow new blocks with the published finality and reorg policy.
+4. Extract `launchId`, token, hook, `PoolManager`, and `poolId` from the Router event.
+5. At one canonical block, cross-check `launchIdByToken` or `launchIdByPool`, then read `launchStamp` and `stampProof`.
+6. Assign a public label only after every required identity and proof agrees.
 
-No SDK or API key is required.
+```js
+const manifestUrl = "https://developers.programmable.family/api/v2/manifest"
+const manifest = await fetch(manifestUrl).then(requireOk).then((response) => response.json())
+const router = manifest.launchStampRouter
+
+if (manifest.chainId !== 1 || router?.status !== "live") {
+  throw new Error("Programmable Router is not live for this chain")
+}
+
+function requireOk(response) {
+  if (!response.ok) throw new Error(`Programmable manifest returned ${response.status}`)
+  return response
+}
+```
+
+Production consumers must also validate the manifest-published runtime hash, ABI SHA-256, event descriptors, getter selectors, immutable bindings, and canonical block policy. The [launch stamp specification](docs/reference/launch-stamp.md) contains the complete algorithm and copy-paste verifier examples.
+
+## Public labels
+
+| Router value | Public label | Scope |
+| --- | --- | --- |
+| `LaunchKindV1.CustomGraph` (`1`) | `Programmable Custom` | Future Custom launches stamped by the canonical Router |
+| `LaunchKindV1.Classic` (`2`) | `Programmable Classic` | Future Classic launches stamped by the canonical Router |
+| Unknown, zero, or inconsistent | No Programmable label | Preserve independently known asset data and report provenance as unavailable or indeterminate |
+
+The Classic hook is shared infrastructure and cannot identify one launch. Use token or `PoolManager + poolId` as the interoperable lookup path. Use component lookup only as corroborating evidence for an exclusive component.
+
+## Finalized PCAN vector
+
+Use the finalized PCAN canary to smoke-test a terminal implementation:
+
+| Field | Value |
+| --- | --- |
+| Transaction | [`0xc07b4e70…378b612`](https://etherscan.io/tx/0xc07b4e70233534a1d4f435ffc9a636ed5f542f4aedcde35052c58224f378b612) |
+| Token | [`0x9DEeB39D…cc8f7cE`](https://etherscan.io/token/0x9DEeB39D2590b0cAD5fc473F755C5F97Dcc8f7cE) |
+| Pool ID | `0x5c5a3ebee6840640642ba2bea526621a4962d2c89c388c36a2edb4725802a229` |
+| Launch ID | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` |
+| Launch kind | `CustomGraph` (`1`) |
+
+The manifest publishes the complete vector at JSON Pointer `/launchStampRouter/canaryEvidence`. The [PCAN reference](docs/reference/launch-stamp.md#finalized-pcan-test-vector) includes the stamp hash, component proofs, block evidence, and exact guarantee boundary.
+
+## Guarantee boundary
+
+A valid stamp establishes that the exact canonical Router atomically executed and stamped the recorded launch. It also establishes that the recorded v4 pool was uninitialized before route execution and initialized before the stamp was written.
+
+It does not establish current liquidity, safety, audit status, sellability, tradability, terminal support, or economic outcome. Historical launches are not backfilled. Direct calls to a Factory outside the Router do not create Router provenance. Publication of this contract does not mean a named terminal has integrated the label.
+
+## Hosted API
+
+The hosted API is an optional normalized read model for existing Classic and Custom records, metadata, markets, and support states. It is not a Router verification dependency.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
 curl -fsSL https://developers.programmable.family/api/v2/status
 curl -fsSL https://developers.programmable.family/api/v2/manifest
 curl -fsSL https://developers.programmable.family/api/v2/launches
+curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 
-If status reports the Custom Registry unavailable, request
-`/api/v1/launches?category=classic`; the unfiltered feed intentionally waits
-for complete source coverage instead of silently omitting Custom launches.
+No SDK or API key is required. The v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md).
 
-```js
-const baseUrl = "https://developers.programmable.family"
+Fee data is market-path evidence, not a category default. The Native Programmable policy is 10 basis points, or 0.1%, on supported official market paths, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
 
-const [status, manifest, launches] = await Promise.all([
-  fetch(`${baseUrl}/api/v2/status`).then(requireOk).then(response => response.json()),
-  fetch(`${baseUrl}/api/v2/manifest`).then(requireOk).then(response => response.json()),
-  fetch(`${baseUrl}/api/v2/launches`).then(requireOk).then(response => response.json()),
-])
-
-for (const record of launches.items) {
-  console.log({
-    platformId: record.platformId,
-    launchId: record.launchId,
-    projectId: record.projectId ?? null,
-    category: record.category,
-    chainId: record.chainId,
-    token: record.token,
-    assetCount: record.assets?.length ?? 0,
-    marketCount: record.markets.length,
-    finality: record.finalityEvidence?.status ?? record.launch.finality,
-  })
-}
-
-function requireOk(response) {
-  if (!response.ok) throw new Error(`Programmable API returned ${response.status}`)
-  return response
-}
-```
-
-That short snippet inspects only the first page. Production consumers should use the [bounded full-traversal reference](docs/quickstart.md#5-consume-the-feed-in-javascript), which includes replay deduplication, page and retry limits, timeout, jitter, `Retry-After`, cursor-loop rejection, durable commit ordering, and the next `after` poll.
-
-A conforming v2 client must:
-
-1. Read active deployments from the manifest instead of hard-coding contract addresses.
-2. Deduplicate launches by `launchId`. When `token` is present, identify that ERC-20 by `chainId` and address; otherwise preserve `projectId`, `launchId`, and the authenticated `assets` graph without inventing a token.
-3. Accept `markets: []`; never invent a pool, price, volume, or trade route.
-4. Treat capabilities and market types as extensible. Keep an unknown launch visible and hide unsupported features.
-5. Use `page.nextCursor` only to finish the current traversal, then persist `page.resumeCursor` and send it back as `after` when polling.
-6. Respect finality and reorg state instead of treating first observation as permanent.
-
-The complete terminal contract is in [Trading terminals and scanners](docs/guides/terminals-and-scanners.md).
-
-## Choose what you are building
-
-- **Trading terminal or scanner:** Follow the launch feed, label Classic and Custom, and expose only supported market features. [Open the terminal guide](docs/guides/terminals-and-scanners.md).
-- **Launch provider:** Connect a reviewed external factory to the live Custom Registry without creating a provider-specific terminal category. [Open the provider guide](docs/guides/launch-providers.md).
-- **Wallet or explorer:** Resolve token metadata and verify Programmable provenance without trusting names or tickers as identity. [Open the wallet guide](docs/guides/wallets.md).
-- **Indexer or data platform:** Backfill deterministically, resume with cursors, and handle observed blocks and reorgs. [Open the indexer guide](docs/guides/indexers.md).
-- **App, game, or bot:** Discover launches and inspect verified capabilities without interpreting arbitrary contract metadata as instructions. [Open the app guide](docs/guides/apps-and-games.md).
-
-## One stable v2 envelope
-
-Every launch record uses the same top-level shape:
+## Repository map
 
 ```text
-schemaVersion
-platformId
-launchId
-category
-chainId
-token
-assets
-launch
-verification
-capabilities
-markets
-fees
-extensions
+docs/           Human-readable guides and reference
+abis/           Canonical interfaces for direct verification
+openapi/        OpenAPI 3.1 contracts
+schemas/        JSON Schemas for public responses
+deployments/    Deployment and source evidence
+fixtures/       Conformance and failure cases
+examples/       Read-only integration examples
+tests/          Offline contract and consumer checks
 ```
 
-`platformId` is always `programmable` on records produced by the official projection. `category` is the durable `classic | custom` launch class, while the model remains open-ended. These fields come from verified launch provenance, never from a creator-editable token tag.
-
-Full Registry-backed records also carry `publicLabel`, `caip2`, `projectId`, model, template, partner, optional provider attribution, builder, approval and deployment bindings, structured review, fee policy, finality evidence, presentation, Registry origin, launching wallet, post-launch authorities, lifecycle, and mechanisms. Historical v2 records need not carry the richer fields. Their addition does not create “API v3”; the v2 envelope and historical record meanings remain stable.
-
-`provider` is the normative optional location for launch-provider attribution. `verificationStatus: "registry-bound"` is valid only with its Registry evidence hash. `display-only` provider data and unfamiliar provider extensions may be shown as secondary attribution, but they never establish Programmable identity, partner status, fee verification, template approval, security review, or executable support.
-
-`token` can be null for a project-only launch. `assets` can preserve multiple tokens, contracts, hooks, controllers, oracles, bridges, rewards, and unknown future roles. Markets can refer to those assets without fabricating an ERC-20 pair or pool.
-
-The envelope is stable even when the product is unfamiliar. Market-specific information stays inside `markets`, optional capabilities advertise support, and namespaced extensions carry additional data without redefining trusted core fields.
-
-Within v2, existing fields are not removed, renamed, or reinterpreted. New Classic deployments and an activated Custom Registry appear through the manifest. New optional fields, capabilities, and market types are additive. Clients must ignore what they do not recognize and preserve the known launch identity. See [Compatibility](docs/concepts/compatibility.md).
-
-## Source of truth and trust
-
-Onchain launch provenance is authoritative. The API is a normalized projection designed for integration; it is not a substitute for the transaction, block, registry, and runtime evidence carried by a record.
-
-Legacy indexer records can have partial provenance. Recognized onchain events remain discoverable when metadata, supply, or block-timestamp enrichment is unavailable; affected fields stay partial, unavailable, or null and the feed can report `degraded`. Incomplete event-log coverage is different: launch-list and token-list routes return a retryable `503` rather than presenting an incomplete list as complete.
-
-Creator-supplied names, descriptions, images, and links are metadata. They do not inherit the trust level of launch provenance. Integrators should display metadata trust state, sanitize rich content, and keep chain, launch ID, and authenticated project and asset identities visible. A token address exists only when the record actually advertises a token.
-
-Registration means that a launch can be traced to a recognized Programmable deployment. It is not an unconditional statement that a token, external service, market, or economic outcome is safe or independently audited.
-
-Read [The data model](docs/concepts/data-model.md) and [Operations](docs/operations.md) before enabling production ingestion.
-
-## Fee policies
-
-The Native Programmable platform fee is 10 basis points, or 0.1%, on supported official Programmable market paths. The recipient is:
-
-```text
-0x4957f49620AFf3Adbbe8195a4f633E49cc93376c
-```
-
-- Current Classic paths include the 10 bps platform share within their configured trading fee.
-- Native Custom paths add 10 bps on top of the creator-defined market fee only after that fee path is deployed and verified.
-- An active fee-bearing partnership-template path implements exactly 20 bps in the partner template: 15 bps for the partner and 5 bps for Programmable. It does not also add the Native Custom 10 bps.
-- A launch with no executed trade has no trading volume and therefore no volume fee.
-- Normal token transfers, game rewards, and independently created third-party pools are outside this fee path.
-
-Partner attribution is independent of market and fee state. A verified partner-attributed project with no qualifying official market path uses `feePolicy.mode: "no-qualifying-market"` and zero shares; it does not pretend that 20 bps is active. An active fee-bearing partnership-template path remains disabled until the template proves one fee basis, both recipients, the exact split, currency, accrual, claim rights, and protection against one party claiming the other's share. No Basebit or Aion partner recipient or live fee path is currently published through the v2 manifest.
-
-Never infer fee behavior from `category`, partner name, or template metadata; read the manifest and each market's verified fee disclosure. See [Fees](docs/reference/fees.md).
-
-## API and machine-readable resources
-
-| Resource | Purpose |
-| --- | --- |
-| `GET /.well-known/programmable.json` | Stable discovery document |
-| `GET /api/v2/status` | API, indexing, freshness, and lifecycle status |
-| `GET /api/v2/manifest` | Active deployments, start blocks, fee policy, and endpoint discovery |
-| `GET /api/v2/launches` | Paginated normalized launch feed |
-| `GET /api/v2/launches/{launchId}` | One launch by globally scoped launch ID, including project-only and multi-asset records |
-| `GET /api/v2/launches/{chainId}/{tokenAddress}` | One asset's Programmable launch record |
-| `GET /api/v2/token-list` | Wallet-friendly finalized token list |
-| [`llms.txt`](llms.txt) | Compact agent index |
-| [`llms-full.txt`](llms-full.txt) | Complete agent-oriented integration contract |
-
-The [HTTP API reference](docs/reference/http-api.md) describes response handling and errors. JSON Schemas and the OpenAPI contract are normative machine-readable resources in this repository.
-
-Use [Direct onchain verification](docs/reference/onchain-verification.md) to reproduce provenance and [Programmable Verified](docs/concepts/programmable-verified.md) to keep review, deployment binding, finality, authorities, dependencies, market support, and metadata trust separate.
-
-## Validation commands
-
-Run the offline repository gates before opening a pull request:
+## Validate a change
 
 ```bash
 npm ci
@@ -179,51 +112,13 @@ npm run build
 npm run check
 ```
 
-Run the bounded read-only production smoke only when live verification is intentional:
+Run the bounded production smoke only when live verification is intentional:
 
 ```bash
 PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
 ```
 
-The live smoke proves that the currently published HTTP surface answers and conforms to its expected baseline. It does not prove a launch, fee path, market, safety property, or third-party integration.
-
-## Repository map
-
-```text
-docs/           Human-readable guides, concepts, reference, and operations
-openapi/        OpenAPI descriptions for the hosted APIs
-schemas/        JSON Schemas for every public response
-deployments/    Reproducible deployment evidence and source records
-abis/           Contract interfaces used for direct verification
-fixtures/       Classic, Custom, no-market, multi-market, and forward-compatibility cases
-examples/       Copy-paste integration examples
-proposals/      Non-normative prelaunch design inputs; never deployed ABI authority
-compatibility/  Frozen public consumer contracts
-scripts/        Build, conformance, and live-smoke commands
-tests/          Offline schema, semantic, consumer, and server checks
-llms.txt        Compact agent documentation index
-llms-full.txt   Complete agent integration context
-```
-
-## Current boundaries
-
-- Classic launch discovery is live on Ethereum.
-- Custom Registry discovery is live on Ethereum Mainnet. General Custom intake remains prelaunch; the v2 Custom feed publishes only finalized, exact-revision Registry records.
-- The separate Router V1 trust root is live on Ethereum for future Classic and future Custom stamps from block `25717612`. The finalized onchain canary covers `CustomGraph`; no separate Classic onchain canary is published. Historical coins are not backfilled.
-- Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
-- Ethereum Mainnet is the only currently advertised chain. Multi-chain support becomes live per chain only through the well-known document and manifest.
-- No Basebit or Aion partnership, template, recipient, Registry record, or live fee path is currently verified by the public v2 surface.
-- A registered launch is always discoverable. Chart, quote, simulation, and execution support remain explicit per market.
-- No named terminal, scanner, wallet, or data provider is implied to have integrated Programmable.
-- The GitHub approval to permit to wallet self-service launch flow is not live. The published Router interface is read-only integration evidence for future stamped launches.
-
-Read the [FAQ](docs/faq.md) for common integration questions and use the [production integration checklist](docs/integration-checklist.md) before release.
-
-Existing v1 consumers can follow the [v1 to v2 migration guide](docs/migrations/v1-to-v2.md). API v1 remains supported and has no retirement date.
-
-## Support and security
-
-Use this repository's GitHub issues for documentation and integration problems. Do not post private keys, credentials, non-public source code, or user data. Follow the repository security policy for vulnerabilities.
+Use [GitHub issues](https://github.com/0xprogrammable/developers/issues) for public documentation or integration problems. Follow [SECURITY.md](SECURITY.md) for vulnerabilities. Do not post credentials, private source, or user data.
 
 ## License
 
