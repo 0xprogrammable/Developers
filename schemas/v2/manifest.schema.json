@@ -13,6 +13,7 @@
     "publicCategories",
     "deployments",
     "customRegistry",
+    "launchStampRouter",
     "platformFee",
     "endpoints",
     "compatibility"
@@ -107,6 +108,9 @@
     },
     "customRegistry": {
       "$ref": "#/$defs/customRegistry"
+    },
+    "launchStampRouter": {
+      "$ref": "#/$defs/launchStampRouter"
     },
     "registryGenerations": {
       "type": "array",
@@ -832,37 +836,49 @@
         "note": {
           "type": "string",
           "minLength": 1
-        },
-        "launchStamp": {
-          "$ref": "#/$defs/launchStamp"
         }
       },
       "additionalProperties": false
     },
-    "launchStamp": {
+    "launchStampRouter": {
       "allOf": [
         {
-          "$ref": "#/$defs/launchStampActivation"
+          "$ref": "#/$defs/launchStampRouterActivation"
         }
       ],
       "type": "object",
       "required": [
         "version",
+        "generation",
         "status",
+        "scope",
+        "supportsFutureClassic",
+        "supportsFutureCustom",
+        "supportsHistoricalLaunches",
         "provenanceClaim",
         "provenanceOnly",
         "verificationMode",
         "launchIdentityScope",
         "address",
         "startBlock",
+        "endBlock",
+        "runtimeCodeHash",
         "abiUrl",
+        "abiSha256",
         "contractName",
+        "finalityConfirmations",
+        "canonicalReadBlock",
+        "authorityMode",
+        "bindings",
+        "atomicSelector",
         "events",
-        "getters",
-        "lifecycle"
+        "getters"
       ],
       "properties": {
         "version": {
+          "const": "1"
+        },
+        "generation": {
           "const": "1"
         },
         "status": {
@@ -872,6 +888,18 @@
             "retired"
           ]
         },
+        "scope": {
+          "const": "future-launches-only"
+        },
+        "supportsFutureClassic": {
+          "const": true
+        },
+        "supportsFutureCustom": {
+          "const": true
+        },
+        "supportsHistoricalLaunches": {
+          "const": false
+        },
         "provenanceClaim": {
           "const": "launched-on-programmable"
         },
@@ -879,10 +907,10 @@
           "const": true
         },
         "verificationMode": {
-          "const": "canonical-stamp-and-registry"
+          "const": "canonical-router"
         },
         "launchIdentityScope": {
-          "const": "chain-id+stamp-address+launch-id"
+          "const": "chain-id+router-address+launch-id"
         },
         "address": {
           "$ref": "common.schema.json#/$defs/nullableEvmAddress"
@@ -890,8 +918,25 @@
         "startBlock": {
           "$ref": "common.schema.json#/$defs/nullableDecimalString"
         },
+        "endBlock": {
+          "$ref": "common.schema.json#/$defs/nullableDecimalString"
+        },
+        "runtimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
         "abiUrl": {
           "$ref": "common.schema.json#/$defs/httpsUrl"
+        },
+        "abiSha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          ]
         },
         "contractName": {
           "type": [
@@ -900,6 +945,33 @@
           ],
           "minLength": 1,
           "maxLength": 128
+        },
+        "finalityConfirmations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "canonicalReadBlock": {
+          "const": "finalized-or-explicit-canonical-block"
+        },
+        "authorityMode": {
+          "const": "eip-1271-contract-only"
+        },
+        "bindings": {
+          "$ref": "#/$defs/launchStampRouterBindings"
+        },
+        "atomicSelector": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^0x[0-9a-f]{8}$"
+            }
+          ]
         },
         "events": {
           "type": "object",
@@ -921,7 +993,6 @@
           "type": "object",
           "required": [
             "token",
-            "hook",
             "pool",
             "component",
             "componentRuntimeCodeHash",
@@ -929,9 +1000,6 @@
           ],
           "properties": {
             "token": {
-              "$ref": "#/$defs/nullableGetterDescriptor"
-            },
-            "hook": {
               "$ref": "#/$defs/nullableGetterDescriptor"
             },
             "pool": {
@@ -948,52 +1016,43 @@
             }
           },
           "additionalProperties": false
-        },
-        "lifecycle": {
-          "type": "object",
-          "required": [
-            "contract",
-            "getter",
-            "statusCodes"
-          ],
-          "properties": {
-            "contract": {
-              "const": "customRegistry"
-            },
-            "getter": {
-              "$ref": "#/$defs/nullableGetterDescriptor"
-            },
-            "statusCodes": {
-              "type": "object",
-              "required": [
-                "0",
-                "1",
-                "2",
-                "3"
-              ],
-              "properties": {
-                "0": {
-                  "const": "none"
-                },
-                "1": {
-                  "const": "observed"
-                },
-                "2": {
-                  "const": "finalized"
-                },
-                "3": {
-                  "const": "revoked"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
         }
       },
       "additionalProperties": false
     },
-    "launchStampActivation": {
+    "launchStampRouterBindings": {
+      "type": "object",
+      "required": [
+        "permitAuthority",
+        "permitAuthorityRuntimeCodeHash",
+        "graphFactory",
+        "graphFactoryRuntimeCodeHash",
+        "poolManager",
+        "poolManagerRuntimeCodeHash"
+      ],
+      "properties": {
+        "permitAuthority": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "permitAuthorityRuntimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "graphFactory": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "graphFactoryRuntimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        },
+        "poolManager": {
+          "$ref": "common.schema.json#/$defs/nullableEvmAddress"
+        },
+        "poolManagerRuntimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/nullableHash32"
+        }
+      },
+      "additionalProperties": false
+    },
+    "launchStampRouterActivation": {
       "allOf": [
         {
           "if": {
@@ -1015,6 +1074,75 @@
               },
               "startBlock": {
                 "type": "null"
+              },
+              "endBlock": {
+                "type": "null"
+              },
+              "runtimeCodeHash": {
+                "type": "null"
+              },
+              "abiSha256": {
+                "type": "null"
+              },
+              "finalityConfirmations": {
+                "type": "null"
+              },
+              "atomicSelector": {
+                "type": "null"
+              },
+              "bindings": {
+                "type": "object",
+                "properties": {
+                  "permitAuthority": {
+                    "type": "null"
+                  },
+                  "permitAuthorityRuntimeCodeHash": {
+                    "type": "null"
+                  },
+                  "graphFactory": {
+                    "type": "null"
+                  },
+                  "graphFactoryRuntimeCodeHash": {
+                    "type": "null"
+                  },
+                  "poolManager": {
+                    "type": "null"
+                  },
+                  "poolManagerRuntimeCodeHash": {
+                    "type": "null"
+                  }
+                }
+              },
+              "events": {
+                "type": "object",
+                "properties": {
+                  "launchStamped": {
+                    "type": "null"
+                  },
+                  "componentStamped": {
+                    "type": "null"
+                  }
+                }
+              },
+              "getters": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "null"
+                  },
+                  "pool": {
+                    "type": "null"
+                  },
+                  "component": {
+                    "type": "null"
+                  },
+                  "componentRuntimeCodeHash": {
+                    "type": "null"
+                  },
+                  "record": {
+                    "type": "null"
+                  }
+                }
               }
             }
           }
@@ -1041,6 +1169,117 @@
                 "$ref": "common.schema.json#/$defs/evmAddress"
               },
               "startBlock": {
+                "$ref": "common.schema.json#/$defs/decimalString"
+              },
+              "runtimeCodeHash": {
+                "$ref": "common.schema.json#/$defs/hash32"
+              },
+              "abiSha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "finalityConfirmations": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "atomicSelector": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{8}$"
+              },
+              "bindings": {
+                "type": "object",
+                "properties": {
+                  "permitAuthority": {
+                    "$ref": "common.schema.json#/$defs/evmAddress"
+                  },
+                  "permitAuthorityRuntimeCodeHash": {
+                    "$ref": "common.schema.json#/$defs/hash32"
+                  },
+                  "graphFactory": {
+                    "$ref": "common.schema.json#/$defs/evmAddress"
+                  },
+                  "graphFactoryRuntimeCodeHash": {
+                    "$ref": "common.schema.json#/$defs/hash32"
+                  },
+                  "poolManager": {
+                    "$ref": "common.schema.json#/$defs/evmAddress"
+                  },
+                  "poolManagerRuntimeCodeHash": {
+                    "$ref": "common.schema.json#/$defs/hash32"
+                  }
+                }
+              },
+              "events": {
+                "type": "object",
+                "properties": {
+                  "launchStamped": {
+                    "$ref": "#/$defs/eventDescriptor"
+                  },
+                  "componentStamped": {
+                    "$ref": "#/$defs/eventDescriptor"
+                  }
+                }
+              },
+              "getters": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "$ref": "#/$defs/getterDescriptor"
+                  },
+                  "pool": {
+                    "$ref": "#/$defs/getterDescriptor"
+                  },
+                  "component": {
+                    "$ref": "#/$defs/getterDescriptor"
+                  },
+                  "componentRuntimeCodeHash": {
+                    "$ref": "#/$defs/getterDescriptor"
+                  },
+                  "record": {
+                    "$ref": "#/$defs/getterDescriptor"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "live"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "endBlock": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "retired"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "endBlock": {
                 "$ref": "common.schema.json#/$defs/decimalString"
               }
             }

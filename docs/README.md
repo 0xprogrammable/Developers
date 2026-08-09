@@ -10,7 +10,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 4. [v2 compatibility rules](concepts/compatibility.md)
 5. [Programmable Verified](concepts/programmable-verified.md)
 6. [Direct onchain verification](reference/onchain-verification.md)
-7. [Programmable launch stamp](reference/launch-stamp.md)
+7. [Future launch Router verification](reference/launch-stamp.md)
 8. [Production operations](operations.md)
 9. [Production integration checklist](integration-checklist.md)
 
@@ -27,7 +27,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 - [HTTP API](reference/http-api.md)
 - [Platform fees](reference/fees.md)
 - [Direct onchain verification](reference/onchain-verification.md)
-- [Programmable launch stamp](reference/launch-stamp.md)
+- [Future launch Router verification](reference/launch-stamp.md)
 - [Multi-chain discovery](concepts/multi-chain.md)
 - [Programmable Verified](concepts/programmable-verified.md)
 - [OpenAPI 3.1 contract](../openapi/programmable-v2.yaml)
@@ -40,7 +40,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 
 ## Product status in one paragraph
 
-Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Programmable Custom is reserved for finalized accepted Registry launches; general intake remains prelaunch. Historical Stock-Paired records are not part of the v2 Custom classification. Every registered v2 launch is discoverable through one envelope; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Programmable Custom is reserved for finalized accepted Registry launches; general intake remains prelaunch. The separate `launchStampRouter` trust root for future Classic and future Custom launches is also prelaunch and does not cover historical coins. Historical Stock-Paired records are not part of the v2 Custom classification. Every registered v2 launch is discoverable through one envelope; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

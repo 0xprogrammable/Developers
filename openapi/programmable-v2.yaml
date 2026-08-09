@@ -108,12 +108,15 @@ paths:
         and Registry generations are added here so clients do not need a code
         change. A prelaunch Registry carries null address and start-block
         fields; clients must never replace those nulls with guessed values.
-        `customRegistry.launchStamp` publishes
-        the provenance-only direct-verification ABI, event topics, and getter
-        selectors. A point lookup uses Ethereum JSON-RPC and does not depend on
-        a Programmable server or indexer; only the exact manifest-listed
-        stamp address is authoritative for stamp lookups and logs; the parent
-        Registry address is authoritative for launch lifecycle.
+        `launchStampRouter` is the independent provenance-only trust root for
+        future Router-stamped Classic and Custom launches. Its address, start
+        block, runtime-code hash, ABI hash, bindings, events, getters, and sole
+        atomic selector remain null while prelaunch. After activation, direct
+        verification uses only the manifest-listed chain and Router through
+        Ethereum JSON-RPC; historical launches are outside Router V1.
+        Universal detection uses token or `(PoolManager, PoolId)` and then the
+        record's `LaunchKindV1` value. The shared Classic hook is not a launch
+        identity and must not classify a Classic launch.
       responses:
         "200":
           description: Current deployment manifest.

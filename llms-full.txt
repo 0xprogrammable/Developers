@@ -67,6 +67,7 @@ Root fields:
 - publicCategories
 - deployments
 - customRegistry
+- launchStampRouter
 - platformFee
 - endpoints
 - compatibility
@@ -77,9 +78,9 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 The live Custom Registry and the still-prelaunch public intake are represented separately. A prelaunch intake state never carries or guesses a different Registry address.
 
-`customRegistry.launchStamp` publishes the prelaunch verification contract name, minimal ABI URL, event topics, and getter selectors. Its canonical address and start block remain null until deployment evidence exists. After activation, point lookups require only Ethereum JSON-RPC: token, hook, and launch-owned component addresses resolve to a launch ID, while a v4 pool resolves by `PoolManager + PoolId`. The complete identity is `chainId + stamp address + launchId`. Only the exact manifest-listed stamp address is authoritative; an attacker can copy the ABI and events but cannot write canonical stamp storage or emit logs from that address.
+Top-level `launchStampRouter` is the independent prelaunch trust descriptor for future Router-stamped Classic and Custom launches. Its canonical address, start block, runtime-code hash, ABI hash, permit authority, Graph Factory and PoolManager bindings, event descriptors, getter descriptors, and sole atomic selector remain null until deployment evidence is frozen. Historical launches are explicitly outside Router V1.
 
-The stamp is point-in-time provenance only. The parent Registry supplies `observed`, `finalized`, or `revoked` lifecycle. A stamped runtime code hash records the launch-time shell; for proxies or beacons, even a matching current shell hash does not prove the current implementation, beacon, admin, initialization, or upgrade-authority state. Terminals must revalidate those independently. Provenance does not imply safety, audit status, liquidity, sellability, routing support, or third-party integration. A direct point lookup needs no Programmable server or indexer; terminals may scan canonical stamp logs themselves for bulk discovery.
+After activation, the complete lookup identity is `chainId + Router address + launchId`. Universal detection uses the token or `PoolManager + PoolId` getter, then reads the stamp record: `LaunchKindV1.Classic` maps to Classic and `LaunchKindV1.CustomGraph` maps to Custom. The shared Classic hook must never identify or classify one Classic launch; a hook or component getter can only corroborate an exclusive Custom component. Use a finalized or explicit concrete canonical block, never a mixture of `latest` calls. A matching event topic from another emitter, a direct factory call, metadata, a backend response, the Custom Registry, or a hosted feed cannot create Router provenance. Future Classic and Custom labels share this one Router trust root. The stamp is point-in-time provenance only and does not imply safety, audit status, liquidity, sellability, routing support, or third-party integration. Current proxy implementation and authority state require separate review.
 
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
 
@@ -604,7 +605,7 @@ Not allowed without separate evidence:
 - API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
 - Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
-- Programmable launch stamp: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
+- Future launch Router verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
 - Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md
 - Multi-chain discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md
 - Production checklist: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md

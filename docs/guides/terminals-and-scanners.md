@@ -40,15 +40,18 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
 
-For direct onchain consumers, apply this rule exactly:
+For direct onchain consumers, keep the existing deployment sources and the future Router source separate:
 
-1. `Programmable Classic` requires a launch event from an enabled Classic launcher in the v2 manifest.
-2. `Programmable Custom` requires Registry-backed lifecycle plus a nonzero lookup or launch event from the canonical launch stamp in the v2 manifest.
-3. No token, hook, factory, frontend, provider API or metadata field can self-assign either label.
+1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
+2. Existing `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
+3. Future Router V1 launches require a nonzero direct lookup or a valid launch event from the exact top-level `launchStampRouter` address in the v2 manifest. Router V1 does not backfill historical launches.
+4. Future `Programmable Classic` and `Programmable Custom` labels share that one Router trust root. Read the stamp record after a token or `(PoolManager, PoolId)` lookup: `LaunchKindV1.Classic` maps to Classic and `LaunchKindV1.CustomGraph` maps to Custom. Do not guess the class from token metadata, a hook, or a factory call.
 
-For Custom point lookups, use the manifest-advertised launch-stamp getters for a token or primary contract, hook, launch-owned component, or `PoolManager + PoolId`. A nonzero launch ID returned by the exact canonical stamp contract is the origin proof; scope it with the manifest chain ID and stamp address. The point lookup needs an Ethereum RPC endpoint but no Programmable server or indexer. See [Verify “Launched on Programmable” directly onchain](../reference/launch-stamp.md).
+For an interoperable Router point lookup, use the manifest-advertised getter for a token or `PoolManager + PoolId`. Scope every nonzero launch ID with the manifest chain ID and Router address. The Classic hook is shared, so its address must never identify or classify one Classic launch. A hook or component lookup may corroborate an exclusive Custom component. Resolve one finalized or caller-supplied canonical block to a concrete block number and use it for every code and storage read in the verification. The lookup needs an Ethereum RPC endpoint but no Programmable server, database, Registry, or indexer. See [Launch stamp router verification](../reference/launch-stamp.md).
 
-The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy.
+Logs qualify only when both the emitter and `topic0` exactly match the manifest-bound Router and ABI. A copied event from another address, direct Classic V3 Factory or Graph Factory calls, and every Single Factory call are outside Router V1 provenance.
+
+The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy. A stamp does not establish safety, audit status, liquidity, sellability, or execution support.
 
 ## New-launch card
 

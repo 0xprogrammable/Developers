@@ -49,10 +49,11 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
 | [`indexer-cursor.mjs`](indexer-cursor.mjs) | Separates page traversal from a durable high-water cursor and avoids checkpointing degraded data |
 | [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
-| [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Verifies a Custom token, hook, v4 pool, or component directly against the manifest-listed canonical stamp |
+| [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Dependency-light JSON-RPC verification for a future Classic or Custom token, hook, v4 pool, or component at the manifest-listed Router |
+| [`verify-launch-stamp-viem.ts`](verify-launch-stamp-viem.ts) | Equivalent Router point lookup with viem and the same concrete-block, runtime, and record checks |
 | [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest and paginated launch feed with curl |
 
-## Direct Custom launch-stamp lookup
+## Future launch Router lookup
 
 After the v2 manifest activates the stamp, verify a token or primary contract directly through Ethereum JSON-RPC:
 
@@ -61,7 +62,15 @@ PROGRAMMABLE_RPC_URL=https://your-rpc.example \
   node examples/verify-launch-stamp.mjs token 0x1111111111111111111111111111111111111111
 ```
 
-The example discovers the canonical stamp address, start block, and getter selector from the manifest. It contains no Programmable deployment address and fails closed while the stamp is prelaunch. Token, hook, and component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId.
+The examples discover the canonical Router address, start block, runtime hash, ABI hash, and getter descriptors from top-level `launchStampRouter`. They contain no Programmable deployment address and return `unavailable` while the Router is prelaunch. Token, hook, and component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId. Historical launches are outside Router V1.
+
+Both future public labels use the same Router stamp. The record value `LaunchKindV1.Classic` maps to `Programmable Classic`; `LaunchKindV1.CustomGraph` maps to `Programmable Custom`. Universal detection uses token or `(PoolManager, PoolId)`. The shared Classic hook never identifies one Classic launch, and the examples never infer a class from metadata, a hook, or a factory call.
+
+Install `viem` in an existing TypeScript project to use the typed variant:
+
+```sh
+npm install viem
+```
 
 For a durable local indexer checkpoint, choose a path explicitly:
 

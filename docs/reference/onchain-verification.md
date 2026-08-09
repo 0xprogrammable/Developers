@@ -8,7 +8,7 @@ Ethereum is the only active chain in the current discovery document. Classic dep
 
 Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
-The launch stamp remains prelaunch. Its integration ABI, event topics, and getter selectors are published so terminals can implement now, but its canonical address and start block remain `null`. Do not scan stamp topics or accept stamp lookups as live until the manifest publishes an evidenced stamp deployment and live lifecycle.
+The future-launch Router remains prelaunch. Its top-level `launchStampRouter` manifest entry keeps the deployment address, start block, runtime-code hash, authority and production bindings `null`. Until the frozen ABI and deployment evidence are published, do not scan candidate topics, call a draft Router, or assign a Router-derived label.
 
 ## Trust root
 
@@ -42,21 +42,32 @@ For each enabled Classic deployment:
 
 Multiple enabled deployments can overlap. Deduplicate the normalized launch by `launchId`, not by whichever deployment your scanner encountered first.
 
-## Custom launch-stamp verification
+## Future launch Router verification
 
-After activation, a Custom launch is Programmable only when all of these checks pass:
+Router V1 is a separate provenance path for future Classic and future Custom launches. It has no Registry lifecycle and does not change the evidence rules for historical records.
+
+After activation, accept Router provenance only when all of these checks pass:
 
 - the chain is advertised by the official discovery document;
-- the parent Registry and launch-stamp generation are live in the manifest;
-- the log address equals the exact manifest-listed stamp address;
-- the block is at or after the stamp start block and inside its lifecycle range;
-- the event topic and decoded fields match the published ABI;
-- a direct token, hook, `PoolManager + PoolId`, or launch-owned component lookup at that same stamp address returns a nonzero launch ID;
-- the complete identity is scoped as `chainId + stamp address + launchId`;
-- current lifecycle is read from the manifest-listed parent Registry; and
-- the block has the finality state your product requires.
+- top-level `launchStampRouter` is `live`, or `retired` for a read inside its published block range;
+- the Router address, start block, runtime-code hash, ABI hash, event descriptors and getter descriptors are non-null and internally consistent;
+- `eth_chainId` equals the manifest chain ID;
+- the selected finalized or caller-supplied canonical block is resolved once and every `eth_getCode` and `eth_call` uses that same concrete block;
+- Router bytecode at that block matches the manifest runtime-code hash;
+- a direct token or `PoolManager + PoolId` lookup at the canonical Router returns a nonzero launch ID; hook or component lookups are corroborating evidence only for an exclusive Custom component;
+- the stamp record at the same block agrees with the query and the complete identity `chainId + Router address + launchId`;
+- any discovery log has the exact Router emitter and manifest ABI `topic0`; and
+- the block satisfies the consumer's finality and reorg policy.
 
-A pull request, approval result, provider API response, webhook, token tag, copied event, matching logo, or creator field cannot create the `Programmable Custom` label.
+The same Router result is the origin proof for both future public labels. Read the stamp record at the same block: `LaunchKindV1.Classic` maps to `Programmable Classic`, and `LaunchKindV1.CustomGraph` maps to `Programmable Custom`. If the value is absent, unknown, or inconsistent, preserve the origin evidence but do not guess a class. The Classic hook is shared and must never identify or classify one launch.
+
+A pull request, permit, approval response, factory response, webhook, token tag, copied event, matching logo, creator field, direct Graph Factory call, or Single Factory call cannot create Router provenance. This check requires an Ethereum RPC endpoint but no Programmable server, database, Registry, indexer, or Supabase project. See [Launch stamp router verification](launch-stamp.md).
+
+The Router records point-in-time provenance. A matching recorded component shell-code hash does not prove the current implementation, beacon, admin, initialization state, or upgrade authority. It also does not establish safety, audit status, liquidity, sellability, route support, or third-party integration.
+
+## Separate Custom Registry verification
+
+The existing Custom Registry and its candidate future generations are a different evidence surface. They are not Router V1 detection dependencies.
 
 ### Generation 2 contract set
 
@@ -73,7 +84,7 @@ All four identities must be present and mutually consistent before the generatio
 
 The Generation 2 integration event set contains 15 events across the Registry, PartnerFactory Registry, and atomic registrar. The manifest binds every event to its emitter role. The fee-policy verifier has no discovery event and is authenticated through its contract identity and the Registry binding. Derive topics from the published ABI and compare the complete canonical event-set hash; do not accept a partial topic list.
 
-These checks need an Ethereum RPC endpoint but no Programmable server or indexer. See the copy-paste [launch-stamp verifier](launch-stamp.md). Repository, build, review, authority, and deployment commitments remain available as separate evidence for products that want deeper verification; they are not required to establish the provenance-only `Launched on Programmable` label.
+These Registry checks need an Ethereum RPC endpoint but no hosted Programmable indexer. Repository, build, review, authority, and deployment commitments remain separate evidence for products that want deeper Registry verification.
 
 ## Commitment domains
 
@@ -89,7 +100,7 @@ Keep the immutable Registry commitment separate from the mutable read-model proj
 
 A new observation, finality state, correction, or revocation can change `envelopeDigest`, the projection, and `projectionDigest` without changing `registeredRecordCommitment` or `registryOrigin.registeredRecordHash`. Never compare a `sha256:` envelope or projection digest as though it were the bytes32 Registry commitment, and never let a projection update rewrite immutable registration evidence.
 
-These commitment domains support deeper Registry and read-model verification. A terminal performing only the launch-stamp provenance check does not need to reconstruct them.
+These commitment domains support deeper Registry and read-model verification. A terminal performing only the Router provenance check does not need to reconstruct them.
 
 The compatibility producer `programmable.custom-launch-registry-record.v3` remains frozen at its published 34-word contract seam. It must not be silently reinterpreted for Generation 2. Generation 2 uses `programmable.custom-launch-registry-record.v4`, whose exact 37-word commitment preimage adds `configurationHash`, `permissionsHash`, and `marketPathId`, replaces the old partner-specific slot with provider-neutral `providerId`, and retains model and template IDs plus versions. The v4 validator recomputes:
 
@@ -137,29 +148,31 @@ Use the public lifecycle distinctly:
 
 Persist block hashes, not only heights. On disagreement, stop advancing the durable cursor, rewind to a common finalized boundary, and replay.
 
-## Impersonation-resistant checklist
+## Router impersonation-resistant checklist
 
-Before displaying a Programmable label, require:
+Before displaying a Router-derived Programmable label, require:
 
 - official discovery origin;
 - advertised chain ID and CAIP-2 identity;
-- exact Registry and stamp generations;
-- exact stamp address and either a valid getter response or a valid event topic plus transaction, block hash, and log position;
-- nonzero launch ID scoped with chain ID and stamp address;
-- current lifecycle from the parent Registry; and
-- when an API record is also consumed, an API category consistent with the onchain source.
+- exact canonical Router address and published start block;
+- Router runtime and ABI hashes matching the manifest;
+- either a nonzero direct getter response with a consistent stamp record, or a valid event from that exact Router plus a direct point-lookup cross-check;
+- one concrete canonical block used for all reads;
+- a nonzero launch ID scoped with chain ID and Router address; and
+- the frozen mapper result before assigning Classic versus Custom.
 
-If one required input is unavailable, keep any independently known asset visible but label Programmable provenance `unknown`, `partial`, or unavailable. Do not guess.
+If one required input is unavailable, malformed, or inconsistent, keep independently known asset data but mark Router provenance `indeterminate` or `unavailable`. Do not convert operational uncertainty into `not-stamped`, and do not guess a class.
 
-## Activation evidence still required for Custom
+## Activation evidence still required for Router V1
 
-Direct Custom stamp activation remains blocked until all of the following are public and mutually consistent:
+Router V1 remains prelaunch until all of the following are public and mutually consistent:
 
-- chain, parent Registry address, stamp address, their start blocks, generation, ABI, and stamp event topics;
-- verified stamp source and runtime code identity;
-- the immutable Atomic Registrar writer binding and parent Registry binding;
-- one real Custom canary transaction and launch ID;
-- successful token, hook, pool, and component lookups for that canary; and
-- finality, retirement, and Registry lifecycle behavior.
+- chain, canonical Router address, start block, ABI, ABI hash, event topics, getter selectors and runtime-code hash;
+- verified source, exact deployed runtime and immutable EIP-1271 permit-authority, Graph Factory and PoolManager bindings;
+- exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while the Classic V3 route and runtime are permit- and record-bound; no Single Factory route exists;
+- frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics;
+- future Classic and future Custom canary transactions with launch IDs;
+- successful token, hook, `PoolManager + PoolId`, component and stamp-record cross-checks for those canaries; and
+- finality, reorg and retirement behavior.
 
 Read [Programmable Verified](../concepts/programmable-verified.md), [Multi-chain discovery](../concepts/multi-chain.md), and [Production operations](../operations.md) before enabling a production scanner.

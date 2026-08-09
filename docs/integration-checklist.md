@@ -18,9 +18,15 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Deduplicate by `launchId`; key token assets by chain ID plus address, and project-only launches by `projectId` plus their authenticated asset graph.
 - [ ] Keep provider, partner, template, model, hook, and market type as secondary attribution.
 - [ ] Never trust name, symbol, logo, metadata tag, creator text, or a copied event as origin proof.
-- [ ] For a Custom stamp, require the manifest chain ID, exact canonical stamp address, stamp start block, published getter or event ABI, and a nonzero launch ID scoped with that chain and stamp address.
+- [ ] Treat top-level `launchStampRouter` as a future-only trust root; never use it to backfill a historical Classic or Custom launch.
+- [ ] Require the manifest chain ID, exact canonical Router address, Router start block, runtime-code hash, ABI hash, and a nonzero launch ID scoped with that chain and Router address.
+- [ ] Resolve one finalized or caller-supplied canonical block and use its concrete number for every Router code read, point lookup, and record cross-check.
+- [ ] Assign a future class only from the stamp record: `LaunchKindV1.Classic` maps to Classic and `LaunchKindV1.CustomGraph` maps to Custom.
+- [ ] Use token or `(PoolManager, PoolId)` for interoperable detection; never identify or classify Classic through its shared hook.
 - [ ] Bind a v4 pool lookup to both its PoolManager address and PoolId; do not treat PoolId alone as a global identity.
-- [ ] Treat storage or logs from a copied stamp contract at any other address as non-Programmable.
+- [ ] Filter discovery logs by both exact canonical Router address and manifest ABI `topic0`; reject a copied emitter.
+- [ ] Treat direct Single Factory, Classic V3 Factory, and Graph Factory calls outside the Router as outside Router V1 provenance.
+- [ ] Keep Router prelaunch fail-closed while its address, start block, runtime, authority, or production bindings are null.
 - [ ] Treat stamped runtime code hashes as point-in-time evidence; independently resolve and revalidate current proxy implementation, beacon, admin, initialization, and upgrade authority state.
 
 ## Feed ingestion
@@ -69,13 +75,22 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Verify recipient, currency, basis, charge mode, rounding, accrual, claim authority, and double-claim protections.
 - [ ] Do not classify transfers, mints, burns, rewards, games, refunds, bridges, or unrelated pools as fee-bearing trades without path-specific evidence.
 
-## Release evidence
+## Router V1 activation evidence
+
+- [ ] Confirm the canonical Router chain, address, start block, ABI hash, topics, getter selectors, code verification, and runtime-code hash from public evidence.
+- [ ] Confirm immutable EIP-1271 contract authority, Graph Factory and PoolManager addresses and runtime hashes; reject an EOA authority fallback.
+- [ ] Confirm exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while Classic V3 route and runtime are permit- and record-bound; Single Factory remains outside Router V1.
+- [ ] Confirm frozen `LaunchKindV1.CustomGraph | Classic` record and event behavior with one canary of each class.
+- [ ] Confirm token, hook, `PoolManager + PoolId`, component, record and point-in-time code-hash results at finalized canonical blocks.
+- [ ] Keep Router V1 prelaunch if any required activation evidence is absent.
+
+## Registry and feed release evidence
 
 - [ ] Confirm the registry chain, address, start block, ABI, topics, generation, code verification, and authorized writers from public evidence.
 - [ ] Confirm approval-to-commit, reproducible-build, artifact, configuration, launch-wallet, and runtime bindings.
 - [ ] Confirm a real Custom canary transaction, launch ID, Registry event, API record, and finality transition.
 - [ ] Confirm cursor traversal cannot lose a launch inserted during pagination.
 - [ ] Run schema, fixture, conformance, type, lint, build, security, link, and browser checks appropriate to your integration.
-- [ ] Keep Custom prelaunch if any required external evidence is absent.
+- [ ] Keep the affected Custom Registry or feed path prelaunch if any required external evidence is absent.
 
 The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. General intake remains prelaunch and must stay disabled independently of discovery.

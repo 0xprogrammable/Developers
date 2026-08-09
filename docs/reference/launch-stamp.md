@@ -1,112 +1,134 @@
-# Verify “Launched on Programmable” directly onchain
+# Launch stamp router verification
 
-The Programmable launch stamp is a provenance check. It answers one question:
+The launch stamp router is an onchain provenance interface for future Programmable launches. A successful lookup answers one question: was this token, hook, v4 pool, or launch-owned component created through the canonical Programmable launch router?
 
-> Was this token, hook, v4 pool, or component registered by the official Programmable launch path?
+It does not state that a contract is audited, safe, liquid, sellable, supported by a router, or suitable for a transaction.
 
-The point lookup requires an Ethereum RPC endpoint, but no Programmable API, database, server, SDK, or indexer. Bulk discovery can scan the same canonical contract logs directly.
+## Deployment state
 
-## Current state
+`launchStampRouter` in the version 2 manifest is currently `prelaunch`. Its `address`, `startBlock`, `runtimeCodeHash`, final ABI hash, permit authority, factory binding, PoolManager binding, event descriptors, getter descriptors, and atomic selector are `null` until one deployment is verified and activated.
 
-Custom Registry generation 1 is live and manifest-listed. The launch stamp is still **prelaunch**: its integration ABI, event topics, and getter selectors are published for implementation, while its canonical address and start block remain `null`. Until the v2 manifest marks the stamp live with an evidenced address and start block, stamp integrations must return `unavailable` and must not derive the Programmable label from stamp state.
+While any required activation field is `null`, integrations must return `unavailable`. Do not replace a null with a value from a pull request, test fixture, frontend, chat, draft deployment, or copied contract.
 
-Never replace a prelaunch stamp `null` with an address or block copied from a pull request, fixture, chat, frontend, or draft contract.
+## Scope
+
+Router V1 covers only launches executed after its published start block:
+
+- future Programmable Classic launches;
+- future Programmable Custom launches; and
+- one v4 market bound as `PoolManager + PoolId` for each stamped launch.
+
+Historical Classic or Custom coins are not backfilled and do not acquire a router stamp. The old launch path, a direct Foundation factory call, a matching ticker, or an existing Programmable label is not a Router V1 stamp.
+
+Both future labels use the same canonical router as their provenance source. The stamp record's frozen `LaunchKindV1` value selects the class: `Classic` or `CustomGraph`. If that value is absent, unknown, or inconsistent, preserve the launch-origin result but do not guess a Classic or Custom class.
+
+Universal terminal detection uses the token getter or the `(PoolManager, PoolId)` getter and then reads the stamp record. The Classic hook is shared by many launches, so a hook lookup must never be used to identify or classify a Classic launch. A Custom launch-owned hook may be verified through the exclusive-component getter, but token or pool lookup remains the interoperable path.
 
 ## Trust root
 
-Begin with the official discovery document and follow its manifest URL:
+Start with the official discovery document and follow its manifest URL:
 
 ```text
 https://developers.programmable.family/.well-known/programmable.json
-→ manifestUrl
-→ customRegistry
+-> manifestUrl
+-> launchStampRouter
 ```
 
-The manifest supplies the complete source identity:
-
-- EVM `chainId` and CAIP-2 chain identity;
-- the canonical Registry and stamp addresses;
-- the first block that may contain a valid Registry record or stamp;
-- lifecycle status;
-- the versioned ABI, event topics, and getter selectors.
-
-The Registry address, stamp address, and their start blocks live only in the manifest. The current Registry identity is published there; the stamp identity remains `null` until activation. Consumer examples intentionally contain none of them. The stamp contract answers identity lookups; the parent Registry supplies the current launch lifecycle.
-
-## The non-spoofable rule
-
-A contract is a Programmable launch only when the lookup succeeds against the exact canonical stamp address published for that chain. Current lifecycle state is read from the exact parent Registry address in the same manifest.
-
-An attacker can copy the contract name, getter names, event names, event topics, ABI, logo, metadata, or website. Those copies do not matter: storage and logs at another address are not Programmable provenance. A creator signature, backend response, webhook, or self-declared marker is not a substitute for canonical stamp state.
-
-For a log-based integration, require all of the following:
-
-1. RPC chain ID equals the manifest chain ID.
-2. Stamp log address equals `customRegistry.launchStamp.address` after address normalization.
-3. Block number is at or after `customRegistry.launchStamp.startBlock` and inside the generation lifecycle.
-4. `topic0` and decoded values match the manifest-linked ABI.
-5. The returned `launchId` is nonzero and is scoped together with the manifest chain ID and stamp address.
-6. Current lifecycle is read separately from the parent Registry.
-
-Checking only an event signature or only a function on the launched contract is unsafe and non-conforming.
-
-The deployed stamp is writable only by its immutable Atomic Registrar. During the atomic launch it checks the parent Registry record, execution-policy capability, complete v4 PoolKey, runtime code hashes, and the approval-bound stamp hash. It recomputes the PoolId from the PoolKey and rejects duplicate launch IDs, tokens, hooks, launch-owned components, and `PoolManager + PoolId` identities. A copied contract can reproduce this code, but its different address is outside the manifest trust root.
-
-The two discovery events are:
-
-- `ProgrammableLaunchStampedV1`, binding launch ID, token, hook, PoolManager, PoolId, and stamp hash;
-- `ProgrammableComponentStampedV1`, binding a launch-owned component, its kind, and observed runtime code hash.
-
-Read the remaining pool-key, component-set, capability, and stamp commitments through the manifest-advertised `launchStamp(bytes32)` and component getters.
-
-## Point lookups
-
-The manifest advertises versioned getters for four identity checks:
-
-| Query | Inputs | Result |
-| --- | --- | --- |
-| Token or primary contract | contract address | `launchId` or zero |
-| Hook | hook address | chain-scoped `launchId` or zero |
-| v4 pool | PoolManager address plus `PoolId` | `launchId` or zero |
-| Component | component address | chain-scoped `launchId` or zero |
-
-Uniswap v4 pools live inside a singleton PoolManager and do not have an individual pool-contract address. Always bind `PoolManager + PoolId`; do not use a `PoolId` alone unless a future deployed stamp contract immutably binds exactly one PoolManager and the manifest says so.
-
-Token, hook, and additional launch-owned component addresses are globally single-assignment within one stamp contract. Shared dependencies such as PoolManager, routers, and factories are not launch-owned components and must not be submitted to the component lookup.
-
-`launchId == bytes32(0)` means the queried token, hook, pool, or component is not stamped by that stamp generation. A nonzero result establishes Programmable launch provenance. Treat the complete identity as `chainId + stamp address + launchId`; a bare launch ID is not a global identity. This provenance does not by itself establish an audit, safety, liquidity, price, sellability, router support, or economic outcome.
-
-The ABI also exposes `componentRuntimeCodeHash(address)`. This is point-in-time launch provenance: it records the runtime code hash observed when the stamp was written. An integrator may compare it with current `EXTCODEHASH` or `eth_getCode` evidence to detect shell-code drift, but a matching proxy shell hash does not prove that the current implementation, beacon, admin, upgrade authority, or initialization state still matches the launch state. Terminals must perform their own current proxy resolution, authority review, simulation, security checks, and revalidation. None of those current-state checks is implied by the Programmable origin label.
-
-## Minimal verification algorithm
+The accepted router identity is:
 
 ```text
-fetch official discovery document
-fetch its manifest
-assert RPC chainId == manifest.chainId
-assert customRegistry.status == live
-assert customRegistry.launchStamp.status == live
-assert stamp address, stamp startBlock, ABI and selected getter are published
-eth_call selected getter at customRegistry.launchStamp.address
-if launchId is zero: not a Programmable launch
-else: Launched on Programmable
-read current lifecycle from customRegistry.launchStamp.lifecycle at customRegistry.address
+manifest chainId + launchStampRouter.address + launchStampRouter.startBlock
 ```
 
-Use the [dependency-free example](../../examples/verify-launch-stamp.mjs) for token, hook, pool, and component lookups.
+The manifest also pins the router runtime-code hash and ABI URL/hash. Validate those bindings before enabling lookups. Never derive a router address from an event topic, factory address, token metadata, application response, or transaction calldata.
+
+After a nonzero lookup, the complete provenance identity is `chainId + Router address + launchId`. The start block bounds which Router events and records belong to this generation; it is not a substitute for the launch ID.
+
+The Custom Registry, hosted launch feed, an indexer, Supabase, and the permit service are not detection dependencies. They may carry separate product data, but they do not replace or extend the router trust root.
+
+## Consumer outcomes
+
+Return one of these states without collapsing operational uncertainty into a negative result:
+
+| State | Meaning | Label behavior |
+| --- | --- | --- |
+| `unavailable` | Router is prelaunch, required manifest data is null, or the selected chain is not active | Do not assign a router-derived label |
+| `not-stamped` | A valid lookup at the canonical router returned `bytes32(0)` | Do not assign a router-derived label |
+| `stamped` | The canonical router returned a nonzero launch ID and its record is consistent | Record Programmable launch provenance; classify only from `record.kind` |
+| `indeterminate` | RPC, manifest, ABI, runtime, block, decoding, or cross-check evidence is incomplete or inconsistent | Keep existing asset data, but do not assign or remove a label based on this attempt |
+
+`not-stamped` is valid only after a successful canonical lookup. A timeout, pruned block, malformed response, chain mismatch, or unavailable finalized block is `indeterminate`, not `not-stamped`.
+
+## Point lookup algorithm
+
+Use the same concrete block for every call in one verification:
+
+1. Fetch and validate the official discovery document and version 2 manifest.
+2. Require `launchStampRouter.status` to be `live` or, for historical reads within its published range, `retired`.
+3. Require non-null router address, start block, runtime-code hash, ABI hash, event descriptors, and getter descriptors.
+4. Call `eth_chainId` and require exact equality with the manifest chain ID.
+5. Resolve the finalized block or a caller-supplied canonical block to a concrete block number and hash. Do not mix multiple `latest` reads.
+6. Require the concrete block to be at or after `startBlock` and, for a retired generation, at or before `endBlock` when scanning new stamps.
+7. Fetch router bytecode at that block and compare its EVM Keccak-256 hash with `runtimeCodeHash`.
+8. Call the manifest-advertised router getter for the token or `PoolManager + PoolId`. A hook or component getter may corroborate an exclusive Custom component, but is not a universal lookup path.
+9. If the result is zero, return `not-stamped`.
+10. If the result is nonzero, read the stamp record at the same block and cross-check the queried identity, launch ID, market identity, nonzero stamp hash, and recognized `LaunchKindV1` value.
+11. Map `LaunchKindV1.Classic` to `Programmable Classic` and `LaunchKindV1.CustomGraph` to `Programmable Custom`. Do not infer class from a hook name, token metadata, factory call, or previous platform record.
+
+The final manifest and ABI publish the exact signatures, selectors, return layout, event topics, indexed fields, component-kind values, and `LaunchKindV1` encoding. Until those fields are non-null and artifact-matched, this algorithm intentionally stops at `unavailable`.
+
+The dependency-light JSON-RPC example and the viem example implement this sequence:
+
+- [JSON-RPC verifier](../../examples/verify-launch-stamp.mjs)
+- [viem verifier](../../examples/verify-launch-stamp-viem.ts)
 
 ## Bulk discovery
 
-A terminal that wants every new launch can call `eth_getLogs` against exactly the manifest stamp address, from exactly the published stamp start block, using the published launch and component topics. It may keep its own checkpoint and finality policy. No Programmable-hosted indexer is required.
+Bulk consumers may call `eth_getLogs` without a Programmable-hosted indexer. Use all of these constraints together:
 
-The hosted launch feed remains an optional normalized convenience for metadata and broad discovery. It is not the trust root for the onchain stamp.
+- `address` equals the exact manifest router address;
+- `topic0` equals the manifest event topic derived from the pinned ABI;
+- `fromBlock` equals the published router start block;
+- `toBlock` respects the router end block if the generation is retired; and
+- accepted logs are persisted with block hash, transaction hash, transaction index, and log index.
 
-Stamp provenance is append-only. A later Registry lifecycle of `revoked` remains historical evidence that the launch occurred through Programmable, while signaling that the launch is no longer in an active accepted state. Keep origin and current lifecycle as separate fields.
+Apply an explicit finality and reorg policy. A log with the correct topic from any other emitter is not Programmable provenance. For high-assurance ingestion, cross-check the direct getter and record at the log block before advancing a durable checkpoint.
 
-## Display language
+## Atomic launch path
 
-Conforming display copy:
+Router V1 has exactly one market-bearing state-changing selector and no route-specific overload. It executes the permit-bound route selected by `LaunchKindV1` and writes the stamp in one transaction; any failed validation reverts both operations.
 
-- `Launched on Programmable`
-- `Programmable Custom`
+The write path is deliberately separate from detection:
 
-Do not derive the label from a ticker, image, hook callback, arbitrary creator metadata, or a copied stamp implementation. Do not expand the provenance label into `safe`, `audited`, `sellable`, `risk-free`, or another claim not made by this interface.
+- `CustomGraph` uses the Router's immutable Graph Factory binding;
+- `Classic` uses the exact Classic V3 route and runtime committed by the permit and stamp record rather than a Router immutable;
+- the permit authority is a nonzero contract and signatures are checked through EIP-1271;
+- there is no EOA authority fallback;
+- the EIP-712 permit binds chain, router, launch wallet, route, factory call, value, expected result, stamp request, nonce, and validity window; and
+- replayed permits or nonces are rejected.
+
+A direct call to the Single Factory is outside Router V1. Direct calls to the Classic V3 Factory or Graph Factory outside the router are also outside Router V1. None creates canonical router state, even if it deploys byte-identical contracts.
+
+Terminals do not need a permit, authority API, factory response, Registry record, or backend response to verify an existing stamp. They read the canonical router only.
+
+## Runtime-code evidence
+
+The component runtime-code hash records code observed when the atomic stamp was written. Comparing it with current `EXTCODEHASH` or `keccak256(eth_getCode(...))` can detect shell-code drift.
+
+This is point-in-time evidence. For a proxy or beacon, a matching shell hash does not prove the current implementation, beacon, admin, initialization state, or upgrade authority. Resolve and review current proxy state separately. That review does not change the historical router-origin result.
+
+## Unsupported in Router V1
+
+Do not assign a Router V1 label to:
+
+- any launch before the manifest start block;
+- historical launches that predate Router V1;
+- Single Factory launches;
+- direct Classic V3 Factory or Graph Factory launches that bypass the router;
+- a Classic classification derived from the shared Classic hook;
+- post-hoc or staged self-attestations;
+- a copied router, event, ABI, website, signature, or metadata field;
+- a pool identified by `PoolId` without its PoolManager; or
+- a token whose lookup is unavailable, zero, malformed, or inconsistent.
+
+These boundaries are provenance rules only. Trading terminals remain responsible for their own security analysis, market support, simulation, routing, and transaction policy.
