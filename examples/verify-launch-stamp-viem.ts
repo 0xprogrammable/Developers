@@ -28,6 +28,26 @@ type GetterDescriptor = {
   result: string;
 };
 
+type EventDescriptor = {
+  name: string;
+  signature: string;
+  topic0: Hex;
+  indexedInputs: string[];
+};
+
+type RouterBindings = {
+  permitAuthority: Address | null;
+  permitAuthorityRuntimeCodeHash: Hex | null;
+  graphFactory: Address | null;
+  graphFactoryRuntimeCodeHash: Hex | null;
+  poolManager: Address | null;
+  poolManagerRuntimeCodeHash: Hex | null;
+};
+
+type ActiveRouterBindings = {
+  [Key in keyof RouterBindings]: NonNullable<RouterBindings[Key]>;
+};
+
 type RouterManifest = {
   status: "prelaunch" | "live" | "retired";
   address: Address | null;
@@ -36,9 +56,14 @@ type RouterManifest = {
   runtimeCodeHash: Hex | null;
   abiUrl: string;
   abiSha256: string | null;
+  finalityConfirmations: number | null;
+  atomicSignature: string;
+  atomicSelector: Hex;
+  bindings: RouterBindings;
   events: {
-    launchStamped: { signature: string; topic0: Hex } | null;
-    componentStamped: { signature: string; topic0: Hex } | null;
+    launchStamped: EventDescriptor | null;
+    launchRouteStamped: EventDescriptor | null;
+    componentStamped: EventDescriptor | null;
   };
   getters: Record<string, GetterDescriptor | null>;
 };
@@ -65,13 +90,26 @@ export async function verifyLaunchStampWithViem({
     !router.startBlock ||
     !router.runtimeCodeHash ||
     !router.abiSha256 ||
+    router.finalityConfirmations === null ||
+    !router.atomicSignature ||
+    !router.atomicSelector ||
+    !completeBindings(router.bindings) ||
     !router.events.launchStamped ||
+    !router.events.launchRouteStamped ||
     !router.events.componentStamped ||
+    !router.getters.chainId ||
+    !router.getters.permitAuthority ||
+    !router.getters.permitAuthorityRuntimeCodeHash ||
+    !router.getters.graphFactory ||
+    !router.getters.graphFactoryRuntimeCodeHash ||
+    !router.getters.poolManager ||
+    !router.getters.poolManagerRuntimeCodeHash ||
     !router.getters.token ||
     !router.getters.pool ||
     !router.getters.component ||
     !router.getters.componentRuntimeCodeHash ||
-    !router.getters.record
+    !router.getters.record ||
+    !router.getters.stampProof
   ) {
     return result("unavailable", "router-prelaunch-or-incomplete", query);
   }
@@ -112,6 +150,15 @@ export async function verifyLaunchStampWithViem({
       return result("indeterminate", "router-abi-hash-mismatch", query);
     }
     validatePublishedAbi(abi, router);
+    await validateImmutableBindings({
+      abi,
+      bindings: router.bindings,
+      blockNumber,
+      chainId,
+      client,
+      router,
+      routerAddress: router.address,
+    });
 
     const pointDescriptor = router.getters[query.kind]!;
     const pointFunction = describedFunction(abi, pointDescriptor);
@@ -147,7 +194,24 @@ export async function verifyLaunchStampWithViem({
       args: [launchId],
     });
     const record = namedOutputs(recordFunction, decodedRecord);
-    if (!record.stampHash || record.stampHash === ZERO_BYTES32) {
+    const requiredRecordHashes = [
+      "poolId",
+      "poolKeyHash",
+      "componentSetHash",
+      "routePayloadHash",
+      "routeLauncherRuntimeCodeHash",
+      "expectedResultHash",
+      "permitDigest",
+      "stampHash",
+    ];
+    if (
+      requiredRecordHashes.some(
+        (field) => !nonzeroHash32(record[field]),
+      ) ||
+      ["launchWallet", "token", "hook", "poolManager", "routeLauncher"].some(
+        (field) => normalizeAddress(record[field]) === null,
+      )
+    ) {
       return result("indeterminate", "stamp-record-empty", query);
     }
     if (
@@ -168,9 +232,46 @@ export async function verifyLaunchStampWithViem({
     if (!classification) {
       return result("indeterminate", "launch-kind-unknown", query);
     }
+    if (
+      normalizeAddress(record.poolManager) !==
+      normalizeAddress(router.bindings.poolManager)
+    ) {
+      return result("indeterminate", "stamp-record-pool-manager-mismatch", query);
+    }
+    if (
+      classification.kind === "CustomGraph" &&
+      (normalizeAddress(record.routeLauncher) !==
+        normalizeAddress(router.bindings.graphFactory) ||
+        String(record.routeLauncherRuntimeCodeHash).toLowerCase() !==
+          router.bindings.graphFactoryRuntimeCodeHash?.toLowerCase())
+    ) {
+      return result("indeterminate", "custom-graph-route-binding-mismatch", query);
+    }
+    const routeCode = await client.getBytecode({
+      address: record.routeLauncher as Address,
+      blockNumber,
+    });
+    const observedRouteRuntime = routeCode ? keccak256(routeCode) : null;
 
     let componentRuntime = null;
     if (query.kind === "token" || query.kind === "component") {
+      const proofFunction = describedFunction(abi, router.getters.stampProof);
+      const decodedProof = await callFunction({
+        client,
+        router: router.address,
+        blockNumber,
+        item: proofFunction,
+        args: [query.address],
+      });
+      const proof = namedOutputs(proofFunction, decodedProof);
+      if (
+        String(proof.launchId).toLowerCase() !== launchId.toLowerCase() ||
+        String(proof.stampHash).toLowerCase() !==
+          String(record.stampHash).toLowerCase()
+      ) {
+        return result("indeterminate", "stamp-proof-mismatch", query);
+      }
+
       const runtimeFunction = describedFunction(
         abi,
         router.getters.componentRuntimeCodeHash,
@@ -182,6 +283,9 @@ export async function verifyLaunchStampWithViem({
         item: runtimeFunction,
         args: [query.address],
       })) as Hex;
+      if (!nonzeroHash32(recorded)) {
+        return result("indeterminate", "component-runtime-record-missing", query);
+      }
       const observedCode = await client.getBytecode({
         address: query.address,
         blockNumber,
@@ -207,6 +311,18 @@ export async function verifyLaunchStampWithViem({
       category: classification.category,
       publicLabel: classification.publicLabel,
       stampHash: record.stampHash,
+      route: {
+        launcher: record.routeLauncher,
+        recordedRuntimeCodeHash: record.routeLauncherRuntimeCodeHash,
+        observedRuntimeCodeHash: observedRouteRuntime,
+        runtimeMatches:
+          observedRouteRuntime === null
+            ? null
+            : observedRouteRuntime === record.routeLauncherRuntimeCodeHash,
+        routePayloadHash: record.routePayloadHash,
+        expectedResultHash: record.expectedResultHash,
+        permitDigest: record.permitDigest,
+      },
       componentRuntime,
       claim: "provenance-only",
     };
@@ -255,6 +371,120 @@ function validatePublishedAbi(abi: Abi, router: RouterManifest) {
     if (!item || toEventSelector(item) !== descriptor.topic0) {
       throw new Error("event topic mismatch");
     }
+    const indexedInputs = item.inputs
+      .filter(({ indexed }) => indexed)
+      .map(({ name }) => name);
+    if (JSON.stringify(indexedInputs) !== JSON.stringify(descriptor.indexedInputs)) {
+      throw new Error("event indexed layout mismatch");
+    }
+  }
+
+  const atomic = abi.find(
+    (candidate): candidate is AbiFunction =>
+      candidate.type === "function" &&
+      functionSignature(candidate) === router.atomicSignature,
+  );
+  if (
+    !atomic ||
+    atomic.stateMutability !== "payable" ||
+    toFunctionSelector(atomic) !== router.atomicSelector
+  ) {
+    throw new Error("atomic selector mismatch");
+  }
+  const payableFunctions = abi.filter(
+    (candidate): candidate is AbiFunction =>
+      candidate.type === "function" && candidate.stateMutability === "payable",
+  );
+  if (payableFunctions.length !== 1 || payableFunctions[0] !== atomic) {
+    throw new Error("unexpected payable Router function");
+  }
+}
+
+async function validateImmutableBindings({
+  abi,
+  bindings,
+  blockNumber,
+  chainId,
+  client,
+  router,
+  routerAddress,
+}: {
+  abi: Abi;
+  bindings: ActiveRouterBindings;
+  blockNumber: bigint;
+  chainId: number;
+  client: ReturnType<typeof createPublicClient>;
+  router: RouterManifest;
+  routerAddress: Address;
+}) {
+  const expectations: Array<{
+    getter: string;
+    expected: Address | Hex | bigint;
+    kind: "address" | "hash" | "uint";
+  }> = [
+    { getter: "chainId", expected: BigInt(chainId), kind: "uint" },
+    {
+      getter: "permitAuthority",
+      expected: bindings.permitAuthority,
+      kind: "address",
+    },
+    {
+      getter: "permitAuthorityRuntimeCodeHash",
+      expected: bindings.permitAuthorityRuntimeCodeHash,
+      kind: "hash",
+    },
+    {
+      getter: "graphFactory",
+      expected: bindings.graphFactory,
+      kind: "address",
+    },
+    {
+      getter: "graphFactoryRuntimeCodeHash",
+      expected: bindings.graphFactoryRuntimeCodeHash,
+      kind: "hash",
+    },
+    {
+      getter: "poolManager",
+      expected: bindings.poolManager,
+      kind: "address",
+    },
+    {
+      getter: "poolManagerRuntimeCodeHash",
+      expected: bindings.poolManagerRuntimeCodeHash,
+      kind: "hash",
+    },
+  ];
+
+  for (const { getter, expected, kind } of expectations) {
+    const item = describedFunction(abi, router.getters[getter]);
+    const observed = await callFunction({
+      client,
+      router: routerAddress,
+      blockNumber,
+      item,
+      args: [],
+    });
+    const matches =
+      kind === "uint"
+        ? BigInt(observed as bigint) === expected
+        : kind === "address"
+          ? normalizeAddress(observed) === normalizeAddress(expected)
+          : String(observed).toLowerCase() === String(expected).toLowerCase();
+    if (!matches) throw new Error(`immutable ${getter} mismatch`);
+  }
+
+  for (const [addressKey, hashKey] of [
+    ["permitAuthority", "permitAuthorityRuntimeCodeHash"],
+    ["graphFactory", "graphFactoryRuntimeCodeHash"],
+    ["poolManager", "poolManagerRuntimeCodeHash"],
+  ] as const) {
+    const code = await client.getBytecode({
+      address: bindings[addressKey],
+      blockNumber,
+    });
+    if (!code || keccak256(code) !== bindings[hashKey]) {
+      throw new Error(`binding ${addressKey} runtime mismatch`);
+    }
   }
 }
 
@@ -283,14 +513,14 @@ function namedOutputs(item: AbiFunction, decoded: unknown) {
 
 function classifyLaunchKind(value: unknown) {
   const kind = BigInt(value as bigint);
-  if (kind === 0n) {
+  if (kind === 1n) {
     return {
       kind: "CustomGraph",
       category: "custom",
       publicLabel: "Programmable Custom",
     };
   }
-  if (kind === 1n) {
+  if (kind === 2n) {
     return {
       kind: "Classic",
       category: "classic",
@@ -298,6 +528,19 @@ function classifyLaunchKind(value: unknown) {
     };
   }
   return null;
+}
+
+function completeBindings(
+  bindings: RouterBindings | undefined,
+): bindings is ActiveRouterBindings {
+  return Boolean(
+    bindings?.permitAuthority &&
+      bindings.permitAuthorityRuntimeCodeHash &&
+      bindings.graphFactory &&
+      bindings.graphFactoryRuntimeCodeHash &&
+      bindings.poolManager &&
+      bindings.poolManagerRuntimeCodeHash,
+  );
 }
 
 function functionSignature(item: AbiFunction) {
@@ -308,7 +551,10 @@ function eventSignature(item: AbiEvent) {
   return `${item.name}(${item.inputs.map(canonicalType).join(",")})`;
 }
 
-function canonicalType(input: { type: string; components?: readonly unknown[] }) {
+function canonicalType(input: {
+  type: string;
+  components?: readonly unknown[];
+}): string {
   if (!input.type.startsWith("tuple")) return input.type;
   const suffix = input.type.slice("tuple".length);
   const components = (input.components ?? []) as readonly {
@@ -341,7 +587,17 @@ async function fetchJson(url: string) {
 }
 
 function normalizeAddress(value: unknown) {
-  return typeof value === "string" ? value.toLowerCase() : null;
+  return typeof value === "string" && /^0x[0-9a-fA-F]{40}$/.test(value)
+    ? value.toLowerCase()
+    : null;
+}
+
+function nonzeroHash32(value: unknown): value is Hex {
+  return (
+    typeof value === "string" &&
+    /^0x[0-9a-fA-F]{64}$/.test(value) &&
+    value.toLowerCase() !== ZERO_BYTES32
+  );
 }
 
 function result(state: string, reason: string, query: Query) {

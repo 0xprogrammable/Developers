@@ -15,11 +15,42 @@
   "endBlock": null,
   "runtimeCodeHash": null,
   "abiUrl": "https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json",
-  "abiSha256": null,
+  "abiSha256": "sha256:bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86",
   "contractName": "ProgrammableLaunchStampRouterV1",
+  "artifact": {
+    "sourceRepository": "https://github.com/0xprogrammable/programmable",
+    "sourceCommit": "0a7134bbb912222639627fb9078df2f8dd3a6c38",
+    "sourceTree": "24ffb0c6b04af7993254560b4f03608de8f52231",
+    "sourcePath": "src/ProgrammableLaunchStampRouterV1.sol",
+    "artifactPath": "out/ProgrammableLaunchStampRouterV1.sol/ProgrammableLaunchStampRouterV1.json"
+  },
   "finalityConfirmations": null,
   "canonicalReadBlock": "finalized-or-explicit-canonical-block",
   "authorityMode": "eip-1271-contract-only",
+  "enumValues": {
+    "launchKind": {
+      "invalid": 0,
+      "customGraph": 1,
+      "classic": 2
+    },
+    "componentKind": {
+      "other": 0,
+      "token": 1,
+      "hook": 2
+    },
+    "componentScope": {
+      "invalid": 0,
+      "exclusive": 1,
+      "sharedInfrastructure": 2
+    }
+  },
+  "eip712": {
+    "name": "ProgrammableLaunchStampRouter",
+    "version": "1",
+    "primaryType": "ProgrammableLaunchPermitV1",
+    "permitType": "ProgrammableLaunchPermitV1(uint256 chainId,address router,address launchWallet,uint8 kind,bytes32 routePayloadHash,bytes32 expectedResultHash,bytes32 stampRequestHash,bytes32 nonce,uint64 validAfter,uint64 deadline,uint256 value)",
+    "permitTypeHash": "0x5147473bd302ad67f9ef14ef9262d1b0f8d4f7155081bc8c508195b647413761"
+  },
   "bindings": {
     "permitAuthority": null,
     "permitAuthorityRuntimeCodeHash": null,
@@ -28,16 +59,105 @@
     "poolManager": null,
     "poolManagerRuntimeCodeHash": null
   },
-  "atomicSelector": null,
+  "atomicSignature": "launchAndStampV1((uint256,address,address,uint8,bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint256),(bytes32,address,bytes32,(address,address,uint24,int24,address),bytes32,(uint8,address,bytes32,uint8,uint8)[]),bytes,bytes)",
+  "atomicSelector": "0xe5f6b8cd",
   "events": {
-    "launchStamped": null,
-    "componentStamped": null
+    "launchStamped": {
+      "name": "ProgrammableLaunchStampedV1",
+      "signature": "ProgrammableLaunchStampedV1(bytes32,address,address,address,bytes32,bytes32)",
+      "topic0": "0x6cf479a102f1eebc9244f48f8d68f6aa52b4c5a4516318df58ba46614a5b14f2",
+      "indexedInputs": [
+        "launchId",
+        "token",
+        "hook"
+      ]
+    },
+    "launchRouteStamped": {
+      "name": "ProgrammableLaunchRouteStampedV1",
+      "signature": "ProgrammableLaunchRouteStampedV1(bytes32,uint8,bytes32,bytes32,bytes32)",
+      "topic0": "0x45e7cc355b63ca67d6278a0d8d23470ce2a0741a9c60283d7dee712df7a877a5",
+      "indexedInputs": [
+        "launchId",
+        "kind",
+        "routePayloadHash"
+      ]
+    },
+    "componentStamped": {
+      "name": "ProgrammableComponentStampedV1",
+      "signature": "ProgrammableComponentStampedV1(bytes32,address,uint8,bytes32)",
+      "topic0": "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b",
+      "indexedInputs": [
+        "launchId",
+        "component",
+        "kind"
+      ]
+    }
   },
   "getters": {
-    "token": null,
-    "pool": null,
-    "component": null,
-    "componentRuntimeCodeHash": null,
-    "record": null
+    "chainId": {
+      "signature": "CHAIN_ID()",
+      "selector": "0x85e1f4d0",
+      "result": "chain-id"
+    },
+    "permitAuthority": {
+      "signature": "PERMIT_AUTHORITY()",
+      "selector": "0xc3a3d03c",
+      "result": "address"
+    },
+    "permitAuthorityRuntimeCodeHash": {
+      "signature": "PERMIT_AUTHORITY_RUNTIME_CODE_HASH()",
+      "selector": "0xa497c61c",
+      "result": "runtime-code-hash"
+    },
+    "graphFactory": {
+      "signature": "GRAPH_FACTORY()",
+      "selector": "0x1cc9e5ce",
+      "result": "address"
+    },
+    "graphFactoryRuntimeCodeHash": {
+      "signature": "GRAPH_FACTORY_RUNTIME_CODE_HASH()",
+      "selector": "0x92989a00",
+      "result": "runtime-code-hash"
+    },
+    "poolManager": {
+      "signature": "POOL_MANAGER()",
+      "selector": "0x62308e85",
+      "result": "address"
+    },
+    "poolManagerRuntimeCodeHash": {
+      "signature": "POOL_MANAGER_RUNTIME_CODE_HASH()",
+      "selector": "0x38d831c4",
+      "result": "runtime-code-hash"
+    },
+    "token": {
+      "signature": "launchIdByToken(address)",
+      "selector": "0x1dad847c",
+      "result": "launch-id"
+    },
+    "pool": {
+      "signature": "launchIdByPool(address,bytes32)",
+      "selector": "0x361df6f3",
+      "result": "launch-id"
+    },
+    "component": {
+      "signature": "launchIdByComponent(address)",
+      "selector": "0x58c5e373",
+      "result": "launch-id"
+    },
+    "componentRuntimeCodeHash": {
+      "signature": "componentRuntimeCodeHash(address)",
+      "selector": "0xc892d353",
+      "result": "runtime-code-hash"
+    },
+    "record": {
+      "signature": "launchStamp(bytes32)",
+      "selector": "0x4c9e4764",
+      "result": "stamp-record"
+    },
+    "stampProof": {
+      "signature": "stampProof(address)",
+      "selector": "0x174b9f9d",
+      "result": "stamp-proof"
+    }
   }
 }

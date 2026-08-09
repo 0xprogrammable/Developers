@@ -21,7 +21,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Treat top-level `launchStampRouter` as a future-only trust root; never use it to backfill a historical Classic or Custom launch.
 - [ ] Require the manifest chain ID, exact canonical Router address, Router start block, runtime-code hash, ABI hash, and a nonzero launch ID scoped with that chain and Router address.
 - [ ] Resolve one finalized or caller-supplied canonical block and use its concrete number for every Router code read, point lookup, and record cross-check.
-- [ ] Assign a future class only from the stamp record: `LaunchKindV1.Classic` maps to Classic and `LaunchKindV1.CustomGraph` maps to Custom.
+- [ ] Assign a future class only from the stamp record: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; reject `Invalid = 0`.
 - [ ] Use token or `(PoolManager, PoolId)` for interoperable detection; never identify or classify Classic through its shared hook.
 - [ ] Bind a v4 pool lookup to both its PoolManager address and PoolId; do not treat PoolId alone as a global identity.
 - [ ] Filter discovery logs by both exact canonical Router address and manifest ABI `topic0`; reject a copied emitter.
@@ -81,7 +81,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Confirm immutable EIP-1271 contract authority, Graph Factory and PoolManager addresses and runtime hashes; reject an EOA authority fallback.
 - [ ] Confirm exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while Classic V3 route and runtime are permit- and record-bound; Single Factory remains outside Router V1.
 - [ ] Confirm frozen `LaunchKindV1.CustomGraph | Classic` record and event behavior with one canary of each class.
-- [ ] Confirm token, hook, `PoolManager + PoolId`, component, record and point-in-time code-hash results at finalized canonical blocks.
+- [ ] Confirm token, `PoolManager + PoolId`, exclusive-component, `stampProof`, record and point-in-time code-hash results at finalized canonical blocks.
 - [ ] Keep Router V1 prelaunch if any required activation evidence is absent.
 
 ## Registry and feed release evidence

@@ -96,6 +96,14 @@ async function verifyActiveRouter({
   );
   if (sha256 !== router.abiSha256) fail("router-abi-hash-mismatch");
   if (!Array.isArray(abi)) fail("router-abi-malformed");
+  validatePublishedAbi(abi, router);
+  await validateImmutableBindings({
+    callRpc,
+    block: concreteBlock,
+    abi,
+    manifest,
+    router,
+  });
 
   const getter = router.getters[kind];
   const args = kind === "pool" ? values : [values[0]];
@@ -133,9 +141,30 @@ async function verifyActiveRouter({
   });
   validateRecord(record, { kind, values });
   const classification = classifyLaunchKind(record.kind);
+  validateRouteRecord(record, classification, router.bindings);
+
+  const currentRouteCode = await callRpc("eth_getCode", [
+    record.routeLauncher,
+    concreteBlock,
+  ]);
+  const observedRouteRuntime =
+    isBytecode(currentRouteCode) && currentRouteCode !== "0x"
+      ? keccak256(hexBytes(currentRouteCode))
+      : null;
 
   let componentRuntime = null;
   if (kind === "token" || kind === "component") {
+    const proof = await readDescribedFunction({
+      callRpc,
+      address: router.address,
+      block: concreteBlock,
+      abi,
+      descriptor: router.getters.stampProof,
+      args: [values[0]],
+    });
+    if (proof?.launchId !== launchId || proof?.stampHash !== record.stampHash) {
+      fail("stamp-proof-mismatch");
+    }
     const recorded = await readDescribedFunction({
       callRpc,
       address: router.address,
@@ -172,6 +201,18 @@ async function verifyActiveRouter({
     category: classification.category,
     publicLabel: classification.publicLabel,
     stampHash: record.stampHash,
+    route: {
+      launcher: record.routeLauncher,
+      recordedRuntimeCodeHash: record.routeLauncherRuntimeCodeHash,
+      observedRuntimeCodeHash: observedRouteRuntime,
+      runtimeMatches:
+        observedRouteRuntime === null
+          ? null
+          : observedRouteRuntime === record.routeLauncherRuntimeCodeHash,
+      routePayloadHash: record.routePayloadHash,
+      expectedResultHash: record.expectedResultHash,
+      permitDigest: record.permitDigest,
+    },
     componentRuntime,
     claim: "provenance-only",
   });
@@ -190,6 +231,7 @@ function activationUnavailableReason(router) {
     !isSha256(router.abiSha256) ||
     !httpsOrLocalUrl(router.abiUrl) ||
     !Number.isInteger(router.finalityConfirmations) ||
+    typeof router.atomicSignature !== "string" ||
     !selector(router.atomicSelector)
   ) {
     return "router-activation-incomplete";
@@ -211,22 +253,142 @@ function activationUnavailableReason(router) {
     return "router-bindings-incomplete";
   }
   const requiredGetters = [
+    router.getters?.chainId,
+    router.getters?.permitAuthority,
+    router.getters?.permitAuthorityRuntimeCodeHash,
+    router.getters?.graphFactory,
+    router.getters?.graphFactoryRuntimeCodeHash,
+    router.getters?.poolManager,
+    router.getters?.poolManagerRuntimeCodeHash,
     router.getters?.token,
     router.getters?.pool,
     router.getters?.component,
     router.getters?.componentRuntimeCodeHash,
     router.getters?.record,
+    router.getters?.stampProof,
   ];
   if (requiredGetters.some((value) => !getterDescriptor(value))) {
     return "router-getters-incomplete";
   }
   if (
     !eventDescriptor(router.events?.launchStamped) ||
+    !eventDescriptor(router.events?.launchRouteStamped) ||
     !eventDescriptor(router.events?.componentStamped)
   ) {
     return "router-events-incomplete";
   }
   return null;
+}
+
+function validatePublishedAbi(abi, router) {
+  for (const descriptor of Object.values(router.getters)) {
+    if (!getterDescriptor(descriptor)) fail("getter-descriptor-invalid");
+    const item = abi.find(
+      (candidate) =>
+        candidate?.type === "function" &&
+        canonicalSignature(candidate) === descriptor.signature,
+    );
+    if (!item || functionSelector(item) !== descriptor.selector) {
+      fail("getter-selector-mismatch");
+    }
+  }
+
+  for (const descriptor of Object.values(router.events)) {
+    if (!eventDescriptor(descriptor)) fail("event-descriptor-invalid");
+    const item = abi.find(
+      (candidate) =>
+        candidate?.type === "event" &&
+        canonicalSignature(candidate) === descriptor.signature,
+    );
+    if (!item || eventTopic(item) !== descriptor.topic0) {
+      fail("event-topic-mismatch");
+    }
+    const indexedInputs = item.inputs
+      .filter(({ indexed }) => indexed)
+      .map(({ name }) => name);
+    if (JSON.stringify(indexedInputs) !== JSON.stringify(descriptor.indexedInputs)) {
+      fail("event-indexed-layout-mismatch");
+    }
+  }
+
+  const atomic = abi.find(
+    (candidate) =>
+      candidate?.type === "function" &&
+      canonicalSignature(candidate) === router.atomicSignature,
+  );
+  if (
+    !atomic ||
+    atomic.stateMutability !== "payable" ||
+    functionSelector(atomic) !== router.atomicSelector
+  ) {
+    fail("atomic-selector-mismatch");
+  }
+  const payableFunctions = abi.filter(
+    (candidate) =>
+      candidate?.type === "function" && candidate.stateMutability === "payable",
+  );
+  if (payableFunctions.length !== 1 || payableFunctions[0] !== atomic) {
+    fail("unexpected-payable-router-function");
+  }
+}
+
+async function validateImmutableBindings({
+  callRpc,
+  block,
+  abi,
+  manifest,
+  router,
+}) {
+  const expected = [
+    ["chainId", BigInt(manifest.chainId), "chain-id"],
+    ["permitAuthority", router.bindings.permitAuthority, "address"],
+    [
+      "permitAuthorityRuntimeCodeHash",
+      router.bindings.permitAuthorityRuntimeCodeHash,
+      "hash",
+    ],
+    ["graphFactory", router.bindings.graphFactory, "address"],
+    [
+      "graphFactoryRuntimeCodeHash",
+      router.bindings.graphFactoryRuntimeCodeHash,
+      "hash",
+    ],
+    ["poolManager", router.bindings.poolManager, "address"],
+    [
+      "poolManagerRuntimeCodeHash",
+      router.bindings.poolManagerRuntimeCodeHash,
+      "hash",
+    ],
+  ];
+
+  for (const [key, expectedValue, kind] of expected) {
+    const observed = await readDescribedFunction({
+      callRpc,
+      address: router.address,
+      block,
+      abi,
+      descriptor: router.getters[key],
+      args: [],
+    });
+    if (
+      (kind === "chain-id" && observed !== expectedValue) ||
+      (kind === "address" && normalizeAddress(observed) !== normalizeAddress(expectedValue)) ||
+      (kind === "hash" && observed !== expectedValue)
+    ) {
+      fail(`immutable-${key}-mismatch`);
+    }
+  }
+
+  for (const [addressKey, hashKey] of [
+    ["permitAuthority", "permitAuthorityRuntimeCodeHash"],
+    ["graphFactory", "graphFactoryRuntimeCodeHash"],
+    ["poolManager", "poolManagerRuntimeCodeHash"],
+  ]) {
+    const code = await callRpc("eth_getCode", [router.bindings[addressKey], block]);
+    if (!isBytecode(code) || code === "0x" || keccak256(hexBytes(code)) !== router.bindings[hashKey]) {
+      fail(`binding-${addressKey}-runtime-mismatch`);
+    }
+  }
 }
 
 async function readDescribedFunction({
@@ -256,6 +418,22 @@ function validateRecord(record, { kind, values }) {
   if (!isHash32(record.stampHash) || record.stampHash === ZERO_BYTES32) {
     fail("stamp-record-empty");
   }
+  for (const field of [
+    "poolId",
+    "poolKeyHash",
+    "componentSetHash",
+    "routePayloadHash",
+    "routeLauncherRuntimeCodeHash",
+    "expectedResultHash",
+    "permitDigest",
+  ]) {
+    if (!isHash32(record[field]) || record[field] === ZERO_BYTES32) {
+      fail(`stamp-record-${field}-missing`);
+    }
+  }
+  for (const field of ["launchWallet", "token", "hook", "poolManager", "routeLauncher"]) {
+    if (!address(record[field])) fail(`stamp-record-${field}-invalid`);
+  }
   if (kind === "token" && normalizeAddress(record.token) !== normalizeAddress(values[0])) {
     fail("stamp-record-token-mismatch");
   }
@@ -268,16 +446,29 @@ function validateRecord(record, { kind, values }) {
   }
 }
 
+function validateRouteRecord(record, classification, bindings) {
+  if (normalizeAddress(record.poolManager) !== normalizeAddress(bindings.poolManager)) {
+    fail("stamp-record-pool-manager-mismatch");
+  }
+  if (
+    classification.kind === "CustomGraph" &&
+    (normalizeAddress(record.routeLauncher) !== normalizeAddress(bindings.graphFactory) ||
+      record.routeLauncherRuntimeCodeHash !== bindings.graphFactoryRuntimeCodeHash)
+  ) {
+    fail("custom-graph-route-binding-mismatch");
+  }
+}
+
 function classifyLaunchKind(value) {
   const kind = typeof value === "bigint" ? value : BigInt(value);
-  if (kind === 0n) {
+  if (kind === 1n) {
     return {
       kind: "CustomGraph",
       category: "custom",
       publicLabel: "Programmable Custom",
     };
   }
-  if (kind === 1n) {
+  if (kind === 2n) {
     return {
       kind: "Classic",
       category: "classic",
@@ -316,8 +507,7 @@ function decodeOutputs(outputs = [], value) {
     return [output.name || String(index), result.value];
   });
   if (cursor !== words.length) fail("getter-result-size-mismatch");
-  if (decoded.length === 1 && !outputs[0].name) return decoded[0][1];
-  if (decoded.length === 1 && outputs[0].type !== "tuple") return decoded[0][1];
+  if (decoded.length === 1) return decoded[0][1];
   return Object.fromEntries(decoded);
 }
 
@@ -363,6 +553,10 @@ function canonicalType(parameter) {
 
 function functionSelector(item) {
   return keccak256(new TextEncoder().encode(canonicalSignature(item))).slice(0, 10);
+}
+
+function eventTopic(item) {
+  return keccak256(new TextEncoder().encode(canonicalSignature(item)));
 }
 
 function createRpcClient(rpcUrl) {
@@ -456,7 +650,8 @@ function eventDescriptor(value) {
     value &&
     typeof value.name === "string" &&
     typeof value.signature === "string" &&
-    isHash32(value.topic0)
+    isHash32(value.topic0) &&
+    Array.isArray(value.indexedInputs)
   );
 }
 

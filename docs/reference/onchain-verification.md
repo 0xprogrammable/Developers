@@ -8,7 +8,7 @@ Ethereum is the only active chain in the current discovery document. Classic dep
 
 Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
-The future-launch Router remains prelaunch. Its top-level `launchStampRouter` manifest entry keeps the deployment address, start block, runtime-code hash, authority and production bindings `null`. Until the frozen ABI and deployment evidence are published, do not scan candidate topics, call a draft Router, or assign a Router-derived label.
+The future-launch Router remains prelaunch. Its frozen ABI, artifact identity, topics, indexed layouts, getter selectors, enum values and atomic selector are published. Its top-level `launchStampRouter` manifest entry keeps the deployment address, start block, end block, runtime-code hash, finality confirmations, authority and production bindings `null`. Until that deployment evidence is published, do not scan topics, call a draft Router, or assign a Router-derived label.
 
 ## Trust root
 
@@ -159,7 +159,7 @@ Before displaying a Router-derived Programmable label, require:
 - either a nonzero direct getter response with a consistent stamp record, or a valid event from that exact Router plus a direct point-lookup cross-check;
 - one concrete canonical block used for all reads;
 - a nonzero launch ID scoped with chain ID and Router address; and
-- the frozen mapper result before assigning Classic versus Custom.
+- the recognized record value (`CustomGraph = 1` or `Classic = 2`) before assigning a class.
 
 If one required input is unavailable, malformed, or inconsistent, keep independently known asset data but mark Router provenance `indeterminate` or `unavailable`. Do not convert operational uncertainty into `not-stamped`, and do not guess a class.
 
@@ -172,7 +172,7 @@ Router V1 remains prelaunch until all of the following are public and mutually c
 - exactly one generic market-bearing atomic selector, with no route-specific overload: Custom Graph uses the immutable Graph Factory binding, while the Classic V3 route and runtime are permit- and record-bound; no Single Factory route exists;
 - frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics;
 - future Classic and future Custom canary transactions with launch IDs;
-- successful token, hook, `PoolManager + PoolId`, component and stamp-record cross-checks for those canaries; and
+- successful token, `PoolManager + PoolId`, exclusive-component, `stampProof` and stamp-record cross-checks for those canaries; and
 - finality, reorg and retirement behavior.
 
 Read [Programmable Verified](../concepts/programmable-verified.md), [Multi-chain discovery](../concepts/multi-chain.md), and [Production operations](../operations.md) before enabling a production scanner.

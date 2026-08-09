@@ -1,8 +1,6 @@
 # Programmable integration reference
 
-**Integrate once. Discover every Programmable launch.**
-
-Public, read-only contracts and ingestion rules for trading terminals, launch trackers, scanners, wallets, indexers, bots, and apps.
+Public read-only contracts, onchain provenance, and ingestion rules for terminals and other data consumers.
 
 ## Terminal labels
 
