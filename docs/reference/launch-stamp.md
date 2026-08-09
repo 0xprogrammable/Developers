@@ -6,9 +6,28 @@ It does not state that a contract is audited, safe, liquid, sellable, tradable, 
 
 ## Deployment state
 
-The frozen Router V1 interface is published, but `launchStampRouter.status` is currently `prelaunch`. The ABI, ABI hash, artifact identity, events, indexed fields, getter selectors, enum values, EIP-712 permit type, and atomic selector are fixed in the manifest.
+The frozen Router V1 interface and one Ethereum deployment are published. The contract at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` was mined in block `25717612` and observed finalized at block `25717634`. The manifest's `deploymentEvidence` object pins the transaction, both block hashes, runtime identities, immutable getter observations, and evidence hashes.
 
-The deployment-specific fields remain `null`: Router address, start block, end block, runtime-code hash, finality confirmations, permit-authority binding, Graph Factory binding, and PoolManager binding. While any required activation field is `null`, consumers must return `unavailable`. Never fill a null from a pull request, test fixture, frontend, chat, draft deployment, or copied contract.
+The Router is not activated for terminal classification yet. `launchStampRouter.status` remains `prelaunch`, and its activation address, start block, end block, runtime-code hash, finality confirmations, permit-authority binding, Graph Factory binding, and PoolManager binding remain `null`. Consumers must therefore return `unavailable`. The separately published deployment evidence does not fill an activation field or replace the required finalized Classic and Custom canaries.
+
+### Finalized deployment evidence
+
+| Field | Value |
+| --- | --- |
+| Address | `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` |
+| Deployment transaction | `0x3bc086661555c10040feb3fceb23d33003e22ca033e65cfae72592119ee8d486` |
+| Deployment block | `25717612` |
+| Deployment block hash | `0x8e4512193217c2171624657717d32dbfe9896455e553cadc192fbfe32d3278bc` |
+| Finalized observation block | `25717634` |
+| Finalized observation block hash | `0x4177a280cd7e43da181bf1d73900eb2431c26d5fe933a5ed0e583370064cbd6e` |
+| Finality depth at observation | `22` blocks |
+| Runtime length | `23013` bytes |
+| Runtime Keccak-256 | `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546` |
+| Runtime SHA-256 | `0b0e89074bff270bd5bf80ca9642f748dca1857d1ab643cbce65f4f663937ec7` |
+| Getter bundle SHA-256 | `6e6e8a93193bbe2f79f98594a1af32c27bae0746f8297dd13592d9608e2feb20` |
+| Complete evidence SHA-256 | `f9786ebfb74c96a3c225567ad324f0fbecfd8520b8d8addec85ba58cd67e19ff` |
+
+The getter bundle records `CHAIN_ID = 1`, permit authority `0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b`, Graph Factory `0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887`, and PoolManager `0x000000000004444c5dc75cB358380D2e3dE08A90`, together with their runtime-code hashes. Read the exact values from `deploymentEvidence.observedBindings`. These observations are evidence for the deployed bytecode and immutable configuration; they are not the active manifest bindings while status is `prelaunch`.
 
 ## Scope
 

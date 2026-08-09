@@ -8,7 +8,7 @@ Ethereum is the only active chain in the current discovery document. Classic dep
 
 Generation 1 is the manifest-published Custom trust root and its finalized project-only genesis canary is the immutable discovery baseline. General Custom intake remains prelaunch. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
-The future-launch Router remains prelaunch. Its frozen ABI, artifact identity, topics, indexed layouts, getter selectors, enum values and atomic selector are published. Its top-level `launchStampRouter` manifest entry keeps the deployment address, start block, end block, runtime-code hash, finality confirmations, authority and production bindings `null`. Until that deployment evidence is published, do not scan topics, call a draft Router, or assign a Router-derived label.
+The future-launch Router remains prelaunch. Its frozen ABI and finalized Ethereum deployment evidence are published, including the deployed address, transaction, deployment and finalized block hashes, exact runtime identities, and immutable getter observations. The activation address, start block, end block, runtime-code hash, finality confirmations, authority and production bindings remain `null`. Until those activation fields and finalized Classic and Custom canaries are published, do not scan Router topics or assign a Router-derived label.
 
 ## Trust root
 
@@ -166,7 +166,7 @@ If one required input is unavailable, malformed, or inconsistent, keep independe
 
 ## Activation evidence still required for Router V1
 
-Router V1 remains prelaunch until all of the following are public and mutually consistent:
+Router V1 remains prelaunch until all of the following are public and mutually consistent. The finalized deployment evidence closes the contract deployment, runtime, and observed immutable-getter checks; it does not close the canary or activation checks:
 
 - chain, canonical Router address, start block, ABI, ABI hash, event topics, getter selectors and runtime-code hash;
 - verified source, exact deployed runtime and immutable EIP-1271 permit-authority, Graph Factory and PoolManager bindings;
