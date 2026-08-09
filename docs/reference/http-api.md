@@ -60,6 +60,8 @@ compatibility
 
 The manifest is the canonical integration inventory for active and prelaunch deployments. Read deployment arrays and lifecycle state. Never hard-code a single registry or launcher address as the entire Programmable source.
 
+`generatedAt` is the publication time of that exact static manifest revision. It is not the current chain head, an indexer freshness signal, or a replacement for the status and finality fields.
+
 The Website endpoint `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror, not a second integration trust root. Its schema and generation labels can differ from this Developer manifest. For terminal, wallet, indexer, bot, or direct-onchain integration, the discovery-selected `https://developers.programmable.family/api/v2/manifest` takes precedence. A conflict must pause trust advancement and alert an operator; it must not be resolved by merging fields from both documents.
 
 The v2 Custom Registry state is live with public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, and finality policy from the manifest; they must not infer that live discovery enables general submission intake.
