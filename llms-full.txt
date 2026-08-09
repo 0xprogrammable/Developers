@@ -67,6 +67,7 @@ Root fields:
 - publicCategories
 - deployments
 - customRegistry
+- launchStampRouter
 - platformFee
 - endpoints
 - compatibility
@@ -76,6 +77,10 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
 
 The live Custom Registry and the still-prelaunch public intake are represented separately. A prelaunch intake state never carries or guesses a different Registry address.
+
+Top-level `launchStampRouter` is the independent prelaunch trust descriptor for future Router-stamped Classic and Custom launches. The exact Router V1 ABI, published ABI-file SHA-256, pinned source commit/tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum contract address, transaction, deployment and finalized block hashes, runtime identities, and immutable getter observations. The activation address, start block, end block, runtime-code hash, finality confirmations, permit authority, Graph Factory and PoolManager bindings remain null until the required canaries and activation evidence are complete. Historical launches are explicitly outside Router V1.
+
+After activation, the complete lookup identity is `chainId + Router address + launchId`. Universal detection uses `launchIdByToken(address)` or `launchIdByPool(address,bytes32)`, then `launchStamp(bytes32)`: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; `Invalid = 0` is rejected. The shared Classic hook must never identify or classify one Classic launch. `launchIdByComponent(address)` and `stampProof(address)` only corroborate an exclusive address-based component. Use a finalized or explicit concrete canonical block, never a mixture of `latest` calls. A matching event topic from another emitter, a direct factory call, metadata, a backend response, the Custom Registry, or a hosted feed cannot create Router provenance. Future Classic and Custom labels share this one Router trust root. The stamp is point-in-time provenance only and does not imply safety, audit status, liquidity, sellability, routing support, or third-party integration. Current proxy implementation and authority state require separate review.
 
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
 
@@ -600,6 +605,7 @@ Not allowed without separate evidence:
 - API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
 - Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
+- Future launch Router verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
 - Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md
 - Multi-chain discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md
 - Production checklist: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md

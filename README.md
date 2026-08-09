@@ -1,8 +1,6 @@
 # Programmable integration reference
 
-**Integrate once. Discover every Programmable launch.**
-
-Public, read-only contracts and ingestion rules for trading terminals, launch trackers, scanners, wallets, indexers, bots, and apps.
+Public read-only contracts, onchain provenance, and ingestion rules for terminals and other data consumers.
 
 ## Terminal labels
 
@@ -23,7 +21,7 @@ The public category is always `classic` or `custom`. Provider names, factories, 
 
 A full Registry-backed Custom record uses `platformId: "programmable"`, `category: "custom"`, and `publicLabel: "Programmable Custom"`. These values come from the trusted projection, never creator metadata.
 
-[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
+[Minimal API example](docs/quickstart.md) · [Terminal guide](docs/guides/terminals-and-scanners.md) · [Future launch Router](docs/reference/launch-stamp.md) · [Direct onchain verification](docs/reference/onchain-verification.md) · [Integration checklist](docs/integration-checklist.md) · [Developer site](https://developers.programmable.family)
 
 ## Minimal API consumer
 
@@ -210,6 +208,7 @@ llms-full.txt   Complete agent integration context
 
 - Classic launch discovery is live on Ethereum.
 - Custom Registry discovery is live on Ethereum Mainnet. General Custom intake remains prelaunch; the v2 Custom feed publishes only finalized, exact-revision Registry records.
+- The separate Router V1 trust root for future Classic and future Custom launches remains prelaunch. Its finalized deployment evidence is published separately, its activation fields remain null until the required canaries, and it does not cover historical coins.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification. They remain available only on compatibility API v1.
 - Ethereum Mainnet is the only currently advertised chain. Multi-chain support becomes live per chain only through the well-known document and manifest.
 - No Basebit or Aion partnership, template, recipient, Registry record, or live fee path is currently verified by the public v2 surface.

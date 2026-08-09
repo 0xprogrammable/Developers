@@ -41,10 +41,15 @@ for (const root of jsonRoots) {
     jsonCount += 1;
   }
 }
-await assertCanonicalJson(
-  path.join(REPOSITORY_ROOT, "abis", "ethereum", "programmable-custom-registry-v1.json"),
-);
-jsonCount += 1;
+for (const abi of [
+  "programmable-custom-registry-v1.json",
+  "programmable-launch-stamp-router-v1.json",
+]) {
+  await assertCanonicalJson(
+    path.join(REPOSITORY_ROOT, "abis", "ethereum", abi),
+  );
+  jsonCount += 1;
+}
 
 const launchValidator = registry.validator("launch.schema.json");
 const launchFiles = await listFiles(

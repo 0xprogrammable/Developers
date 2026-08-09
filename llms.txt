@@ -35,6 +35,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - [Programmable Verified](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md): Exact-review and deployed-revision binding without a blanket safety claim.
 - [Multi-chain discovery](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md): Chain activation, identity, registry generations, and cursor partitioning.
 - [Direct onchain verification](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
+- [Launch stamp Router](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md): Direct Router verification for future Classic and Custom token, v4 pool, and exclusive-component provenance.
 - [Production checklist](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
 - [FAQ](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md): Common product and integration questions.
 
@@ -86,10 +87,11 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and either atomic with the launch or emitted only after a verified staged workflow is finalized.
 18. Resolve the live Custom Registry address and start block from the manifest. Treat general Custom intake and provider examples as prelaunch unless their exact approval and Registry evidence are published.
 19. Assign `Programmable Custom` only to a v2 record backed by the manifest-listed Custom Registry. Provider metadata, hook addresses and API responses cannot self-assign the label.
-20. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
-21. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
-22. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
-23. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
+20. For a Router stamp check, bind `chainId + Router address + launchId`, resolve the Router and start block from top-level `launchStampRouter`, use one finalized or explicit canonical block, and reject copied emitters. Router V1 covers future launches only. Detect by token or `(PoolManager, PoolId)`, then map `CustomGraph = 1` or `Classic = 2`; never classify Classic by its shared hook. Use `stampProof` only for address-based token or exclusive-component corroboration.
+21. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
+22. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
+23. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
+24. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
 
 ## Fee summary
 

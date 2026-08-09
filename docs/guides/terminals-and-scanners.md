@@ -40,11 +40,18 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
 
-For direct onchain consumers, apply this rule exactly:
+For direct onchain consumers, keep the existing deployment sources and the future Router source separate:
 
-1. `Programmable Classic` requires a launch event from an enabled Classic launcher in the v2 manifest.
-2. `Programmable Custom` requires a launch event from the Custom Registry in the v2 manifest.
-3. No token, hook, factory, frontend, provider API or metadata field can self-assign either label.
+1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
+2. Existing `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
+3. Future Router V1 launches require a nonzero direct lookup or a valid launch event from the exact top-level `launchStampRouter` address in the v2 manifest. Router V1 does not backfill historical launches.
+4. Future `Programmable Classic` and `Programmable Custom` labels share that one Router trust root. Read the stamp record after a token or `(PoolManager, PoolId)` lookup: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; reject `Invalid = 0`. Do not guess the class from token metadata, a hook, or a factory call.
+
+For an interoperable Router point lookup, use the manifest-advertised getter for a token or `PoolManager + PoolId`. Scope every nonzero launch ID with the manifest chain ID and Router address. The Classic hook is shared, so its address must never identify or classify one Classic launch. `launchIdByComponent` may corroborate an exclusive component; for every address-based lookup, require `stampProof` to return the same launch ID and stamp hash. Resolve one finalized or caller-supplied canonical block to a number and hash. Prefer EIP-1898 hash-bound reads with `requireCanonical: true`; otherwise re-read that height after the complete verification and require the hash to be unchanged. Use HTTPS for a remote RPC endpoint; plaintext HTTP is suitable only for loopback development. The lookup needs no Programmable server, database, Registry, or indexer. See [Launch stamp Router verification](../reference/launch-stamp.md).
+
+Logs qualify only when both the emitter and `topic0` exactly match the manifest-bound Router and ABI. A copied event from another address, direct Classic V3 Factory or Graph Factory calls, and every Single Factory call are outside Router V1 provenance.
+
+The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy. A stamp does not establish safety, audit status, liquidity, sellability, or execution support.
 
 ## New-launch card
 
