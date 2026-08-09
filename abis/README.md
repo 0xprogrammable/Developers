@@ -17,8 +17,9 @@ integration to one launcher address.
 The Router file is the exact 44-item ABI from Forge artifact commit
 `0a7134bbb912222639627fb9078df2f8dd3a6c38`. Its published ABI-file SHA-256 is
 `bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86`.
-The interface is frozen, but the Router address, start block, runtime identity,
-finality policy and immutable production bindings remain null while prelaunch.
+The interface is frozen and the Router is live. Resolve its address, start
+block, runtime identity, finality policy, and immutable production bindings
+from the current version 2 manifest; this ABI file is not deployment authority.
 
 The Custom Registry ABI is intentionally full rather than event-only because
 approval and registration integrations must use its canonical hash helpers.

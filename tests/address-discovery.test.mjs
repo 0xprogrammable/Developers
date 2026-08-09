@@ -23,7 +23,7 @@ describe("documentation contract", () => {
     assert.deepEqual(await hardcodedDeploymentFindings(), []);
   });
 
-  test("publishes the required read-only endpoints and fee disclosure", async () => {
+  test("publishes the Router-first entry points, read-only endpoints, and fee disclosure", async () => {
     const readme = await readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8");
     for (const endpoint of [
       "/api/v2/status",
@@ -36,9 +36,13 @@ describe("documentation contract", () => {
     assert.ok(readme.includes(FEE_RECIPIENT));
     assert.match(readme, /10 basis points, or 0\.1%/);
     assert.match(readme, /v2 API is read-only/i);
-    assert.match(readme, /Programmable Custom Registry discovery \| Live on Ethereum/i);
-    assert.match(readme, /Programmable Custom public intake \| Prelaunch/i);
-    assert.match(readme, /Stock-Paired records are not part of the v2/i);
+    assert.match(readme, /programmable-launch-stamp-router-v1\.json/i);
+    assert.match(readme, /docs\/reference\/launch-stamp\.md/i);
+    assert.match(readme, /future Programmable Classic and Programmable Custom launches/i);
+    assert.match(readme, /Finalized PCAN vector/i);
+    assert.match(readme, /Historical launches are not backfilled/i);
+    assert.doesNotMatch(readme, /Custom public intake/i);
+    assert.doesNotMatch(readme, /self-service launch flow/i);
   });
 
   test("never presents the read-only feed as transaction authorization", async () => {

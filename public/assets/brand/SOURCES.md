@@ -12,8 +12,8 @@ generated lookalikes and were not downloaded from a third party.
 ## Open Graph image
 
 - Public file: `programmable-developers-og.png`
-- Owned source: `Programmable/public/og/programmable-loop-og-1200x630.png`
-- SHA-256: `d5e12764ff045abe62d3626327a39d342943b41e4c09607a2710f90c4231d87e`
+- Owned source: `Programmable/public/og/programmable-night-garden-og-1200x630.png`
+- SHA-256: `52163fb3d92e54e04151d9e1cc2131e960c2a9c586e7b36a1810b8b437569804`
 
 ## Favicon
 
