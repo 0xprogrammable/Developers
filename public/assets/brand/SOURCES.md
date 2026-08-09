@@ -15,6 +15,12 @@ generated lookalikes and were not downloaded from a third party.
 - Owned source: `Programmable/public/og/programmable-night-garden-og-1200x630.png`
 - SHA-256: `52163fb3d92e54e04151d9e1cc2131e960c2a9c586e7b36a1810b8b437569804`
 
+## README cover
+
+- Public file: `programmable-developers-readme.png`
+- Owned source: `programmable-developers-og.png`, center-cropped to `1200 × 360`
+- SHA-256: `86020553e83de587781e5d430a7ec9e39977922e796d2e7d571728583018f28c`
+
 ## Favicon
 
 - Public file: `/favicon.svg`

@@ -1,4 +1,4 @@
-![Programmable night garden](public/assets/brand/programmable-developers-og.png)
+![Programmable night garden](public/assets/brand/programmable-developers-readme.png)
 
 # Programmable developer reference
 
