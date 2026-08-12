@@ -42,6 +42,8 @@ Prelaunch means the integration contract is available for client development, bu
 
 The v2 manifest reports `customRegistry.status: "live"`, `publicSubmissionsEnabled: false`, and the exact active address, generation, and start block. The filtered v2 Custom feed begins with the finalized project-only genesis canary. These values are the controlling public state; provider catalogs and intake drafts cannot override them.
 
+The v2 status response also reports `customRegistryPublication`. Its `sourceReady` field is the gate for real Registry records; the Gen1 genesis canary can keep that field true without an authenticated applicant feed. Consumers must not interpret `custom.status: "live"` or the canary alone as proof that a new project is launchable.
+
 Generation 1 is the manifest-published Custom trust root. Its finalized project-only genesis canary is the immutable discovery baseline; general Custom intake remains prelaunch. Generation 1 is not evidence that the stronger Generation 2 interface is deployed.
 
 The local Generation 2 release candidate currently snapshots the four-contract Registry, PartnerFactory Registry, fee-policy verifier, atomic registrar, 15-event integration set, and 37-word v4 producer commitment. It is undeployed and not final ABI authority. The Public Registry root is still changing its execution-policy, route, and market-data-source binding contract; final ABI, topics, event count, Solidity hash preimages, artifact hashes, and artifact-set hash will therefore differ. After the final Public commit, Developer must replace the candidate artifacts byte-for-byte and rerun Contract → Approval → Read Model → Developer parity before Generation 2 activation.

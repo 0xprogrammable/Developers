@@ -90,6 +90,16 @@
         }
       },
       "additionalProperties": true
+    },
+    "customRegistryPublication": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/customRegistryPublication"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "additionalProperties": true,
@@ -123,6 +133,46 @@
         "degraded",
         "unavailable"
       ]
+    },
+    "customRegistryPublication": {
+      "type": "object",
+      "required": [
+        "status",
+        "publicSubmissionsEnabled",
+        "sourceReady",
+        "activeGeneration",
+        "requiresLiveSource",
+        "publishedRegistries"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "live",
+            "prelaunch"
+          ]
+        },
+        "publicSubmissionsEnabled": {
+          "type": "boolean"
+        },
+        "sourceReady": {
+          "type": "boolean"
+        },
+        "activeGeneration": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "requiresLiveSource": {
+          "type": "boolean"
+        },
+        "publishedRegistries": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
     }
   }
 }

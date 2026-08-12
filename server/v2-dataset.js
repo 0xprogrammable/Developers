@@ -376,6 +376,11 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
     chain: status.chain,
     coverage: status.coverage,
     customRegistry: status.customRegistry,
+    // Keep the publication gate visible to status consumers.  The projected
+    // dataset already computes this independently from the source snapshot;
+    // dropping it here makes a Gen1 canary look indistinguishable from a
+    // fully configured applicant feed.
+    customRegistryPublication: status.customRegistryPublication ?? null,
     counts: status.counts,
     errors: status.errors,
   };
