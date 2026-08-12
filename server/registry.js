@@ -35,6 +35,8 @@ const PROHIBITED_TEXT = /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u
 const FEED_SCHEMA = "programmable.custom-launch-registry-feed.v1";
 const RECORD_SCHEMA = "programmable.custom-launch-registry-record.v2";
 const FEED_SOURCE_ID = "programmable-custom-launch-registry-v2";
+export const EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID =
+  REGISTRY_V3_FEED_SOURCE_ID;
 const FEE_RECIPIENT = PLATFORM_FEE.beneficiary.toLowerCase();
 const encoder = new TextEncoder();
 const processCheckpointStore = createMemoryRegistryCheckpointStore();
@@ -473,6 +475,7 @@ export function registryCustomFeedConfiguration(env = process.env) {
   if (!audience || !issuer || !subject) throw new TypeError("Registry workload identity is invalid");
   return Object.freeze({
     feedUrl: exactHttpsUrl(env.PROGRAMMABLE_REGISTRY_CUSTOM_FEED_URL, "Registry feed URL").href,
+    expectedSourceId: EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
     audience, targetBindingHash,
     tokenEndpoint: exactHttpsEndpoint(env.PROGRAMMABLE_WORKLOAD_TOKEN_ENDPOINT, "workload token endpoint"),
     issuer, subject, subjectToken,
@@ -495,6 +498,7 @@ export function createMemoryRegistryCheckpointStore() {
 function checkpointKey(configuration) {
   return canonicalSha256("programmable.developer-registry-checkpoint-key.v1", {
     feedUrl: configuration.feedUrl,
+    expectedSourceId: configuration.expectedSourceId ?? null,
     audience: configuration.audience,
     targetBindingHash: configuration.targetBindingHash,
   });
@@ -618,7 +622,7 @@ function validateRequestBoundAccessToken(token, configuration, request) {
   }
 }
 
-function validateFeedPage(page, previous, now) {
+function validateFeedPage(page, previous, now, expectedSourceId = null) {
   if (!exactKeys(page, ["schemaVersion", "source", "snapshot", "items", "page"]) || page.schemaVersion !== FEED_SCHEMA ||
     !exactKeys(page.source, ["sourceId", "status", "completeness", "freshness", "checkedAt", "latestAcceptedAt"]) ||
     ![
@@ -636,6 +640,9 @@ function validateFeedPage(page, previous, now) {
     typeof page.page.resumeCursor !== "string" || page.page.resumeCursor.length < 16 || page.page.resumeCursor.length > 4_096 ||
     typeof page.page.hasMore !== "boolean" || page.page.hasMore !== (page.page.nextCursor !== null)) {
     throw new TypeError("Registry custom-feed page is invalid");
+  }
+  if (expectedSourceId !== null && page.source.sourceId !== expectedSourceId) {
+    throw new TypeError("Registry custom-feed source is not the configured authority");
   }
   const checkedAt = Date.parse(page.source.checkedAt);
   const latestAcceptedAt = page.source.latestAcceptedAt === null
@@ -671,7 +678,13 @@ function validateRegistryFeedItem(item, sourceId) {
 export async function readRegistryCustomFeed(options = {}) {
   const configuration = options.configuration ?? registryCustomFeedConfiguration();
   if (configuration === null) {
-    return { configured: false, records: [], source: null, snapshot: null };
+    return {
+      configured: false,
+      expectedSourceId: EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+      records: [],
+      source: null,
+      snapshot: null,
+    };
   }
   const fetchImplementation = options.fetchImplementation ?? fetch;
   const accessToken = options.accessToken ?? ((input) => defaultAccessToken(
@@ -728,7 +741,12 @@ export async function readRegistryCustomFeed(options = {}) {
         throw new TypeError("Registry custom feed is unavailable");
       }
       const page = parseCanonicalJson(await readBoundedText(response, REQUEST_LIMITS.registryResponseBytes, "Registry custom-feed response"));
-      validateFeedPage(page, previous, now());
+      validateFeedPage(
+        page,
+        previous,
+        now(),
+        configuration.expectedSourceId ?? null,
+      );
       if (BigInt(page.snapshot.highWaterGeneration) < checkpointHighWater) {
         throw new TypeError("Registry custom-feed snapshot rolled back");
       }
@@ -763,7 +781,13 @@ export async function readRegistryCustomFeed(options = {}) {
             resumeCursor: page.page.resumeCursor,
           });
         }
-        return { configured: true, records, source: page.source, snapshot: page.snapshot };
+        return {
+          configured: true,
+          expectedSourceId: configuration.expectedSourceId ?? null,
+          records,
+          source: page.source,
+          snapshot: page.snapshot,
+        };
       }
       cursor = page.page.nextCursor;
     } finally {

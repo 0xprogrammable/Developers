@@ -28,6 +28,8 @@ For every advertised chain:
 
 An event name or topic is not sufficient. The log must come from the exact manifest-listed contract on the exact chain.
 
+For Generation 1, authenticate the operation caller against the matching manifest entry rather than one generic writer list. `registered` uses the canonical `WRITER_ROLE` and the atomic registrar `0xcc916e5200d2626edfd918dc219bc4296629e997`; `finalized` uses the distinct `FINALIZER_ROLE` and `0x2bb333d48dfaf1596d9036671d2e43168994249e`. A finalization projection attributed to the registrar, or a registration projection attributed only to the finalizer, must be rejected.
+
 ## Classic source verification
 
 For each enabled Classic deployment:

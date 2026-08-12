@@ -18,6 +18,8 @@ Both paths must use the same identities and lifecycle rules.
 
 Cursors are opaque. Return them unchanged. A replayed page must be harmless.
 
+For applicant ingestion, require `customRegistryPublication.expectedSourceId === customRegistryPublication.observedSourceId`, `sourceConfigured`, `sourceCurrent`, and `sourceReady`. The current Generation 1 source is `programmable-custom-launch-registry-v3`; do not substitute the Website v1 presentation mirror or merge it with the Developer manifest. Treat `baselineLaunches` as canary coverage and `applicantLaunches` as the separate real-applicant count.
+
 A `degraded` feed still contains recognized events when canonical event coverage is complete but enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. If event-log coverage itself is incomplete, launch-list and token-list routes return a retryable `503` rather than a partial list.
 
 ## Direct onchain path

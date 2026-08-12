@@ -5,6 +5,7 @@ import { canonicalSha256, canonicalizeJson } from "../server/canonical.js";
 import { keccak256 } from "../server/keccak.js";
 import {
   createMemoryRegistryCheckpointStore,
+  EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
   readRegistryCustomFeed,
 } from "../server/registry.js";
 import {
@@ -222,6 +223,64 @@ function resealProjectionItem(item) {
 }
 
 describe("Canonical Custom Registry v3 seam", () => {
+  test("pins the configured production source to authenticated v3 items", async () => {
+    const body = (sourceId, items, highWaterGeneration) => ({
+      schemaVersion: "programmable.custom-launch-registry-feed.v1",
+      source: {
+        sourceId,
+        status: "ready",
+        completeness: "complete",
+        freshness: "current",
+        checkedAt: "2026-08-07T10:00:00.000Z",
+        latestAcceptedAt: items.length === 0
+          ? null
+          : "2026-08-07T09:59:00.000Z",
+      },
+      snapshot: {
+        highWaterGeneration,
+        indexedAt: "2026-08-07T10:00:00.000Z",
+      },
+      items,
+      page: {
+        nextCursor: null,
+        resumeCursor: `registry-v3-source-${sourceId}-0001`,
+        hasMore: false,
+      },
+    });
+    const read = (payload) => readRegistryCustomFeed({
+      configuration: {
+        ...feedConfiguration,
+        expectedSourceId: EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+      },
+      now: () => Date.parse("2026-08-07T10:00:30.000Z"),
+      accessToken: async () => "test-registry-feed-token-0001",
+      fetchImplementation: async () => new Response(canonicalizeJson(payload), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    });
+
+    const accepted = await read(body(
+      EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+      [projectionItem()],
+      "1",
+    ));
+    assert.equal(accepted.records.length, 1);
+    assert.equal(
+      accepted.source.sourceId,
+      EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+    );
+
+    await assert.rejects(
+      () => read(body("programmable-custom-launch-registry-v2", [], "0")),
+      /not the configured authority/,
+    );
+    await assert.rejects(
+      () => read(body("programmable-custom-launch-registry-v4", [], "0")),
+      /not the configured authority/,
+    );
+  });
+
   test("resumes without loss across the Gen1 v3 to Gen2 v4 feed migration", async () => {
     const v3Item = projectionItem();
     const v4Item = {
@@ -573,7 +632,7 @@ describe("Canonical Custom Registry v3 seam", () => {
     assert.equal(normalized.token, null);
     assert.deepEqual(normalized.markets, []);
     const { createSchemaRegistry } = await import("../scripts/lib/schema.mjs");
-    const { registryOriginMatchesManifest } = await import(
+    const { projectV2Dataset, registryOriginMatchesManifest } = await import(
       "../server/v2-dataset.js"
     );
     const schemas = await createSchemaRegistry("v2");
@@ -586,6 +645,8 @@ describe("Canonical Custom Registry v3 seam", () => {
     );
     const registryEvidence =
       normalized.extensions["programmable/registry-v3"];
+    const registrationWriter =
+      "0x6666666666666666666666666666666666666666";
     const manifest = {
       registryGenerations: [{
         chainId: normalized.chainId,
@@ -596,9 +657,27 @@ describe("Canonical Custom Registry v3 seam", () => {
         runtimeCodeKeccak256: registryEvidence.registryRuntimeCodeHash,
         startBlock: normalized.registryOrigin.registryStartBlock,
         endBlock: null,
-        authorizedWriters: [registryEvidence.registryWriter],
+        authorizedWriters: [registrationWriter],
+        operationAuthorities: {
+          registered: {
+            role: "writer",
+            roleHash:
+              "0x38a7c92332f0fbaba4dce6b9f3eea9c1ebabcd169e98906ab9a73f4ed8a6e4f8",
+            addresses: [registrationWriter],
+          },
+          finalized: {
+            role: "finalizer",
+            roleHash:
+              "0xe55e8ef6452e74c26a3f53152c87f1ccda401f3155e8946d061b3dd85334736b",
+            addresses: [registryEvidence.registryWriter],
+          },
+        },
         registryEventSetHash: normalized.registryOrigin.registryEventSetHash,
         events: {
+          registered: {
+            topic0:
+              "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a",
+          },
           [registryEvidence.operation]: {
             topic0: registryEvidence.eventTopic0,
           },
@@ -606,6 +685,63 @@ describe("Canonical Custom Registry v3 seam", () => {
       }],
     };
     assert.equal(registryOriginMatchesManifest(normalized, manifest), true);
+    manifest.customRegistry = {
+      status: "live",
+      publicSubmissionsEnabled: true,
+    };
+    manifest.chains = [{ chainId: normalized.chainId, status: "live" }];
+    const projectedApplicant = projectV2Dataset({
+      records: [normalized],
+      status: {
+        schemaVersion: "1.0.0",
+        status: "ready",
+        generatedAt: "2026-08-07T10:00:00.000Z",
+        chainId: normalized.chainId,
+        coverage: {
+          status: "complete",
+          checkpoint: {
+            blockNumber: Number(normalized.launch.blockNumber),
+            blockHash: normalized.launch.blockHash,
+            finality: "finalized",
+          },
+        },
+        customRegistry: {
+          configured: true,
+          expectedSourceId: EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+          status: "ready",
+          sourceId: EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+          completeness: "complete",
+          freshness: "current",
+          highWaterGeneration: "1",
+          launches: 1,
+        },
+        counts: { total: 1, classic: 0, custom: 1 },
+        errors: [],
+      },
+    }, manifest);
+    assert.equal(projectedApplicant.records.length, 1);
+    assert.equal(
+      projectedApplicant.status.customRegistryPublication.sourceReady,
+      true,
+    );
+    assert.equal(
+      projectedApplicant.status.customRegistryPublication.applicantLaunches,
+      1,
+    );
+    assert.equal(
+      projectedApplicant.status.customRegistryPublication.baselineLaunches,
+      0,
+    );
+    const registered = structuredClone(normalized);
+    registered.extensions["programmable/registry-v3"].operation = "registered";
+    registered.extensions["programmable/registry-v3"].registryWriter =
+      registrationWriter;
+    registered.extensions["programmable/registry-v3"].eventTopic0 =
+      manifest.registryGenerations[0].events.registered.topic0;
+    assert.equal(registryOriginMatchesManifest(registered, manifest), true);
+    registered.extensions["programmable/registry-v3"].registryWriter =
+      registryEvidence.registryWriter;
+    assert.equal(registryOriginMatchesManifest(registered, manifest), false);
     const manifestMutations = [
       ["chain", (value) => { value.chainId = 8453; }],
       ["address", (value) => {
@@ -614,10 +750,16 @@ describe("Canonical Custom Registry v3 seam", () => {
       ["runtime", (value) => {
         value.runtimeCodeKeccak256 = `0x${"8".repeat(64)}`;
       }],
-      ["writer", (value) => {
-        value.authorizedWriters = [
+      ["finalizer", (value) => {
+        value.operationAuthorities.finalized.addresses = [
           "0x8888888888888888888888888888888888888888",
         ];
+      }],
+      ["finalizer role", (value) => {
+        value.operationAuthorities.finalized.role = "writer";
+      }],
+      ["finalizer role hash", (value) => {
+        value.operationAuthorities.finalized.roleHash = `0x${"8".repeat(64)}`;
       }],
       ["event", (value) => {
         value.events.finalized.topic0 = `0x${"8".repeat(64)}`;

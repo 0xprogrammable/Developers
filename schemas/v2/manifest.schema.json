@@ -305,6 +305,28 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "type": "object",
+            "required": [
+              "generation"
+            ],
+            "properties": {
+              "generation": {
+                "const": "1"
+              }
+            }
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "operationAuthorities"
+            ],
+            "properties": {
+              "operationAuthorities": true
+            }
+          }
         }
       ],
       "required": [
@@ -362,6 +384,28 @@
           "items": {
             "$ref": "common.schema.json#/$defs/evmAddress"
           }
+        },
+        "operationAuthorities": {
+          "type": "object",
+          "required": [
+            "registered",
+            "finalized"
+          ],
+          "properties": {
+            "registered": {
+              "$ref": "#/$defs/registryOperationAuthority"
+            },
+            "finalized": {
+              "$ref": "#/$defs/registryOperationAuthority"
+            },
+            "corrected": {
+              "$ref": "#/$defs/registryOperationAuthority"
+            },
+            "revoked": {
+              "$ref": "#/$defs/registryOperationAuthority"
+            }
+          },
+          "additionalProperties": false
         },
         "registryEventSetHash": {
           "type": "string",
@@ -465,6 +509,37 @@
             "partnerFactoryRegistry",
             "atomicRegistrar"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "registryOperationAuthority": {
+      "type": "object",
+      "required": [
+        "role",
+        "roleHash",
+        "addresses"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "writer",
+            "finalizer",
+            "corrector",
+            "revoker"
+          ]
+        },
+        "roleHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "addresses": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/evmAddress"
+          }
         }
       },
       "additionalProperties": false

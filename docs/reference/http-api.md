@@ -37,7 +37,7 @@ Do not treat HTTP 200 alone as proof that every launch source or execution adapt
 
 The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` while still returning recognized launches with partial enrichment. Incomplete Classic event coverage or an unconfigured, incomplete, or non-current Custom Registry makes the affected aggregate route unavailable instead of returning a falsely complete list. `category=classic` remains independent from Custom Registry availability.
 
-The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes: `sourceReady` is the authenticated Registry coverage result, `activeGeneration` is the manifest-selected generation, `requiresLiveSource` distinguishes Gen1's immutable baseline from later live-source requirements, and `publishedRegistries` is the count of manifest-published generations. A `null` value means the status was produced before dataset projection and must not be treated as source readiness.
+The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes. `publicationReady` is the complete route gate. `baselineReady` describes only the immutable Gen1 canary, while `sourceConfigured`, `sourceCurrent`, and `sourceReady` separately describe the authenticated applicant source. `expectedSourceId` and `observedSourceId` make the active producer generation explicit. `baselineLaunches` and `applicantLaunches` are separate, so the canary never inflates the applicant count. `activeGeneration`, `requiresLiveSource`, and `publishedRegistries` describe the manifest-selected Registry boundary. A `null` object means the status was produced before dataset projection and must not be treated as source readiness.
 
 ## Manifest
 
@@ -66,7 +66,7 @@ The manifest is the canonical integration inventory for active and prelaunch dep
 
 The Website endpoint `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror, not a second integration trust root. Its schema and generation labels can differ from this Developer manifest. For terminal, wallet, indexer, bot, or direct-onchain integration, the discovery-selected `https://developers.programmable.family/api/v2/manifest` takes precedence. A conflict must pause trust advancement and alert an operator; it must not be resolved by merging fields from both documents.
 
-The v2 Custom Registry state is live with public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, and finality policy from the manifest; they must not infer that live discovery enables general submission intake.
+The v2 Custom Registry state is live with public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, finality policy, and operation-specific authority sets from the manifest. For Generation 1, `authorizedWriters` and `operationAuthorities.registered` identify registration writers; `operationAuthorities.finalized` independently identifies finalizers. A registration writer is not a finalizer merely because both operations emit from the Registry. Clients must not infer that live discovery enables general submission intake.
 
 Clients should reject an unexplained manifest rollback and alert on conflicting data for the same manifest version.
 

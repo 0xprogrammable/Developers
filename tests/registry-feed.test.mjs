@@ -6,6 +6,7 @@ import { projectV2Record, publicLaunchV2 } from "../server/v2-dataset.js";
 import { canonicalSha256, canonicalizeJson } from "../server/canonical.js";
 import { deriveUniswapV4PoolId, keccak256 } from "../server/keccak.js";
 import {
+  EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
   normalizeRegistryCustomItem,
   readRegistryCustomFeed,
   createMemoryRegistryCheckpointStore,
@@ -395,6 +396,30 @@ describe("authenticated Custom Registry ingestion", () => {
     assert.throws(
       () => registryCustomFeedConfiguration({ PROGRAMMABLE_WORKLOAD_SUBJECT_TOKEN: "stray-secret-token-0001" }),
       /configuration is incomplete/,
+    );
+    const env = {
+      PROGRAMMABLE_REGISTRY_CUSTOM_FEED_URL:
+        "https://registry.programmable.family/v2/custom-launch-feed",
+      PROGRAMMABLE_REGISTRY_CUSTOM_FEED_AUDIENCE: configuration.audience,
+      PROGRAMMABLE_REGISTRY_CUSTOM_FEED_TARGET_BINDING:
+        configuration.targetBindingHash,
+      PROGRAMMABLE_WORKLOAD_TOKEN_ENDPOINT:
+        "https://identity.programmable.family/token",
+      PROGRAMMABLE_WORKLOAD_ISSUER: configuration.issuer,
+      PROGRAMMABLE_WORKLOAD_SUBJECT: configuration.subject,
+      PROGRAMMABLE_WORKLOAD_SUBJECT_TOKEN: "test-subject-token-production-v3",
+    };
+    assert.equal(
+      registryCustomFeedConfiguration(env).expectedSourceId,
+      EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
+    );
+    assert.throws(
+      () => registryCustomFeedConfiguration({
+        ...env,
+        PROGRAMMABLE_REGISTRY_CUSTOM_FEED_URL:
+          "https://programmable.family/api/custom-launch/registry/v1/manifest",
+      }),
+      /exact HTTPS custom-feed URL/,
     );
   });
 
