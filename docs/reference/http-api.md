@@ -37,6 +37,8 @@ Do not treat HTTP 200 alone as proof that every launch source or execution adapt
 
 The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` while still returning recognized launches with partial enrichment. Incomplete Classic event coverage or an unconfigured, incomplete, or non-current Custom Registry makes the affected aggregate route unavailable instead of returning a falsely complete list. `category=classic` remains independent from Custom Registry availability.
 
+The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes: `sourceReady` is the authenticated Registry coverage result, `activeGeneration` is the manifest-selected generation, `requiresLiveSource` distinguishes Gen1's immutable baseline from later live-source requirements, and `publishedRegistries` is the count of manifest-published generations. A `null` value means the status was produced before dataset projection and must not be treated as source readiness.
+
 ## Manifest
 
 ### `GET /api/v2/manifest`

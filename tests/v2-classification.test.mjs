@@ -139,13 +139,11 @@ describe("version 2 classification", () => {
 
   test("publishes Registry discovery while keeping general intake prelaunch", async () => {
     const manifest = await developerManifestV2();
-    const publicStatus = serviceStatusV2(
-      projectV2Dataset({
-        records: [internalRecord(classic, "0001"), genesisCanary],
-        status: { ...status(), customRegistry: { status: "ready" } },
-      }, manifest).status,
-      manifest,
-    );
+    const projected = projectV2Dataset({
+      records: [internalRecord(classic, "0001"), genesisCanary],
+      status: { ...status(), customRegistry: { status: "ready" } },
+    }, manifest);
+    const publicStatus = serviceStatusV2(projected.status, manifest);
     assert.equal(manifest.customRegistry.status, "live");
     assert.equal(
       manifest.customRegistry.address,
@@ -154,6 +152,10 @@ describe("version 2 classification", () => {
     assert.equal(manifest.customRegistry.publicSubmissionsEnabled, false);
     assert.equal(manifest.deployments.some((item) => item.modelId === "stock-paired"), false);
     assert.equal(publicStatus.custom.status, "live");
+    assert.deepEqual(
+      publicStatus.customRegistryPublication,
+      projected.status.customRegistryPublication,
+    );
   });
 
   test("includes the immutable Registry genesis canary in the Custom feed", async () => {
