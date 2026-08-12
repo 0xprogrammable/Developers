@@ -12,8 +12,10 @@ import {
 } from "./constants.js";
 import { readLegacyFeed } from "./legacy.js";
 import {
+  EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
   normalizeRegistryCustomItem,
   readRegistryCustomFeed,
+  registryCustomFeedConfiguration,
 } from "./registry.js";
 import {
   compareLaunchesDescending,
@@ -263,11 +265,20 @@ function mergeRecords(legacyRecords, gapRecords, registryRecords = []) {
 
 async function buildDataset() {
   const generatedAt = new Date().toISOString();
+  let registryConfiguration = null;
+  let registryConfigurationError = null;
+  try {
+    registryConfiguration = registryCustomFeedConfiguration();
+  } catch (error) {
+    registryConfigurationError = error;
+  }
   const [legacyResult, headResult, finalizedResult, registryResult] = await Promise.allSettled([
     readLegacyFeed(),
     readHeadBlock(),
     readFinalizedBlock(),
-    readRegistryCustomFeed(),
+    registryConfigurationError === null
+      ? readRegistryCustomFeed()
+      : Promise.reject(registryConfigurationError),
   ]);
   const legacy = legacyResult.status === "fulfilled" ? legacyResult.value : null;
   const head = headResult.status === "fulfilled" ? headResult.value : null;
@@ -420,8 +431,12 @@ async function buildDataset() {
     !gapTruncated &&
     !enrichedGap.truncated;
   const enrichmentComplete = enrichedGap.errors.length === 0;
+  const registryConfigured = registry?.configured === true ||
+    registryConfiguration !== null;
   const registryReady = Boolean(
     registry?.configured &&
+      registry.expectedSourceId === EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID &&
+      registry.source?.sourceId === registry.expectedSourceId &&
       registry.source?.status === "ready" &&
       registry.source?.completeness === "complete" &&
       registry.source?.freshness === "current" &&
@@ -528,10 +543,13 @@ async function buildDataset() {
       },
     },
     customRegistry: {
-      configured: registry?.configured === true,
+      configured: registryConfigured,
+      expectedSourceId:
+        registry?.expectedSourceId ?? registryConfiguration?.expectedSourceId ??
+        EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
       status: registryReady
         ? "ready"
-        : registry?.configured === false
+        : !registryConfigured && registryConfigurationError === null
           ? "unconfigured"
           : "unavailable",
       sourceId: registry?.source?.sourceId ?? null,

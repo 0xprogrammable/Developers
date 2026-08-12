@@ -54,6 +54,18 @@ describe("JSON Schema registry", () => {
     );
   });
 
+  test("requires operation-specific authorities for Registry generation 1", async () => {
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments", "ethereum-v2.json"),
+    );
+    const validate = registryV2.validator("manifest.schema.json");
+    assertValid(validate, manifest, "deployments/ethereum-v2.json");
+
+    delete manifest.registryGenerations[0].operationAuthorities;
+    assert.equal(validate(manifest), false);
+    assert.match(validationSummary(validate), /operationAuthorities/);
+  });
+
   test("validates feed and token-list fixtures", async () => {
     assertValid(
       registry.validator("launch-feed.schema.json"),

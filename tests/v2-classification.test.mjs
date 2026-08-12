@@ -150,11 +150,40 @@ describe("version 2 classification", () => {
       "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
     );
     assert.equal(manifest.customRegistry.publicSubmissionsEnabled, false);
+    const registry = manifest.registryGenerations.find((generation) =>
+      generation.generation === "1"
+    );
+    assert.deepEqual(registry.authorizedWriters, [
+      "0xcc916e5200d2626edfd918dc219bc4296629e997",
+    ]);
+    assert.deepEqual(registry.operationAuthorities, {
+      registered: {
+        role: "writer",
+        roleHash:
+          "0x38a7c92332f0fbaba4dce6b9f3eea9c1ebabcd169e98906ab9a73f4ed8a6e4f8",
+        addresses: [
+          "0xcc916e5200d2626edfd918dc219bc4296629e997",
+        ],
+      },
+      finalized: {
+        role: "finalizer",
+        roleHash:
+          "0xe55e8ef6452e74c26a3f53152c87f1ccda401f3155e8946d061b3dd85334736b",
+        addresses: [
+          "0x2bb333d48dfaf1596d9036671d2e43168994249e",
+        ],
+      },
+    });
     assert.equal(manifest.deployments.some((item) => item.modelId === "stock-paired"), false);
     assert.equal(publicStatus.custom.status, "live");
     assert.deepEqual(
       publicStatus.customRegistryPublication,
       projected.status.customRegistryPublication,
+    );
+    assertValid(
+      (await createSchemaRegistry("v2")).validator("status.schema.json"),
+      publicStatus,
+      "projected v2 status",
     );
   });
 
@@ -200,7 +229,11 @@ describe("version 2 classification", () => {
       projected.status.customRegistryPublication.requiresLiveSource,
       false,
     );
-    assert.equal(projected.status.customRegistryPublication.sourceReady, true);
+    assert.equal(projected.status.customRegistryPublication.sourceReady, false);
+    assert.equal(projected.status.customRegistryPublication.baselineReady, true);
+    assert.equal(projected.status.customRegistryPublication.publicationReady, true);
+    assert.equal(projected.status.customRegistryPublication.baselineLaunches, 1);
+    assert.equal(projected.status.customRegistryPublication.applicantLaunches, 0);
     const publicStatus = serviceStatusV2(projected.status, manifest);
     assert.equal(publicStatus.custom.status, "live");
     assert.equal(publicStatus.customRegistry.status, "unavailable");
@@ -221,6 +254,10 @@ describe("version 2 classification", () => {
       status: { ...status(), customRegistry: sourceStatus },
     }), manifest);
     assert.deepEqual(projected.status.customRegistry, sourceStatus);
+    assert.equal(projected.status.customRegistryPublication.sourceConfigured, false);
+    assert.equal(projected.status.customRegistryPublication.sourceCurrent, false);
+    assert.equal(projected.status.customRegistryPublication.sourceReady, false);
+    assert.equal(projected.status.customRegistryPublication.publicationReady, true);
 
     const custom = launchFeedPayload(projected, {
       category: "custom",

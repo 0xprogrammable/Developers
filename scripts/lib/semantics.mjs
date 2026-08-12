@@ -35,6 +35,18 @@ const GEN2_CONTRACT_ROLES = Object.freeze([
   "feePolicyVerifier",
   "atomicRegistrar",
 ]);
+const GEN1_OPERATION_AUTHORITIES = Object.freeze({
+  registered: Object.freeze({
+    role: "writer",
+    roleHash:
+      "0x38a7c92332f0fbaba4dce6b9f3eea9c1ebabcd169e98906ab9a73f4ed8a6e4f8",
+  }),
+  finalized: Object.freeze({
+    role: "finalizer",
+    roleHash:
+      "0xe55e8ef6452e74c26a3f53152c87f1ccda401f3155e8946d061b3dd85334736b",
+  }),
+});
 
 function finding(code, path, message) {
   return { code, path, message };
@@ -964,6 +976,34 @@ export function validateManifestSemantics(manifest) {
             `Generation 2 event ${eventId} must bind emitter role ${emitterRole}`,
           ));
         }
+      }
+    } else if (generation.generation === "1") {
+      const authorities = generation.operationAuthorities;
+      for (const [operation, expected] of Object.entries(
+        GEN1_OPERATION_AUTHORITIES,
+      )) {
+        const authority = authorities?.[operation];
+        if (authority?.role !== expected.role ||
+          authority?.roleHash !== expected.roleHash ||
+          !Array.isArray(authority?.addresses) ||
+          authority.addresses.length === 0) {
+          findings.push(finding(
+            "REGISTRY_OPERATION_AUTHORITY",
+            `/registryGenerations/${index}/operationAuthorities/${operation}`,
+            `Generation 1 ${operation} authority must bind the canonical ${expected.role} role and a non-empty address set`,
+          ));
+        }
+      }
+      const registrationWriters = (authorities?.registered?.addresses ?? [])
+        .map((address) => address.toLowerCase()).sort();
+      const legacyWriters = (generation.authorizedWriters ?? [])
+        .map((address) => address.toLowerCase()).sort();
+      if (registrationWriters.join("\0") !== legacyWriters.join("\0")) {
+        findings.push(finding(
+          "REGISTRY_REGISTRATION_WRITER_MISMATCH",
+          `/registryGenerations/${index}/operationAuthorities/registered`,
+          "Generation 1 registration authority must match authorizedWriters exactly",
+        ));
       }
     }
   }

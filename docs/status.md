@@ -42,7 +42,7 @@ Prelaunch means the integration contract is available for client development, bu
 
 The v2 manifest reports `customRegistry.status: "live"`, `publicSubmissionsEnabled: false`, and the exact active address, generation, and start block. The filtered v2 Custom feed begins with the finalized project-only genesis canary. These values are the controlling public state; provider catalogs and intake drafts cannot override them.
 
-The v2 status response also reports `customRegistryPublication`. Its `sourceReady` field is the gate for real Registry records; the Gen1 genesis canary can keep that field true without an authenticated applicant feed. Consumers must not interpret `custom.status: "live"` or the canary alone as proof that a new project is launchable.
+The v2 status response also reports `customRegistryPublication`. The Gen1 canary sets `baselineReady` and can keep `publicationReady` true, but it never sets `sourceConfigured`, `sourceCurrent`, or `sourceReady`. Those source fields advance only for the authenticated, complete, current `programmable-custom-launch-registry-v3` applicant feed. `baselineLaunches` and `applicantLaunches` remain separate. Consumers must not interpret `custom.status: "live"` or the canary alone as proof that a new project is launchable.
 
 Generation 1 is the manifest-published Custom trust root. Its finalized project-only genesis canary is the immutable discovery baseline; general Custom intake remains prelaunch. Generation 1 is not evidence that the stronger Generation 2 interface is deployed.
 

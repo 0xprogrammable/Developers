@@ -826,8 +826,22 @@ describe("Registry generation 2 contract parity", () => {
     delete v3.extensions["programmable/registry-v4"];
     const manifestV3 = structuredClone(manifestV4);
     manifestV3.registryGenerations[0].generation = "1";
-    v3.extensions["programmable/registry-v3"].registryWriter =
-      manifestV3.registryGenerations[0].authorizedWriters[0];
+    const gen1Writer = manifestV3.registryGenerations[0].authorizedWriters[0];
+    manifestV3.registryGenerations[0].operationAuthorities = {
+      registered: {
+        role: "writer",
+        roleHash:
+          "0x38a7c92332f0fbaba4dce6b9f3eea9c1ebabcd169e98906ab9a73f4ed8a6e4f8",
+        addresses: [gen1Writer],
+      },
+      finalized: {
+        role: "finalizer",
+        roleHash:
+          "0xe55e8ef6452e74c26a3f53152c87f1ccda401f3155e8946d061b3dd85334736b",
+        addresses: [gen1Writer],
+      },
+    };
+    v3.extensions["programmable/registry-v3"].registryWriter = gen1Writer;
     assert.equal(isV2PublicLaunch(v3, manifestV3), true);
 
     const v4OnGen1 = structuredClone(v4);
@@ -855,11 +869,13 @@ describe("Registry generation 2 contract parity", () => {
     manifest.chains = [{ chainId: 1, status: "live" }];
     const source = {
       configured: true,
+      expectedSourceId: "programmable-custom-launch-registry-v4",
       status: "ready",
       sourceId: "programmable-custom-launch-registry-v4",
       completeness: "complete",
       freshness: "current",
       highWaterGeneration: "1",
+      launches: 1,
     };
     const dataset = (customRegistry = source) => ({
       records: [record],

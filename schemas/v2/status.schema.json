@@ -139,10 +139,18 @@
       "required": [
         "status",
         "publicSubmissionsEnabled",
+        "publicationReady",
+        "baselineReady",
+        "sourceConfigured",
         "sourceReady",
+        "sourceCurrent",
+        "expectedSourceId",
+        "observedSourceId",
         "activeGeneration",
         "requiresLiveSource",
-        "publishedRegistries"
+        "publishedRegistries",
+        "baselineLaunches",
+        "applicantLaunches"
       ],
       "properties": {
         "status": {
@@ -154,8 +162,34 @@
         "publicSubmissionsEnabled": {
           "type": "boolean"
         },
+        "publicationReady": {
+          "type": "boolean"
+        },
+        "baselineReady": {
+          "type": "boolean"
+        },
+        "sourceConfigured": {
+          "type": "boolean"
+        },
         "sourceReady": {
           "type": "boolean"
+        },
+        "sourceCurrent": {
+          "type": "boolean"
+        },
+        "expectedSourceId": {
+          "enum": [
+            "programmable-custom-launch-registry-v3",
+            "programmable-custom-launch-registry-v4",
+            null
+          ]
+        },
+        "observedSourceId": {
+          "enum": [
+            "programmable-custom-launch-registry-v3",
+            "programmable-custom-launch-registry-v4",
+            null
+          ]
         },
         "activeGeneration": {
           "type": [
@@ -168,6 +202,14 @@
           "type": "boolean"
         },
         "publishedRegistries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "baselineLaunches": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "applicantLaunches": {
           "type": "integer",
           "minimum": 0
         }

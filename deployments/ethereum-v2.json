@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "2",
-  "generatedAt": "2026-08-09T15:03:37Z",
+  "manifestVersion": "3",
+  "generatedAt": "2026-08-12T13:35:10Z",
   "chainId": 1,
   "chains": [
     {
@@ -375,6 +375,22 @@
       "authorizedWriters": [
         "0xcc916e5200d2626edfd918dc219bc4296629e997"
       ],
+      "operationAuthorities": {
+        "registered": {
+          "role": "writer",
+          "roleHash": "0x38a7c92332f0fbaba4dce6b9f3eea9c1ebabcd169e98906ab9a73f4ed8a6e4f8",
+          "addresses": [
+            "0xcc916e5200d2626edfd918dc219bc4296629e997"
+          ]
+        },
+        "finalized": {
+          "role": "finalizer",
+          "roleHash": "0xe55e8ef6452e74c26a3f53152c87f1ccda401f3155e8946d061b3dd85334736b",
+          "addresses": [
+            "0x2bb333d48dfaf1596d9036671d2e43168994249e"
+          ]
+        }
+      },
       "registryEventSetHash": "sha256:8df340512445931e96838244207940ce9ca631b48c905bda78d5f4f5bcee1c0a",
       "events": {
         "registered": {

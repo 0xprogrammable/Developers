@@ -146,6 +146,33 @@ describe("semantic conformance", () => {
     );
   });
 
+  test("rejects conflated Registry registration and finalization authority", async () => {
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+    );
+    manifest.registryGenerations[0].operationAuthorities.finalized.role =
+      "writer";
+    assert.ok(
+      validateManifestSemantics(manifest).some(
+        (finding) => finding.code === "REGISTRY_OPERATION_AUTHORITY",
+      ),
+    );
+
+    const registrationMismatch = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+    );
+    registrationMismatch.registryGenerations[0]
+      .operationAuthorities.registered.addresses = [
+        "0x1111111111111111111111111111111111111111",
+      ];
+    assert.ok(
+      validateManifestSemantics(registrationMismatch).some(
+        (finding) =>
+          finding.code === "REGISTRY_REGISTRATION_WRITER_MISMATCH",
+      ),
+    );
+  });
+
   test("rejects executable wallet requests in manifest extensions", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments/ethereum.json"),
