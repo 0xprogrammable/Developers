@@ -22,6 +22,7 @@ The universal guarantee is discovery through a stable core envelope. Charting, q
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
 - Router V1 future-launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
+- The separate operator console at `https://claimhazard.vercel.app` rescans reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 fee sources. The public discovery policy at `https://claimhazard.vercel.app/claim-discovery.json` is read-only and does not expand the Developer API into a transaction API.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification and remain available only through API v1 compatibility routes.
 - Ethereum Mainnet is the only chain currently advertised by the canonical discovery document.
 - No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is verified by the public v2 manifest.
@@ -86,6 +87,26 @@ For a live lookup, the complete identity is `chainId + Router address + launchId
 For onchain discovery, backfill exact-emitter and exact-topic logs from Router `startBlock` in finality-bounded chunks. Persist block hash, transaction hash/index, and log index; verify lookup, record, and address proof at one canonical block; advance only a durable finalized checkpoint; replay an overlap idempotently; orphan and rewind on a block-hash change; then poll or subscribe from the overlap without a backfill-to-live gap. Only consistent records from the exact canonical Router qualify through Router V1. Publication does not imply automatic GMGN, Axiom, FOMO, or other named-terminal adoption. The GitHub approval to permit to wallet self-service launch flow is not live.
 
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
+
+## Protocol fee claim discovery
+
+Launch visibility and claim eligibility are separate. The Developer launch feed
+keeps recognized Classic and Custom launches visible; the operator console
+independently verifies its launcher, Registry, runtime, fee share, reward
+wallet, lifecycle, and finality requirements before it admits a claim.
+
+Current coverage is Classic V3 and V2 canonical launcher replay plus aggregate
+fee hooks, the Classic V1 legacy aggregate hook, 18 fixed Stock-Paired claim
+legs, and complete Custom Registry V1 replay plus current-state verification.
+New finalized standard Custom V1 sources with a supported 5 or 10 bps
+Programmable share are included on refresh. Arbitrary Custom hooks and Custom
+Registry V2 are not admitted; V2 remains HOLD until its exact Mainnet release
+is finalized and published.
+
+The console only supports reward wallet
+`0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. It requests one atomic EIP-5792
+`wallet_sendCalls` batch and sends nothing when atomic batching is unavailable.
+Anyone can view the page, but viewing it conveys no claim authority.
 
 Clients should retain the highest accepted manifest version. An unexplained rollback or conflicting content for the same version requires operator review.
 
@@ -608,6 +629,7 @@ Not allowed without separate evidence:
 - App guide: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md
 - API reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
+- Protocol fee claim discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/protocol-fee-claims.md
 - Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
 - Future launch Router verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
 - Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md

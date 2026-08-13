@@ -154,3 +154,15 @@ A terminal should show:
 - an unavailable or unverified state when the path cannot be established.
 
 Do not label a fee as collected, claimable, or paid solely because a policy is declared. Those states require corresponding verified onchain evidence.
+
+## Operator claim inventory
+
+The public Developer API does not authorize claims or return claim calldata.
+Programmable's separate operator console rescans the reviewed onchain sources
+at `https://claimhazard.vercel.app` and publishes its read-only discovery policy
+at `https://claimhazard.vercel.app/claim-discovery.json`.
+
+See [Protocol fee claim discovery](protocol-fee-claims.md) for the exact Classic,
+fixed Stock-Paired, Custom Registry V1, wallet, atomic-batch, and fail-closed
+boundaries. Custom Registry V2 remains unavailable until its exact Mainnet
+release is finalized and published.

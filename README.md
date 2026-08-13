@@ -13,6 +13,7 @@ Read-only contracts and verification rules for detecting Programmable launches.
 | [Launch stamp specification](docs/reference/launch-stamp.md) | Implement backfill, live follow, reorg handling, and direct verification |
 | [Terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features |
 | [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
+| [Protocol fee claim discovery](docs/reference/protocol-fee-claims.md) | Understand the operator claim inventory, refresh behavior, wallet boundary, and fail-closed Custom admission rules |
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
@@ -90,6 +91,8 @@ curl -fsSL https://developers.programmable.family/api/v2/token-list
 No SDK or API key is required. The v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md).
 
 Fee data is market-path evidence, not a category default. The Native Programmable policy is 10 basis points, or 0.1%, on supported official market paths, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
+
+The separate [operator claim console](https://claimhazard.vercel.app) rescans the exact reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 sources before requesting one atomic wallet batch. Its [claim discovery reference](docs/reference/protocol-fee-claims.md) documents what is automatically included and what remains fail-closed. It does not expand the read-only Developer API into a transaction API.
 
 ## Repository map
 

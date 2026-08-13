@@ -25,6 +25,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 - Add project-only-safe JavaScript examples and a typed v2 client covering discovery, feed, launch-ID, token, and token-list access.
 - Add conditional Preview and Live release-post drafts.
 - Correct the security support table to include canonical API v2 while retaining v1 compatibility support.
+- Document the live operator claim console and its separate read-only discovery policy, wallet boundary, atomic batching, reviewed source inventory, and fail-closed Custom admission rules.
 
 ## [1.1.0] - 2026-08-05
 

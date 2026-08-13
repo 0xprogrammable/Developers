@@ -11,8 +11,9 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 5. [Programmable Verified](concepts/programmable-verified.md)
 6. [Direct onchain verification](reference/onchain-verification.md)
 7. [Future launch Router verification](reference/launch-stamp.md)
-8. [Production operations](operations.md)
-9. [Production integration checklist](integration-checklist.md)
+8. [Protocol fee claim discovery](reference/protocol-fee-claims.md)
+9. [Production operations](operations.md)
+10. [Production integration checklist](integration-checklist.md)
 
 ## Choose an integration path
 
@@ -26,6 +27,7 @@ Programmable exposes one versioned integration surface for Classic and Custom la
 
 - [HTTP API](reference/http-api.md)
 - [Platform fees](reference/fees.md)
+- [Protocol fee claim discovery](reference/protocol-fee-claims.md)
 - [Direct onchain verification](reference/onchain-verification.md)
 - [Future launch Router verification](reference/launch-stamp.md)
 - [Multi-chain discovery](concepts/multi-chain.md)
