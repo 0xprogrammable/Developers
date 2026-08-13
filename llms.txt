@@ -19,6 +19,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
 - The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
+- The separate operator console at `https://claimhazard.vercel.app` rescans reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 fee sources. Its discovery policy is read-only; it does not expand the Developer API into a transaction API.
 - Legacy indexer records can have partial provenance. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
 - Incomplete canonical event-log coverage makes launch-list and token-list routes retryable `503`; missing enrichment alone does not.
 - Do not claim that launches are unconditionally safe, audited, or unruggable.
@@ -37,6 +38,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - [Direct onchain verification](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
 - [Launch stamp Router](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md): Direct Router verification for future Classic and Custom token, v4 pool, and exclusive-component provenance.
 - [Production checklist](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
+- [Protocol fee claim discovery](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/protocol-fee-claims.md): Operator wallet boundary, atomic batching, source inventory, refresh behavior, and fail-closed Custom admission.
 - [FAQ](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md): Common product and integration questions.
 
 ## Integration guides
@@ -92,6 +94,7 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 22. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
 23. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
 24. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
+25. Keep launch visibility separate from claim eligibility. The claim console must independently verify its published launcher, Registry, runtime, fee, recipient, lifecycle, and finality boundary; a visible launch is not automatically claimable.
 
 ## Fee summary
 
@@ -101,3 +104,5 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 - Future Native Custom official paths: 10 bps is added on top of the creator-defined market fee only when deployed and verified.
 - Active fee-bearing partnership-template paths: exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis, with no additional Native Custom 10 bps. Partner-attributed projects without a qualifying fee path use zero shares.
 - The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.
+- Claim console: https://claimhazard.vercel.app
+- Read-only claim discovery policy: https://claimhazard.vercel.app/claim-discovery.json
