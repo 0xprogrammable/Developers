@@ -42,7 +42,7 @@ Pair related events according to the documented deployment contract. An event wi
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
 
-Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. General submission intake remains disabled. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
+Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. Registry-based public submission intake remains disabled; this does not describe the separate Custom Launch API. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
 
 ## Ordering and identity
 

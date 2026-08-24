@@ -2,7 +2,22 @@
 
 # Programmable developer reference
 
-Read-only contracts and verification rules for detecting Programmable launches.
+Unauthenticated read and discovery contracts for detecting and verifying Programmable launches. The authenticated
+Custom Launch API is a separate preparation surface with its own canonical guide and OpenAPI contract.
+
+## Choose the API surface
+
+| Surface | Authentication | Purpose | Canonical contract |
+| --- | --- | --- | --- |
+| Developer read API at `developers.programmable.family` | None | Discover launches, resolve deployments and verify provenance | [Read API OpenAPI](openapi/programmable-v2.yaml) |
+| Custom Launch API at `api.programmable.market` | Wallet-bound bearer API key | Validate a Custom launch request and prepare its exact Router action | [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md) and [live OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
+
+Create or revoke a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys).
+An API key cannot sign or broadcast a transaction; the wallet controller must review, sign and broadcast the prepared
+action. The Custom Launch request and response schemas remain owned by the live OpenAPI contract and are not duplicated
+in this read/discovery repository. Read the current versioned requirements in
+[Programmable Launch Policy](https://github.com/0xprogrammable/launch-policy); this repository does not copy those policy
+bytes.
 
 ## Start here
 
@@ -15,6 +30,9 @@ Read-only contracts and verification rules for detecting Programmable launches.
 | [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
 | [Protocol fee claim discovery](docs/reference/protocol-fee-claims.md) | Understand the operator claim inventory, refresh behavior, wallet boundary, and fail-closed Custom admission rules |
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
+| [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md) | Prepare a wallet-bound Custom launch through the separate authenticated API |
+| [Custom Launch API OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) | Generate a client from the canonical live launch contract |
+| [Programmable Launch Policy](https://github.com/0xprogrammable/launch-policy) | Resolve the current versioned requirements without relying on copied policy text |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
 
@@ -76,9 +94,9 @@ A valid stamp establishes that the exact canonical Router atomically executed an
 
 It does not establish current liquidity, safety, audit status, sellability, tradability, terminal support, or economic outcome. Historical launches are not backfilled. Direct calls to a Factory outside the Router do not create Router provenance. Publication of this contract does not mean a named terminal has integrated the label.
 
-## Hosted API
+## Unauthenticated read API
 
-The hosted API is an optional normalized read model for existing Classic and Custom records, metadata, markets, and support states. It is not a Router verification dependency.
+The hosted read API is an optional normalized model for existing Classic and Custom records, metadata, markets, and support states. It is not a Router verification dependency.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
@@ -88,7 +106,7 @@ curl -fsSL https://developers.programmable.family/api/v2/launches
 curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 
-No SDK or API key is required. The v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md).
+No SDK or API key is required. The v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md). Use the separate authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md) only when preparing a new Custom launch.
 
 Fee data is market-path evidence, not a category default. The Native Programmable policy is 10 basis points, or 0.1%, on supported official market paths, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
 

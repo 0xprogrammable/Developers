@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Public integration contracts for Programmable Classic and Programmable Custom launches."
+      content="Unauthenticated discovery contracts and the canonical authenticated Custom Launch API entry point."
     />
     <meta name="theme-color" content="#0a0d13" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Programmable Developers" />
     <meta
       property="og:description"
-      content="Terminal, provider, data and agent integration reference for Programmable launches."
+      content="Read and verify Programmable launches, or open the separate authenticated Custom Launch API."
     />
     <meta
       property="og:image"
@@ -62,6 +62,7 @@
           <a href="#labels">Labels</a>
           <a href="#providers">Providers</a>
           <a href="#reference">Reference</a>
+          <a href="https://programmable.market/developers/custom-launch-api-v1.md">Launch API</a>
         </nav>
 
         <a
@@ -78,11 +79,12 @@
     <main id="main-content" tabindex="-1">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Public read-only specification</p>
+          <p class="eyebrow">Unauthenticated read specification</p>
           <h1 id="hero-title">Developer integration</h1>
           <p class="hero-lede">
             Contracts, labels and ingestion rules for terminals, launch providers,
-            data platforms and agents. Ethereum mainnet. No API key.
+            data platforms and agents. This read surface needs no API key. Custom launch
+            preparation uses the separate authenticated API.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="https://programmable.family/docs/developers">
@@ -90,6 +92,12 @@
             </a>
             <a class="button button-secondary" href="/api/v2/status">
               API status
+            </a>
+            <a
+              class="button button-secondary"
+              href="https://programmable.market/developers/custom-launch-api-v1.md"
+            >
+              Custom Launch API
             </a>
           </div>
           <p class="live-line" aria-live="polite">
@@ -99,6 +107,13 @@
         </div>
 
         <nav id="paths" class="path-list" aria-label="Integration paths">
+          <a href="https://programmable.market/developers/custom-launch-api-v1.md">
+            <span>
+              <strong>Custom launch agents</strong>
+              <small>Wallet-bound API preparation</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </a>
           <a href="https://programmable.family/docs/developers#terminals">
             <span>
               <strong>Terminals and scanners</strong>
@@ -176,10 +191,10 @@
         </div>
 
         <aside class="prelaunch-note">
-          <strong>Prelaunch specification</strong>
+          <strong>Registry provider intake</strong>
           <p>
-            The open Custom Registry is not deployed. No write address or live provider
-            registration is published yet.
+            Public Registry submissions remain disabled. Router-based Custom launch preparation
+            uses the separately hosted authenticated API.
           </p>
         </aside>
 
@@ -290,8 +305,8 @@
             <strong id="status-launch-count">—</strong>
           </div>
           <div>
-            <span>Custom Registry</span>
-            <strong>Prelaunch</strong>
+            <span>Registry intake</span>
+            <strong>Closed</strong>
           </div>
           <p id="status-updated">Requesting current status…</p>
         </div>
@@ -304,6 +319,7 @@
         <nav aria-label="Footer navigation">
           <a href="https://programmable.family/docs/developers">Documentation</a>
           <a href="https://github.com/0xprogrammable/developers">GitHub</a>
+          <a href="https://programmable.market/developers/custom-launch-api-v1.md">Launch API</a>
           <a href="/api/v2/status">Status</a>
         </nav>
         <span>© <span id="current-year">2026</span> Programmable</span>

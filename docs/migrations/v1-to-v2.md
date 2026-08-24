@@ -46,6 +46,6 @@ The pagination model, response shape and read-only security boundary remain the 
 
 ## Availability
 
-Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. General Custom intake remains prelaunch and is represented separately by `publicSubmissionsEnabled: false`.
+Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Registry-based public submission intake remains prelaunch and is represented separately by `publicSubmissionsEnabled: false`; this state does not describe the separate Custom Launch API.
 
 API v1 remains supported and has no retirement date. New integrations should use v2.

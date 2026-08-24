@@ -4,7 +4,7 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. General public intake remains prelaunch and `publicSubmissionsEnabled` remains `false`.
+Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Registry-based public submission intake remains prelaunch and `publicSubmissionsEnabled` remains `false`; this does not describe the separate Custom Launch API.
 
 ## Public classification
 

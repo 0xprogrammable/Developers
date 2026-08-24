@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-No. Custom Registry discovery is live, but general Custom intake remains prelaunch. The v2 Custom feed contains only finalized approved Registry records.
+Custom has separate lifecycle states. Router-based launch preparation is available through the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Custom Registry discovery is live, while Registry-based public submission intake remains prelaunch. The read API publishes only launches with recognized onchain evidence.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 
@@ -105,9 +105,9 @@ Not through the current public discovery document. Ethereum Mainnet is the only 
 
 No. The integration is public for any provider to adopt. Generic GMGN `uniswap_v4` and `poolId` discovery is ordinary token and pool listing, not verification of the canonical Router stamp or confirmation that GMGN integrated the Programmable label. Third-party market metrics are not canonical onchain evidence; verify provenance through the Router and read current pool state separately through PoolManager or StateView. Describe a named provider as integrated only after that provider confirms it.
 
-## Is GitHub approval to permit to wallet self-service launch live?
+## Do Custom launches still use GitHub approval pull requests?
 
-No. The live Router descriptor and verification interface do not activate a public self-service authoring flow. Treat approval, permit issuance, and wallet launch UX as not live until each surface has separate published production evidence.
+No. New Custom launch preparation uses the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Create a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys), then follow the canonical [live OpenAPI contract](https://programmable.market/openapi/custom-launch-v1.json). The API validates and prepares the Router action; its API key cannot sign or broadcast the wallet transaction.
 
 ## What should an unknown future market look like?
 

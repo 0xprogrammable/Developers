@@ -1,16 +1,31 @@
 # Programmable Developer Platform
 
-> Public, read-only integration contract for Programmable Classic and Programmable Custom launches.
+> Public, unauthenticated read and discovery contract for Programmable Classic and Programmable Custom launches.
 
 Canonical site: https://developers.programmable.family
 Source repository: https://github.com/0xprogrammable/developers
-API base: https://developers.programmable.family/api/v2
+Read API base: https://developers.programmable.family/api/v2
 Full agent context: https://developers.programmable.family/llms-full.txt
+Custom Launch API base: https://api.programmable.market
+Custom Launch API guide: https://programmable.market/developers/custom-launch-api-v1.md
+Custom Launch API OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
+API key management: https://programmable.market/developers/api-keys
+Launch policy: https://github.com/0xprogrammable/launch-policy
+
+## API surface boundary
+
+- Use the Developer read API without authentication to discover launches and verify provenance.
+- Use the separately hosted Custom Launch API with a wallet-bound bearer API key to validate a Custom launch request and prepare its exact Router action.
+- An API key is not wallet signing authority. The Custom Launch API does not sign or broadcast the controller wallet's transaction.
+- The canonical Custom Launch request and response schemas are in the live Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
+- Resolve current versioned launch requirements from Programmable Launch Policy. Do not rely on copied policy text.
+- Registry submission state and Custom Launch API availability are independent. A disabled Registry intake does not disable the Router-based Custom Launch API.
 
 ## Current status
 
 - Classic launch discovery is live on Ethereum.
-- Custom Registry generation 1 discovery is live on Ethereum; general Programmable Custom intake remains prelaunch.
+- Custom Registry generation 1 discovery is live on Ethereum; Registry-based public submission intake remains prelaunch.
+- The authenticated Router-based Custom Launch API is separate from Registry intake and from this unauthenticated read API.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Ethereum Mainnet is the only chain currently advertised by the well-known document.
@@ -28,8 +43,12 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 ## Start here
 
 - [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
+- [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md): Wallet-bound authentication, request construction, preparation, lifecycle and wallet boundary.
+- [Custom Launch API OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Canonical live machine contract for the authenticated launch surface.
+- [API key management](https://programmable.market/developers/api-keys): Create or revoke a wallet-bound Custom Launch API key.
+- [Programmable Launch Policy](https://github.com/0xprogrammable/launch-policy): Current versioned requirements and machine-readable policy contracts.
 - [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
-- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic and Custom Registry discovery, prelaunch public Custom intake, and compatibility boundaries.
+- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic and Custom Registry discovery, prelaunch Registry submission intake, and compatibility boundaries.
 - [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
 - [v2 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
 - [Production operations](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
@@ -82,13 +101,13 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 10. Preserve `launch.timestamp`; do not replace it with first observation time.
 11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
 12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-13. v2 is read-only. Support states do not authorize or construct transactions.
+13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. New Custom launch preparation belongs only to the separately hosted Custom Launch API and its canonical live OpenAPI contract.
 14. Read fee behavior from verified records. Do not infer it from category.
 15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
 16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
 17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and either atomic with the launch or emitted only after a verified staged workflow is finalized.
-18. Resolve the live Custom Registry address and start block from the manifest. Treat general Custom intake and provider examples as prelaunch unless their exact approval and Registry evidence are published.
-19. Assign `Programmable Custom` only to a v2 record backed by the manifest-listed Custom Registry. Provider metadata, hook addresses and API responses cannot self-assign the label.
+18. Resolve the live Custom Registry address and start block from the manifest. Treat Registry-based public intake and provider examples as prelaunch unless their exact approval and Registry evidence are published. Do not infer Custom Launch API availability from Registry intake state.
+19. Assign `Programmable Custom` only from manifest-listed Custom Registry evidence or a consistent canonical Router `CustomGraph` stamp. Provider metadata, hook addresses and API responses cannot self-assign the label.
 20. For a Router stamp check, bind `chainId + Router address + launchId`, resolve the Router and start block from top-level `launchStampRouter`, use one finalized or explicit canonical block, and reject copied emitters. Router V1 covers future launches only. Detect by token or `(PoolManager, PoolId)`, then map `CustomGraph = 1` or `Classic = 2`; never classify Classic by its shared hook. Use `stampProof` only for address-based token or exclusive-component corroboration.
 21. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
 22. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
