@@ -89,7 +89,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Record route coverage exactly: `CustomGraph` onchain canary `true`; Classic onchain canary `false`. Do not report a separate Classic canary.
 - [ ] Treat frozen Classic source and tests through the same live ABI as implementation evidence, not an onchain Classic launch. Require a consistent live `LaunchKindV1.Classic` stamp for each future Classic classification.
 - [ ] Apply the manifest's `64`-confirmation policy to explicit block-number reads, or use the canonical finalized block.
-- [ ] Do not present named-terminal adoption or the GitHub approval to permit to wallet self-service flow as live without separate published evidence.
+- [ ] Do not present named-terminal adoption as live without separate published evidence. Route new Custom launch preparation to the canonical Custom Launch API guide, not a GitHub approval flow.
 
 ## Registry and feed release evidence
 

@@ -25,7 +25,8 @@ describe("launch-provider documentation", () => {
     );
 
     assert.match(guide, /Custom Registry generation 1 is live/i);
-    assert.match(guide, /General public intake remains prelaunch/i);
+    assert.match(guide, /Registry-based public submission intake remains prelaunch/i);
+    assert.match(guide, /does not describe the separate Custom Launch API/i);
     assert.match(guide, /Programmable adapter/);
     assert.match(guide, /Provider factory callback/);
     assert.match(guide, /webhook.*does not prove/is);

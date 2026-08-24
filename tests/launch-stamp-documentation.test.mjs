@@ -527,14 +527,18 @@ describe("launch stamp Router documentation", () => {
     assert.match(guide, /not verification of the canonical Router stamp/i);
     assert.match(guide, /current pool state separately through PoolManager or StateView/i);
     assert.match(guide, /not an Explorer source-publication status/i);
-    assert.match(guide, /GitHub approval to permit to wallet self-service launch flow is not live/i);
+    assert.match(
+      guide,
+      /New Custom launch preparation uses.*Custom Launch API.*not a GitHub approval flow/is,
+    );
     assert.match(terminalGuide, /finalized PCAN test vector/i);
     assert.match(terminalGuide, /backfill-to-live handoff has no gap/i);
     assert.match(terminalGuide, /subscription notification alone is not provenance/i);
     assert.match(terminalGuide, /does not mean GMGN, Axiom, FOMO/i);
     assert.match(terminalGuide, /ordinary market/i);
     assert.match(terminalGuide, /read current pool state separately through PoolManager or StateView/i);
-    assert.match(faq, /self-service launch live/i);
+    assert.match(faq, /Custom launches still use GitHub approval pull requests/i);
+    assert.match(faq, /API key cannot sign or broadcast/i);
     assert.match(faq, /ordinary token and pool listing/i);
     assert.match(faq, /not canonical onchain evidence/i);
     assert.match(faq, /No\./);
