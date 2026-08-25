@@ -225,7 +225,7 @@ describe("documentation contract", () => {
         profileRevision: 3,
         profileVersion: "2.0.0",
         launchProfileHash:
-          "sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9",
+          "sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
         status: "live",
@@ -299,7 +299,7 @@ describe("documentation contract", () => {
     assert.match(guide, /pinned permission mask is `0x2044`/i);
     assert.match(
       guide,
-      /sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9/,
+      /sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee/,
     );
     assert.match(
       guide,
