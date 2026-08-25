@@ -1,15 +1,15 @@
 # Programmable Developer Platform — complete agent context
 
 Canonical site: https://developers.programmable.family
-Source repository: https://github.com/0xprogrammable/developers
+Source repository: https://github.com/0xprogrammable/Developers
 Read API base: https://developers.programmable.family/api/v2
 OpenAPI: https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml
-Schemas: https://github.com/0xprogrammable/developers/tree/main/schemas/v2
+Schemas: https://github.com/0xprogrammable/Developers/tree/main/schemas/v2
 Custom Launch API base: https://api.programmable.market
 Custom Launch API guide: https://programmable.market/developers/custom-launch-api-v1.md
 Custom Launch API OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
 API key management: https://programmable.market/developers/api-keys
-Launch policy: https://github.com/0xprogrammable/launch-policy
+Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
 ## Mission
 
@@ -30,7 +30,7 @@ Resolve current versioned launch requirements from Programmable Launch Policy. D
 - Custom Registry submission intake: prelaunch.
 - Authenticated Router-based Custom Launch API: separate from Registry intake and from the unauthenticated read API.
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
-- Router V1 future-launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
+- Router V1 launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - The separate operator console at `https://claimhazard.vercel.app` rescans reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 fee sources. The public discovery policy at `https://claimhazard.vercel.app/claim-discovery.json` is read-only and does not expand the Developer API into a transaction API.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification and remain available only through API v1 compatibility routes.
@@ -90,9 +90,9 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 The live Custom Registry and its still-prelaunch public submission intake are represented separately. A prelaunch Registry intake state never carries or guesses a different Registry address and does not describe the separate Custom Launch API.
 
-Top-level `launchStampRouter` is the independent live trust descriptor for future Router-stamped Classic and Custom launches. On Ethereum it binds address `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, `64` finality confirmations, and exact permit-authority, Graph Factory, and PoolManager identities. The exact Router V1 ABI URL and published ABI-file SHA-256, Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, source tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type, and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum deployment, runtime identities, and immutable getter observations. `/launchStampRouter/canaryEvidence` is the finalized PCAN test vector and publishes one approved finalized `CustomGraph` canary without inventing another canary ID. Its source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from and does not replace the Router artifact source commit. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. Historical launches are explicitly outside Router V1.
+Top-level `launchStampRouter` is the independent live trust descriptor for Router-stamped Classic and Custom launches. On Ethereum it binds address `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, `64` finality confirmations, and exact permit-authority, Graph Factory, and PoolManager identities. The exact Router V1 ABI URL and published ABI-file SHA-256, Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, source tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type, and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum deployment, runtime identities, and immutable getter observations. `/launchStampRouter/canaryEvidence` is the finalized PCAN test vector and publishes one approved finalized `CustomGraph` canary without inventing another canary ID. Its source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from and does not replace the Router artifact source commit. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. Historical launches are explicitly outside Router V1.
 
-For a live lookup, the complete identity is `chainId + Router address + launchId`. Universal detection uses `launchIdByToken(address)` or `launchIdByPool(address,bytes32)`, then `launchStamp(bytes32)`: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; `Invalid = 0` is rejected. The shared Classic hook must never identify or classify one Classic launch. `launchIdByComponent(address)` and `stampProof(address)` only corroborate an exclusive address-based component. Use a finalized or explicit concrete canonical block, never a mixture of `latest` calls; apply the manifest's `64` confirmations to explicit block-number reads. A matching event topic from another emitter, a direct factory call, metadata, a backend response, the Custom Registry, or a hosted feed cannot create Router provenance. Future Classic and Custom labels share this one Router trust root. Frozen source and tests cover both launch kinds through the same live ABI, but a future Classic label requires its own consistent live Router stamp. The stamp and canary fields are point-in-time provenance only and do not imply safety, audit status, current liquidity, sellability, routing support, or third-party integration. Current proxy implementation and authority state require separate review.
+For a live lookup, the complete identity is `chainId + Router address + launchId`. Universal detection uses `launchIdByToken(address)` or `launchIdByPool(address,bytes32)`, then `launchStamp(bytes32)`: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; `Invalid = 0` is rejected. The shared Classic hook must never identify or classify one Classic launch. `launchIdByComponent(address)` and `stampProof(address)` only corroborate an exclusive address-based component. Use a finalized or explicit concrete canonical block, never a mixture of `latest` calls; apply the manifest's `64` confirmations to explicit block-number reads. A matching event topic from another emitter, a direct factory call, metadata, a backend response, the Custom Registry, or a hosted feed cannot create Router provenance. Router-stamped Classic and Custom labels share this one Router trust root. Frozen source and tests cover both launch kinds through the same live ABI, but a future Classic label requires its own consistent live Router stamp. The stamp and canary fields are point-in-time provenance only and do not imply safety, audit status, current liquidity, sellability, routing support, or third-party integration. Current proxy implementation and authority state require separate review.
 
 For onchain discovery, backfill exact-emitter and exact-topic logs from Router `startBlock` in finality-bounded chunks. Persist block hash, transaction hash/index, and log index; verify lookup, record, and address proof at one canonical block; advance only a durable finalized checkpoint; replay an overlap idempotently; orphan and rewind on a block-hash change; then poll or subscribe from the overlap without a backfill-to-live gap. Only consistent records from the exact canonical Router qualify through Router V1. Publication does not imply automatic GMGN, Axiom, FOMO, or other named-terminal adoption. New Custom launch preparation uses the separately documented Custom Launch API, not a GitHub approval flow.
 
@@ -642,7 +642,7 @@ Not allowed without separate evidence:
 - Fee reference: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md
 - Protocol fee claim discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/protocol-fee-claims.md
 - Direct onchain verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md
-- Future launch Router verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
+- Launch stamp Router verification: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md
 - Programmable Verified: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md
 - Multi-chain discovery: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md
 - Production checklist: https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md

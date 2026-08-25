@@ -4,7 +4,7 @@ The Programmable Developer Platform is supported in public through this GitHub r
 
 ## Ask a question or report a problem
 
-Use [GitHub Issues](https://github.com/0xprogrammable/developers/issues) for:
+Use [GitHub Issues](https://github.com/0xprogrammable/Developers/issues) for:
 
 - integration questions;
 - documentation corrections;

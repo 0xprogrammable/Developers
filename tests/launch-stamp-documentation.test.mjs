@@ -475,8 +475,8 @@ describe("launch stamp Router documentation", () => {
     const manifest = await readJson(MANIFEST_PATH);
     const router = manifest.launchStampRouter;
 
-    assert.match(guide, /future Programmable Classic launches/i);
-    assert.match(guide, /future Programmable Custom launches/i);
+    assert.match(guide, /Programmable Classic launches with a valid Router stamp/i);
+    assert.match(guide, /Programmable Custom launches with a valid Router stamp/i);
     assert.match(guide, /Historical Classic or Custom coins are not backfilled/i);
     assert.match(guide, /same canonical router/i);
     assert.match(guide, /LaunchKindV1\.Invalid.*0/s);
