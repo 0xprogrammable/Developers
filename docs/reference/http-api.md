@@ -39,6 +39,8 @@ The service separates Classic event coverage from the authenticated finalized Cu
 
 The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes. `publicationReady` is the complete route gate. `baselineReady` describes only the immutable Gen1 canary, while `sourceConfigured`, `sourceCurrent`, and `sourceReady` separately describe the authenticated applicant source. `expectedSourceId` and `observedSourceId` make the active producer generation explicit. `baselineLaunches` and `applicantLaunches` are separate, so the canary never inflates the applicant count. `activeGeneration`, `requiresLiveSource`, and `publishedRegistries` describe the manifest-selected Registry boundary. A `null` object means the status was produced before dataset projection and must not be treated as source readiness.
 
+The optional `routerCustom` object reports the independent canonical-Router identity lane. It exposes the exact source boundary, source identity commitment, validated snapshot digest, and verified versus published identity counts. `last-known-good` keeps recognized identities readable but makes the Custom and combined feeds `degraded`; a missing identity is not authoritative until this lane returns to `current` with matching counts.
+
 ## Manifest
 
 ### `GET /api/v2/manifest`
@@ -120,7 +122,7 @@ Implement replay-safe deduplication because retries and reorg reconciliation can
 
 Returns one launch by its globally scoped `launchId`. Use this route for project-only, multi-token, and multi-asset records as well as token-backed launches. URL-encode the complete opaque launch ID as one path segment and validate the response against the v2 launch schema.
 
-Do not construct a launch ID from project name, symbol, creator metadata, or a market address. Obtain it from the canonical feed or Registry evidence.
+Do not construct a launch ID from project name, symbol, creator metadata, or a market address. Obtain it from the canonical feed, Registry evidence, or a verified canonical-Router stamp.
 
 ## Launch by asset
 
@@ -147,6 +149,8 @@ This path is a convenience lookup for token-backed records. A project-only recor
 Returns a wallet-friendly token-list compatibility projection. Use the launch feed when you need full provenance, market support, fee data, non-final records, or reorg state.
 
 A token list is a convenience projection of finalized records with complete token identity. Its top-level `status` reports `ready`, `degraded`, or `unavailable`. A recognized launch with partial identity remains available in the launch feed but is not promoted into the compatibility token list until identity is complete. Token identity remains chain ID plus contract address.
+
+Finalized canonical-Router Custom tokens are included independently from Custom Registry availability. The Router stamp establishes provenance and the pool identity recorded at launch; it does not establish current market support, current supply, or one universal fee policy. Those fields remain unavailable unless separately verified, and the token-list projection never infers a fee from the `custom` category.
 
 ## Query parameters
 

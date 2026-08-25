@@ -161,7 +161,7 @@ Production cursors are HMAC-signed. `PROGRAMMABLE_CURSOR_SIGNING_KEY` must be a 
 
 The snapshot binds the response to a chain boundary and includes a cursor. Consumers must preserve snapshot and finality information for reconciliation.
 
-The feed returns `status: "degraded"` or `"unavailable"` when canonical event coverage or enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Launch-list and token-list remain HTTP `200`; absence is not authoritative until quality returns to `ready`.
+The feed returns `status: "degraded"` or `"unavailable"` when canonical event coverage or enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Finalized canonical-Router Custom token identities use an independent bounded source with a recomputed canonical commitment and a digest-pinned last-known-good fallback, so Registry or market-enrichment gaps do not hide them. Router provenance alone does not establish current supply, market support, or one fee policy. Launch-list and token-list remain HTTP `200`; absence is not authoritative until quality returns to `ready`.
 
 ### GET /api/v2/launches/{launchId}
 
@@ -173,7 +173,7 @@ Returns one token-backed launch by numeric chain ID and EVM token address. Name 
 
 ### GET /api/v2/token-list
 
-Returns a token-list compatibility projection for wallets and simple consumers. It contains finalized records with complete token identity. Recognized launches with partial identity remain in the launch feed. Use the launch feed for full provenance, finality, capabilities, markets, and fees.
+Returns a token-list compatibility projection for wallets and simple consumers. It contains finalized records with complete token identity, including finalized canonical-Router Custom tokens. Recognized launches with partial identity remain in the launch feed. The projection never infers fees from category or Router provenance. Use the launch feed for full provenance, finality, capabilities, markets, and fees.
 
 ## Launch identity
 
@@ -382,7 +382,7 @@ Use only:
 - Programmable Classic
 - Programmable Custom
 
-Classic requires an event from an enabled Classic launcher in the v2 manifest. Custom requires an event from the Custom Registry in the v2 manifest. Providers, factories, templates, tokens, hooks and markets may differ for every Custom launch; their mechanics belong in provenance, capabilities and markets, not additional top-level categories.
+Classic requires an event from an enabled Classic launcher in the v2 manifest. Custom requires either an accepted event from the manifest-listed Custom Registry or a consistent finalized `CustomGraph` stamp from the canonical Router. Providers, factories, templates, tokens, hooks and markets may differ for every Custom launch; their mechanics belong in provenance, capabilities and markets, not additional top-level categories.
 
 A full Registry-backed Custom record uses `platformId: programmable`, `category: custom`, and `publicLabel: Programmable Custom`. The trusted projection assigns these values. Creator metadata, partner data, and extensions cannot override them.
 

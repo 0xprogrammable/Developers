@@ -40,6 +40,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 - The separate operator console at `https://claimhazard.vercel.app` rescans reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 fee sources. Its discovery policy is read-only; it does not expand the Developer API into a transaction API.
 - Legacy indexer records can have partial provenance. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
 - Launch-list and token-list return recognized bounded records with `degraded` or `unavailable` quality when canonical coverage is incomplete; missing enrichment never hides a recognized identity.
+- Finalized canonical-Router Custom token identities remain in v2 launches and token-list independently from Registry freshness. Router provenance does not invent current market support, supply, or a fee policy.
 - Do not claim that launches are unconditionally safe, audited, or unruggable.
 - Do not claim that any named terminal or partner has integrated Programmable without confirmation.
 

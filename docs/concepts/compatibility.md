@@ -12,7 +12,7 @@ This is a compatibility promise, not a claim that software will never change.
 - `category` remains `classic | custom`.
 - A launch remains valid with `markets: []`.
 - `classic` always means an enabled Classic launcher event.
-- `custom` always means an accepted Custom Registry event.
+- `custom` always means an accepted Custom Registry event or a consistent finalized canonical-Router `CustomGraph` stamp.
 - Breaking changes use a new major API path rather than silently changing `/api/v2`.
 
 ## What can be added

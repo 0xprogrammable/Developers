@@ -26,12 +26,44 @@ const EMPTY_HIGH_WATER =
 
 function currentSnapshot(dataset) {
   const checkpoint = dataset.status.coverage.checkpoint;
-  if (!checkpoint) return null;
+  const router = dataset.status.routerCustom;
+  const candidates = [];
+  if (checkpoint) {
+    candidates.push({
+      blockNumber: String(checkpoint.blockNumber),
+      blockHash: checkpoint.blockHash,
+      finality: checkpoint.finality,
+    });
+  }
+  if (
+    typeof router?.asOfBlock === "string" &&
+    /^(0|[1-9][0-9]*)$/.test(router.asOfBlock) &&
+    /^0x[0-9a-fA-F]{64}$/.test(router.asOfBlockHash ?? "")
+  ) {
+    candidates.push({
+      blockNumber: router.asOfBlock,
+      blockHash: router.asOfBlockHash,
+      finality: "finalized",
+    });
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((left, right) => {
+    const leftBlock = BigInt(left.blockNumber);
+    const rightBlock = BigInt(right.blockNumber);
+    return leftBlock < rightBlock ? -1 : leftBlock > rightBlock ? 1 : 0;
+  });
+  const selected = candidates.at(-1);
+  const sameBoundary = candidates.filter((candidate) =>
+    candidate.blockNumber === selected.blockNumber);
+  if (sameBoundary.some((candidate) =>
+    candidate.blockHash.toLowerCase() !== selected.blockHash.toLowerCase())) {
+    throw new Error("v2 source boundaries conflict at the same block");
+  }
   return {
-    blockNumber: String(checkpoint.blockNumber),
-    blockHash: checkpoint.blockHash,
+    blockNumber: selected.blockNumber,
+    blockHash: selected.blockHash,
     indexedAt: dataset.status.generatedAt,
-    finality: checkpoint.finality,
+    finality: selected.finality,
     customRegistryHighWaterGeneration: currentRegistryHighWater(dataset),
   };
 }

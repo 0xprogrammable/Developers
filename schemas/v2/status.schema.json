@@ -108,6 +108,9 @@
           "type": "null"
         }
       ]
+    },
+    "routerCustom": {
+      "$ref": "#/$defs/routerCustom"
     }
   },
   "additionalProperties": true,
@@ -141,6 +144,58 @@
         "degraded",
         "unavailable"
       ]
+    },
+    "routerCustom": {
+      "type": "object",
+      "required": [
+        "source",
+        "status",
+        "generatedAt",
+        "asOfBlock",
+        "asOfBlockHash",
+        "sourceIdentityCommitment",
+        "snapshotSha256",
+        "verifiedIdentityCount",
+        "publishedIdentityCount"
+      ],
+      "properties": {
+        "source": {
+          "const": "canonical-launch-stamp-router"
+        },
+        "status": {
+          "enum": [
+            "current",
+            "last-known-good",
+            "unavailable"
+          ]
+        },
+        "generatedAt": {
+          "$ref": "common.schema.json#/$defs/isoDateTime"
+        },
+        "asOfBlock": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "asOfBlockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "sourceIdentityCommitment": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "snapshotSha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "verifiedIdentityCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publishedIdentityCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     },
     "customLaunchApi": {
       "type": "object",

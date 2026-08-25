@@ -103,7 +103,7 @@ It does not establish current liquidity, safety, audit status, sellability, trad
 
 ## Unauthenticated read API
 
-The hosted read API is an optional normalized model for existing Classic and Custom records, metadata, markets, and support states. It is not a Router verification dependency.
+The hosted read API is an optional normalized model for existing Classic, Registry Custom, and finalized canonical-Router records. Router identities follow a bounded current source whose canonical commitment is recomputed before publication, with a separate digest-pinned last-known-good snapshot for outages. The feed reports degraded quality while only the fallback is available; absence is not authoritative in that state. Missing supply, fee, or market state remains unavailable rather than inferred. The hosted API is not a Router verification dependency.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json

@@ -15,6 +15,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Project finalized canonical-Router Custom token identities through the v2 launch feed and token list, with a bounded last-known-good snapshot and unavailable rather than invented market, supply, and fee data.
 - Keep v2 launch-list and token-list readable across retired legacy-source and incomplete-coverage states, with explicit degraded or unavailable quality and preserved recognized identities.
 - Publish the live Custom Launch API readiness link and mark legacy Registry and GitHub submission intake closed across discovery, manifest, OpenAPI, support, and agent documentation.
 - Add support-safe problem timestamps and expose `Retry-After` alongside request IDs without including credentials.

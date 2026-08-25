@@ -1,5 +1,7 @@
 import { isExactCustomRegistryGenesisCanary } from
   "../../server/genesis-canary.js";
+import { hasExactRouterStampedCustomRecordShape } from
+  "../../server/router-custom.js";
 
 export const PLATFORM_FEE_RECIPIENT =
   "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
@@ -159,16 +161,27 @@ function executableMetadataFindings(value, path = "") {
   return findings;
 }
 
+function isRouterStampedCustomLaunch(launch) {
+  // Semantic validation runs on public JSON after transport. Source trust is
+  // enforced separately, before publication, by the private runtime capability
+  // in server/router-custom.js. Here the exact serialized provenance contract
+  // must remain independently checkable by consumers and live-smoke tests.
+  return hasExactRouterStampedCustomRecordShape(launch);
+}
+
 function validateV2FeePolicy(launch) {
   const findings = [];
   const policy = launch.feePolicy;
   const fees = launch.fees ?? [];
   if (!policy) {
-    if (launch.category === "custom") {
+    if (
+      launch.category === "custom" &&
+      !(isRouterStampedCustomLaunch(launch) && fees.length === 0)
+    ) {
       findings.push(finding(
         "FEE_POLICY_REQUIRED",
         "/feePolicy",
-        "Every v2 Custom record must disclose one closed fee policy",
+        "Every v2 Custom record needs a closed fee policy unless a provenance-only Router record explicitly reports the policy unavailable",
       ));
     }
     return findings;
@@ -349,6 +362,7 @@ function validateV2IdentityAndReview(launch) {
   const exactGenesisCanary = isExactCustomRegistryGenesisCanary(launch);
   const materializedCustom = launch.category === "custom" &&
     !exactGenesisCanary &&
+    !isRouterStampedCustomLaunch(launch) &&
     ["observed", "live", "paused", "retired", "revoked"].includes(
       launch.launch?.status,
     );

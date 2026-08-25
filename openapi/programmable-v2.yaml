@@ -179,6 +179,13 @@ paths:
         for continuing the current page traversal. `after` and `cursor` must
         not be sent together. Coverage gaps do not hide recognized records:
         the response remains HTTP 200 with `status: degraded` or `unavailable`.
+        Finalized canonical-Router Custom records are an independent provenance
+        lane from the Custom Registry. Their token and pool identities remain
+        present through a bounded source whose canonical commitment is
+        recomputed before publication, plus a digest-pinned last-known-good
+        fallback for source outages. Absent fee or supply evidence stays
+        explicitly unavailable. The feed remains degraded and absence is not
+        authoritative until Router coverage is current.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"
@@ -288,8 +295,11 @@ paths:
         Returns a token-list-compatible projection for integrations that need
         token identity and metadata. The top-level `status` reports projection
         quality, and recognized complete token identities remain present when
-        unrelated coverage or market enrichment is incomplete. Use the launch
-        feed for markets, capabilities, provenance, finality and complete fee disclosure.
+        unrelated coverage or market enrichment is incomplete. This includes
+        finalized canonical-Router Custom tokens with complete token identity.
+        Use the launch feed for markets, capabilities, provenance, finality and
+        complete fee disclosure; the compatibility projection does not infer a
+        fee from category or Router provenance.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"

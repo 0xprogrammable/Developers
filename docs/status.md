@@ -58,6 +58,8 @@ The v2 manifest reports `customRegistry.status: "live"`, `publicSubmissionsEnabl
 
 The v2 status response also reports `customRegistryPublication`. The Gen1 canary sets `baselineReady` and can keep `publicationReady` true, but it never sets `sourceConfigured`, `sourceCurrent`, or `sourceReady`. Those source fields advance only for the authenticated, complete, current `programmable-custom-launch-registry-v3` applicant feed. `baselineLaunches` and `applicantLaunches` remain separate. Consumers must not interpret `custom.status: "live"` or the canary alone as proof that a new project is launchable.
 
+`routerCustom` is a separate quality boundary for finalized canonical-Router identities. `current` plus equal verified and published counts permits authoritative absence checks. `last-known-good` preserves recognized identities but degrades Custom and combined feeds, so consumers must retry an absent detail lookup instead of treating it as a final 404.
+
 Generation 1 is the manifest-published Custom Registry trust root. Its finalized project-only genesis canary is the immutable discovery baseline; legacy Registry and GitHub submission intake are closed. Generation 1 is not evidence that the stronger Generation 2 interface is deployed.
 
 Custom Registry Generation 2 and Custom Fee-Enforced Launch Profile V2 are
