@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://developers.programmable.family/schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json",
-  "title": "Programmable Custom Fee-Enforced Launch Profile V2 release-candidate status",
+  "title": "Programmable Custom Fee-Enforced Launch Profile V2 production status",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -34,10 +34,10 @@
       "const": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1"
     },
     "profileRevision": {
-      "const": 2
+      "const": 3
     },
     "profileVersion": {
-      "const": "2.0.0-rc.2"
+      "const": "2.0.0"
     },
     "publicCategory": {
       "const": "custom"
@@ -46,16 +46,16 @@
       "const": "independent-from-custom-registry-generation-2"
     },
     "releaseStage": {
-      "const": "release-candidate"
+      "const": "production"
     },
     "status": {
-      "const": "unavailable"
+      "const": "live"
     },
     "activationStatus": {
-      "const": "canary"
+      "const": "production"
     },
     "productionLaunchAuthorized": {
-      "const": false
+      "const": true
     },
     "guideUrl": {
       "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md"
@@ -72,17 +72,17 @@
         "walletBoundary",
         "listReconciliation",
         "recommendedPollingPath",
-        "heldResponse"
+        "retryPolicy"
       ],
       "properties": {
         "apiVersion": {
           "const": "2"
         },
         "availability": {
-          "const": "dark-release-candidate"
+          "const": "public"
         },
         "publiclyRoutable": {
-          "const": false
+          "const": true
         },
         "collectionPath": {
           "const": "/v2/custom-launches"
@@ -102,22 +102,25 @@
         "recommendedPollingPath": {
           "const": "single-resource"
         },
-        "heldResponse": {
+        "retryPolicy": {
           "type": "object",
           "required": [
-            "httpStatus",
+            "httpStatuses",
             "retryAfter",
-            "retryable"
+            "requestBytes"
           ],
           "properties": {
-            "httpStatus": {
-              "const": 503
+            "httpStatuses": {
+              "const": [
+                429,
+                503
+              ]
             },
             "retryAfter": {
-              "const": "required"
+              "const": "honor"
             },
-            "retryable": {
-              "const": true
+            "requestBytes": {
+              "const": "exact-idempotency-bound-replay"
             }
           },
           "additionalProperties": false
@@ -140,16 +143,16 @@
           "const": "@programmable/launch"
         },
         "version": {
-          "const": "2.0.0-rc.2"
+          "const": "2.0.0"
         },
         "distributionStatus": {
-          "const": "github-release-candidate"
+          "const": "github-release"
         },
         "releaseUrl": {
-          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2"
+          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0"
         },
         "packageAssetUrl": {
-          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz"
+          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz"
         },
         "commands": {
           "const": [
@@ -245,10 +248,10 @@
       ],
       "properties": {
         "status": {
-          "const": "pinned-release-candidate"
+          "const": "pinned-production"
         },
         "launchProfileHash": {
-          "const": "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8"
+          "const": "sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9"
         },
         "contractPolicyId": {
           "const": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517"
@@ -425,7 +428,7 @@
           "const": "0x2044"
         },
         "requiredHookFlagsStatus": {
-          "const": "pinned-release-candidate"
+          "const": "pinned-production"
         },
         "separateComponents": {
           "const": [
@@ -455,28 +458,28 @@
       ],
       "properties": {
         "profileArtifacts": {
-          "const": "exact-pinned-release-candidate"
+          "const": "exact-pinned-production"
         },
         "securityReview": {
-          "const": "release-blockers-open"
+          "const": "internal-review-complete"
         },
         "successfulSimulation": {
-          "const": "unavailable"
+          "const": "pinned-mainnet-block-permit-authorized-router-transaction"
         },
         "onchainDeployment": {
-          "const": "unavailable"
+          "const": "no-public-rev3-canary"
         },
         "onchainFeeReadback": {
-          "const": "unavailable"
+          "const": "configuration-bound-no-accrual-receipt"
         },
         "finalizedCanary": {
-          "const": "unavailable"
+          "const": "not-yet-proven"
         },
         "sourceExactMatch": {
-          "const": "unavailable"
+          "const": "not-yet-proven-for-rev3-canary"
         },
         "securityAudit": {
-          "const": "not-claimed"
+          "const": "not-independently-audited"
         },
         "genericTradability": {
           "const": "not-claimed"
@@ -502,10 +505,10 @@
         "exact-pool-id-enforced",
         "composition-hash-bound",
         "successful-pinned-simulation",
-        "onchain-deployment-finalized",
-        "onchain-fee-readback-confirmed",
-        "finalized-canary",
-        "source-exact-match"
+        "fee-path-configuration-bound",
+        "dual-rpc-finality-enforced",
+        "source-verification-worker-enabled",
+        "global-v2-admission-cap-enforced"
       ]
     }
   },

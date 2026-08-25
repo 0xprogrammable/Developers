@@ -1679,10 +1679,10 @@
           ],
           "properties": {
             "status": {
-              "const": "unavailable"
+              "const": "active"
             },
             "activationStatus": {
-              "const": "fee-enforced-v2-canary"
+              "const": "fee-enforced-v2-public"
             },
             "totalFeeBps": {
               "const": 10

@@ -2,11 +2,11 @@
 
 These are copy-ready drafts, not authorization to post. Verify the URL and current status immediately before use.
 
-## Current — Registry discovery live; launch writes unavailable
+## Current — Registry discovery and Custom Launch API V2 live
 
-Use only while Registry generation 1 and its finalized canary remain public, Custom Launch API V1 reads/status remain live with POST read-only, Fee-Enforced V2 remains publicly unavailable, and legacy Registry and GitHub submission intake remain closed:
+Use only while Registry generation 1 remains public, the exact production-profile descriptor authorizes V2, V1 POST remains read-only, and legacy Registry and GitHub submission intake remain closed:
 
-> Programmable Custom discovery is live with onchain provenance, exact contract identities, finality, and fee disclosures. Custom Launch API V1 writes are read-only, Fee-Enforced V2 is held, and legacy Registry and GitHub intake are closed. Docs: https://developers.programmable.family/
+> Programmable Custom discovery and authenticated Mainnet launch preparation are live. API keys prepare and track exact transactions; the controller wallet reviews and signs separately. The profile discloses an additive 10 bps fee, while generic claiming and buybacks remain unavailable. Legacy Registry and GitHub intake are closed. Docs: https://developers.programmable.family/
 
 ## Live — after the Custom canary
 

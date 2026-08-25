@@ -165,13 +165,18 @@ describe("documentation contract", () => {
     assert.deepEqual(wellKnown.publicCategories.custom, {
       discoveryStatus: "live",
       publicSubmissionStatus: "closed",
+      customLaunchApiStatus: "live",
+      legacyRegistrySubmissionStatus: "closed",
+      legacyGithubSubmissionStatus: "closed",
       registryAddress: manifest.customRegistry.address,
       registryStartBlock: manifest.customRegistry.startBlock,
       registryGeneration: manifest.customRegistry.generation,
       note:
-        "Custom Launch API V1 reads and status remain live, but POST is read-only. Legacy Registry and GitHub submission intake are closed.",
+        "Custom Launch API V2 is public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed.",
     });
-    assert.deepEqual(wellKnown.extensions["programmable.custom-launch-api"], {
+    const customLaunchApi = wellKnown.extensions["programmable.custom-launch-api"];
+    const { publicRelease, versions, legacyIntake, ...v1Surface } = customLaunchApi;
+    assert.deepEqual(v1Surface, {
       status: "live",
       scope: "provenance-only",
       feeEnforcement: "not-established-by-api",
@@ -188,33 +193,58 @@ describe("documentation contract", () => {
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
     });
+    assert.equal(customLaunchApi.publicRelease.status, "live");
+    assert.equal(customLaunchApi.publicRelease.apiVersion, "2");
+    assert.equal(customLaunchApi.publicRelease.openApiUrl,
+      "https://programmable.market/openapi/custom-launch-v2.json");
+    assert.equal(customLaunchApi.publicRelease.cli.releaseVersion, "2.0.0");
+    assert.deepEqual(versions, {
+      v1: {
+        reads: "live",
+        create: "read-only",
+        createHttpStatus: 409,
+        createErrorCode: "CUSTOM_LAUNCH_V1_READ_ONLY",
+        retryable: false,
+      },
+      v2: {
+        status: "live",
+        createHttpStatus: 202,
+        replayHttpStatus: 200,
+        retryAfter: "honor-on-429-or-503",
+      },
+    });
+    assert.deepEqual(legacyIntake, {
+      registry: "closed",
+      github: "closed",
+    });
     assert.deepEqual(
       wellKnown.extensions["programmable.custom-fee-enforced-launch-profile-v2"],
       {
         profileId:
           "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-        profileVersion: "2.0.0-rc.2",
+        profileRevision: 3,
+        profileVersion: "2.0.0",
         launchProfileHash:
-          "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
+          "sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
-        status: "unavailable",
-        releaseStage: "release-candidate",
-        activationStatus: "canary",
-        productionLaunchAuthorized: false,
+        status: "live",
+        releaseStage: "production",
+        activationStatus: "production",
+        productionLaunchAuthorized: true,
         statusUrl: "https://developers.programmable.family/api/v2/status",
         manifestUrl: "https://developers.programmable.family/api/v2/manifest",
         guideUrl:
           "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
         openApiUrl:
           "https://programmable.market/openapi/custom-launch-v2.json",
-        heldResponse: {
-          httpStatus: 503,
-          retryAfter: "required",
-          retryable: true,
+        retryPolicy: {
+          httpStatuses: [429, 503],
+          retryAfter: "honor",
+          requestBytes: "exact-idempotency-bound-replay",
         },
         note:
-          "Custom Launch API V1 reads/status remain live, but POST is read-only. Fee-Enforced V2 is pinned for a private canary; it has no public route, deployment or finalized canary, and held writes return 503.",
+          "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live.",
       },
     );
     assert.deepEqual(
@@ -241,7 +271,7 @@ describe("documentation contract", () => {
     );
   });
 
-  test("documents the held V2 profile without broad product claims", async () => {
+  test("documents the public V2 profile without broad product claims", async () => {
     const guide = await readFile(
       path.join(
         REPOSITORY_ROOT,
@@ -249,7 +279,7 @@ describe("documentation contract", () => {
       ),
       "utf8",
     );
-    assert.match(guide, /pinned `2\.0\.0-rc\.2` canary profile/i);
+    assert.match(guide, /production profile/i);
     assert.match(
       guide,
       /programmable\.fee-enforced-isolated-after-swap\.zero-delta\.v1/,
@@ -269,7 +299,7 @@ describe("documentation contract", () => {
     assert.match(guide, /pinned permission mask is `0x2044`/i);
     assert.match(
       guide,
-      /sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8/,
+      /sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9/,
     );
     assert.match(
       guide,
@@ -279,17 +309,17 @@ describe("documentation contract", () => {
     assert.match(guide, /actual hook and vault\s+runtime code hashes/i);
     assert.match(guide, /409.*CUSTOM_LAUNCH_V1_READ_ONLY/is);
     assert.match(guide, /not retryable/i);
-    assert.match(guide, /503.*Retry-After/is);
+    assert.match(guide, /Retry-After.*503/is);
     assert.match(
       guide,
       /https:\/\/programmable\.market\/openapi\/custom-launch-v2\.json/,
     );
     assert.match(
       guide,
-      /releases\/tag\/programmable-launch-v2\.0\.0-rc\.2/,
+      /releases\/tag\/programmable-launch-v2\.0\.0/,
     );
-    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0-rc\.2\.tgz/);
-    assert.match(guide, /V2 `submit` remains held/i);
+    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0\.tgz/);
+    assert.match(guide, /`submit` and `status` use the authenticated V2 API/i);
     assert.match(guide, /generic fee claiming for arbitrary hooks/i);
     assert.match(guide, /buybacks/i);
     assert.doesNotMatch(guide, /npm (?:install|i) @programmable\/launch/);

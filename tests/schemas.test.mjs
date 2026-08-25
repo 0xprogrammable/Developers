@@ -66,7 +66,7 @@ describe("JSON Schema registry", () => {
     assert.match(validationSummary(validate), /operationAuthorities/);
   });
 
-  test("keeps the Custom Fee-Enforced V2 release candidate fail closed", async () => {
+  test("keeps the Custom Fee-Enforced V2 production profile exact and fail closed", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments", "ethereum-v2.json"),
     );
@@ -76,25 +76,59 @@ describe("JSON Schema registry", () => {
     assertValid(
       validate,
       manifest.customFeeEnforcedLaunchProfileV2,
-      "Custom Fee-Enforced V2 RC descriptor",
+      "Custom Fee-Enforced V2 production descriptor",
     );
-    assert.equal(manifest.platformFee.nativeCustom.status, "unavailable");
+    assert.equal(manifest.platformFee.nativeCustom.status, "active");
     assert.equal(manifest.platformFee.partnerTemplate.status, "unavailable");
     assert.equal(
       manifest.customFeeEnforcedLaunchProfileV2.evidenceStatus.securityReview,
-      "release-blockers-open",
+      "internal-review-complete",
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.evidenceStatus,
+      {
+        profileArtifacts: "exact-pinned-production",
+        securityReview: "internal-review-complete",
+        successfulSimulation:
+          "pinned-mainnet-block-permit-authorized-router-transaction",
+        onchainDeployment: "no-public-rev3-canary",
+        onchainFeeReadback: "configuration-bound-no-accrual-receipt",
+        finalizedCanary: "not-yet-proven",
+        sourceExactMatch: "not-yet-proven-for-rev3-canary",
+        securityAudit: "not-independently-audited",
+        genericTradability: "not-claimed",
+        genericClaiming: "not-available",
+        buybacks: "not-available",
+      },
     );
     assert.ok(
       manifest.customFeeEnforcedLaunchProfileV2.activationRequirements.includes(
         "pool-initialization-front-run-protected",
       ),
     );
+    for (const control of [
+      "dual-rpc-finality-enforced",
+      "source-verification-worker-enabled",
+      "global-v2-admission-cap-enforced",
+    ]) {
+      assert.ok(
+        manifest.customFeeEnforcedLaunchProfileV2.activationRequirements.includes(
+          control,
+        ),
+        control,
+      );
+    }
+    assert.ok(
+      !manifest.customFeeEnforcedLaunchProfileV2.activationRequirements.includes(
+        "finalized-canary",
+      ),
+    );
     assert.deepEqual(
       manifest.customFeeEnforcedLaunchProfileV2.finalArtifactLiterals,
       {
-        status: "pinned-release-candidate",
+        status: "pinned-production",
         launchProfileHash:
-          "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
+          "sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
       },
@@ -142,35 +176,35 @@ describe("JSON Schema registry", () => {
       },
     );
     assert.deepEqual(
-      manifest.customFeeEnforcedLaunchProfileV2.api.heldResponse,
+      manifest.customFeeEnforcedLaunchProfileV2.api.retryPolicy,
       {
-        httpStatus: 503,
-        retryAfter: "required",
-        retryable: true,
+        httpStatuses: [429, 503],
+        retryAfter: "honor",
+        requestBytes: "exact-idempotency-bound-replay",
       },
     );
     assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.cli, {
       packageName: "@programmable/launch",
-      version: "2.0.0-rc.2",
-      distributionStatus: "github-release-candidate",
+      version: "2.0.0",
+      distributionStatus: "github-release",
       releaseUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
       packageAssetUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz",
       commands: ["pack", "validate", "submit", "status"],
     });
 
     for (const mutate of [
-      (profile) => { profile.productionLaunchAuthorized = true; },
-      (profile) => { profile.status = "live"; },
-      (profile) => { profile.api.publiclyRoutable = true; },
-      (profile) => { profile.cli.distributionStatus = "published"; },
+      (profile) => { profile.productionLaunchAuthorized = false; },
+      (profile) => { profile.status = "unavailable"; },
+      (profile) => { profile.api.publiclyRoutable = false; },
+      (profile) => { profile.cli.distributionStatus = "github-release-candidate"; },
       (profile) => { profile.cli.packageAssetUrl = "https://example.com/package.tgz"; },
       (profile) => { profile.feeSemantics.ratePpm = 999; },
       (profile) => { profile.moduleSemantics.maximumCustomReturnDelta = 1; },
       (profile) => { profile.moduleSemantics.customDeltaAccount = "launchWallet"; },
-      (profile) => { profile.api.heldResponse.httpStatus = 409; },
-      (profile) => { profile.api.heldResponse.retryAfter = "optional"; },
+      (profile) => { profile.api.retryPolicy.httpStatuses = [503]; },
+      (profile) => { profile.api.retryPolicy.retryAfter = "ignore"; },
       (profile) => { profile.api.openApiUrl = null; },
       (profile) => { profile.finalArtifactLiterals.contractPolicyId = `0x${"1".repeat(64)}`; },
       (profile) => { profile.artifactCommitments.compiler.optimizer.runs = 999; },

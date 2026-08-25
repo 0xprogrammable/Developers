@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 provenance-read/status readiness URL and read-only POST state, and the separately pinned private-canary Custom Fee-Enforced Launch Profile V2 descriptor. API readiness is not fee-enforcement, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, and the exact public Custom Launch API V2 production-profile descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 

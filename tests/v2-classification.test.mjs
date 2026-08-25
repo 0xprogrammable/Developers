@@ -203,11 +203,11 @@ describe("version 2 classification", () => {
     );
     assert.equal(
       publicStatus.customFeeEnforcedLaunchProfileV2.productionLaunchAuthorized,
-      false,
+      true,
     );
     assert.equal(
       publicStatus.customFeeEnforcedLaunchProfileV2.api.publiclyRoutable,
-      false,
+      true,
     );
     assert.deepEqual(
       publicStatus.customRegistryPublication,

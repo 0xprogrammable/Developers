@@ -52,10 +52,12 @@ describe("OpenAPI v2 contract", () => {
     assert.equal(new Set(operations).size, operations.length);
   });
 
-  test("keeps Developer and Custom launch writes fail closed", () => {
+  test("keeps Developer reads and wallet signing boundaries explicit", () => {
     assert.match(spec.info.description, /409 CUSTOM_LAUNCH_V1_READ_ONLY/u);
-    assert.match(spec.info.description, /503.*Retry-After/us);
-    assert.match(spec.info.description, /pinned for a private\s+canary/u);
+    assert.match(
+      spec.info.description,
+      /public authenticated Ethereum\s+Mainnet preparation route/u,
+    );
     assert.equal(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.const,
@@ -64,11 +66,26 @@ describe("OpenAPI v2 contract", () => {
     assert.match(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.description,
-      /Legacy Registry and GitHub submission intake status/u,
+      /Backward-compatible legacy Registry and GitHub submission intake status/u,
+    );
+    assert.equal(
+      spec.components.schemas.WellKnownDocument.properties.publicCategories
+        .properties.custom.properties.customLaunchApiStatus.const,
+      "live",
+    );
+    assert.equal(
+      spec.components.schemas.WellKnownDocument.properties.publicCategories
+        .properties.custom.properties.legacyRegistrySubmissionStatus.const,
+      "closed",
+    );
+    assert.equal(
+      spec.components.schemas.WellKnownDocument.properties.publicCategories
+        .properties.custom.properties.legacyGithubSubmissionStatus.const,
+      "closed",
     );
     assert.match(
       spec.paths["/api/v2/status"].get.description,
-      /read-only POST state/u,
+      /exact public Fee-Enforced V2 production profile/u,
     );
     assert.equal(
       spec.components.schemas.CustomFeeEnforcedLaunchProfileV2.$ref,

@@ -28,7 +28,8 @@ describe("launch-provider documentation", () => {
     assert.match(guide, /Legacy Registry and GitHub submission intake are closed/i);
     assert.match(guide, /409 CUSTOM_LAUNCH_V1_READ_ONLY/i);
     assert.match(guide, /503.*Retry-After/i);
-    assert.match(guide, /Fee-Enforced Launch Profile V2 remains unavailable/i);
+    assert.match(guide, /authenticated Custom Launch API V2/i);
+    assert.doesNotMatch(guide, /V2 remains unavailable for public launches/i);
     assert.match(guide, /Programmable adapter/);
     assert.match(guide, /Provider factory callback/);
     assert.match(guide, /webhook.*does not prove/is);

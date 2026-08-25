@@ -544,7 +544,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V1 reads and status remain live, but POST is read-only; legacy Registry and GitHub submission intake are closed."
+          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V2 is public on Ethereum Mainnet; V1 POST remains read-only, and legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
     },
     customLaunchApi: {
@@ -568,40 +568,40 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         schemaVersion: "programmable.custom-fee-enforced-launch-profile.v2",
         profileId:
           "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-        profileRevision: 2,
-        profileVersion: "2.0.0-rc.2",
+        profileRevision: 3,
+        profileVersion: "2.0.0",
         publicCategory: "custom",
         registryRelationship: "independent-from-custom-registry-generation-2",
-        releaseStage: "release-candidate",
-        status: "unavailable",
-        activationStatus: "canary",
-        productionLaunchAuthorized: false,
+        releaseStage: "production",
+        status: "live",
+        activationStatus: "production",
+        productionLaunchAuthorized: true,
         guideUrl:
           "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
         api: {
           apiVersion: "2",
-          availability: "dark-release-candidate",
-          publiclyRoutable: false,
+          availability: "public",
+          publiclyRoutable: true,
           collectionPath: "/v2/custom-launches",
           singleResourcePath: "/v2/custom-launches/{requestId}",
           openApiUrl: "https://programmable.market/openapi/custom-launch-v2.json",
           walletBoundary: "separate-wallet-signature",
           listReconciliation: "bounded-opportunistic-for-pending-records",
           recommendedPollingPath: "single-resource",
-          heldResponse: {
-            httpStatus: 503,
-            retryAfter: "required",
-            retryable: true,
+          retryPolicy: {
+            httpStatuses: [429, 503],
+            retryAfter: "honor",
+            requestBytes: "exact-idempotency-bound-replay",
           },
         },
         cli: {
           packageName: "@programmable/launch",
-          version: "2.0.0-rc.2",
-          distributionStatus: "github-release-candidate",
+          version: "2.0.0",
+          distributionStatus: "github-release",
           releaseUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2",
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
           packageAssetUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz",
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz",
           commands: ["pack", "validate", "submit", "status"],
         },
         requestContract: {
@@ -628,9 +628,9 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           customDeltaAccount: "0x0000000000000000000000000000000000000000",
         },
         finalArtifactLiterals: {
-          status: "pinned-release-candidate",
+          status: "pinned-production",
           launchProfileHash:
-            "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
+            "sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9",
           contractPolicyId:
             "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
         },
@@ -727,7 +727,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
             "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
           claimSurface: "fixed-reward-wallet-only",
           requiredHookFlags: "0x2044",
-          requiredHookFlagsStatus: "pinned-release-candidate",
+          requiredHookFlagsStatus: "pinned-production",
           separateComponents: [
             "liquidity-provider-fee",
             "protocol-fee",
@@ -736,14 +736,14 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           ],
         },
         evidenceStatus: {
-          profileArtifacts: "exact-pinned-release-candidate",
-          securityReview: "release-blockers-open",
-          successfulSimulation: "unavailable",
-          onchainDeployment: "unavailable",
-          onchainFeeReadback: "unavailable",
-          finalizedCanary: "unavailable",
-          sourceExactMatch: "unavailable",
-          securityAudit: "not-claimed",
+          profileArtifacts: "exact-pinned-production",
+          securityReview: "internal-review-complete",
+          successfulSimulation: "pinned-mainnet-block-permit-authorized-router-transaction",
+          onchainDeployment: "no-public-rev3-canary",
+          onchainFeeReadback: "configuration-bound-no-accrual-receipt",
+          finalizedCanary: "not-yet-proven",
+          sourceExactMatch: "not-yet-proven-for-rev3-canary",
+          securityAudit: "not-independently-audited",
           genericTradability: "not-claimed",
           genericClaiming: "not-available",
           buybacks: "not-available",
@@ -759,10 +759,10 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           "exact-pool-id-enforced",
           "composition-hash-bound",
           "successful-pinned-simulation",
-          "onchain-deployment-finalized",
-          "onchain-fee-readback-confirmed",
-          "finalized-canary",
-          "source-exact-match",
+          "fee-path-configuration-bound",
+          "dual-rpc-finality-enforced",
+          "source-verification-worker-enabled",
+          "global-v2-admission-cap-enforced",
         ],
       },
     feeds: {

@@ -6,9 +6,9 @@ Read API base: https://developers.programmable.family/api/v2
 OpenAPI: https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml
 Schemas: https://github.com/0xprogrammable/Developers/tree/main/schemas/v2
 Custom Launch API base: https://api.programmable.market
-Custom Launch API guide: https://programmable.market/developers/custom-launch-api-v1.md
-Custom Launch API OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
-Held Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
+Custom Launch API guide: https://programmable.market/docs/developers/custom-launch
+Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
+Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
 API key management: https://programmable.market/developers/api-keys
 Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
@@ -20,7 +20,7 @@ Terminals, scanners, wallets, explorers, indexers, bots, games, and apps use one
 
 The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v2 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
 
-The separately hosted Custom Launch API V1 uses wallet-bound bearer API keys for its live provenance reads and status. POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`, so V1 currently prepares, signs, and broadcasts no controller-wallet transaction. Its canonical request and response schemas live in the V1 Custom Launch OpenAPI contract and are not duplicated in this read/discovery repository. Custom Fee-Enforced Launch Profile V2 is a different pinned `2.0.0-rc.2` private-canary profile: held writes return `503` with `Retry-After`, and it is not a public route.
+The separately hosted Custom Launch API V2 uses wallet-bound bearer API keys to prepare and track public Ethereum Mainnet launches. The controller wallet reviews and signs the exact prepared transaction separately; the API key never grants signing or broadcast authority. V1 reads/status remain compatible and V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. The canonical request and response schemas live in the Custom Launch OpenAPI contracts and are not duplicated in this read/discovery repository.
 
 Resolve current versioned launch requirements from Programmable Launch Policy. Do not copy policy bytes into this repository or treat stale prose as the launch contract.
 
@@ -29,9 +29,9 @@ Resolve current versioned launch requirements from Programmable Launch Policy. D
 - Network: Ethereum mainnet, chain ID 1.
 - Classic launch discovery: live.
 - Legacy Registry and GitHub submission intake: closed.
-- Authenticated Router-based Custom Launch API V1: provenance reads/status live, POST read-only with nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`, and separate from legacy intake and from the unauthenticated read API.
-- Custom Fee-Enforced Launch Profile V2: pinned for a private canary and publicly unavailable; writes return `503` with `Retry-After`, with no public route, deployed fee path, finalized canary, or production authorization.
-- Custom Registry Generation 2 is a separate unavailable four-contract discovery trust root. Neither V2 candidate activates the other.
+- Authenticated Router-based Custom Launch API V2: public preparation and status on Ethereum Mainnet, separate wallet review/signature, and separate from legacy intake and the unauthenticated read API.
+- Custom Launch API V1: provenance reads/status remain compatible; POST remains read-only with nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+- Custom Registry Generation 2 is a separate unavailable four-contract discovery trust root. It does not activate the public Custom Fee-Enforced Launch Profile V2, and the public profile does not activate Registry Generation 2.
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
 - Router V1 launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
@@ -92,13 +92,13 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
 
-The live Custom Registry and the closed legacy submission intake are represented separately. A closed intake state never carries or guesses a different Registry address and does not replace Custom Launch API V1's independent read-only POST state. Top-level `customFeeEnforcedLaunchProfileV2` separately reports the held fee profile; do not confuse it with Custom Registry Generation 2.
+The live Custom Registry and the closed legacy submission intake are represented separately. A closed intake state never carries or guesses a different Registry address and does not disable the separate authenticated Custom Launch API V2. Top-level `customFeeEnforcedLaunchProfileV2` reports the exact public production profile; do not confuse it with Custom Registry Generation 2.
 
 Top-level `launchStampRouter` is the independent live trust descriptor for Router-stamped Classic and Custom launches. On Ethereum it binds address `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, `64` finality confirmations, and exact permit-authority, Graph Factory, and PoolManager identities. The exact Router V1 ABI URL and published ABI-file SHA-256, Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, source tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type, and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum deployment, runtime identities, and immutable getter observations. `/launchStampRouter/canaryEvidence` is the finalized PCAN test vector and publishes one approved finalized `CustomGraph` canary without inventing another canary ID. Its source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from and does not replace the Router artifact source commit. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. Historical launches are explicitly outside Router V1.
 
 For a live lookup, the complete identity is `chainId + Router address + launchId`. Universal detection uses `launchIdByToken(address)` or `launchIdByPool(address,bytes32)`, then `launchStamp(bytes32)`: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; `Invalid = 0` is rejected. The shared Classic hook must never identify or classify one Classic launch. `launchIdByComponent(address)` and `stampProof(address)` only corroborate an exclusive address-based component. Use a finalized or explicit concrete canonical block, never a mixture of `latest` calls; apply the manifest's `64` confirmations to explicit block-number reads. A matching event topic from another emitter, a direct factory call, metadata, a backend response, the Custom Registry, or a hosted feed cannot create Router provenance. Router-stamped Classic and Custom labels share this one Router trust root. Frozen source and tests cover both launch kinds through the same live ABI, but a future Classic label requires its own consistent live Router stamp. The stamp and canary fields are point-in-time provenance only and do not imply safety, audit status, current liquidity, sellability, routing support, or third-party integration. Current proxy implementation and authority state require separate review.
 
-For onchain discovery, backfill exact-emitter and exact-topic logs from Router `startBlock` in finality-bounded chunks. Persist block hash, transaction hash/index, and log index; verify lookup, record, and address proof at one canonical block; advance only a durable finalized checkpoint; replay an overlap idempotently; orphan and rewind on a block-hash change; then poll or subscribe from the overlap without a backfill-to-live gap. Only consistent records from the exact canonical Router qualify through Router V1. Publication does not imply automatic GMGN, Axiom, FOMO, or other named-terminal adoption. Custom Launch API V1 currently exposes no write path, and the closed GitHub approval flow must not be revived.
+For onchain discovery, backfill exact-emitter and exact-topic logs from Router `startBlock` in finality-bounded chunks. Persist block hash, transaction hash/index, and log index; verify lookup, record, and address proof at one canonical block; advance only a durable finalized checkpoint; replay an overlap idempotently; orphan and rewind on a block-hash change; then poll or subscribe from the overlap without a backfill-to-live gap. Only consistent records from the exact canonical Router qualify through Router V1. Publication does not imply automatic GMGN, Axiom, FOMO, or other named-terminal adoption. Custom Launch API V2 is the separate authenticated preparation path; the closed GitHub approval flow must not be revived.
 
 The compatibility object declares v2 additive behavior and tells clients to ignore unknown fields, preserve unknown capabilities and market kinds, discover deployments through the manifest, and never hard-code deployment addresses.
 
@@ -114,8 +114,8 @@ fee hooks, the Classic V1 legacy aggregate hook, 18 fixed Stock-Paired claim
 legs, and complete Custom Registry V1 replay plus current-state verification.
 New finalized standard Custom V1 sources with a supported 5 or 10 bps
 Programmable share are included on refresh. Arbitrary Custom hooks and Custom
-Registry V2 are not admitted; V2 remains HOLD until its exact Mainnet release
-is finalized and published.
+Registry V2 are not admitted; Custom Registry Generation 2 remains HOLD until
+its exact Mainnet release is finalized and published.
 
 The console only supports reward wallet
 `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. It requests one atomic EIP-5792
@@ -481,7 +481,7 @@ Recipient:
 
 Current Classic official paths include the 10 bps platform share inside the configured trading fee. If the Classic total fee is X, the platform share is part of X.
 
-The canary-stage Custom Fee-Enforced Launch Profile V2 specifies an additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool. Exact-input swaps account the output currency and exact-output swaps account the input currency. PoolManager ERC-6909 claims remain in the sealed profile vault and only the fixed reward wallet can claim them. It is not public. Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate. FADE's current claim adapter is specific to FADE and does not create generic claim or buyback support.
+The public Custom Fee-Enforced Launch Profile V2 specifies an additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool. Exact-input swaps account the output currency and exact-output swaps account the input currency. PoolManager ERC-6909 claims remain in the sealed profile vault and only the fixed reward wallet can claim them. Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate. FADE's current claim adapter is specific to FADE and does not create generic claim or buyback support.
 
 An approved partnership template with an active fee-bearing official path implements exactly 20 bps on one defined basis: 15 bps for the partner and 5 bps for Programmable. It does not also charge the Native Custom 10 bps. A partner-attributed project with no qualifying path uses zero shares. Verify both recipients, basis, currency, rounding, accrual, claim authority, pause or retirement state, and protections against replay, double claim, and reentrancy before enabling a fee-bearing path.
 
@@ -526,7 +526,7 @@ Approval is not launch. A changed commit, artifact, runtime, configuration, chai
 ## Launch provider recipe
 
 1. Use public category `custom` and display label `Programmable Custom`; provider attribution is not a third category.
-2. Resolve the live Custom Registry deployment from the manifest. Keep legacy Registry and GitHub submission intake closed and any unapproved provider integration prelaunch. Read Custom Launch API V1 availability and the separately held Fee-Enforced V2 state independently.
+2. Resolve the live Custom Registry deployment from the manifest. Keep legacy Registry and GitHub submission intake closed and any unapproved provider integration prelaunch. Use the separate public Custom Launch API V2 for authenticated preparation; V1 reads/status remain compatible and V1 POST remains read-only.
 3. Use an atomic Programmable adapter, an allowlisted provider-factory callback, or an authenticated staged workflow whose public registration occurs only after final verification.
 4. Do not treat a frontend request, provider API response, webhook, metadata submission, or caller-supplied transaction hash as canonical provenance.
 5. Bind every approved factory to one provider ID, reviewed runtimeCodeKeccak256 identity, template ID and version; keep runtimeCodeSha256 evidence separate when present.
@@ -611,8 +611,8 @@ Allowed:
 - One versioned integration for every Programmable launch.
 - Classic is live on Ethereum.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
-- Custom Launch API V1 provenance reads/status are live; POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
-- Custom Fee-Enforced Launch Profile V2 is pinned for a private canary and publicly unavailable; held writes return `503` with `Retry-After`.
+- Custom Launch API V2 public preparation and status are live on Ethereum Mainnet; the controller wallet reviews and signs separately.
+- Custom Launch API V1 provenance reads/status remain compatible; POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 - Router V1 is live on Ethereum for future stamps from block 25717612; its finalized onchain canary covers CustomGraph, with no separate Classic onchain canary.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification.
 - Every registered launch is discoverable.

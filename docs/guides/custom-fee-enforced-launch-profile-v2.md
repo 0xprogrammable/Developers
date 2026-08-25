@@ -1,7 +1,8 @@
 # Custom Fee-Enforced Launch Profile V2
 
-This guide describes the pinned `2.0.0-rc.2` canary profile. The profile is
-available only for a private canary and is not a public launch route today.
+This guide describes the exact public Custom Launch API V2 production profile
+on Ethereum Mainnet. Read its current revision and hash from the machine
+descriptor before packaging a request.
 
 Read the current machine state from
 `customFeeEnforcedLaunchProfileV2` in both:
@@ -11,10 +12,9 @@ GET https://developers.programmable.family/api/v2/status
 GET https://developers.programmable.family/api/v2/manifest
 ```
 
-While `status` is `unavailable` or `productionLaunchAuthorized` is `false`, do
-not submit a public V2 launch, advertise the profile as live, or infer a fee
-from a Custom label. `activationStatus: "canary"` authorizes only the bounded
-private canary; it does not authorize public production.
+Submit only while `status` is `live`, `api.publiclyRoutable` is `true`, and
+`productionLaunchAuthorized` is `true`. A stale profile revision or hash must
+fail closed. Never infer this fee profile from the `custom` category alone.
 
 ## Keep the four version names separate
 
@@ -23,18 +23,18 @@ private canary; it does not authorize public production.
 | Developer API v2 | Live and read-only | Discovers Classic and Custom launches |
 | Custom Launch API V1 | Reads/status live; POST read-only | POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; it does not enforce the V2 fee profile |
 | Custom Registry Generation 2 | Unavailable release candidate | A separate four-contract future discovery trust root |
-| Custom Fee-Enforced Launch Profile V2 | Unavailable publicly; private canary stage | A pinned launch profile for one exact fee-enforced Router path |
+| Custom Launch API V2 / production profile revision 3 | Public on Ethereum Mainnet | One exact fee-enforced Router path with separate controller-wallet review and signature |
 
 None of these names creates another public category. The only public launch
 categories remain `classic` and `custom`.
 
-## Release-candidate contract
+## Production contract
 
-The closed launch-profile identifier is
-`programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `2`,
-profile version `2.0.0-rc.2`.
+The production launch-profile identifier is
+`programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `3`,
+profile version `2.0.0`.
 
-The release-candidate CLI contract uses package name `@programmable/launch`
+The CLI contract uses package name `@programmable/launch`
 and keeps the four commands `pack`, `validate`, `submit`, and `status`. Its V2
 contracts are:
 
@@ -46,39 +46,37 @@ collection path:     /v2/custom-launches
 single-resource:     /v2/custom-launches/{requestId}
 ```
 
-V2 requires a closed `launchProfile`, per-target `runtimeImmutables`, a
+V2 requires an exact server-published `launchProfile`, per-target `runtimeImmutables`, a
 `verificationBundle`, `launchProfileHash`, and `launchIntentHash`. These
 bindings do not by themselves prove a successful compilation, a deployed
 runtime, a provider exact-source match, or fee enforcement.
 
-The only RC graph has five roles: `token`, `customModule`, `feeVault`,
+The production graph has five roles: `token`, `customModule`, `feeVault`,
 `feeHook`, and `poolInitializer`. The custom module is isolated behind the
 fee hook's bounded `afterSwap` callback. Arbitrary callbacks are not allowed,
 the maximum custom return delta is exactly `0`, and `customDeltaAccount` is the
 explicit zero address `0x0000000000000000000000000000000000000000`.
 There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
 
-The CLI is distributed as a GitHub release candidate at
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2`.
+The production CLI is version `2.0.0`, distributed as an immutable GitHub release at
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0`.
 Install the immutable release asset directly:
 
 ```sh
-npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz
+npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz
 ```
 
-The CLI distribution state is `github-release-candidate`; it is not an npm
-registry publication or a stable production release. The API route remains
-`dark-release-candidate`. Its held machine contract is published at
-`https://programmable.market/openapi/custom-launch-v2.json`, but neither the
-CLI artifact nor that document makes the route publicly writable. `pack` and
-`validate` are usable offline; V2 `submit` remains held by the API's public
-`503` response. A cached package or guessed endpoint is not production
-authorization.
+The CLI distribution state is `github-release`; it is not an npm registry
+publication. The public machine contract is
+`https://programmable.market/openapi/custom-launch-v2.json`. `pack` and
+`validate` work offline; `submit` and `status` use the authenticated V2 API.
+A cached package or guessed endpoint cannot override the live profile
+revision/hash or authorization state.
 
 Custom Launch API V1 is read-only for writes: a V1 POST returns HTTP `409` with
-code `CUSTOM_LAUNCH_V1_READ_ONLY` and is not retryable. While V2 is held, a V2
-write returns HTTP `503` with `Retry-After`; respect that header, but do not
-interpret a later retry as activation without a changed public descriptor.
+code `CUSTOM_LAUNCH_V1_READ_ONLY` and is not retryable. V2 clients must honor
+`Retry-After` on `429` or `503` and retry the exact idempotency-bound request
+bytes, never a rebuilt request.
 
 ## Exact fee semantics
 
@@ -112,17 +110,17 @@ can claim them. This is not a direct ERC-20 or native transfer on every swap.
 The pinned permission mask is `0x2044`, adding the initialization guard to the
 two fee callbacks.
 
-The pinned release-candidate literals are:
+The pinned production literals are:
 
 ```text
-launchProfileHash: sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8
+launchProfileHash: sha256:4b376b5dd2ed8fe6b28fd041a934a6b15187b8579d7b7cc8a37499bd689914e9
 contractPolicyId:  0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517
 ```
 
-They identify this exact canary profile. They do not change
-`productionLaunchAuthorized: false` or make the route public.
+They identify one exact production profile. A client must reject any other
+profile revision or hash.
 
-## Exact release-candidate artifacts
+## Exact production artifacts
 
 The canonical compiler is solc `0.8.26+commit.8a97fa7a`, Cancun EVM,
 optimizer enabled with `1,000` runs, `viaIR: false`, and metadata settings
@@ -156,10 +154,10 @@ Every V2 request and readback must bind:
 None of those per-launch bindings may be satisfied by self-reporting getters
 alone.
 
-## Activation is fail closed
+## Public authorization is fail closed
 
-V2 stays unavailable until the manifest publishes all of the following as one
-consistent release:
+Public V2 authorization is valid only while the manifest publishes all of the
+following as one consistent release:
 
 1. the CLI package and the public authenticated API/OpenAPI contract;
 2. exact pinned profile artifacts and request-hash domains;
@@ -171,21 +169,24 @@ consistent release:
    deterministic pool first, plus enforcement of the one exact pool ID by the
    hook;
 6. a successful simulation of the exact pinned launch transaction;
-7. finalized deployment addresses and runtime code hashes;
-8. a same-block onchain readback of the exact pool, hook, vault, module,
-   recipient, `1,000 / 1,000,000` rate, the final permission mask, seal state and
-   profile identity;
-9. a finalized canary using those exact identities; and
-10. an exact-source provider match for every exclusive component.
+7. a two-provider Ethereum `finalized` checkpoint before a future request may
+   become finalized;
+8. global V2 admission caps in addition to per-principal quotas;
+9. exact fee-path configuration binding; and
+10. a durable post-finality source-verification worker whose provider outcome
+    cannot block or reverse launch finality.
 
-Only then may the descriptor change to a public status and set
-`productionLaunchAuthorized: true`. API readiness alone does not pass any of
-the onchain, source, simulation, finality, market-support, or audit gates.
+The current release publishes a public descriptor and
+`productionLaunchAuthorized: true`. API readiness alone still does not prove
+fee accrual or payment, continuing liquidity, claim support, market support or
+an independent audit. No public Rev3 canary has been executed: Rev3 canary
+finality and a provider exact match for such a canary remain not yet proven,
+and no swap-accrual or treasury-claim receipt is published. Those evidence
+states do not weaken the fail-closed controls applied to each submitted launch.
 
 ## Status polling
 
-When V2 becomes public, use the single-resource route as the canonical polling
-path:
+Use the single-resource route as the canonical polling path:
 
 ```text
 GET /v2/custom-launches/{requestId}
@@ -206,7 +207,9 @@ A required verification bundle binds exact source bytes, Standard JSON compiler
 input, compiler settings, libraries and constructor arguments into the launch
 intent. “Source verified” is true only after the server records a real provider
 exact match. Launch finality must never be blocked or reversed by an Explorer
-outage.
+outage. The legacy five-address closeout described in the
+[onchain verification reference](../reference/onchain-verification.md) is a
+different evidence set and must not be presented as a Rev3 profile canary.
 
 The V2 profile does not claim:
 

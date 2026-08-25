@@ -74,7 +74,7 @@ An unknown value is not itself an error or security finding. It is an instructio
 
 ## Custom activation
 
-Custom Registry discovery is live while legacy Registry and GitHub submission intake are closed. Any future Registry contract change remains independent from public category and launch-schema compatibility. The separately hosted Custom Launch API V1 keeps provenance reads and status live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced Launch Profile V2 is a different private-canary release candidate that remains publicly unavailable and whose held writes return `503` with `Retry-After`.
+Custom Registry discovery is live while legacy Registry and GitHub submission intake are closed. Any future Registry contract change remains independent from public category and launch-schema compatibility. The separately hosted Custom Launch API V2 is public on Ethereum Mainnet. V1 reads/status remain compatible, but V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. The production profile remains part of the existing `custom` category and does not create a new API major.
 
 Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 
