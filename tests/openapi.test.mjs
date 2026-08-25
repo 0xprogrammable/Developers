@@ -52,6 +52,16 @@ describe("OpenAPI v2 contract", () => {
     assert.equal(new Set(operations).size, operations.length);
   });
 
+  test("keeps read-only discovery separate from API-first launch preparation", () => {
+    assert.match(spec.info.description, /API-first write path/u);
+    assert.match(
+      spec.components.schemas.WellKnownDocument.properties.publicCategories
+        .properties.custom.properties.publicSubmissionStatus.description,
+      /Legacy Custom Registry intake status/u,
+    );
+    assert.doesNotMatch(source, /GitHub approval to permit/u);
+  });
+
   test("resolves every local component and repository schema reference", async () => {
     const local = [];
     const relative = [];
