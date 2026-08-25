@@ -21,7 +21,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 - The canonical Custom Launch request and response schemas are in the V1 Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
 - Resolve current versioned launch requirements from Programmable Launch Policy. Do not rely on copied policy text.
 - Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 reads/status remain independently live, but its write surface is read-only.
-- Custom Fee-Enforced Launch Profile V2 is a different pinned `2.0.0-rc.1` private-canary profile. Held writes return `503` with `Retry-After`; it has no public route, deployed fee path, finalized canary, or production authorization.
+- Custom Fee-Enforced Launch Profile V2 is a different pinned `2.0.0-rc.2` private-canary profile. Held writes return `503` with `Retry-After`; it has no public route, deployed fee path, finalized canary, or production authorization.
 
 ## Current status
 
@@ -125,7 +125,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
 - Rate: 10 bps = 0.1% = 1,000 ppm.
 - Recipient: `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
-- V2 canary identity: `programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, `launchProfileHash` `sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d`, contract policy `0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517`, permission mask `0x2044`.
+- V2 canary identity: `programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, `launchProfileHash` `sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8`, contract policy `0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517`, permission mask `0x2044`.
 - Current Classic official paths: the platform share is included within the configured trading fee.
 - Canary-stage Custom Fee-Enforced V2 profile: additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool; exact input uses output currency and exact output uses input currency. It is not public. PoolManager ERC-6909 claims remain in the sealed vault and only the fixed reward wallet can claim them.
 - Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate.

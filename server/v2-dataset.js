@@ -486,8 +486,8 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         schemaVersion: "programmable.custom-fee-enforced-launch-profile.v2",
         profileId:
           "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-        profileRevision: 1,
-        profileVersion: "2.0.0-rc.1",
+        profileRevision: 2,
+        profileVersion: "2.0.0-rc.2",
         publicCategory: "custom",
         registryRelationship: "independent-from-custom-registry-generation-2",
         releaseStage: "release-candidate",
@@ -514,12 +514,12 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         },
         cli: {
           packageName: "@programmable/launch",
-          version: "2.0.0-rc.1",
+          version: "2.0.0-rc.2",
           distributionStatus: "github-release-candidate",
           releaseUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1",
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2",
           packageAssetUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz",
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz",
           commands: ["pack", "validate", "submit", "status"],
         },
         requestContract: {
@@ -548,7 +548,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         finalArtifactLiterals: {
           status: "pinned-release-candidate",
           launchProfileHash:
-            "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+            "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
           contractPolicyId:
             "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
         },
@@ -579,37 +579,37 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
               role: "feeVault",
               contractName: "ProgrammableFeeVaultV2",
               standardJsonInputSha256:
-                "sha256:af2508146771a53b2c44b0be2b108a4dc3d692148595cae2ce63f1bf815667a3",
+                "sha256:788d188b7f8fa86ecf49db7c0371c70a147f8ef99e4d617597feb2cdef2a9995",
               creationBytecodeHash:
-                "0x053476bd624631357dfe15ec172bd046f6a4621003d3293a16fb87dce1ba70bd",
+                "0x0167ff8e72e4739491a8fbf1647cc4f583986f3a43ce16ae5289dd149b9a040c",
               runtimeTemplateCodeHash:
-                "0x8a55169728ba90b1fdb275b06c6b6be0467282327c73e9324c08c78e5f62c359",
+                "0x2c1d5986b9356fb81dbc37051b13effec4ad1e403fcb0d4c5cb236610ee2522d",
               runtimeCodeHash:
-                "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5",
+                "0xf2cbc21a3f07c05909d664ba8d8b66fe6576eb8a5d016faa53e31e73ed6acbd4",
             },
             {
               role: "feeHook",
               contractName: "ProgrammableIsolatedAfterSwapFeeHookV2",
               standardJsonInputSha256:
-                "sha256:58b041ccea068f16f6b9a93e57c7b29578bdfc93a72306ced57800145f0db019",
+                "sha256:fad58023346d0d09d5508a4493854bcf0bb3d360e966a411d715a6a971aac803",
               creationBytecodeHash:
-                "0x1a54813e879edb214d24e97b1f50575f290503f46ea35c1fe40b45114983cdf9",
+                "0x6cd2dbd66351cf83194fb942ace4b4f4356c9499d567619b15a922d5cad730b3",
               runtimeTemplateCodeHash:
-                "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+                "0x0a461fa65d04305fa2e583d9a6fba369b3b2ff66aa5856f56d0782c2ff72e19c",
               runtimeCodeHash:
-                "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+                "0x0a461fa65d04305fa2e583d9a6fba369b3b2ff66aa5856f56d0782c2ff72e19c",
             },
             {
               role: "poolInitializer",
               contractName: "ProgrammableFeePoolInitializerV2",
               standardJsonInputSha256:
-                "sha256:3c2b96af0fc57aea1925fe4ccf6efb937f70df4358bba8889d8406c00607695f",
+                "sha256:ebda2869af9fb1dcd567913768cd37547ccb68171e07e5aff645ea6053f3414c",
               creationBytecodeHash:
-                "0x690a30ab2f5ee0c42856a9627cb46d79b5ebc4fa0a2f4c75c3a6f3e077cbbbeb",
+                "0xf6e047132a68eb0692f314975b45af88c6dd873ab7ecaa7b0c3c84a490b9454c",
               runtimeTemplateCodeHash:
-                "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d",
+                "0x4df0f570bc27f05baa99ad297e4b7666d15f3101f43ba2e2863ce026432f43e4",
               runtimeCodeHash:
-                "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d",
+                "0x4df0f570bc27f05baa99ad297e4b7666d15f3101f43ba2e2863ce026432f43e4",
             },
           ],
         },
@@ -623,9 +623,9 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
               "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
           },
           actualHookRuntimeCodeHash:
-            "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+            "0x0a461fa65d04305fa2e583d9a6fba369b3b2ff66aa5856f56d0782c2ff72e19c",
           actualVaultRuntimeCodeHash:
-            "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5",
+            "0xf2cbc21a3f07c05909d664ba8d8b66fe6576eb8a5d016faa53e31e73ed6acbd4",
           compositionHash: "per-launch-required",
         },
         feeSemantics: {
