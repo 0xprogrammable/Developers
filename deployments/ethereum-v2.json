@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "5",
-  "generatedAt": "2026-08-25T13:13:27Z",
+  "manifestVersion": "6",
+  "generatedAt": "2026-08-25T20:31:58Z",
   "chainId": 1,
   "chains": [
     {
@@ -27,7 +27,7 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "closed",
-      "note": "Custom Launch API V1 reads and status remain live, but POST is read-only. Legacy Registry and GitHub submission intake are closed."
+      "note": "Custom Launch API V2 is public on Ethereum Mainnet. V1 reads and status remain compatible, but V1 POST is read-only. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "deployments": [
@@ -116,7 +116,7 @@
     "eventTopic": "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a",
     "abiUrl": "https://developers.programmable.family/abis/ethereum/programmable-custom-registry-v1.json",
     "finalityConfirmations": 64,
-    "note": "Registry discovery is live for finalized approved launches. Legacy Registry and GitHub submission intake are closed; Custom Launch API V1 reads and status remain live, but POST is read-only."
+    "note": "Registry discovery is live for finalized approved launches. Legacy Registry and GitHub submission intake are closed independently of the public authenticated Custom Launch API V2; V1 POST remains read-only."
   },
   "launchStampRouter": {
     "version": "1",
@@ -365,37 +365,40 @@
   "customFeeEnforcedLaunchProfileV2": {
     "schemaVersion": "programmable.custom-fee-enforced-launch-profile.v2",
     "profileId": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-    "profileRevision": 2,
-    "profileVersion": "2.0.0-rc.2",
+    "profileRevision": 3,
+    "profileVersion": "2.0.0",
     "publicCategory": "custom",
     "registryRelationship": "independent-from-custom-registry-generation-2",
-    "releaseStage": "release-candidate",
-    "status": "unavailable",
-    "activationStatus": "canary",
-    "productionLaunchAuthorized": false,
+    "releaseStage": "production",
+    "status": "live",
+    "activationStatus": "production",
+    "productionLaunchAuthorized": true,
     "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
     "api": {
       "apiVersion": "2",
-      "availability": "dark-release-candidate",
-      "publiclyRoutable": false,
+      "availability": "public",
+      "publiclyRoutable": true,
       "collectionPath": "/v2/custom-launches",
       "singleResourcePath": "/v2/custom-launches/{requestId}",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
       "walletBoundary": "separate-wallet-signature",
       "listReconciliation": "bounded-opportunistic-for-pending-records",
       "recommendedPollingPath": "single-resource",
-      "heldResponse": {
-        "httpStatus": 503,
-        "retryAfter": "required",
-        "retryable": true
+      "retryPolicy": {
+        "httpStatuses": [
+          429,
+          503
+        ],
+        "retryAfter": "honor",
+        "requestBytes": "exact-idempotency-bound-replay"
       }
     },
     "cli": {
       "packageName": "@programmable/launch",
-      "version": "2.0.0-rc.2",
-      "distributionStatus": "github-release-candidate",
-      "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2",
-      "packageAssetUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz",
+      "version": "2.0.0",
+      "distributionStatus": "github-release",
+      "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
+      "packageAssetUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz",
       "commands": [
         "pack",
         "validate",
@@ -427,8 +430,8 @@
       "customDeltaAccount": "0x0000000000000000000000000000000000000000"
     },
     "finalArtifactLiterals": {
-      "status": "pinned-release-candidate",
-      "launchProfileHash": "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
+      "status": "pinned-production",
+      "launchProfileHash": "sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee",
       "contractPolicyId": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517"
     },
     "artifactCommitments": {
@@ -509,7 +512,7 @@
       "claimAuthority": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
       "claimSurface": "fixed-reward-wallet-only",
       "requiredHookFlags": "0x2044",
-      "requiredHookFlagsStatus": "pinned-release-candidate",
+      "requiredHookFlagsStatus": "pinned-production",
       "separateComponents": [
         "liquidity-provider-fee",
         "protocol-fee",
@@ -518,14 +521,14 @@
       ]
     },
     "evidenceStatus": {
-      "profileArtifacts": "exact-pinned-release-candidate",
-      "securityReview": "release-blockers-open",
-      "successfulSimulation": "unavailable",
-      "onchainDeployment": "unavailable",
-      "onchainFeeReadback": "unavailable",
-      "finalizedCanary": "unavailable",
-      "sourceExactMatch": "unavailable",
-      "securityAudit": "not-claimed",
+      "profileArtifacts": "exact-pinned-production",
+      "securityReview": "internal-review-complete",
+      "successfulSimulation": "pinned-mainnet-block-permit-authorized-router-transaction",
+      "onchainDeployment": "no-public-rev3-canary",
+      "onchainFeeReadback": "configuration-bound-no-accrual-receipt",
+      "finalizedCanary": "not-yet-proven",
+      "sourceExactMatch": "not-yet-proven-for-rev3-canary",
+      "securityAudit": "not-independently-audited",
       "genericTradability": "not-claimed",
       "genericClaiming": "not-available",
       "buybacks": "not-available"
@@ -541,10 +544,10 @@
       "exact-pool-id-enforced",
       "composition-hash-bound",
       "successful-pinned-simulation",
-      "onchain-deployment-finalized",
-      "onchain-fee-readback-confirmed",
-      "finalized-canary",
-      "source-exact-match"
+      "fee-path-configuration-bound",
+      "dual-rpc-finality-enforced",
+      "source-verification-worker-enabled",
+      "global-v2-admission-cap-enforced"
     ]
   },
   "registryGenerations": [
@@ -638,12 +641,12 @@
       "chargeMode": "included"
     },
     "customPublicSubmissions": {
-      "status": "prelaunch",
-      "chargeMode": "policy-specific-no-overlay"
+      "status": "live",
+      "chargeMode": "added-on-top"
     },
     "nativeCustom": {
-      "status": "unavailable",
-      "activationStatus": "fee-enforced-v2-canary",
+      "status": "active",
+      "activationStatus": "fee-enforced-v2-public",
       "totalFeeBps": 10,
       "programmableShareBps": 10,
       "scope": "verified-official-market-path-only"

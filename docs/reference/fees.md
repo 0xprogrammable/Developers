@@ -18,7 +18,7 @@ The platform rate is:
 1,000 parts per million
 ```
 
-Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from unavailable Custom candidates. A rate and recipient without a deployed path and onchain readback are not an active policy.
+Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from the exact public Custom profile. A rate and recipient without a bound deployed path are not proof of accrual or payment.
 
 ## Classic
 
@@ -30,10 +30,10 @@ The corresponding fee disclosure uses an included charge mode.
 
 ## Custom Fee-Enforced Launch Profile V2
 
-The closed Custom Fee-Enforced Launch Profile V2 specifies an additive
+The public Custom Fee-Enforced Launch Profile V2 specifies an additive
 `1,000 ppm` Programmable fee for successful swaps through one exact bound V2
-pool. It is pinned for a private canary with
-`productionLaunchAuthorized: false`. There is no public V2 fee-enforced path.
+pool on Ethereum Mainnet. The current machine descriptor publishes its exact
+production revision and hash with `productionLaunchAuthorized: true`.
 
 The fee basis is the gross amount of the unspecified pool currency for each
 swap. Exact-input swaps account the output currency; exact-output swaps account
@@ -47,7 +47,7 @@ The additive Programmable fee is separate from the liquidity-provider fee,
 protocol fee, creator or custom-module fee, and network gas. A consumer must not
 collapse those components into “10 bps total.”
 
-Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V1 provenance reads/status remain live, but POST is read-only; API availability does not prove a fee path. A fixture, release candidate, request hash, Router stamp, or successful HTTP response must not claim that a future fee path is already onchain-verified.
+Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V2 is a separate authenticated public preparation path; V1 POST remains read-only. API availability does not prove that any specific launch accrued or paid a fee. A request hash, Router stamp, or successful HTTP response is not fee-payment evidence.
 
 Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
 
@@ -55,8 +55,8 @@ There is no partner share in this fee-enforced launch profile.
 The current FADE claim adapter is specific to FADE. It is not a generic fee
 claim or buyback interface for V2 or arbitrary hooks.
 
-See the [V2 release-candidate guide](../guides/custom-fee-enforced-launch-profile-v2.md)
-for the exact activation gates and polling boundary.
+See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
+for the exact authorization and polling boundaries.
 
 ## Partnership templates
 
@@ -135,7 +135,7 @@ These are release-candidate conformance vectors. They do not prove a deployed Re
 
 ## Scope
 
-An active fee applies only to executed volume through the exact supported official Programmable market path described by a verified record. Today the Custom Fee-Enforced V2 path is unavailable.
+An active fee applies only to executed volume through the exact supported official Programmable market path described by a verified record. Public API availability does not make unrelated pools or transfers subject to the profile.
 
 - No executed trade means no trading volume and no volume fee.
 - A token transfer is not automatically a trade.
@@ -188,5 +188,5 @@ boundaries. Custom Registry V2 remains unavailable until its exact Mainnet
 release is finalized and published.
 
 Custom Fee-Enforced Launch Profile V2 does not add generic claiming or buybacks.
-Its future fee readback, launch finality, source verification, tradability and
-claim capability remain separate states.
+Fee readback, launch finality, source verification, tradability and claim
+capability remain separate states.

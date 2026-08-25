@@ -46,6 +46,6 @@ The pagination model, response shape and read-only security boundary remain the 
 
 ## Availability
 
-Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Legacy Registry and GitHub submission intake are closed and represented separately by `publicSubmissionsEnabled: false`. Authenticated Custom Launch API V1 provenance reads and status remain live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced Launch Profile V2 is a separate private-canary release candidate that remains publicly unavailable and whose held writes return `503` with `Retry-After`.
+Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Legacy Registry and GitHub submission intake are closed and represented separately by `publicSubmissionsEnabled: false`. The authenticated Custom Launch API V2 is a separate public Mainnet preparation path. V1 provenance reads/status remain compatible, but V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 
 API v1 remains supported and has no retirement date. New integrations should use v2.

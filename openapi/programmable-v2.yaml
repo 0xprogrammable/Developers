@@ -12,10 +12,11 @@ info:
     API V1 at `https://api.programmable.market` keeps provenance reads and status
     live, but POST is read-only and returns nonretryable
     `409 CUSTOM_LAUNCH_V1_READ_ONLY`; this Developer v2 service also remains read
-    only. The Custom Fee-Enforced Launch Profile V2 is pinned for a private
-    canary, not a public route; held writes return `503` with `Retry-After`.
-    Its `publicSubmissionStatus` field describes only
-    the closed legacy Registry and GitHub submission intake. Historical Stock-Paired
+    only. The separate Custom Launch API V2 is a public authenticated Ethereum
+    Mainnet preparation route with an exact fee-enforced production profile.
+    Its existing `publicSubmissionStatus` field continues to describe the
+    closed legacy intake; `customLaunchApiStatus` describes the public V2 API.
+    Historical Stock-Paired
     launches are not part of the version 2 Programmable Custom classification.
     `category: custom` is the stable product taxonomy, not a claim of Registry
     acceptance. Consumers must inspect
@@ -83,9 +84,8 @@ paths:
       summary: Read API and data-pipeline status
       description: |
         Reports service availability separately from Classic discovery,
-        feed freshness, the Custom Launch API V1 provenance-read/status link and
-        read-only POST state, and the separately held Fee-Enforced V2 release
-        candidate. A successful HTTP response is not itself proof that indexed
+        feed freshness, the Custom Launch API V1 compatibility state, and the
+        exact public Fee-Enforced V2 production profile. A successful HTTP response is not itself proof that indexed
         data is current, that a fee is enforced, that source is an exact match,
         or that a contract was audited.
       responses:
@@ -139,15 +139,13 @@ paths:
         record's `LaunchKindV1` value. The shared Classic hook is not a launch
         identity and must not classify a Classic launch. Only a consistent
         record from the exact canonical Router qualifies through Router V1.
-        `customFeeEnforcedLaunchProfileV2` is a separate pinned private-canary
-        launch-profile release candidate, not Custom Registry Generation 2 and
-        not a third public category. Its public-unavailable state is authoritative
-        until the profile's exact deployment,
-        simulation, finalized canary and fee readback gates are published. Publication
+        `customFeeEnforcedLaunchProfileV2` is a separate public production
+        launch profile, not Custom Registry Generation 2 and not a third public
+        category. Its exact revision and hash are authoritative. Publication
         does not imply named-terminal adoption. Launch submission is not part of
         this read-only API. Custom Launch API V1 POST is also read-only and returns
-        nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; held Fee-Enforced V2 writes
-        return `503` with `Retry-After`.
+        nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; public launch preparation
+        uses the separate authenticated V2 API.
       responses:
         "200":
           description: Current deployment manifest.
@@ -449,13 +447,31 @@ components:
             custom:
               type: object
               additionalProperties: false
-              required: [discoveryStatus, publicSubmissionStatus, registryAddress, registryStartBlock, registryGeneration, note]
+              required:
+                - discoveryStatus
+                - publicSubmissionStatus
+                - customLaunchApiStatus
+                - legacyRegistrySubmissionStatus
+                - legacyGithubSubmissionStatus
+                - registryAddress
+                - registryStartBlock
+                - registryGeneration
+                - note
               properties:
                 discoveryStatus:
                   const: live
                 publicSubmissionStatus:
                   const: closed
-                  description: Legacy Registry and GitHub submission intake status. Custom Launch API V1 reads/status remain live, but POST returns nonretryable 409 CUSTOM_LAUNCH_V1_READ_ONLY; held Fee-Enforced V2 writes return 503 with Retry-After.
+                  description: Backward-compatible legacy Registry and GitHub submission intake status. It remains closed independently of the public authenticated Custom Launch API V2. V1 reads/status remain compatible, but V1 POST returns nonretryable 409 CUSTOM_LAUNCH_V1_READ_ONLY.
+                customLaunchApiStatus:
+                  const: live
+                  description: Public authenticated Custom Launch API V2 submission status.
+                legacyRegistrySubmissionStatus:
+                  const: closed
+                  description: Legacy Custom Registry submission intake status.
+                legacyGithubSubmissionStatus:
+                  const: closed
+                  description: Legacy GitHub submission intake status.
                 registryAddress:
                   type: string
                   pattern: ^0x[0-9a-fA-F]{40}$

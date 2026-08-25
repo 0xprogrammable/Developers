@@ -72,7 +72,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 
 - [ ] Read fees from the manifest and launch record; do not infer them from category.
 - [ ] For a Registry-backed `feePolicy.mode: "native"` record, require the verified 10 bps Programmable fee only on its exact official market path; do not confuse this record mode with Fee-Enforced Launch Profile V2.
-- [ ] Keep Custom Fee-Enforced Launch Profile V2 unavailable while `productionLaunchAuthorized` is false; do not treat live V1 API readiness as fee evidence.
+- [ ] Treat Custom Launch API V2 as public only for the exact manifest revision/hash with `productionLaunchAuthorized: true`; API readiness is not fee-accrual evidence.
 - [ ] For the V2 profile, verify 1,000 ppm over 1,000,000 on the gross unspecified pool-currency amount for the exact bound pool; exact input uses output currency and exact output uses input currency.
 - [ ] Keep liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components separate.
 - [ ] Keep partner/template attribution separate from fee state; allow `no-qualifying-market` with zero shares when no verified fee path exists.
@@ -83,7 +83,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 ## Router V1 activation evidence
 
 - [ ] Confirm the canonical Router chain, address, start block, ABI hash, topics, getter selectors, pinned source commit and tree, and reproducible artifact/runtime exact match from public evidence. Do not infer or claim Explorer source publication.
-- [ ] Keep Custom Registry Generation 2 distinct from Custom Fee-Enforced Launch Profile V2; neither candidate activates the other.
+- [ ] Keep the unavailable Custom Registry Generation 2 candidate distinct from the public Custom Fee-Enforced Launch Profile V2; evidence for either surface cannot activate the other.
 - [ ] Do not claim generic tradability, claiming, rewards, buybacks, or an audit from V2 profile selection, simulation, API availability, or Router finality.
 - [ ] Before production enablement, require HTTP `200` for the well-known discovery document, its manifest URL, the manifest-listed hosted ABI, and the public Router specification. Hash the exact ABI response bytes and compare `abiSha256`.
 - [ ] Confirm immutable EIP-1271 contract authority, Graph Factory and PoolManager addresses and runtime hashes; reject an EOA authority fallback.
@@ -94,7 +94,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Record route coverage exactly: `CustomGraph` onchain canary `true`; Classic onchain canary `false`. Do not report a separate Classic canary.
 - [ ] Treat frozen Classic source and tests through the same live ABI as implementation evidence, not an onchain Classic launch. Require a consistent live `LaunchKindV1.Classic` stamp for each future Classic classification.
 - [ ] Apply the manifest's `64`-confirmation policy to explicit block-number reads, or use the canonical finalized block.
-- [ ] Do not present named-terminal adoption as live without separate published evidence. Treat Custom Launch API V1 POST as read-only (`409 CUSTOM_LAUNCH_V1_READ_ONLY`, nonretryable) and Fee-Enforced V2 as held (`503` with `Retry-After`); do not revive a GitHub approval flow.
+- [ ] Do not present named-terminal adoption as live without separate published evidence. Treat Custom Launch API V1 POST as read-only (`409 CUSTOM_LAUNCH_V1_READ_ONLY`, nonretryable), use V2 only through its exact public descriptor, and do not revive a GitHub approval flow.
 
 ## Registry and feed release evidence
 
@@ -105,4 +105,4 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Run schema, fixture, conformance, type, lint, build, security, link, and browser checks appropriate to your integration.
 - [ ] Keep the affected Custom Registry or feed path prelaunch if any required external evidence is absent.
 
-The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. Legacy Registry and GitHub submission intake are closed and stay disabled independently of discovery. Custom Launch API V1 reads/status remain live but POST is read-only, and Fee-Enforced V2 remains publicly held despite its private-canary profile state; no public Custom write route is exposed by these states.
+The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. Legacy Registry and GitHub submission intake are closed and stay disabled independently of discovery. Custom Launch API V2 is the separate authenticated public preparation route; V1 reads/status remain compatible and V1 POST stays read-only.

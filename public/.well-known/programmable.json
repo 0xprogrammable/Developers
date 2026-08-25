@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches, with Custom Launch API V1 read/status state linked separately.",
+  "description": "Canonical discovery for Programmable Classic and Custom launches, including the public authenticated Custom Launch API V2.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -29,10 +29,13 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "closed",
+      "customLaunchApiStatus": "live",
+      "legacyRegistrySubmissionStatus": "closed",
+      "legacyGithubSubmissionStatus": "closed",
       "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
       "registryStartBlock": "25701139",
       "registryGeneration": "1",
-      "note": "Custom Launch API V1 reads and status remain live, but POST is read-only. Legacy Registry and GitHub submission intake are closed."
+      "note": "Custom Launch API V2 is public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed."
     }
   },
   "compatibility": {
@@ -59,27 +62,65 @@
       "guideUrl": "https://programmable.market/developers/custom-launch-api-v1.md",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v1.json",
       "apiKeyManagementUrl": "https://programmable.market/developers/api-keys",
-      "walletBoundary": "separate-wallet-signature"
+      "walletBoundary": "separate-wallet-signature",
+      "publicRelease": {
+        "status": "live",
+        "apiVersion": "2",
+        "guideUrl": "https://programmable.market/docs/developers/custom-launch",
+        "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
+        "authentication": "wallet-bound-api-key",
+        "walletBoundary": "separate-wallet-signature",
+        "cli": {
+          "packageName": "@programmable/launch",
+          "binary": "programmable-launch",
+          "releaseVersion": "2.0.0",
+          "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
+          "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz"
+        }
+      },
+      "versions": {
+        "v1": {
+          "reads": "live",
+          "create": "read-only",
+          "createHttpStatus": 409,
+          "createErrorCode": "CUSTOM_LAUNCH_V1_READ_ONLY",
+          "retryable": false
+        },
+        "v2": {
+          "status": "live",
+          "createHttpStatus": 202,
+          "replayHttpStatus": 200,
+          "retryAfter": "honor-on-429-or-503"
+        }
+      },
+      "legacyIntake": {
+        "registry": "closed",
+        "github": "closed"
+      }
     },
     "programmable.custom-fee-enforced-launch-profile-v2": {
       "profileId": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-      "profileVersion": "2.0.0-rc.2",
-      "launchProfileHash": "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
+      "profileRevision": 3,
+      "profileVersion": "2.0.0",
+      "launchProfileHash": "sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee",
       "contractPolicyId": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
-      "status": "unavailable",
-      "releaseStage": "release-candidate",
-      "activationStatus": "canary",
-      "productionLaunchAuthorized": false,
+      "status": "live",
+      "releaseStage": "production",
+      "activationStatus": "production",
+      "productionLaunchAuthorized": true,
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
       "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
-      "heldResponse": {
-        "httpStatus": 503,
-        "retryAfter": "required",
-        "retryable": true
+      "retryPolicy": {
+        "httpStatuses": [
+          429,
+          503
+        ],
+        "retryAfter": "honor",
+        "requestBytes": "exact-idempotency-bound-replay"
       },
-      "note": "Custom Launch API V1 reads/status remain live, but POST is read-only. Fee-Enforced V2 is pinned for a private canary; it has no public route, deployment or finalized canary, and held writes return 503."
+      "note": "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live."
     },
     "programmable.legacy-v1": {
       "status": "supported",

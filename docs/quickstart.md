@@ -245,7 +245,7 @@ Before shipping:
 - Treat creator metadata and external links as untrusted display data.
 - Map only `classic` to `Programmable Classic` and `custom` to `Programmable Custom`; keep partner, template, model, hook, and market kind as secondary data.
 - Keep unsupported Registry generations and provider paths inactive when their deployment evidence is absent. Legacy Registry and GitHub submission intake are closed; Custom Launch API V1 POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
-- Keep Custom Fee-Enforced Launch Profile V2 unavailable for public use while its manifest descriptor authorizes only a private canary. A held V2 write returns `503` with `Retry-After`; do not treat that retry contract as public activation.
+- Treat Custom Launch API V2 as public only while its manifest descriptor reports the exact production revision/hash, `status: "live"`, `publiclyRoutable: true`, and `productionLaunchAuthorized: true`.
 - Partition checkpoints by API major version, chain, and filter scope.
 - Display `Programmable Verified` only from an effective structured review bound to the deployed revision.
 - Keep partner attribution independent from fee state. A partner-attributed project without a verified fee path uses `no-qualifying-market` and zero shares; an active partnership-template fee path uses 20 bps split 15/5 with no extra Native Custom 10 bps.
