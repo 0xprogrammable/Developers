@@ -91,7 +91,21 @@ describe("OpenAPI v2 contract", () => {
       spec.components.schemas.CustomFeeEnforcedLaunchProfileV2.$ref,
       "../schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json",
     );
+    assert.equal(
+      spec.components.schemas.DirectNativeHookGraphProfileDiscoveryV1.$ref,
+      "../schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json",
+    );
+    assert.equal(spec.components.schemas.DirectNativeHookGraphProfileV1, undefined);
+    assert.match(
+      spec.paths["/api/v2/manifest"].get.description,
+      /gated Direct Native Hook Graph V1 preview/u,
+    );
     assert.equal(spec.paths["/v2/custom-launches"], undefined);
+    assert.equal(spec.paths["/v3/custom-launches"], undefined);
+    assert.match(
+      spec.paths["/api/v2/manifest"].get.description,
+      /inside the selected total fee/u,
+    );
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });
 

@@ -35,7 +35,7 @@ describe("launch stamp Router documentation", () => {
     const fixture = await readJson(FIXTURE_PATH);
     const router = manifest.launchStampRouter;
 
-    assert.equal(manifest.generatedAt, "2026-08-25T20:31:58Z");
+    assert.equal(manifest.generatedAt, "2026-08-25T23:40:25Z");
     assert.ok(router, "top-level launchStampRouter is required");
     assert.equal(manifest.customRegistry.launchStamp, undefined);
     assert.equal(router.status, "live");

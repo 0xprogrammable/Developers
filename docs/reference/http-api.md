@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, and the exact public Custom Launch API V2 production-profile descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, the exact public Custom Launch API V2 production-profile descriptor, and the separately gated Direct Native Hook Graph V1 preview descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 
@@ -57,6 +57,9 @@ network
 publicCategories
 deployments
 customRegistry
+launchStampRouter
+customFeeEnforcedLaunchProfileV2
+directNativeHookGraphProfileV1
 platformFee
 endpoints
 compatibility
@@ -69,6 +72,26 @@ The manifest is the canonical integration inventory for active and prelaunch dep
 The Website endpoint `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror, not a second integration trust root. Its schema and generation labels can differ from this Developer manifest. For terminal, wallet, indexer, bot, or direct-onchain integration, the discovery-selected `https://developers.programmable.family/api/v2/manifest` takes precedence. A conflict must pause trust advancement and alert an operator; it must not be resolved by merging fields from both documents.
 
 The v2 Custom Registry state is live with Registry-based public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, finality policy, and operation-specific authority sets from the manifest. For Generation 1, `authorizedWriters` and `operationAuthorities.registered` identify registration writers; `operationAuthorities.finalized` independently identifies finalizers. A registration writer is not a finalizer merely because both operations emit from the Registry. Clients must not infer that live discovery enables Registry submission intake or use this state to determine availability of the separate Custom Launch API.
+
+`directNativeHookGraphProfileV1` is an optional v2 discovery descriptor for a
+future Custom Launch API V3 direct-hook graph path. The descriptor schema is
+`programmable.direct-native-hook-graph-profile-discovery.v1`, separate from the
+V3 request profile schema `programmable.direct-native-hook-graph-profile.v1`.
+Its transport request is
+`programmable.custom-launch-create-request.v3`. The planned collection is
+`/v3/custom-launches`; the candidate funding-signature handoff is
+`POST /v3/wallet-admin/custom-launches/{launchId}/funding-authorization`, with
+the corresponding operation under that path in the planned
+`https://programmable.market/openapi/custom-launch-v3.json` document. Neither is
+publicly routable. The V3 OpenAPI and supporting CLI are not published,
+`productionLaunchAuthorized` is false, admission under the existing immutable
+permit authority and the fixed signature-patch evidence are pending, and a
+per-launch initializer is a direct stamped target rather than a separate trust
+root. Clients may inspect the contract
+but must not construct or submit a profile request until a later manifest
+revision publishes complete activation evidence. An older v2 discovery response
+may omit the optional field; that omission does not affect `classic`, `custom`,
+Custom Launch API V1 compatibility, or the public V2 production profile.
 
 Clients should reject an unexplained manifest rollback and alert on conflicting data for the same manifest version.
 
@@ -89,6 +112,13 @@ page.hasMore
 ```
 
 `items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. Classic derives those fields from a recognized deployment. Custom derives them from either an authenticated finalized Registry record or a consistent finalized `CustomGraph` stamp from the exact canonical Router. `extensions["programmable/classification"].basis` distinguishes those source-provenance paths; `category: "custom"` alone must never be interpreted as Registry acceptance. `launchRouteId` is retained separately and is never substituted for `modelId`. An item becomes public launch data only after the recognized finalized launch evidence exists; a submission or approval alone is not a launch.
+
+The gated Direct Native Hook Graph profile creates no prelaunch item in this
+feed or the token list. Its planned mechanism and extension identifiers are
+descriptive preview data only. Publication requires profile activation followed
+by a finalized consistent canonical-Router launch and an enabled projector;
+profile documentation, an API key, source review or a prepared graph is not
+launch provenance.
 
 Router-backed records report their fee policy as unavailable unless separate exact evidence exists. The semantic exception for an absent Registry fee policy is granted only when the record's complete entry digest and source-boundary digest are members of the accepted Router snapshot. A copied Router-shaped JSON object or a self-declared source commitment does not qualify.
 

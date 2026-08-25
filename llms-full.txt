@@ -32,6 +32,7 @@ Resolve current versioned launch requirements from Programmable Launch Policy. D
 - Authenticated Router-based Custom Launch API V2: public preparation and status on Ethereum Mainnet, separate wallet review/signature, and separate from legacy intake and the unauthenticated read API.
 - Custom Launch API V1: provenance reads/status remain compatible; POST remains read-only with nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 - Custom Registry Generation 2 is a separate unavailable four-contract discovery trust root. It does not activate the public Custom Fee-Enforced Launch Profile V2, and the public profile does not activate Registry Generation 2.
+- Direct Native Hook Graph Profile V1 is a separately gated Custom Launch API V3 preview descriptor. V3 routing is `integration-pending`, the `3.0.0-rc.1` CLI candidate and V3 OpenAPI are not published, profile admission under the existing immutable permit authority is pending, `productionLaunchAuthorized` is false, and launch/token feeds publish no profile records.
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
 - Router V1 launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
@@ -84,6 +85,7 @@ Root fields:
 - customRegistry
 - launchStampRouter
 - customFeeEnforcedLaunchProfileV2
+- directNativeHookGraphProfileV1
 - platformFee
 - endpoints
 - compatibility
@@ -93,6 +95,56 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
 
 The live Custom Registry and the closed legacy submission intake are represented separately. A closed intake state never carries or guesses a different Registry address and does not disable the separate authenticated Custom Launch API V2. Top-level `customFeeEnforcedLaunchProfileV2` reports the exact public production profile; do not confuse it with Custom Registry Generation 2.
+
+Top-level `directNativeHookGraphProfileV1` is an optional v2 discovery
+descriptor with schema
+`programmable.direct-native-hook-graph-profile-discovery.v1`; it is not the V3
+request profile object `programmable.direct-native-hook-graph-profile.v1`. The
+planned profile version is `1.0.0`. The GraphFactory
+accepts 1–16 targets and the current Router accepts 2–16, while this funding
+profile requires 3–16 because token, hook and initializer are distinct direct
+roles. Component kinds remain `token`, `hook` and `other`, with the initializer
+role mapped to `other`. Every target/result index has exactly one expected output and one
+exclusive component. The profile covers constrained exact v4 permission sets,
+ERC-20/ERC-20 and native/ERC-20 pools, and the canonical
+`programmable-volume-fee-v2@2.0.0` `standard-amm` reference kernel at mask
+`0x20cc`. The reference is unaudited and undeployed; a different runtime or
+mask requires a new exact review and variable/custom conformance remains
+fail-closed.
+
+The candidate request/resource schemas are
+`programmable.custom-launch-create-request.v3` and
+`programmable.custom-launch.v3`; the planned routes are
+`POST /v3/custom-launches` and
+`POST /v3/wallet-admin/custom-launches/{launchId}/funding-authorization`.
+The latter must be a real operation in the V3 OpenAPI `paths` map, not only a
+string embedded in a funding challenge. Static LP fees are limited to
+`0..999999`.
+Neither is public. Before the first signature,
+`fundingIntentHash = keccak256(abi.encode(domainHash, chainId, USDC, Router,
+GraphFactory, routeNamespace, routeNonce, bytes32(launchIntentHash), from,
+predictedInitializer, exactValue, validAfter, validBefore))`, where the funding
+domain is `programmable.direct-native-hook-graph.funding-intent.v1`. The EIP-3009
+nonce hashes the nonce-domain hash and that funding-intent hash. The launch
+intent transitively binds exact source/verification, graph template, PoolKey,
+hook/currency, target roles and fixed signature-patch descriptor. Funding
+signature `v/r/s`, final initializer calldata and final graph commitment are
+excluded until the wallet submits the exact USDC authorization; only then may
+the server patch fixed slots and compute the final graph, permit and Router
+transaction. The wallet reviews and signs that transaction separately. An API
+key, CLI or agent signs or broadcasts neither stage.
+
+The existing immutable permit authority at
+`0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b` with runtime code hash
+`0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c`
+is the admission trust root and defaults to deny. Each launch requires exact
+review-admission hashes for source, compiler input/output, target manifest,
+hook and initializer creation/runtime code, fee conformance and security
+review. The initializer is a per-launch direct stamped target, not a separate
+fixed trust root. The Programmable 1,000 hundredths-of-a-bip share is inside the
+selected total: `effective=max(selected,1000)` and `project=effective-1000`.
+The descriptor remains gated; planned identifiers are not executable support,
+and older v2 clients may ignore or omit this optional field.
 
 Top-level `launchStampRouter` is the independent live trust descriptor for Router-stamped Classic and Custom launches. On Ethereum it binds address `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, `64` finality confirmations, and exact permit-authority, Graph Factory, and PoolManager identities. The exact Router V1 ABI URL and published ABI-file SHA-256, Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, source tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type, and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum deployment, runtime identities, and immutable getter observations. `/launchStampRouter/canaryEvidence` is the finalized PCAN test vector and publishes one approved finalized `CustomGraph` canary without inventing another canary ID. Its source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from and does not replace the Router artifact source commit. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. Historical launches are explicitly outside Router V1.
 
@@ -481,7 +533,7 @@ Recipient:
 
 Current Classic official paths include the 10 bps platform share inside the configured trading fee. If the Classic total fee is X, the platform share is part of X.
 
-The public Custom Fee-Enforced Launch Profile V2 specifies an additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool. Exact-input swaps account the output currency and exact-output swaps account the input currency. PoolManager ERC-6909 claims remain in the sealed profile vault and only the fixed reward wallet can claim them. Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate. FADE's current claim adapter is specific to FADE and does not create generic claim or buyback support.
+The public Custom Fee-Enforced Launch Profile V2 specifies an additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool. Exact-input swaps account the output currency and exact-output swaps account the input currency. PoolManager ERC-6909 claims remain in the sealed profile vault and only the fixed reward wallet can claim them. The separate Direct Native Hook Graph V1 preview instead places 1,000 hundredths of a bip inside the selected total: `effective total = max(selected total, 1000)`, `Programmable = 1000`, and `project = effective total - 1000`. A `30000` selection is therefore `29000 + 1000 = 30000`, not `31000`. This requirement is not fee-accrual evidence while the V3 profile remains gated. Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate. Generic fee claiming and buybacks are not live. FADE's current claim adapter is specific to FADE and does not create generic claim or buyback support for arbitrary hooks.
 
 An approved partnership template with an active fee-bearing official path implements exactly 20 bps on one defined basis: 15 bps for the partner and 5 bps for Programmable. It does not also charge the Native Custom 10 bps. A partner-attributed project with no qualifying path uses zero shares. Verify both recipients, basis, currency, rounding, accrual, claim authority, pause or retirement state, and protections against replay, double claim, and reentrancy before enabling a fee-bearing path.
 
@@ -613,6 +665,7 @@ Allowed:
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
 - Custom Launch API V2 public preparation and status are live on Ethereum Mainnet; the controller wallet reviews and signs separately.
 - Custom Launch API V1 provenance reads/status remain compatible; POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+- Direct Native Hook Graph Profile V1 is a gated V3 preview; its planned routes, funding challenge and CLI candidate are not live and authorize neither wallet signature.
 - Router V1 is live on Ethereum for future stamps from block 25717612; its finalized onchain canary covers CustomGraph, with no separate Classic onchain canary.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification.
 - Every registered launch is discoverable.

@@ -765,6 +765,12 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           "global-v2-admission-cap-enforced",
         ],
       },
+    ...(manifest?.directNativeHookGraphProfileV1
+      ? {
+          directNativeHookGraphProfileV1:
+            manifest.directNativeHookGraphProfileV1,
+        }
+      : {}),
     feeds: {
       manifest: "ready",
       launches: feeds,

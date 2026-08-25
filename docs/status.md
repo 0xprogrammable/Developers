@@ -23,6 +23,7 @@ V1 reads and status remain compatible; V1 POST remains read-only and returns non
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Custom Launch API V2 | `custom` | Ethereum | Public | Wallet-bound API keys may prepare and track deterministic launches; the controller wallet reviews and signs separately |
+| Direct Native Hook Graph Profile V1 / Custom Launch API V3 | `custom` if activated | Ethereum | Integration-pending preview | V3 is not publicly routable, no supporting CLI is published, admission under the existing immutable permit authority and the signature-patch runtime are pending, and feeds publish no profile records |
 | Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status remain compatible; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
 | Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy or V1 write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
@@ -71,6 +72,33 @@ different systems. The first is a future four-contract discovery trust root.
 The second is the public production launch profile for one exact additive fee
 path. Generation 2 remains inactive; the V2 profile is live. Neither creates a
 new category, and evidence for one cannot activate the other.
+
+## Direct Native Hook Graph V1 preview
+
+`directNativeHookGraphProfileV1` is an optional, machine-readable preview
+descriptor under
+`programmable.direct-native-hook-graph-profile-discovery.v1`, not the V3 request
+profile object and not a live launch surface. It reserves a future `custom` profile for
+one direct project-owned v4 hook inside an atomic acyclic profile graph of 3–16
+targets. The underlying GraphFactory accepts 1–16 and the current Router accepts
+2–16, but this funding profile requires distinct token, hook and initializer
+roles plus one exclusive component per target/result index; the initializer role
+uses the existing `other` component kind. The contract covers an exact constrained per-launch set of
+v4 hook permissions, ERC-20/ERC-20 and native/ERC-20 PoolKeys, a pre-signature
+`fundingIntentHash`, and two separately reviewed wallet signatures. The frozen
+platform share is 10 bps inside the selected total hook fee, not 10 bps added
+above it; the recipient remains explicit.
+
+The descriptor is fail-closed: `status: "gated"`,
+`productionLaunchAuthorized: false`, V3 API support `integration-pending`, the
+CLI candidate `not-published`, and exact profile admission under the existing
+immutable permit authority is pending. The current
+launch and token-list feeds publish no prelaunch record for it. Only an
+integration-owner activation backed by a published V3 contract and CLI,
+funding-hash and fixed signature-patch parity, exact per-launch review admission,
+canonical-kernel and inclusive fee-split evidence, finalized canary and enabled feed projector may
+change those states. Generic fee claiming and buybacks remain not live. See the
+[versioned preview contract](guides/direct-native-hook-graph-profile-v1.md).
 
 The local Generation 2 release candidate currently snapshots the four-contract Registry, PartnerFactory Registry, fee-policy verifier, atomic registrar, 15-event integration set, and 37-word v4 producer commitment. It is undeployed and not final ABI authority. The Public Registry root is still changing its execution-policy, route, and market-data-source binding contract; final ABI, topics, event count, Solidity hash preimages, artifact hashes, and artifact-set hash will therefore differ. After the final Public commit, Developer must replace the candidate artifacts byte-for-byte and rerun Contract → Approval → Read Model → Developer parity before Generation 2 activation.
 

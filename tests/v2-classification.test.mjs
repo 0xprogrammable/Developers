@@ -210,6 +210,35 @@ describe("version 2 classification", () => {
       true,
     );
     assert.deepEqual(
+      publicStatus.directNativeHookGraphProfileV1,
+      manifest.directNativeHookGraphProfileV1,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.productionLaunchAuthorized,
+      false,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.api.publiclyRoutable,
+      false,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.api.apiVersion,
+      "3",
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.graphContract.minimumTargets,
+      3,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.platformFee.accountingMode,
+      "inclusive-selected-total",
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV1.feedContract
+        .prelaunchProfileRecordsPublished,
+      false,
+    );
+    assert.deepEqual(
       publicStatus.customRegistryPublication,
       projected.status.customRegistryPublication,
     );

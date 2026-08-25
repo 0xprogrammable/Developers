@@ -58,6 +58,31 @@ claim or buyback interface for V2 or arbitrary hooks.
 See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
 for the exact authorization and polling boundaries.
 
+## Direct Native Hook Graph Profile V1 preview
+
+The Direct Native Hook Graph V1 contract reserves 1,000 hundredths of a bip
+(10 bps) for Programmable inside the selected total hook fee, with recipient
+`0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. For each buy and sell direction,
+the selected total may be `0` through `999999`, the effective total is
+`max(selected total, 1000)`, and the project share is `effective total - 1000`.
+Thus a `30000` (3.0%) selection yields `29000` project + `1000` Programmable =
+`30000` total, not `31000`. The basis is executed gross quote-currency volume;
+the two liabilities and their rounding remain separate.
+
+The exact readback contract is
+`PROGRAMMABLE_HUNDREDTHS_OF_BIP()` / `0x8a9585e4`,
+`PROGRAMMABLE_FEE_OWNER()` / `0x21466b6a`,
+`PROGRAMMABLE_FEE_POLICY_HASH()` / `0x677d6592`, and
+`runtimeConfigurationHash()` / `0xca7751ad`.
+
+This is a gated preview requirement, not current fee-accrual evidence. The
+profile has no publicly routable V3 API, published supporting CLI, activated
+permit-authority profile admission, finalized canary or feed projector, and
+`productionLaunchAuthorized` is false. Exact source, build, runtime,
+graph-composition, split/readback and settlement evidence are required before
+activation. Generic fee claiming for arbitrary direct hooks and buybacks are not
+live. See the [Direct Native Hook Graph V1 guide](../guides/direct-native-hook-graph-profile-v1.md).
+
 ## Partnership templates
 
 Partner and template attribution do not imply that a market or fee path exists. A verified partner-attributed project with no qualifying official market path uses `feePolicy.mode: "no-qualifying-market"`, all shares remain zero, and no 20 bps fee is presented as active.

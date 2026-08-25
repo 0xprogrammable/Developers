@@ -79,6 +79,9 @@
     "customFeeEnforcedLaunchProfileV2": {
       "$ref": "custom-fee-enforced-launch-profile-v2.schema.json"
     },
+    "directNativeHookGraphProfileV1": {
+      "$ref": "direct-native-hook-graph-profile-discovery-v1.schema.json"
+    },
     "feeds": {
       "type": "object",
       "required": [
