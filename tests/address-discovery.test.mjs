@@ -135,10 +135,19 @@ describe("documentation contract", () => {
       registryAddress: manifest.customRegistry.address,
       registryStartBlock: manifest.customRegistry.startBlock,
       registryGeneration: manifest.customRegistry.generation,
-      note: "Custom Launch API is live. Legacy Registry and GitHub submission intake are closed.",
+      note:
+        "Custom Launch API V1 reads and status remain live, but POST is read-only. Legacy Registry and GitHub submission intake are closed.",
     });
     assert.deepEqual(wellKnown.extensions["programmable.custom-launch-api"], {
       status: "live",
+      scope: "provenance-only",
+      feeEnforcement: "not-established-by-api",
+      writeStatus: "read-only",
+      postResponse: {
+        httpStatus: 409,
+        code: "CUSTOM_LAUNCH_V1_READ_ONLY",
+        retryable: false,
+      },
       apiBaseUrl: "https://api.programmable.market",
       readyzUrl: "https://api.programmable.market/readyz",
       guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
@@ -147,11 +156,41 @@ describe("documentation contract", () => {
       walletBoundary: "separate-wallet-signature",
     });
     assert.deepEqual(
+      wellKnown.extensions["programmable.custom-fee-enforced-launch-profile-v2"],
+      {
+        profileId:
+          "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
+        profileVersion: "2.0.0-rc.1",
+        launchProfileHash:
+          "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+        contractPolicyId:
+          "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
+        status: "unavailable",
+        releaseStage: "release-candidate",
+        activationStatus: "canary",
+        productionLaunchAuthorized: false,
+        statusUrl: "https://developers.programmable.family/api/v2/status",
+        manifestUrl: "https://developers.programmable.family/api/v2/manifest",
+        guideUrl:
+          "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
+        openApiUrl:
+          "https://programmable.market/openapi/custom-launch-v2.json",
+        heldResponse: {
+          httpStatus: 503,
+          retryAfter: "required",
+          retryable: true,
+        },
+        note:
+          "Custom Launch API V1 reads/status remain live, but POST is read-only. Fee-Enforced V2 is pinned for a private canary; it has no public route, deployment or finalized canary, and held writes return 503.",
+      },
+    );
+    assert.deepEqual(
       schemaIndex.schemas.map(({ name }) => name),
       [
         "common",
         "canonical-custom-registry-record-v3",
         "canonical-custom-registry-record-v4",
+        "custom-fee-enforced-launch-profile-v2",
         "launch-feed",
         "launch",
         "manifest",
@@ -167,5 +206,59 @@ describe("documentation contract", () => {
           destination === "/schemas/v2/index.json",
       ),
     );
+  });
+
+  test("documents the held V2 profile without broad product claims", async () => {
+    const guide = await readFile(
+      path.join(
+        REPOSITORY_ROOT,
+        "docs/guides/custom-fee-enforced-launch-profile-v2.md",
+      ),
+      "utf8",
+    );
+    assert.match(guide, /pinned `2\.0\.0-rc\.1` canary profile/i);
+    assert.match(
+      guide,
+      /programmable\.fee-enforced-isolated-after-swap\.zero-delta\.v1/,
+    );
+    assert.match(guide, /maximum custom return delta is exactly `0`/i);
+    assert.match(
+      guide,
+      /customDeltaAccount.*0x0000000000000000000000000000000000000000/is,
+    );
+    assert.match(guide, /no `launchWallet` coupling/i);
+    assert.match(guide, /gross amount of the unspecified pool currency/i);
+    assert.match(guide, /Exact input \| Output currency/);
+    assert.match(guide, /Exact output \| Input currency/);
+    assert.match(guide, /single-resource route as the canonical polling\s+path/i);
+    assert.match(guide, /self-reporting getters/i);
+    assert.match(guide, /initializing the\s+deterministic pool first/i);
+    assert.match(guide, /pinned permission mask is `0x2044`/i);
+    assert.match(
+      guide,
+      /sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d/,
+    );
+    assert.match(
+      guide,
+      /0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517/,
+    );
+    assert.match(guide, /PoolManager\s+ERC-6909 claims/i);
+    assert.match(guide, /actual hook and vault\s+runtime code hashes/i);
+    assert.match(guide, /409.*CUSTOM_LAUNCH_V1_READ_ONLY/is);
+    assert.match(guide, /not retryable/i);
+    assert.match(guide, /503.*Retry-After/is);
+    assert.match(
+      guide,
+      /https:\/\/programmable\.market\/openapi\/custom-launch-v2\.json/,
+    );
+    assert.match(
+      guide,
+      /releases\/tag\/programmable-launch-v2\.0\.0-rc\.1/,
+    );
+    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0-rc\.1\.tgz/);
+    assert.match(guide, /V2 `submit` remains held/i);
+    assert.match(guide, /generic fee claiming for arbitrary hooks/i);
+    assert.match(guide, /buybacks/i);
+    assert.doesNotMatch(guide, /npm (?:install|i) @programmable\/launch/);
   });
 });

@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-Custom has separate lifecycle states. Router-based launch preparation is live through the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed. The read API publishes only launches with recognized onchain evidence.
+Custom has separate lifecycle states. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed. [Custom Launch API V1](https://programmable.market/developers/custom-launch-api-v1.md) provenance reads and status remain live, but POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. The read API publishes only launches with recognized onchain evidence. The separate [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) is pinned for a private canary but publicly unavailable; held writes return `503` with `Retry-After`.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 
@@ -75,11 +75,24 @@ Launch-list and token-list routes do not turn incomplete source coverage into a 
 
 ## How does the 0.1% fee work?
 
-Current Classic official paths include the 10 bps Programmable share within the configured trading fee. Future verified Native Custom official paths add 10 bps on top of the creator-defined market fee. Read each verified fee disclosure rather than deriving economics from the category.
+Current Classic official paths include the 10 bps Programmable share within the configured trading fee. The canary-stage Custom Fee-Enforced V2 profile instead specifies an additive 1,000 ppm on the gross amount of the unspecified pool currency for each successful swap through the exact bound pool. Exact input accounts the output currency; exact output accounts the input currency. The sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. That V2 path is not public. Read each verified fee disclosure rather than deriving economics from the category.
 
 The recipient is `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
 
 Partner attribution does not by itself activate a fee. Without a qualifying official market path, a partner-attributed project uses zero shares. An active fee-bearing partnership-template path uses exactly 20 bps on one basis: 15 bps partner plus 5 bps Programmable, and it does not also charge the Native Custom 10 bps. No Basebit or Aion live partner path or recipient is currently verified by the public v2 manifest.
+
+Liquidity-provider fees, protocol fees, creator or custom-module fees, the
+Programmable profile fee, and network gas are separate components. Neither API
+availability nor a declared policy proves onchain enforcement, exact source,
+finality, tradability, claim support, buybacks, or an audit.
+
+## Is Custom Registry Generation 2 the fee-enforced API?
+
+No. Custom Registry Generation 2 is an unavailable four-contract discovery
+trust root. Custom Fee-Enforced Launch Profile V2 is a different unavailable
+launch profile. Developer API v2 is the live read-only API major. Custom Launch
+API V1 keeps provenance reads and status live, but its POST surface is read-only.
+All use only the existing `classic` and `custom` categories.
 
 ## Does the fee apply to transfers or a third-party pool?
 
@@ -107,7 +120,13 @@ No. The integration is public for any provider to adopt. Generic GMGN `uniswap_v
 
 ## Do Custom launches still use GitHub approval pull requests?
 
-No. New Custom launch preparation uses the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Create a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys), then follow the canonical [live OpenAPI contract](https://programmable.market/openapi/custom-launch-v1.json). The API validates and prepares the Router action; its API key cannot sign or broadcast the wallet transaction.
+No. Legacy Registry and GitHub submission intake are closed. The authenticated
+[Custom Launch API V1](https://programmable.market/developers/custom-launch-api-v1.md)
+keeps provenance reads and status live, but POST returns nonretryable
+`409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced V2 is held and returns
+`503` with `Retry-After`; there is no public Custom write route while those
+states remain authoritative. An API key is never wallet signing or broadcast
+authority.
 
 ## What should an unknown future market look like?
 

@@ -18,7 +18,7 @@ The platform rate is:
 1,000 parts per million
 ```
 
-Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure binds the active policy to the deployment and market path.
+Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from unavailable Custom candidates. A rate and recipient without a deployed path and onchain readback are not an active policy.
 
 ## Classic
 
@@ -28,19 +28,35 @@ If the total configured Classic trading fee is `X`, the platform share is part o
 
 The corresponding fee disclosure uses an included charge mode.
 
-## Native Custom
+## Custom Fee-Enforced Launch Profile V2
 
-Native Custom means an official Programmable Custom launch that is not using an approved partnership-template fee policy.
+The closed Custom Fee-Enforced Launch Profile V2 specifies an additive
+`1,000 ppm` Programmable fee for successful swaps through one exact bound V2
+pool. It is pinned for a private canary with
+`productionLaunchAuthorized: false`. There is no public V2 fee-enforced path.
 
-Future official Native Custom market paths add the 10 bps Programmable platform fee on top of the creator-defined market fee, but only after that specific fee path is deployed and verified.
+The fee basis is the gross amount of the unspecified pool currency for each
+swap. Exact-input swaps account the output currency; exact-output swaps account
+the input currency. This is not a static quote-currency rule and must not be
+derived from `PoolKey.fee`. Fees accrue as PoolManager ERC-6909 claims in the
+sealed profile vault and can be claimed only by the fixed reward wallet
+`0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`; they are not transferred directly
+on every swap.
 
-If the creator-defined market fee is `X`, the supported official path charges `X + 10 bps`.
+The additive Programmable fee is separate from the liquidity-provider fee,
+protocol fee, creator or custom-module fee, and network gas. A consumer must not
+collapse those components into “10 bps total.”
 
-Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. The separate Custom Launch API is live, but API availability does not prove a fee path. A fixture or draft must not claim that a future fee path is already onchain-verified.
+Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V1 provenance reads/status remain live, but POST is read-only; API availability does not prove a fee path. A fixture, release candidate, request hash, Router stamp, or successful HTTP response must not claim that a future fee path is already onchain-verified.
 
 Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
 
-There is no partner share in the Native Custom policy.
+There is no partner share in this fee-enforced launch profile.
+The current FADE claim adapter is specific to FADE. It is not a generic fee
+claim or buyback interface for V2 or arbitrary hooks.
+
+See the [V2 release-candidate guide](../guides/custom-fee-enforced-launch-profile-v2.md)
+for the exact activation gates and polling boundary.
 
 ## Partnership templates
 
@@ -85,6 +101,10 @@ Both remain integration blockers, not values to infer or placeholders to fill.
 
 ## Registry-backed `feePolicy`
 
+This section describes the separate Custom Registry Generation 2 record model.
+It is not the Custom Fee-Enforced Launch Profile V2 and does not activate that
+profile.
+
 The additive v2 Registry record uses `feePolicy.mode`:
 
 | Mode | Required values |
@@ -115,7 +135,7 @@ These are release-candidate conformance vectors. They do not prove a deployed Re
 
 ## Scope
 
-The fee applies to executed volume through the supported official Programmable market path described by the verified record.
+An active fee applies only to executed volume through the exact supported official Programmable market path described by a verified record. Today the Custom Fee-Enforced V2 path is unavailable.
 
 - No executed trade means no trading volume and no volume fee.
 - A token transfer is not automatically a trade.
@@ -166,3 +186,7 @@ See [Protocol fee claim discovery](protocol-fee-claims.md) for the exact Classic
 fixed Stock-Paired, Custom Registry V1, wallet, atomic-batch, and fail-closed
 boundaries. Custom Registry V2 remains unavailable until its exact Mainnet
 release is finalized and published.
+
+Custom Fee-Enforced Launch Profile V2 does not add generic claiming or buybacks.
+Its future fee readback, launch finality, source verification, tradability and
+claim capability remain separate states.

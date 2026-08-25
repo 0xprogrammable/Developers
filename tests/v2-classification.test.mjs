@@ -179,12 +179,36 @@ describe("version 2 classification", () => {
     assert.equal(publicStatus.custom.status, "live");
     assert.deepEqual(publicStatus.customLaunchApi, {
       status: "live",
+      scope: "provenance-only",
+      feeEnforcement: "not-established-by-api",
+      writeStatus: "read-only",
+      postResponse: {
+        httpStatus: 409,
+        code: "CUSTOM_LAUNCH_V1_READ_ONLY",
+        retryable: false,
+      },
       readyzUrl: "https://api.programmable.market/readyz",
       guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
       openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
     });
+    assert.deepEqual(
+      publicStatus.customFeeEnforcedLaunchProfileV2,
+      manifest.customFeeEnforcedLaunchProfileV2,
+    );
+    assert.equal(
+      publicStatus.customFeeEnforcedLaunchProfileV2.profileId,
+      "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
+    );
+    assert.equal(
+      publicStatus.customFeeEnforcedLaunchProfileV2.productionLaunchAuthorized,
+      false,
+    );
+    assert.equal(
+      publicStatus.customFeeEnforcedLaunchProfileV2.api.publiclyRoutable,
+      false,
+    );
     assert.deepEqual(
       publicStatus.customRegistryPublication,
       projected.status.customRegistryPublication,

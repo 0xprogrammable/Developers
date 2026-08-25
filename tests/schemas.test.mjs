@@ -66,6 +66,123 @@ describe("JSON Schema registry", () => {
     assert.match(validationSummary(validate), /operationAuthorities/);
   });
 
+  test("keeps the Custom Fee-Enforced V2 release candidate fail closed", async () => {
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments", "ethereum-v2.json"),
+    );
+    const validate = registryV2.validator(
+      "custom-fee-enforced-launch-profile-v2.schema.json",
+    );
+    assertValid(
+      validate,
+      manifest.customFeeEnforcedLaunchProfileV2,
+      "Custom Fee-Enforced V2 RC descriptor",
+    );
+    assert.equal(manifest.platformFee.nativeCustom.status, "unavailable");
+    assert.equal(manifest.platformFee.partnerTemplate.status, "unavailable");
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.evidenceStatus.securityReview,
+      "release-blockers-open",
+    );
+    assert.ok(
+      manifest.customFeeEnforcedLaunchProfileV2.activationRequirements.includes(
+        "pool-initialization-front-run-protected",
+      ),
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.finalArtifactLiterals,
+      {
+        status: "pinned-release-candidate",
+        launchProfileHash:
+          "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+        contractPolicyId:
+          "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
+      },
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.requiredBindings
+        .canonicalPoolManager,
+      {
+        address: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        runtimeCodeHash:
+          "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
+      },
+    );
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.feeSemantics
+        .requiredHookFlags,
+      "0x2044",
+    );
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.feeSemantics.settlementMode,
+      "pool-manager-erc6909-claims-in-sealed-vault",
+    );
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.feeSemantics.claimAuthority,
+      "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+    );
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.artifactCommitments.compiler
+        .settingsHash,
+      "0xd8985cd6554daab2848a8df4d90f9d5e0d81f15d062ee04bcd8414f292ccaf43",
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.artifactCommitments.components
+        .map(({ role }) => role),
+      ["token", "feeVault", "feeHook", "poolInitializer"],
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.moduleSemantics,
+      {
+        mode: "isolated-external-module",
+        callback: "afterSwap",
+        arbitraryCallbacks: false,
+        maximumCustomReturnDelta: 0,
+        customDeltaAccount: "0x0000000000000000000000000000000000000000",
+      },
+    );
+    assert.deepEqual(
+      manifest.customFeeEnforcedLaunchProfileV2.api.heldResponse,
+      {
+        httpStatus: 503,
+        retryAfter: "required",
+        retryable: true,
+      },
+    );
+    assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.cli, {
+      packageName: "@programmable/launch",
+      version: "2.0.0-rc.1",
+      distributionStatus: "github-release-candidate",
+      releaseUrl:
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1",
+      packageAssetUrl:
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz",
+      commands: ["pack", "validate", "submit", "status"],
+    });
+
+    for (const mutate of [
+      (profile) => { profile.productionLaunchAuthorized = true; },
+      (profile) => { profile.status = "live"; },
+      (profile) => { profile.api.publiclyRoutable = true; },
+      (profile) => { profile.cli.distributionStatus = "published"; },
+      (profile) => { profile.cli.packageAssetUrl = "https://example.com/package.tgz"; },
+      (profile) => { profile.feeSemantics.ratePpm = 999; },
+      (profile) => { profile.moduleSemantics.maximumCustomReturnDelta = 1; },
+      (profile) => { profile.moduleSemantics.customDeltaAccount = "launchWallet"; },
+      (profile) => { profile.api.heldResponse.httpStatus = 409; },
+      (profile) => { profile.api.heldResponse.retryAfter = "optional"; },
+      (profile) => { profile.api.openApiUrl = null; },
+      (profile) => { profile.finalArtifactLiterals.contractPolicyId = `0x${"1".repeat(64)}`; },
+      (profile) => { profile.artifactCommitments.compiler.optimizer.runs = 999; },
+      (profile) => { profile.feeSemantics.claimAuthority = `0x${"1".repeat(40)}`; },
+      (profile) => { profile.requiredBindings.exactPoolId = "optional"; },
+    ]) {
+      const profile = structuredClone(manifest.customFeeEnforcedLaunchProfileV2);
+      mutate(profile);
+      assert.equal(validate(profile), false);
+    }
+  });
+
   test("validates feed and token-list fixtures", async () => {
     assertValid(
       registry.validator("launch-feed.schema.json"),

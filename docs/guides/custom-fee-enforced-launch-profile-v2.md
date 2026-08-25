@@ -1,0 +1,225 @@
+# Custom Fee-Enforced Launch Profile V2
+
+This guide describes the pinned `2.0.0-rc.1` canary profile. The profile is
+available only for a private canary and is not a public launch route today.
+
+Read the current machine state from
+`customFeeEnforcedLaunchProfileV2` in both:
+
+```text
+GET https://developers.programmable.family/api/v2/status
+GET https://developers.programmable.family/api/v2/manifest
+```
+
+While `status` is `unavailable` or `productionLaunchAuthorized` is `false`, do
+not submit a public V2 launch, advertise the profile as live, or infer a fee
+from a Custom label. `activationStatus: "canary"` authorizes only the bounded
+private canary; it does not authorize public production.
+
+## Keep the four version names separate
+
+| Name | Current state | Meaning |
+| --- | --- | --- |
+| Developer API v2 | Live and read-only | Discovers Classic and Custom launches |
+| Custom Launch API V1 | Reads/status live; POST read-only | POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; it does not enforce the V2 fee profile |
+| Custom Registry Generation 2 | Unavailable release candidate | A separate four-contract future discovery trust root |
+| Custom Fee-Enforced Launch Profile V2 | Unavailable publicly; private canary stage | A pinned launch profile for one exact fee-enforced Router path |
+
+None of these names creates another public category. The only public launch
+categories remain `classic` and `custom`.
+
+## Release-candidate contract
+
+The closed launch-profile identifier is
+`programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `1`,
+profile version `2.0.0-rc.1`.
+
+The release-candidate CLI contract uses package name `@programmable/launch`
+and keeps the four commands `pack`, `validate`, `submit`, and `status`. Its V2
+contracts are:
+
+```text
+config schema:       programmable.launch-pack-config.v2
+create request:      programmable.custom-launch-create-request.v2
+agent attestation:   programmable.agent-launch-attestation.v2
+collection path:     /v2/custom-launches
+single-resource:     /v2/custom-launches/{requestId}
+```
+
+V2 requires a closed `launchProfile`, per-target `runtimeImmutables`, a
+`verificationBundle`, `launchProfileHash`, and `launchIntentHash`. These
+bindings do not by themselves prove a successful compilation, a deployed
+runtime, a provider exact-source match, or fee enforcement.
+
+The only RC graph has five roles: `token`, `customModule`, `feeVault`,
+`feeHook`, and `poolInitializer`. The custom module is isolated behind the
+fee hook's bounded `afterSwap` callback. Arbitrary callbacks are not allowed,
+the maximum custom return delta is exactly `0`, and `customDeltaAccount` is the
+explicit zero address `0x0000000000000000000000000000000000000000`.
+There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
+
+The CLI is distributed as a GitHub release candidate at
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1`.
+Install the immutable release asset directly:
+
+```sh
+npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz
+```
+
+The CLI distribution state is `github-release-candidate`; it is not an npm
+registry publication or a stable production release. The API route remains
+`dark-release-candidate`. Its held machine contract is published at
+`https://programmable.market/openapi/custom-launch-v2.json`, but neither the
+CLI artifact nor that document makes the route publicly writable. `pack` and
+`validate` are usable offline; V2 `submit` remains held by the API's public
+`503` response. A cached package or guessed endpoint is not production
+authorization.
+
+Custom Launch API V1 is read-only for writes: a V1 POST returns HTTP `409` with
+code `CUSTOM_LAUNCH_V1_READ_ONLY` and is not retryable. While V2 is held, a V2
+write returns HTTP `503` with `Retry-After`; respect that header, but do not
+interpret a later retry as activation without a changed public descriptor.
+
+## Exact fee semantics
+
+The profile adds exactly `1,000` parts per million, equal to `10` basis points
+or `0.10%`, for each successful swap through the exact bound V2 pool. The
+denominator is `1,000,000`. It does not charge other pools or every market for
+the same token.
+
+The fee basis is the gross amount of the unspecified pool currency. The fee
+asset therefore depends on the swap mode:
+
+| Swap mode | Fee asset |
+| --- | --- |
+| Exact input | Output currency |
+| Exact output | Input currency |
+
+This is not a permanent “quote token” rule and it is not the Uniswap pool fee
+in `PoolKey.fee`. The profile is additive to other independently configured
+economics. Display and account for these separately:
+
+- liquidity-provider fee;
+- protocol fee;
+- creator or custom-module fee;
+- Programmable's 1,000 ppm profile fee; and
+- network gas.
+
+The Programmable recipient is
+`0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Fees settle as PoolManager
+ERC-6909 claims held in the sealed profile vault; only that fixed reward wallet
+can claim them. This is not a direct ERC-20 or native transfer on every swap.
+The pinned permission mask is `0x2044`, adding the initialization guard to the
+two fee callbacks.
+
+The pinned release-candidate literals are:
+
+```text
+launchProfileHash: sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d
+contractPolicyId:  0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517
+```
+
+They identify this exact canary profile. They do not change
+`productionLaunchAuthorized: false` or make the route public.
+
+## Exact release-candidate artifacts
+
+The canonical compiler is solc `0.8.26+commit.8a97fa7a`, Cancun EVM,
+optimizer enabled with `1,000` runs, `viaIR: false`, and metadata settings
+`bytecodeHash: "ipfs"` plus `appendCBOR: true`. The canonical compiler-settings
+hash is
+`0xd8985cd6554daab2848a8df4d90f9d5e0d81f15d062ee04bcd8414f292ccaf43`.
+
+| Role | Creation bytecode Keccak-256 | Runtime Keccak-256 |
+| --- | --- | --- |
+| `token` | `0x71660c7252993788cbab7c257ce654622c5661611623c4cb288f68f157d1b25d` | `0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef` |
+| `feeVault` | `0x053476bd624631357dfe15ec172bd046f6a4621003d3293a16fb87dce1ba70bd` | `0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5` |
+| `feeHook` | `0x1a54813e879edb214d24e97b1f50575f290503f46ea35c1fe40b45114983cdf9` | `0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067` |
+| `poolInitializer` | `0x690a30ab2f5ee0c42856a9627cb46d79b5ebc4fa0a2f4c75c3a6f3e077cbbbeb` | `0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d` |
+
+The vault row is the materialized runtime after its canonical immutable
+PoolManager and Graph Factory bindings; its unmaterialized runtime-template
+hash remains separately published in the machine descriptor. A request's
+custom-module runtime is separately exact-source-bound and is not replaced by
+one shared runtime.
+
+Every V2 request and readback must bind:
+
+- the exact per-launch pool ID and initial `sqrtPriceX96`;
+- the authorized initializer;
+- canonical Mainnet PoolManager
+  `0x000000000004444c5dc75cB358380D2e3dE08A90` and runtime hash
+  `0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293`;
+- actual hook and vault runtime code hashes; and
+- one composition hash covering the complete deployed profile.
+
+None of those per-launch bindings may be satisfied by self-reporting getters
+alone.
+
+## Activation is fail closed
+
+V2 stays unavailable until the manifest publishes all of the following as one
+consistent release:
+
+1. the CLI package and the public authenticated API/OpenAPI contract;
+2. exact pinned profile artifacts and request-hash domains;
+3. closure of the remaining public-production security-review gates;
+4. canonical PoolManager identity and runtime, canonical hook and vault runtime
+   identities, and a composition hash bound by the graph rather than supplied
+   only by self-reporting getters;
+5. atomic authorization that prevents a third party from initializing the
+   deterministic pool first, plus enforcement of the one exact pool ID by the
+   hook;
+6. a successful simulation of the exact pinned launch transaction;
+7. finalized deployment addresses and runtime code hashes;
+8. a same-block onchain readback of the exact pool, hook, vault, module,
+   recipient, `1,000 / 1,000,000` rate, the final permission mask, seal state and
+   profile identity;
+9. a finalized canary using those exact identities; and
+10. an exact-source provider match for every exclusive component.
+
+Only then may the descriptor change to a public status and set
+`productionLaunchAuthorized: true`. API readiness alone does not pass any of
+the onchain, source, simulation, finality, market-support, or audit gates.
+
+## Status polling
+
+When V2 becomes public, use the single-resource route as the canonical polling
+path:
+
+```text
+GET /v2/custom-launches/{requestId}
+```
+
+The list route may perform a bounded opportunistic reconciliation of pending
+records before returning. It is useful for history, but it is not guaranteed to
+advance every pending item and does not replace single-resource polling.
+
+An `authorized` response is still only a wallet handoff. The controller wallet
+must independently verify the exact chain, sender, Router, value, selector and
+calldata, then separately approve any broadcast. An API key is not signing
+authority.
+
+## Source and product boundaries
+
+A required verification bundle binds exact source bytes, Standard JSON compiler
+input, compiler settings, libraries and constructor arguments into the launch
+intent. “Source verified” is true only after the server records a real provider
+exact match. Launch finality must never be blocked or reversed by an Explorer
+outage.
+
+The V2 profile does not claim:
+
+- a security audit or universal safety;
+- current liquidity or continuing tradability;
+- support by any terminal or router;
+- generic fee claiming for arbitrary hooks;
+- generic creator rewards;
+- buybacks; or
+- correctness of a separate custom module beyond its exact bounded interface.
+
+The current FADE claim adapter is specific to FADE and is not evidence of a
+generic claim or buyback surface for V2 or arbitrary hooks.
+
+Launch provenance, fee enforcement, source exact match, finality, market
+support, claim capability and audit status remain separate evidence axes.

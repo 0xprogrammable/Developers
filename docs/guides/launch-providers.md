@@ -4,7 +4,7 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; the separate Custom Launch API is live.
+Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`. Custom Launch API V1 provenance reads/status remain live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced Launch Profile V2 remains unavailable for public launches; it is pinned only for a private canary, and held writes return `503` with `Retry-After`.
 
 ## Public classification
 

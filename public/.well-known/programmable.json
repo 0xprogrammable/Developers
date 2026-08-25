@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches, with the live Custom Launch API linked separately.",
+  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches, with Custom Launch API V1 read/status state linked separately.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -32,7 +32,7 @@
       "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
       "registryStartBlock": "25701139",
       "registryGeneration": "1",
-      "note": "Custom Launch API is live. Legacy Registry and GitHub submission intake are closed."
+      "note": "Custom Launch API V1 reads and status remain live, but POST is read-only. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "compatibility": {
@@ -46,12 +46,40 @@
   "extensions": {
     "programmable.custom-launch-api": {
       "status": "live",
+      "scope": "provenance-only",
+      "feeEnforcement": "not-established-by-api",
+      "writeStatus": "read-only",
+      "postResponse": {
+        "httpStatus": 409,
+        "code": "CUSTOM_LAUNCH_V1_READ_ONLY",
+        "retryable": false
+      },
       "apiBaseUrl": "https://api.programmable.market",
       "readyzUrl": "https://api.programmable.market/readyz",
       "guideUrl": "https://programmable.market/developers/custom-launch-api-v1.md",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v1.json",
       "apiKeyManagementUrl": "https://programmable.market/developers/api-keys",
       "walletBoundary": "separate-wallet-signature"
+    },
+    "programmable.custom-fee-enforced-launch-profile-v2": {
+      "profileId": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
+      "profileVersion": "2.0.0-rc.1",
+      "launchProfileHash": "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+      "contractPolicyId": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
+      "status": "unavailable",
+      "releaseStage": "release-candidate",
+      "activationStatus": "canary",
+      "productionLaunchAuthorized": false,
+      "statusUrl": "https://developers.programmable.family/api/v2/status",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
+      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
+      "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
+      "heldResponse": {
+        "httpStatus": 503,
+        "retryAfter": "required",
+        "retryable": true
+      },
+      "note": "Custom Launch API V1 reads/status remain live, but POST is read-only. Fee-Enforced V2 is pinned for a private canary; it has no public route, deployment or finalized canary, and held writes return 503."
     },
     "programmable.legacy-v1": {
       "status": "supported",

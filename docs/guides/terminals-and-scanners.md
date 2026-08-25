@@ -21,7 +21,7 @@ The manifest records the historical Classic V2 hook and the current Classic V3 h
 
 ## Current Custom boundary
 
-Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. The separate Custom Launch API is live and prepares Router-based launches under its own authenticated contract.
+Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 provenance reads/status remain live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced Launch Profile V2 is pinned for a private canary but remains publicly unavailable; held writes return `503` with `Retry-After`.
 
 Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 
@@ -55,7 +55,7 @@ For a direct onchain Router index, backfill `eth_getLogs` from the manifest `sta
 
 The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy. A stamp does not establish safety, audit status, liquidity, sellability, or execution support.
 
-Only consistent records from the exact canonical Router qualify through Router V1. Publishing this interface does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. New Custom launch preparation uses the separately documented [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md), not a GitHub approval flow; this remains a read-only terminal integration surface.
+Only consistent records from the exact canonical Router qualify through Router V1. Publishing this interface does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. The separately documented [Custom Launch API V1](https://programmable.market/developers/custom-launch-api-v1.md) currently exposes no write path: POST is read-only, and the closed GitHub approval flow must not be revived. This remains a read-only terminal integration surface.
 
 GMGN's generic `uniswap_v4` and `poolId` discovery can identify the PCAN token or pool as an ordinary market. It does not verify the canonical Router stamp or show that GMGN integrated the Programmable label. Do not treat third-party market metrics as canonical onchain evidence. Verify the stamp through the Router, and read current pool state separately through PoolManager or StateView.
 
@@ -146,7 +146,7 @@ The v2 feed is read-only. It does not return transaction payloads or authorize e
 Read `fees` per record and market path.
 
 - Classic currently includes the 10 bps Programmable share inside the configured trading fee.
-- Future Native Custom official paths add 10 bps on top of the creator-defined market fee only when verified.
+- The canary-stage Custom Fee-Enforced V2 profile specifies an additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool; it is not public.
 - Partner attribution does not imply an active fee. A partner-attributed project without a qualifying path uses zero shares; an active fee-bearing partnership-template path uses exactly 20 bps on one verified basis: 15 bps partner plus 5 bps Programmable, with no additional Native Custom 10 bps.
 
 Never derive the charge mode from `category`, a partner name, or template metadata. Disable verified fee presentation when the rate, basis, currency, recipients, accrual, or claim path cannot be established.

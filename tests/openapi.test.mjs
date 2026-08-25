@@ -52,8 +52,10 @@ describe("OpenAPI v2 contract", () => {
     assert.equal(new Set(operations).size, operations.length);
   });
 
-  test("keeps read-only discovery separate from API-first launch preparation", () => {
-    assert.match(spec.info.description, /API-first write path/u);
+  test("keeps Developer and Custom launch writes fail closed", () => {
+    assert.match(spec.info.description, /409 CUSTOM_LAUNCH_V1_READ_ONLY/u);
+    assert.match(spec.info.description, /503.*Retry-After/us);
+    assert.match(spec.info.description, /pinned for a private\s+canary/u);
     assert.equal(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.const,
@@ -64,7 +66,15 @@ describe("OpenAPI v2 contract", () => {
         .properties.custom.properties.publicSubmissionStatus.description,
       /Legacy Registry and GitHub submission intake status/u,
     );
-    assert.match(spec.paths["/api/v2/status"].get.description, /readiness link/u);
+    assert.match(
+      spec.paths["/api/v2/status"].get.description,
+      /read-only POST state/u,
+    );
+    assert.equal(
+      spec.components.schemas.CustomFeeEnforcedLaunchProfileV2.$ref,
+      "../schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json",
+    );
+    assert.equal(spec.paths["/v2/custom-launches"], undefined);
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });
 
