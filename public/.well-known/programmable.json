@@ -73,9 +73,9 @@
         "cli": {
           "packageName": "@programmable/launch",
           "binary": "programmable-launch",
-          "releaseVersion": "2.0.0",
-          "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
-          "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz"
+          "releaseVersion": "2.0.1",
+          "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
+          "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz"
         }
       },
       "versions": {

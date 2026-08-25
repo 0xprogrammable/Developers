@@ -197,7 +197,7 @@ describe("documentation contract", () => {
     assert.equal(customLaunchApi.publicRelease.apiVersion, "2");
     assert.equal(customLaunchApi.publicRelease.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v2.json");
-    assert.equal(customLaunchApi.publicRelease.cli.releaseVersion, "2.0.0");
+    assert.equal(customLaunchApi.publicRelease.cli.releaseVersion, "2.0.1");
     assert.deepEqual(versions, {
       v1: {
         reads: "live",
@@ -316,9 +316,9 @@ describe("documentation contract", () => {
     );
     assert.match(
       guide,
-      /releases\/tag\/programmable-launch-v2\.0\.0/,
+      /releases\/tag\/programmable-launch-v2\.0\.1/,
     );
-    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0\.tgz/);
+    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.1\.tgz/);
     assert.match(guide, /`submit` and `status` use the authenticated V2 API/i);
     assert.match(guide, /generic fee claiming for arbitrary hooks/i);
     assert.match(guide, /buybacks/i);

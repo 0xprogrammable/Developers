@@ -58,12 +58,12 @@ the maximum custom return delta is exactly `0`, and `customDeltaAccount` is the
 explicit zero address `0x0000000000000000000000000000000000000000`.
 There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
 
-The production CLI is version `2.0.0`, distributed as an immutable GitHub release at
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0`.
+The production CLI is version `2.0.1`, distributed as an immutable GitHub release at
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1`.
 Install the immutable release asset directly:
 
 ```sh
-npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz
+npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz
 ```
 
 The CLI distribution state is `github-release`; it is not an npm registry
