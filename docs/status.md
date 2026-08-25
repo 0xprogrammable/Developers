@@ -16,7 +16,7 @@ prepare Router actions; Registry submission state does not describe that API's a
 | Surface | Category | Network | State | Meaning |
 | --- | --- | --- | --- | --- |
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
-| Router V1 future-launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
+| Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Custom Registry submission intake | `custom` | Ethereum | Prelaunch | Registry-based public submissions are not a live launch source; the Custom Launch API is separate |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active; Registry-based public submission intake remains prelaunch |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |

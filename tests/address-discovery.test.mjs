@@ -38,7 +38,7 @@ describe("documentation contract", () => {
     assert.match(readme, /v2 API is read-only/i);
     assert.match(readme, /programmable-launch-stamp-router-v1\.json/i);
     assert.match(readme, /docs\/reference\/launch-stamp\.md/i);
-    assert.match(readme, /future Programmable Classic and Programmable Custom launches/i);
+    assert.match(readme, /Router-stamped Programmable Classic and Programmable Custom launches/i);
     assert.match(readme, /Finalized PCAN vector/i);
     assert.match(readme, /Historical launches are not backfilled/i);
     assert.doesNotMatch(readme, /Custom public intake/i);

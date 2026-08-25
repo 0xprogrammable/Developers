@@ -20,7 +20,7 @@ meaning of valid records within a supported major version.
 Do not open a public issue for a vulnerability or include secrets, private keys, access tokens, unpublished exploit
 details, or personal data in an issue or pull request.
 
-Use [GitHub's private vulnerability reporting](https://github.com/0xprogrammable/developers/security/advisories/new).
+Use [GitHub's private vulnerability reporting](https://github.com/0xprogrammable/Developers/security/advisories/new).
 If that private route is unavailable, do not disclose the report in a public issue; wait until private reporting is
 available again.
 

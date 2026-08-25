@@ -8,7 +8,7 @@ Ethereum is the only active chain in the current discovery document. Classic dep
 
 Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Registry-based public submission intake remains prelaunch; this does not describe the separate Custom Launch API. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
-The future-launch Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
+The launch stamp Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
 
 ## Trust root
 
@@ -44,9 +44,9 @@ For each enabled Classic deployment:
 
 Multiple enabled deployments can overlap. Deduplicate the normalized launch by `launchId`, not by whichever deployment your scanner encountered first.
 
-## Future launch Router verification
+## Launch stamp Router verification
 
-Router V1 is a separate provenance path for future Classic and future Custom launches. It has no Registry lifecycle and does not change the evidence rules for historical records.
+Router V1 is a separate provenance path for Router-stamped Classic and Custom launches. It has no Registry lifecycle and does not change the evidence rules for historical records.
 
 Accept Router provenance only when all of these checks pass:
 

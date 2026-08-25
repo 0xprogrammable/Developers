@@ -1,6 +1,6 @@
 # Launch stamp Router verification
 
-`ProgrammableLaunchStampRouterV1` is an onchain provenance interface for future Programmable launches. A valid lookup establishes that the exact canonical Router atomically executed and stamped the recorded launch. It also establishes that the recorded v4 pool was uninitialized before route execution and initialized before the stamp was written.
+`ProgrammableLaunchStampRouterV1` is an onchain provenance interface for Router-stamped Programmable launches. A valid lookup establishes that the exact canonical Router atomically executed and stamped the recorded launch. It also establishes that the recorded v4 pool was uninitialized before route execution and initialized before the stamp was written.
 
 It does not universally prove that each Classic component was newly created. It does not establish current pool state or current liquidity, and it does not state that a contract is audited, safe, sellable, tradable, supported by a terminal, or suitable for a transaction.
 
@@ -106,8 +106,8 @@ Generic discovery of the PCAN token or v4 pool through GMGN's `uniswap_v4` and `
 
 Router V1 covers only launches executed through the live Router at or after its published start block:
 
-- future Programmable Classic launches;
-- future Programmable Custom launches; and
+- Programmable Classic launches with a valid Router stamp;
+- Programmable Custom launches with a valid Router stamp; and
 - one v4 market identified by `PoolManager + PoolId` per stamped launch.
 
 Historical Classic or Custom coins are not backfilled. Single Factory launches and direct Classic V3 or Graph Factory calls do not create Router provenance.

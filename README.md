@@ -16,7 +16,7 @@ Create or revoke a wallet-bound key on the [API key management page](https://pro
 An API key cannot sign or broadcast a transaction; the wallet controller must review, sign and broadcast the prepared
 action. The Custom Launch request and response schemas remain owned by the live OpenAPI contract and are not duplicated
 in this read/discovery repository. Read the current versioned requirements in
-[Programmable Launch Policy](https://github.com/0xprogrammable/launch-policy); this repository does not copy those policy
+[Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy); this repository does not copy those policy
 bytes.
 
 ## Start here
@@ -32,13 +32,13 @@ bytes.
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
 | [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md) | Prepare a wallet-bound Custom launch through the separate authenticated API |
 | [Custom Launch API OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) | Generate a client from the canonical live launch contract |
-| [Programmable Launch Policy](https://github.com/0xprogrammable/launch-policy) | Resolve the current versioned requirements without relying on copied policy text |
+| [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) | Resolve the current versioned requirements without relying on copied policy text |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
 
 ## Router-first integration
 
-`ProgrammableLaunchStampRouterV1` is the trust root for future Programmable Classic and Programmable Custom launches on Ethereum. Detection requires the official manifest, an Ethereum RPC endpoint, and the canonical Router.
+`ProgrammableLaunchStampRouterV1` is the trust root for Router-stamped Programmable Classic and Programmable Custom launches on Ethereum. Detection requires the official manifest, an Ethereum RPC endpoint, and the canonical Router.
 
 1. Fetch the live manifest and require a complete `launchStampRouter` entry for the selected chain.
 2. Verify the Router runtime and hosted ABI hashes before decoding data.
@@ -68,8 +68,8 @@ Production consumers must also validate the manifest-published runtime hash, ABI
 
 | Router value | Public label | Scope |
 | --- | --- | --- |
-| `LaunchKindV1.CustomGraph` (`1`) | `Programmable Custom` | Future Custom launches stamped by the canonical Router |
-| `LaunchKindV1.Classic` (`2`) | `Programmable Classic` | Future Classic launches stamped by the canonical Router |
+| `LaunchKindV1.CustomGraph` (`1`) | `Programmable Custom` | Custom launches stamped by the canonical Router |
+| `LaunchKindV1.Classic` (`2`) | `Programmable Classic` | Classic launches stamped by the canonical Router |
 | Unknown, zero, or inconsistent | No Programmable label | Preserve independently known asset data and report provenance as unavailable or indeterminate |
 
 The Classic hook is shared infrastructure and cannot identify one launch. Use token or `PoolManager + poolId` as the interoperable lookup path. Use component lookup only as corroborating evidence for an exclusive component.
@@ -139,7 +139,7 @@ Run the bounded production smoke only when live verification is intentional:
 PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
 ```
 
-Use [GitHub issues](https://github.com/0xprogrammable/developers/issues) for public documentation or integration problems. Follow [SECURITY.md](SECURITY.md) for vulnerabilities. Do not post credentials, private source, or user data.
+Use [GitHub issues](https://github.com/0xprogrammable/Developers/issues) for public documentation or integration problems. Follow [SECURITY.md](SECURITY.md) for vulnerabilities. Do not post credentials, private source, or user data.
 
 ## License
 

@@ -15,7 +15,7 @@ integration to one launcher address.
 | `ethereum/stock-paired-launcher.json` | Stock-Paired v1, v2, and v3 launch events |
 | `ethereum/stock-paired-coordinator.json` | Stock-Paired ETH coordinator event |
 | `ethereum/programmable-custom-registry-v1.json` | Full normative Custom Registry V1 ABI |
-| `ethereum/programmable-launch-stamp-router-v1.json` | Frozen Router V1 verification ABI for future Classic and Custom launches; authoritative only when its hash and deployment identity match top-level `launchStampRouter` |
+| `ethereum/programmable-launch-stamp-router-v1.json` | Frozen Router V1 verification ABI for Router-stamped Classic and Custom launches; authoritative only when its hash and deployment identity match top-level `launchStampRouter` |
 
 The Router file is the exact 44-item ABI from Forge artifact commit
 `0a7134bbb912222639627fb9078df2f8dd3a6c38`. Its published ABI-file SHA-256 is
