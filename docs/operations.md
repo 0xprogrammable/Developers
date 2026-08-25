@@ -84,6 +84,8 @@ The schema permits `orphaned`, but do not assume the current API emits a complet
 - Use `page.nextCursor` only to continue the same traversal.
 - Store `page.resumeCursor` only after the represented traversal has been durably applied.
 - Send that resume cursor as `after` on the next incremental poll.
+- If the Router Custom identity commitment changes, an `after` poll replays the bounded Router identity set; deduplicate it by `launchId` before committing the new resume cursor.
+- A Router commitment change during page traversal fails that traversal closed. Restart from the last durable resume cursor instead of mixing source boundaries.
 - Upsert launch records by `launchId`.
 - Make repeated pages harmless.
 - Store a present ERC-20 as chain ID plus address; store project-only identity as `projectId`, `launchId`, and authenticated asset namespace/value references.

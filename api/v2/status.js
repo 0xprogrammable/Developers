@@ -1,6 +1,6 @@
-import { feedStatus } from "../../server/dataset.js";
 import {
   developerManifestV2,
+  feedStatusV2,
   getV2Dataset,
   serviceStatusV2,
 } from "../../server/v2-dataset.js";
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       serviceStatusV2(dataset.status, manifest),
       {
       cacheControl: "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
-      apiStatus: feedStatus(dataset.status.status),
+      apiStatus: feedStatusV2(dataset),
       },
     );
   } catch {

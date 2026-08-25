@@ -6,6 +6,10 @@ import {
   validateManifestSemantics,
 } from "./lib/semantics.mjs";
 import { readBoundedBytes } from "../server/bounded-body.js";
+import {
+  createRouterCustomAcceptedMembership,
+  readRouterCustomRecords,
+} from "../server/router-custom.js";
 
 const configuredBase = process.env.PROGRAMMABLE_API_BASE;
 if (!configuredBase) {
@@ -94,11 +98,20 @@ assertNoFindings(
   validateManifestSemantics(manifestResult.value),
   "live manifest",
 );
+const acceptedRouterCustom = await readRouterCustomRecords(manifestResult.value);
+const acceptedRouterCustomMembership = createRouterCustomAcceptedMembership(
+  acceptedRouterCustom.records,
+  manifestResult.value,
+);
+const semanticOptions = { acceptedRouterCustomMembership };
 
 const feedResult = await boundedJson("/launches?limit=100", "launch-feed.schema.json");
 assertNoFindings(validateFeedSemantics(feedResult.value), "live launch feed");
 for (const [index, launch] of feedResult.value.items.entries()) {
-  assertNoFindings(validateLaunchSemantics(launch), `live launch ${index}`);
+  assertNoFindings(
+    validateLaunchSemantics(launch, semanticOptions),
+    `live launch ${index}`,
+  );
 }
 if (feedResult.value.status === "ready" && feedResult.value.snapshot) {
   assertRecent(
@@ -126,7 +139,10 @@ if (feedResult.value.page.hasMore) {
     throw new Error("page continuation repeated a launch from page one");
   }
   for (const [index, launch] of nextResult.value.items.entries()) {
-    assertNoFindings(validateLaunchSemantics(launch), `live launch page two item ${index}`);
+    assertNoFindings(
+      validateLaunchSemantics(launch, semanticOptions),
+      `live launch page two item ${index}`,
+    );
   }
 }
 
@@ -139,7 +155,10 @@ if (feedResult.value.items[0]) {
   if (detailResult.value.launchId !== launch.launchId) {
     throw new Error("launch detail does not match the feed record");
   }
-  assertNoFindings(validateLaunchSemantics(detailResult.value), "live launch detail");
+  assertNoFindings(
+    validateLaunchSemantics(detailResult.value, semanticOptions),
+    "live launch detail",
+  );
 }
 
 await boundedJson("/token-list", "token-list.schema.json");

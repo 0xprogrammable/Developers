@@ -70,13 +70,14 @@ Version 1 has no retirement date unless an official release note states one.
 
 Version 2 is the default API for new integrations.
 
-- `classic` means a launch event from an enabled Classic launcher in the v2 manifest.
-- `custom` means a launch event from the Custom Registry in the v2 manifest.
+- `classic` means a launch authenticated through an enabled Classic launcher in the v2 manifest.
+- `custom` means a Programmable Custom launch authenticated either by an accepted event from the Custom Registry in the v2 manifest or by a consistent finalized `CustomGraph` stamp from the exact canonical Router in that manifest.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Provider, factory, template, token, hook and market contracts may vary without changing the public Custom category.
 - Partner and template attribution remain secondary provenance and never create another public category.
+- `category` is the stable product taxonomy, not a substitute for provenance. Consumers must inspect `extensions["programmable/classification"].basis` and the corresponding Registry or Router evidence rather than infer Registry acceptance from `category: "custom"`.
 
-Within version 2, those meanings are immutable. A future change to either classification requires another major API version.
+Within version 2, those meanings are immutable. Registry and canonical-Router evidence are additive source-provenance paths under the unchanged `custom` category; neither reinterprets an existing record or authorizes a third category. A future change to either classification requires another major API version.
 
 ## Immutable releases
 

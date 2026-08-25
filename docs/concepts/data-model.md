@@ -156,7 +156,7 @@ v2 has exactly two public categories:
 - `classic`
 - `custom`
 
-`classic` requires an event from a Classic launcher in the v2 manifest. `custom` requires an event from the Custom Registry in the v2 manifest. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Historical Stock-Paired launches are excluded from v2.
+`classic` requires an event from a Classic launcher in the v2 manifest. `custom` requires either an accepted event from the Custom Registry in the v2 manifest or a consistent finalized `CustomGraph` stamp from its exact canonical Router. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Historical Stock-Paired launches are excluded from v2. The category is not provenance: use `extensions["programmable/classification"].basis` to select the Registry or Router verification path.
 
 ## Capabilities
 

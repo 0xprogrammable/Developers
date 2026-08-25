@@ -9,7 +9,7 @@ Expose exactly two filters and labels:
 | API value | Display label | Include |
 | --- | --- | --- |
 | `category=classic` | `Programmable Classic` | Current and historical Classic releases |
-| `category=custom` | `Programmable Custom` | Launches accepted through the Custom Registry listed in the v2 manifest |
+| `category=custom` | `Programmable Custom` | Launches accepted through the manifest-listed Custom Registry or finalized with `CustomGraph` by the canonical Router |
 
 Do not expose internal model IDs as additional public categories. A Programmable label establishes recognized launch provenance. It is not a universal audit, safety, liquidity, or execution guarantee.
 
@@ -25,7 +25,7 @@ Custom Registry discovery is live and the v2 Custom feed publishes finalized app
 
 Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 
-After registry activation, every accepted Custom launch uses the same `custom` category even when its token, hook, factory, provider, market and template contracts differ from every prior launch. Those values stay on the individual record. The terminal classification comes from the registry event and its normalized v2 record.
+Every recognized Custom launch uses the same `custom` category even when its token, hook, factory, provider, market and template contracts differ from every prior launch. Those values stay on the individual record. Registry records derive the classification from the accepted Registry event; Router records derive it from a consistent finalized `CustomGraph` stamp. Neither lane may infer the label from metadata.
 
 The baseline integration discovers every recognized launch. Charting, quotes, simulation, and execution are separate per-market capabilities and may be unavailable.
 
@@ -43,9 +43,11 @@ Do not hard-code launcher or registry addresses. The manifest is what allows com
 For direct onchain consumers, keep the existing deployment sources and the live launch-stamp Router source separate. The manifest marks Router V1 live from block `25717612` with `64` finality confirmations. Its finalized onchain canary covers `CustomGraph`; no separate Classic onchain canary is published. A future Classic label still requires a consistent stamp from the live Router.
 
 1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
-2. Existing `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
+2. Registry-backed `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
 3. Router V1 launches require a nonzero direct lookup or a valid launch event from the exact top-level `launchStampRouter` address in the v2 manifest. Router V1 does not backfill historical launches.
 4. Router-stamped `Programmable Classic` and `Programmable Custom` labels share that one Router trust root. Read the stamp record after a token or `(PoolManager, PoolId)` lookup: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; reject `Invalid = 0`. Do not guess the class from token metadata, a hook, or a factory call.
+
+The hosted v2 launch feed also projects finalized canonical-Router Custom token identities through the Website's bounded Router snapshot, after recomputing its canonical identity commitment and validating its manifest binding, ordering, uniqueness, and finality boundary. A separate digest-pinned last-known-good snapshot survives source outages. This projection is independent from Custom Registry freshness. It preserves token and recorded pool identity when enrichment is missing, but leaves current market support, supply, and fee policy unavailable unless another exact evidence source establishes them. While only last-known-good data is available, the feed stays degraded and absence is not authoritative.
 
 For an interoperable Router point lookup, use the manifest-advertised getter for a token or `PoolManager + PoolId`. Scope every nonzero launch ID with the manifest chain ID and Router address. The Classic hook is shared, so its address must never identify or classify one Classic launch. `launchIdByComponent` may corroborate an exclusive component; for every address-based lookup, require `stampProof` to return the same launch ID and stamp hash. Resolve one finalized or caller-supplied canonical block to a number and hash. Prefer EIP-1898 hash-bound reads with `requireCanonical: true`; otherwise re-read that height after the complete verification and require the hash to be unchanged. Use HTTPS for a remote RPC endpoint; plaintext HTTP is suitable only for loopback development. The lookup needs no Programmable server, database, Registry, or indexer. See [Launch stamp Router verification](../reference/launch-stamp.md).
 

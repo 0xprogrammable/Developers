@@ -28,6 +28,7 @@ const jsonRoots = [
   "compatibility",
   "deployments",
   "event-sets",
+  "snapshots",
   "specifications",
 ];
 let jsonCount = 0;
@@ -113,7 +114,7 @@ assertValid(
 );
 assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2.json");
 if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
-  throw new Error("Version 2 deployment inventory must keep Custom discovery Registry-derived");
+  throw new Error("Version 2 deployment inventory must remain Classic-only; Custom discovery uses its separate Registry and Router roots");
 }
 
 const v2Core = await readJson(
@@ -122,6 +123,8 @@ const v2Core = await readJson(
 if (
   v2Core.classification?.classic?.label !== "Programmable Classic" ||
   v2Core.classification?.custom?.label !== "Programmable Custom" ||
+  v2Core.classification?.custom?.requiredEvidence !==
+    "programmable-custom-registry-event-or-canonical-launch-stamp-router" ||
   !v2Core.excludedModels?.includes("stock-paired")
 ) {
   throw new Error("Version 2 classification contract is incomplete");

@@ -17,6 +17,10 @@ info:
     Its `publicSubmissionStatus` field describes only
     the closed legacy Registry and GitHub submission intake. Historical Stock-Paired
     launches are not part of the version 2 Programmable Custom classification.
+    `category: custom` is the stable product taxonomy, not a claim of Registry
+    acceptance. Consumers must inspect
+    `extensions["programmable/classification"].basis` and verify the Registry
+    or canonical-Router evidence named by that basis.
 
     Within v2, existing fields keep their type and meaning. New deployments,
     capabilities and market kinds are additive. Consumers must ignore unknown
@@ -179,6 +183,16 @@ paths:
         for continuing the current page traversal. `after` and `cursor` must
         not be sent together. Coverage gaps do not hide recognized records:
         the response remains HTTP 200 with `status: degraded` or `unavailable`.
+        Finalized canonical-Router Custom records are an independent provenance
+        lane from the Custom Registry. Their token and pool identities remain
+        present through a bounded source whose canonical commitment is
+        recomputed before publication, plus a digest-pinned last-known-good
+        fallback for source outages. Absent fee or supply evidence stays
+        explicitly unavailable. The feed remains degraded and absence is not
+        authoritative until Router coverage is current. A Router record's
+        absent Registry fee policy is semantically valid only when its exact
+        entry and source-boundary digests are members of the accepted source
+        snapshot; source-shaped JSON alone is never sufficient.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"
@@ -288,8 +302,11 @@ paths:
         Returns a token-list-compatible projection for integrations that need
         token identity and metadata. The top-level `status` reports projection
         quality, and recognized complete token identities remain present when
-        unrelated coverage or market enrichment is incomplete. Use the launch
-        feed for markets, capabilities, provenance, finality and complete fee disclosure.
+        unrelated coverage or market enrichment is incomplete. This includes
+        finalized canonical-Router Custom tokens with complete token identity.
+        Use the launch feed for markets, capabilities, provenance, finality and
+        complete fee disclosure; the compatibility projection does not infer a
+        fee from category or Router provenance.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"

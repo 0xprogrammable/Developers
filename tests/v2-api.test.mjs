@@ -62,6 +62,28 @@ function launch(block, options = {}) {
   };
 }
 
+function routerLaunch(block) {
+  const value = launch(block, { category: "custom" });
+  value.extensions["programmable/router-stamp-v1"] = {
+    sourceIdentityCommitment: `sha256:${"a".repeat(64)}`,
+  };
+  return value;
+}
+
+function routerStatus(identityCommitment, asOfBlock = "100000") {
+  return {
+    source: "canonical-launch-stamp-router",
+    status: "current",
+    generatedAt: "2026-08-06T00:00:00.000Z",
+    asOfBlock,
+    asOfBlockHash: `0x${"b".repeat(64)}`,
+    sourceIdentityCommitment: identityCommitment,
+    snapshotSha256: `sha256:${"c".repeat(64)}`,
+    verifiedIdentityCount: 1,
+    publishedIdentityCount: 1,
+  };
+}
+
 function dataset(records, overrides = {}) {
   return {
     records,
@@ -199,6 +221,119 @@ async function call(handler, query = {}, url = "/api/v2/launches") {
 }
 
 describe("v2 API contract", () => {
+  test("replays Router identities when the commitment changes so a late old launch is not lost", () => {
+    const commitmentA = `sha256:${"1".repeat(64)}`;
+    const commitmentB = `sha256:${"2".repeat(64)}`;
+    const newest = launch(200);
+    const existingRouter = routerLaunch(150);
+    const first = launchFeedPayload(dataset([newest, existingRouter], {
+      routerCustom: routerStatus(commitmentA, "200"),
+    }), { limit: 100 });
+
+    const lateOldRouter = routerLaunch(100);
+    const polled = launchFeedPayload(
+      dataset([newest, existingRouter, lateOldRouter], {
+        routerCustom: {
+          ...routerStatus(commitmentB, "201"),
+          verifiedIdentityCount: 2,
+          publishedIdentityCount: 2,
+        },
+      }),
+      {
+        limit: 1,
+        after: decodeResumeCursor(first.page.resumeCursor),
+      },
+    );
+
+    assert.deepEqual(polled.items.map((item) => item.launchId), [
+      existingRouter.launchId,
+    ]);
+    assert.ok(polled.page.nextCursor);
+    const replayRemainder = launchFeedPayload(
+      dataset([newest, existingRouter, lateOldRouter], {
+        routerCustom: {
+          ...routerStatus(commitmentB, "201"),
+          verifiedIdentityCount: 2,
+          publishedIdentityCount: 2,
+        },
+      }),
+      {
+        limit: 1,
+        cursor: decodePageCursor(polled.page.nextCursor),
+      },
+    );
+    assert.deepEqual(replayRemainder.items.map((item) => item.launchId), [
+      lateOldRouter.launchId,
+    ]);
+    assert.equal(replayRemainder.page.nextCursor, null);
+    assert.equal(
+      decodeResumeCursor(replayRemainder.page.resumeCursor)
+        .routerIdentityCommitment,
+      commitmentB,
+    );
+  });
+
+  test("fails a page traversal closed when the Router commitment changes", () => {
+    const records = [routerLaunch(200), routerLaunch(100)];
+    const first = launchFeedPayload(dataset(records, {
+      routerCustom: {
+        ...routerStatus(`sha256:${"3".repeat(64)}`, "200"),
+        verifiedIdentityCount: 2,
+        publishedIdentityCount: 2,
+      },
+    }), { category: "custom", limit: 1 });
+    assert.ok(first.page.nextCursor.length <= 1_024);
+
+    assert.throws(
+      () => launchFeedPayload(dataset(records, {
+        routerCustom: {
+          ...routerStatus(`sha256:${"4".repeat(64)}`, "201"),
+          verifiedIdentityCount: 2,
+          publishedIdentityCount: 2,
+        },
+      }), {
+        category: "custom",
+        limit: 1,
+        cursor: decodePageCursor(first.page.nextCursor),
+      }),
+      /Router source changed during page traversal/,
+    );
+  });
+
+  test("reports per-source boundaries and a conservative aggregate snapshot", () => {
+    const commitment = `sha256:${"5".repeat(64)}`;
+    const current = dataset([launch(300), routerLaunch(200)], {
+      coverage: {
+        status: "complete",
+        checkpoint: {
+          blockNumber: 300,
+          blockHash: `0x${"a".repeat(64)}`,
+          finality: "confirmed",
+        },
+      },
+      routerCustom: routerStatus(commitment, "200"),
+    });
+    const feed = launchFeedPayload(current, { limit: 100 });
+
+    assert.equal(feed.snapshot.blockNumber, "200");
+    assert.equal(feed.snapshot.blockHash, `0x${"b".repeat(64)}`);
+    assert.equal(feed.snapshot.finality, "confirmed");
+    assert.deepEqual(feed.snapshot.sources, {
+      classicIndexer: {
+        blockNumber: "300",
+        blockHash: `0x${"a".repeat(64)}`,
+        finality: "confirmed",
+      },
+      customRegistry: { highWaterGeneration: "0" },
+      routerCustom: {
+        blockNumber: "200",
+        blockHash: `0x${"b".repeat(64)}`,
+        finality: "finalized",
+        identityCommitment: commitment,
+      },
+    });
+  });
+
   test("keeps Custom prelaunch empty while serving complete Classic discovery", async () => {
     const current = dataset([launch(10)]);
     const handler = createLaunchesHandler(async () => current);

@@ -11,7 +11,7 @@
     },
     "custom": {
       "label": "Programmable Custom",
-      "requiredEvidence": "programmable-custom-registry-event"
+      "requiredEvidence": "programmable-custom-registry-event-or-canonical-launch-stamp-router"
     }
   },
   "excludedModels": [

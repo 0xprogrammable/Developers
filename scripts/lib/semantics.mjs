@@ -1,5 +1,7 @@
 import { isExactCustomRegistryGenesisCanary } from
   "../../server/genesis-canary.js";
+import { isAcceptedRouterStampedCustomRecord } from
+  "../../server/router-custom.js";
 
 export const PLATFORM_FEE_RECIPIENT =
   "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
@@ -159,16 +161,29 @@ function executableMetadataFindings(value, path = "") {
   return findings;
 }
 
-function validateV2FeePolicy(launch) {
+function isRouterStampedCustomLaunch(launch, acceptedRouterCustomMembership) {
+  return isAcceptedRouterStampedCustomRecord(
+    launch,
+    acceptedRouterCustomMembership,
+  );
+}
+
+function validateV2FeePolicy(launch, acceptedRouterCustomMembership) {
   const findings = [];
   const policy = launch.feePolicy;
   const fees = launch.fees ?? [];
   if (!policy) {
-    if (launch.category === "custom") {
+    if (
+      launch.category === "custom" &&
+      !(isRouterStampedCustomLaunch(
+        launch,
+        acceptedRouterCustomMembership,
+      ) && fees.length === 0)
+    ) {
       findings.push(finding(
         "FEE_POLICY_REQUIRED",
         "/feePolicy",
-        "Every v2 Custom record must disclose one closed fee policy",
+        "Every v2 Custom record needs a closed fee policy unless a provenance-only Router record explicitly reports the policy unavailable",
       ));
     }
     return findings;
@@ -307,7 +322,7 @@ function validateV2FeePolicy(launch) {
   return findings;
 }
 
-function validateV2IdentityAndReview(launch) {
+function validateV2IdentityAndReview(launch, acceptedRouterCustomMembership) {
   const findings = [];
   const expectedLabel = launch.category === "classic"
     ? "Programmable Classic"
@@ -349,6 +364,7 @@ function validateV2IdentityAndReview(launch) {
   const exactGenesisCanary = isExactCustomRegistryGenesisCanary(launch);
   const materializedCustom = launch.category === "custom" &&
     !exactGenesisCanary &&
+    !isRouterStampedCustomLaunch(launch, acceptedRouterCustomMembership) &&
     ["observed", "live", "paused", "retired", "revoked"].includes(
       launch.launch?.status,
     );
@@ -449,7 +465,10 @@ function validateV2IdentityAndReview(launch) {
   return findings;
 }
 
-export function validateLaunchSemantics(launch) {
+export function validateLaunchSemantics(
+  launch,
+  { acceptedRouterCustomMembership = null } = {},
+) {
   const findings = [];
   const capabilities = launch.capabilities ?? [];
   const markets = launch.markets ?? [];
@@ -532,8 +551,14 @@ export function validateLaunchSemantics(launch) {
   }
 
   if (isV2) {
-    findings.push(...validateV2IdentityAndReview(launch));
-    findings.push(...validateV2FeePolicy(launch));
+    findings.push(...validateV2IdentityAndReview(
+      launch,
+      acceptedRouterCustomMembership,
+    ));
+    findings.push(...validateV2FeePolicy(
+      launch,
+      acceptedRouterCustomMembership,
+    ));
   }
 
   const lifecycle = launch.launch?.status;

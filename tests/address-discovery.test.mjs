@@ -12,7 +12,7 @@ describe("documentation contract", () => {
   test("keeps the frozen v2 launch and compatibility contracts byte-identical", async () => {
     for (const [file, expected] of [
       ["schemas/v2/launch.schema.json", "1cc15f9b63d26a6b2422862f02e601207da7495237354137a1f2fd88bb2bf05f"],
-      ["compatibility/core-v2.json", "fa3e8da7da7dace4b72b8319bea9a2c97809a06187348bea9df897358f6d0fe5"],
+      ["compatibility/core-v2.json", "e863d39d25ff040f2d7a5c100d354019a11aaca8b102686e67ea0fe4e0be60b0"],
     ]) {
       const bytes = await readFile(path.join(REPOSITORY_ROOT, file));
       assert.equal(createHash("sha256").update(bytes).digest("hex"), expected, file);
@@ -43,6 +43,39 @@ describe("documentation contract", () => {
     assert.match(readme, /Historical launches are not backfilled/i);
     assert.doesNotMatch(readme, /Custom public intake/i);
     assert.doesNotMatch(readme, /self-service launch flow/i);
+  });
+
+  test("keeps two v2 categories while binding Custom to explicit provenance bases", async () => {
+    const [versioning, migration, reference, openapi, core] = await Promise.all([
+      readFile(path.join(REPOSITORY_ROOT, "VERSIONING.md"), "utf8"),
+      readFile(
+        path.join(REPOSITORY_ROOT, "docs/migrations/v1-to-v2.md"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "docs/reference/http-api.md"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "openapi/programmable-v2.yaml"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "compatibility/core-v2.json"),
+        "utf8",
+      ).then(JSON.parse),
+    ]);
+    assert.deepEqual(core.publicCategories, ["classic", "custom"]);
+    assert.equal(
+      core.classification.custom.requiredEvidence,
+      "programmable-custom-registry-event-or-canonical-launch-stamp-router",
+    );
+    for (const source of [versioning, migration, reference, openapi]) {
+      assert.match(source, /classification.*basis/is);
+      assert.match(source, /Registry.*Router|Router.*Registry/is);
+    }
+    assert.match(reference, /accepted Router snapshot/i);
+    assert.match(openapi, /source-shaped JSON alone is never sufficient/i);
   });
 
   test("never presents the read-only feed as transaction authorization", async () => {

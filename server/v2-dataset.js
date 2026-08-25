@@ -12,6 +12,12 @@ import {
   REGISTRY_V4_PRODUCER_SCHEMA,
   validateRegistryProjectionEnvelopeV4,
 } from "./registry-v4.js";
+import {
+  carryRouterCustomTrust,
+  isRouterStampedCustom,
+  isTrustedRouterStampedCustomRecord,
+  readRouterCustomRecords,
+} from "./router-custom.js";
 
 let manifestPromise = null;
 
@@ -168,24 +174,29 @@ export function isV2PublicLaunch(record, manifest = null) {
   if (record?.category === "classic") {
     return record.launch?.modelId === "classic";
   }
-  return isRegisteredCustom(record, manifest);
+  return isRouterStampedCustom(record, manifest) ||
+    isRegisteredCustom(record, manifest);
 }
 
 function classification(record) {
   const isClassic = record.category === "classic";
+  const isRouterCustom = !isClassic &&
+    isTrustedRouterStampedCustomRecord(record);
   return {
     namespace: "programmable",
     category: record.category,
     label: isClassic ? "Programmable Classic" : "Programmable Custom",
     basis: isClassic
       ? "recognized-classic-launcher-event"
-      : "programmable-custom-registry-event",
+      : isRouterCustom
+        ? "canonical-launch-stamp-router"
+        : "programmable-custom-registry-event",
   };
 }
 
 export function projectV2Record(record) {
   const isClassic = record.category === "classic";
-  return {
+  return carryRouterCustomTrust(record, {
     ...record,
     schemaVersion: API_V2_SCHEMA_VERSION,
     platformId: "programmable",
@@ -200,7 +211,7 @@ export function projectV2Record(record) {
       ...record.extensions,
       "programmable/classification": classification(record),
     },
-  };
+  });
 }
 
 export function publicLaunchV2(record) {
@@ -209,7 +220,7 @@ export function publicLaunchV2(record) {
     registryV4Envelope: _registryV4Envelope,
     ...publicRecord
   } = record;
-  return publicRecord;
+  return carryRouterCustomTrust(record, publicRecord);
 }
 
 export function customRegistryGenesisCanaryRecord() {
@@ -294,6 +305,7 @@ export function projectV2Dataset(dataset, manifest = null) {
     .filter((record) =>
       isV2PublicLaunch(record, manifest) &&
       (record.category !== "custom" ||
+        isRouterStampedCustom(record, manifest) ||
         (customRegistryLive &&
           (isExactCustomRegistryGenesisCanary(record)
             ? baselineReady
@@ -350,12 +362,56 @@ export function projectV2Dataset(dataset, manifest = null) {
   };
 }
 
+export function mergeRouterCustomRecords(dataset, routerCustom) {
+  const existingLaunchIds = new Set(
+    dataset.records.map((record) => record.launchId.toLowerCase()),
+  );
+  const existingTokens = new Set(
+    dataset.records
+      .map((record) => record.token?.address?.toLowerCase())
+      .filter(Boolean),
+  );
+  for (const record of routerCustom.records) {
+    if (
+      existingLaunchIds.has(record.launchId.toLowerCase()) ||
+      existingTokens.has(record.token.address.toLowerCase())
+    ) {
+      throw new Error("Router Custom identity conflicts with another public source");
+    }
+  }
+  const records = [...routerCustom.records, ...dataset.records]
+    .sort((left, right) => right.sortKey.localeCompare(left.sortKey));
+  return {
+    ...dataset,
+    records,
+    status: {
+      ...dataset.status,
+      routerCustom: {
+        source: "canonical-launch-stamp-router",
+        status: routerCustom.status,
+        generatedAt: routerCustom.generatedAt,
+        asOfBlock: routerCustom.asOfBlock,
+        asOfBlockHash: routerCustom.asOfBlockHash,
+        sourceIdentityCommitment: routerCustom.sourceIdentityCommitment,
+        snapshotSha256: routerCustom.snapshotSha256,
+        verifiedIdentityCount: routerCustom.verifiedIdentityCount,
+        publishedIdentityCount: routerCustom.records.length,
+      },
+    },
+  };
+}
+
 export async function getV2Dataset() {
   const [dataset, manifest] = await Promise.all([
     getDataset(),
     developerManifestV2(),
   ]);
-  return projectV2Dataset(seedCustomRegistryBaseline(dataset), manifest);
+  const seeded = seedCustomRegistryBaseline(dataset);
+  const routerCustom = await readRouterCustomRecords(manifest);
+  return projectV2Dataset(
+    mergeRouterCustomRecords(seeded, routerCustom),
+    manifest,
+  );
 }
 
 export function isV2DatasetPublishable(dataset, category = null) {
@@ -365,6 +421,13 @@ export function isV2DatasetPublishable(dataset, category = null) {
   );
   if (!classicReady) return false;
   if (category === "classic") return true;
+  const router = dataset.status.routerCustom;
+  if (router && (
+    router.status !== "current" ||
+    !Number.isSafeInteger(router.verifiedIdentityCount) ||
+    !Number.isSafeInteger(router.publishedIdentityCount) ||
+    router.verifiedIdentityCount !== router.publishedIdentityCount
+  )) return false;
   const publication = dataset.status.customRegistryPublication;
   if (publication?.status !== "live") return true;
   if (publication.requiresLiveSource === true &&
@@ -386,8 +449,20 @@ export function feedStatusV2(dataset, category = null) {
     category !== "classic" &&
     publication?.status === "live" &&
     publication.publicationReady !== true;
+  const router = dataset.status.routerCustom;
+  const routerCoverageIncomplete = category !== "classic" && Boolean(
+    router && (
+      router.status !== "current" ||
+      !Number.isSafeInteger(router.verifiedIdentityCount) ||
+      !Number.isSafeInteger(router.publishedIdentityCount) ||
+      router.verifiedIdentityCount !== router.publishedIdentityCount
+    )
+  );
 
-  if (!classicCoverageReady || customPublicationIncomplete || classic === "unavailable") {
+  if (
+    !classicCoverageReady || customPublicationIncomplete ||
+    routerCoverageIncomplete || classic === "unavailable"
+  ) {
     return selectedRecords.length > 0 ? "degraded" : "unavailable";
   }
   if (
@@ -424,9 +499,16 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       ? "degraded"
       : "unavailable";
   const customLive = customRegistryStatus === "live";
+  const router = status.routerCustom;
+  const routerReady = Boolean(
+    router?.status === "current" &&
+      Number.isSafeInteger(router.verifiedIdentityCount) &&
+      Number.isSafeInteger(router.publishedIdentityCount) &&
+      router.verifiedIdentityCount === router.publishedIdentityCount,
+  );
   const customFeed = customLive
     ? status.customRegistryPublication?.publicationReady === true
-      ? routesAvailable
+      ? routesAvailable && (!router || routerReady)
         ? feedStatus(status.status)
         : publishedCustom > 0
           ? "degraded"
@@ -462,7 +544,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches are discoverable. Custom Launch API V1 reads and status remain live, but POST is read-only; legacy Registry and GitHub submission intake are closed."
+          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V1 reads and status remain live, but POST is read-only; legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
     },
     customLaunchApi: {
@@ -692,6 +774,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
     chain: status.chain,
     coverage: status.coverage,
     customRegistry: status.customRegistry,
+    ...(router ? { routerCustom: router } : {}),
     // Keep the publication gate visible to status consumers.  The projected
     // dataset already computes this independently from the source snapshot;
     // dropping it here makes a Gen1 canary look indistinguishable from a

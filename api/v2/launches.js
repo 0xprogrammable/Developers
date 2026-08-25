@@ -23,16 +23,96 @@ import {
 
 const EMPTY_HIGH_WATER =
   "0000000000000000:0000000000:0000000000:0x0000000000000000000000000000000000000000";
+const ROUTER_IDENTITY_COMMITMENT_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const FINALITY_RANK = new Map([
+  ["observed", 0],
+  ["confirmed", 1],
+  ["finalized", 2],
+]);
 
-function currentSnapshot(dataset) {
-  const checkpoint = dataset.status.coverage.checkpoint;
-  if (!checkpoint) return null;
+function routerSourceBoundary(dataset, category) {
+  if (category === "classic") return null;
+  const router = dataset.status.routerCustom;
+  if (router === null || router === undefined) return null;
+  if (
+    typeof router.asOfBlock !== "string" ||
+    !/^(0|[1-9][0-9]*)$/.test(router.asOfBlock) ||
+    !/^0x[0-9a-fA-F]{64}$/.test(router.asOfBlockHash ?? "") ||
+    !ROUTER_IDENTITY_COMMITMENT_PATTERN.test(
+      router.sourceIdentityCommitment ?? "",
+    )
+  ) {
+    throw new Error("v2 Router source boundary is invalid");
+  }
   return {
-    blockNumber: String(checkpoint.blockNumber),
-    blockHash: checkpoint.blockHash,
+    blockNumber: router.asOfBlock,
+    blockHash: router.asOfBlockHash,
+    finality: "finalized",
+    identityCommitment: router.sourceIdentityCommitment,
+  };
+}
+
+function currentSnapshot(
+  dataset,
+  category,
+  registryHighWaterGeneration,
+  routerSource,
+) {
+  const checkpoint = dataset.status.coverage.checkpoint;
+  const candidates = [];
+  const classicSource = checkpoint
+    ? {
+        blockNumber: String(checkpoint.blockNumber),
+        blockHash: checkpoint.blockHash,
+        finality: checkpoint.finality,
+      }
+    : null;
+  if (checkpoint) {
+    candidates.push(classicSource);
+  }
+  if (routerSource) {
+    candidates.push({
+      blockNumber: routerSource.blockNumber,
+      blockHash: routerSource.blockHash,
+      finality: routerSource.finality,
+    });
+  }
+  if (candidates.length === 0) return null;
+  if (candidates.some((candidate) => !FINALITY_RANK.has(candidate.finality))) {
+    throw new Error("v2 source finality is invalid");
+  }
+  candidates.sort((left, right) => {
+    const leftBlock = BigInt(left.blockNumber);
+    const rightBlock = BigInt(right.blockNumber);
+    return leftBlock < rightBlock ? -1 : leftBlock > rightBlock ? 1 : 0;
+  });
+  const selected = candidates[0];
+  const sameBoundary = candidates.filter((candidate) =>
+    candidate.blockNumber === selected.blockNumber);
+  if (sameBoundary.some((candidate) =>
+    candidate.blockHash.toLowerCase() !== selected.blockHash.toLowerCase())) {
+    throw new Error("v2 source boundaries conflict at the same block");
+  }
+  const conservativeFinality = candidates.reduce(
+    (lowest, candidate) =>
+      FINALITY_RANK.get(candidate.finality) < FINALITY_RANK.get(lowest)
+        ? candidate.finality
+        : lowest,
+    "finalized",
+  );
+  return {
+    blockNumber: selected.blockNumber,
+    blockHash: selected.blockHash,
     indexedAt: dataset.status.generatedAt,
-    finality: checkpoint.finality,
-    customRegistryHighWaterGeneration: currentRegistryHighWater(dataset),
+    finality: conservativeFinality,
+    customRegistryHighWaterGeneration: registryHighWaterGeneration,
+    sources: {
+      classicIndexer: classicSource,
+      customRegistry: category === "classic"
+        ? null
+        : { highWaterGeneration: registryHighWaterGeneration },
+      routerCustom: routerSource,
+    },
   };
 }
 
@@ -49,7 +129,8 @@ function greatestGeneration(left, right) {
   return BigInt(left) > BigInt(right) ? left : right;
 }
 
-function currentRegistryHighWater(dataset) {
+function currentRegistryHighWater(dataset, category = null) {
+  if (category === "classic") return "0";
   const sourceValue = dataset.status.customRegistry?.highWaterGeneration;
   let highest = typeof sourceValue === "string" && /^(0|[1-9]\d*)$/.test(sourceValue)
     ? sourceValue
@@ -68,10 +149,20 @@ function withinRegistryHighWater(record, highWaterGeneration) {
   return generation === null || BigInt(generation) <= BigInt(highWaterGeneration);
 }
 
-function afterBoundary(record, sortHighWater, registryHighWaterGeneration) {
+function isRouterCustomRecord(record) {
+  return Boolean(record.extensions?.["programmable/router-stamp-v1"]);
+}
+
+function afterBoundary(
+  record,
+  sortHighWater,
+  registryHighWaterGeneration,
+  routerReplay,
+) {
   const generation = registryGeneration(record);
   return record.sortKey > sortHighWater ||
-    (generation !== null && BigInt(generation) > BigInt(registryHighWaterGeneration));
+    (generation !== null && BigInt(generation) > BigInt(registryHighWaterGeneration)) ||
+    (routerReplay && isRouterCustomRecord(record));
 }
 
 function greatestSortKey(left, right) {
@@ -98,34 +189,70 @@ export function launchFeedPayload(
       (chainId === null || record.chainId === chainId),
   );
   const newestSortKey = baseRecords[0]?.sortKey ?? EMPTY_HIGH_WATER;
-  const currentGeneration = currentRegistryHighWater(dataset);
+  const currentGeneration = currentRegistryHighWater(dataset, category);
+  const currentRouterSource = routerSourceBoundary(dataset, category);
+  const currentRouterCommitment = category === "classic"
+    ? undefined
+    : currentRouterSource?.identityCommitment ?? null;
+  if (cursor && currentRouterCommitment !== undefined) {
+    const frozenRouterSource = cursor.snapshot?.sources?.routerCustom;
+    if (
+      !cursor.snapshot?.sources ||
+      (frozenRouterSource?.identityCommitment ?? null) !==
+        currentRouterCommitment
+    ) {
+      throw new Error("v2 Router source changed during page traversal");
+    }
+  }
   const highWater = cursor
     ? cursor.highWater
     : greatestSortKey(newestSortKey, after?.highWater);
-  const traversalSnapshot = cursor?.snapshot ?? currentSnapshot(dataset);
+  const traversalSnapshot = cursor?.snapshot ?? currentSnapshot(
+    dataset,
+    category,
+    currentGeneration,
+    currentRouterSource,
+  );
   const lowerBound = cursor?.after ?? after?.highWater ?? null;
   const lowerRegistryBound = cursor?.afterRegistryHighWaterGeneration ??
     after?.registryHighWaterGeneration ??
     "0";
   const registryHighWaterGeneration = cursor?.registryHighWaterGeneration ??
     greatestGeneration(currentGeneration, after?.registryHighWaterGeneration ?? null);
+  const routerReplay = cursor?.routerReplay ?? Boolean(
+    lowerBound !== null &&
+      currentRouterCommitment !== undefined &&
+      after?.routerIdentityCommitment !== currentRouterCommitment,
+  );
   const traversalRecords = baseRecords.filter(
     (record) =>
       record.sortKey <= highWater &&
       withinRegistryHighWater(record, registryHighWaterGeneration) &&
       (lowerBound === null ||
-        afterBoundary(record, lowerBound, lowerRegistryBound)),
+        afterBoundary(
+          record,
+          lowerBound,
+          lowerRegistryBound,
+          routerReplay,
+        )),
   );
   const page = paginate(traversalRecords, {
     limit,
     cursor: cursor?.position ?? null,
   });
 
-  const resumeCursor = encodeResumeCursor(
-    highWater,
-    scope,
-    registryHighWaterGeneration,
-  );
+  const resumeCursor = currentRouterCommitment === undefined
+    ? encodeResumeCursor(
+        highWater,
+        scope,
+        registryHighWaterGeneration,
+      )
+    : encodeResumeCursor(
+        highWater,
+        scope,
+        registryHighWaterGeneration,
+        currentRouterCommitment,
+      );
   return {
     schemaVersion: API_V2_SCHEMA_VERSION,
     status: feedStatusV2(dataset, category),
@@ -144,11 +271,12 @@ export function launchFeedPayload(
               highWater,
               page.pagination.nextPosition,
               scope,
-            traversalSnapshot,
-            lowerBound,
-            registryHighWaterGeneration,
-            lowerRegistryBound,
-          ),
+              traversalSnapshot,
+              lowerBound,
+              registryHighWaterGeneration,
+              lowerRegistryBound,
+              currentRouterCommitment === undefined ? undefined : routerReplay,
+            ),
       resumeCursor,
       hasMore: page.pagination.hasMore,
     },
