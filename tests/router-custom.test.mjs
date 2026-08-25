@@ -15,6 +15,8 @@ import {
   serviceStatusV2,
 } from "../server/v2-dataset.js";
 import {
+  createRouterCustomAcceptedMembership,
+  hasExactRouterStampedCustomRecordShape,
   isRouterStampedCustom,
   readRouterCustomRecords,
   resetRouterCustomCacheForTest,
@@ -253,9 +255,30 @@ describe("Router Custom v2 projection", () => {
     const currentRecord = publicLaunchV2(projected.records.find((record) =>
       record.token.symbol === "NEXT"));
     assert.deepEqual(validateLaunchSemantics(currentRecord), []);
+    const acceptedRouterCustomMembership =
+      createRouterCustomAcceptedMembership(snapshot.records, manifest);
     const transportedRecord = JSON.parse(JSON.stringify(currentRecord));
     assert.equal(isRouterStampedCustom(transportedRecord, manifest), false);
-    assert.deepEqual(validateLaunchSemantics(transportedRecord), []);
+    assert.ok(validateLaunchSemantics(transportedRecord).some((finding) =>
+      finding.code === "FEE_POLICY_REQUIRED"));
+    assert.deepEqual(validateLaunchSemantics(transportedRecord, {
+      acceptedRouterCustomMembership,
+    }), []);
+
+    const forgedMembership = structuredClone(transportedRecord);
+    forgedMembership.extensions["programmable/router-stamp-v1"]
+      .sourceIdentityCommitment = `sha256:${"1".repeat(64)}`;
+    assert.equal(
+      hasExactRouterStampedCustomRecordShape(forgedMembership),
+      true,
+      "the adversarial record remains shape-valid",
+    );
+    assert.ok(validateLaunchSemantics(forgedMembership, {
+      acceptedRouterCustomMembership,
+    }).some((finding) => finding.code === "FEE_POLICY_REQUIRED"));
+    assert.ok(validateLaunchSemantics(transportedRecord, {
+      acceptedRouterCustomMembership: { accepts: () => true },
+    }).some((finding) => finding.code === "FEE_POLICY_REQUIRED"));
 
     transportedRecord.markets[0].hookAddress =
       "0x3333333333333333333333333333333333333333";

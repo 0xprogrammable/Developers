@@ -17,6 +17,10 @@ info:
     Its `publicSubmissionStatus` field describes only
     the closed legacy Registry and GitHub submission intake. Historical Stock-Paired
     launches are not part of the version 2 Programmable Custom classification.
+    `category: custom` is the stable product taxonomy, not a claim of Registry
+    acceptance. Consumers must inspect
+    `extensions["programmable/classification"].basis` and verify the Registry
+    or canonical-Router evidence named by that basis.
 
     Within v2, existing fields keep their type and meaning. New deployments,
     capabilities and market kinds are additive. Consumers must ignore unknown
@@ -185,7 +189,10 @@ paths:
         recomputed before publication, plus a digest-pinned last-known-good
         fallback for source outages. Absent fee or supply evidence stays
         explicitly unavailable. The feed remains degraded and absence is not
-        authoritative until Router coverage is current.
+        authoritative until Router coverage is current. A Router record's
+        absent Registry fee policy is semantically valid only when its exact
+        entry and source-boundary digests are members of the accepted source
+        snapshot; source-shaped JSON alone is never sufficient.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"

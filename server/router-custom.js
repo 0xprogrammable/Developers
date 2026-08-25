@@ -50,6 +50,7 @@ const ROUTER_CUSTOM_CACHE_MS = 15_000;
 // Only records produced after validating the complete source commitment receive
 // this non-serializable capability. A source-shaped object cannot self-assign it.
 const TRUSTED_CURRENT_ROUTER_RECORD = Symbol("trusted-current-router-record");
+const ACCEPTED_ROUTER_MEMBERSHIP = Symbol("accepted-router-membership");
 
 let bundledSnapshotPromise = null;
 let cache = null;
@@ -891,6 +892,52 @@ export function isTrustedRouterStampedCustomRecord(record) {
     hasExactRouterStampedCustomRecordShape(record) &&
       (record?.[TRUSTED_CURRENT_ROUTER_RECORD] === true ||
         isPinnedFallbackRecord(record)),
+  );
+}
+
+function routerMembershipDigest(record) {
+  if (!hasExactRouterStampedCustomRecordShape(record)) return null;
+  const extension = record.extensions["programmable/router-stamp-v1"];
+  return canonicalSha256(
+    "programmable.router-custom-accepted-membership.v1",
+    {
+      launchId: record.launchId.toLowerCase(),
+      entrySha256: extension.entrySha256,
+      snapshotSha256: extension.snapshotSha256,
+      sourceIdentityCommitment: extension.sourceIdentityCommitment,
+      snapshotGeneratedAt: extension.snapshotGeneratedAt,
+      snapshotAsOfBlock: extension.snapshotAsOfBlock,
+      snapshotAsOfBlockHash: extension.snapshotAsOfBlockHash.toLowerCase(),
+    },
+  );
+}
+
+export function createRouterCustomAcceptedMembership(records, manifest) {
+  const accepted = new Set();
+  for (const record of records ?? []) {
+    if (!isRouterStampedCustom(record, manifest)) continue;
+    const digest = routerMembershipDigest(record);
+    if (digest) accepted.add(digest);
+  }
+  const membership = {
+    accepts(record) {
+      const digest = routerMembershipDigest(record);
+      return digest !== null && accepted.has(digest);
+    },
+  };
+  Object.defineProperty(membership, ACCEPTED_ROUTER_MEMBERSHIP, {
+    value: true,
+    enumerable: false,
+    writable: false,
+  });
+  return Object.freeze(membership);
+}
+
+export function isAcceptedRouterStampedCustomRecord(record, membership = null) {
+  if (isTrustedRouterStampedCustomRecord(record)) return true;
+  return Boolean(
+    membership?.[ACCEPTED_ROUTER_MEMBERSHIP] === true &&
+      membership.accepts(record),
   );
 }
 

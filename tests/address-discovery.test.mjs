@@ -45,6 +45,39 @@ describe("documentation contract", () => {
     assert.doesNotMatch(readme, /self-service launch flow/i);
   });
 
+  test("keeps two v2 categories while binding Custom to explicit provenance bases", async () => {
+    const [versioning, migration, reference, openapi, core] = await Promise.all([
+      readFile(path.join(REPOSITORY_ROOT, "VERSIONING.md"), "utf8"),
+      readFile(
+        path.join(REPOSITORY_ROOT, "docs/migrations/v1-to-v2.md"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "docs/reference/http-api.md"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "openapi/programmable-v2.yaml"),
+        "utf8",
+      ),
+      readFile(
+        path.join(REPOSITORY_ROOT, "compatibility/core-v2.json"),
+        "utf8",
+      ).then(JSON.parse),
+    ]);
+    assert.deepEqual(core.publicCategories, ["classic", "custom"]);
+    assert.equal(
+      core.classification.custom.requiredEvidence,
+      "programmable-custom-registry-event-or-canonical-launch-stamp-router",
+    );
+    for (const source of [versioning, migration, reference, openapi]) {
+      assert.match(source, /classification.*basis/is);
+      assert.match(source, /Registry.*Router|Router.*Registry/is);
+    }
+    assert.match(reference, /accepted Router snapshot/i);
+    assert.match(openapi, /source-shaped JSON alone is never sufficient/i);
+  });
+
   test("never presents the read-only feed as transaction authorization", async () => {
     const reference = await readFile(
       path.join(REPOSITORY_ROOT, "docs/reference/http-api.md"),

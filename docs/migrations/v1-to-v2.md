@@ -6,16 +6,16 @@ API v2 is the canonical integration for new terminals, scanners, bots and launch
 
 API v1 classified historical first-party Stock-Paired launches as `custom`. Programmable no longer uses that model as its public Custom category.
 
-API v2 gives `custom` one precise meaning: a launch accepted through the canonical Programmable Custom Registry. Stock-Paired records remain available only through v1 compatibility endpoints and are not `Programmable Custom` in v2.
+API v2 gives `custom` one precise product meaning: a Programmable Custom launch authenticated by an accepted canonical Custom Registry event or a consistent finalized canonical-Router `CustomGraph` stamp. Stock-Paired records remain available only through v1 compatibility endpoints and are not `Programmable Custom` in v2.
 
 ## Classification contract
 
 | API value | Display label | Required evidence |
 | --- | --- | --- |
 | `classic` | `Programmable Classic` | Event from a Classic launcher listed in the v2 manifest |
-| `custom` | `Programmable Custom` | Event from the Custom Registry listed in the v2 manifest |
+| `custom` | `Programmable Custom` | Accepted event from the Custom Registry listed in the v2 manifest, or a consistent finalized `CustomGraph` stamp from its exact canonical Router |
 
-Provider names, factories, hook addresses, token addresses and template versions may differ for every Custom launch. They are record-level provenance, not additional terminal categories.
+Provider names, factories, hook addresses, token addresses and template versions may differ for every Custom launch. They are record-level provenance, not additional terminal categories. Use `extensions["programmable/classification"].basis` to select the Registry or Router verification path; `category: "custom"` alone never proves Registry acceptance.
 
 ## Endpoint changes
 
@@ -40,9 +40,9 @@ The pagination model, response shape and read-only security boundary remain the 
 4. Preserve `token: null`, authenticated assets, and zero, one, or several markets without fabricating a token or pool.
 5. Map only `classic` and `custom` to the two exact display labels above.
 6. Remove v1 Stock-Paired records from any Programmable Custom filter.
-7. Resolve Classic launchers and the Custom Registry from the v2 manifest.
+7. Resolve Classic launchers, the Custom Registry and the canonical Router from the v2 manifest.
 8. Keep the Custom filter visible when no matching records are returned; inspect response quality and do not treat a degraded or unavailable absence as deletion.
-9. Enable a Custom record only when its registry provenance is `verified`.
+9. Enable a Custom record only when its declared Registry or Router provenance path has complete accepted evidence.
 
 ## Availability
 
