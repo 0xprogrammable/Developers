@@ -9,23 +9,26 @@ Full agent context: https://developers.programmable.family/llms-full.txt
 Custom Launch API base: https://api.programmable.market
 Custom Launch API guide: https://programmable.market/developers/custom-launch-api-v1.md
 Custom Launch API OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
+Held Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
 API key management: https://programmable.market/developers/api-keys
 Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
 ## API surface boundary
 
 - Use the Developer read API without authentication to discover launches and verify provenance.
-- Use the separately hosted Custom Launch API with a wallet-bound bearer API key to validate a Custom launch request and prepare its exact Router action.
-- An API key is not wallet signing authority. The Custom Launch API does not sign or broadcast the controller wallet's transaction.
-- The canonical Custom Launch request and response schemas are in the live Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
+- Use the separately hosted Custom Launch API V1 with a wallet-bound bearer API key only for its live provenance reads and status. POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+- An API key is not wallet signing authority. V1 currently prepares, signs, and broadcasts no controller-wallet transaction.
+- The canonical Custom Launch request and response schemas are in the V1 Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
 - Resolve current versioned launch requirements from Programmable Launch Policy. Do not rely on copied policy text.
-- Legacy Registry and GitHub submission intake are closed. The Router-based Custom Launch API is independently live.
+- Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 reads/status remain independently live, but its write surface is read-only.
+- Custom Fee-Enforced Launch Profile V2 is a different pinned `2.0.0-rc.1` private-canary profile. Held writes return `503` with `Retry-After`; it has no public route, deployed fee path, finalized canary, or production authorization.
 
 ## Current status
 
 - Classic launch discovery is live on Ethereum.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
-- The authenticated Router-based Custom Launch API is live and separate from legacy intake and from this unauthenticated read API.
+- The authenticated Router-based Custom Launch API V1 is separate from legacy intake and from this unauthenticated read API. Its provenance reads/status remain live; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+- Custom Registry Generation 2 and Custom Fee-Enforced Launch Profile V2 are separate unavailable release candidates. Neither activates the other, and neither creates a third public category.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
 - Ethereum Mainnet is the only chain currently advertised by the well-known document.
@@ -43,12 +46,14 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 ## Start here
 
 - [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
-- [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md): Wallet-bound authentication, request construction, preparation, lifecycle and wallet boundary.
-- [Custom Launch API OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Canonical live machine contract for the authenticated launch surface.
+- [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md): Wallet-bound authentication, provenance reads/status, read-only POST state and wallet boundary.
+- [Custom Launch API OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Canonical V1 machine contract; POST availability must follow the live status contract.
+- [Held Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json): Pinned V2 machine contract; its published schema does not override the held `503` route or public-production flag.
+- [Custom Fee-Enforced Launch Profile V2](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md): Exact 1,000 ppm RC semantics, pinned artifacts, public activation gates, polling boundary, and unsupported claims.
 - [API key management](https://programmable.market/developers/api-keys): Create or revoke a wallet-bound Custom Launch API key.
 - [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy): Current versioned requirements and machine-readable policy contracts.
 - [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
-- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic and Custom discovery, closed legacy intake, live Custom Launch API, and compatibility boundaries.
+- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic and Custom discovery, closed legacy intake, V1 read-only POST state, private-canary/public-held V2 state, and compatibility boundaries.
 - [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
 - [v2 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
 - [Production operations](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
@@ -71,7 +76,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 ## Reference
 
 - [HTTP API](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
-- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic and Native Custom 10 bps semantics, partnership-template 20/15/5 policy, evidence, claims, and scope.
+- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic included-fee semantics, held Custom V2 additive 1,000 ppm semantics, partnership-template 20/15/5 policy, evidence, claims, and scope.
 - [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
 - [JSON Schemas](https://github.com/0xprogrammable/Developers/tree/main/schemas/v2): Normative public response schemas.
 - [Examples](https://github.com/0xprogrammable/Developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
@@ -101,7 +106,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 10. Preserve `launch.timestamp`; do not replace it with first observation time.
 11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
 12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. New Custom launch preparation belongs only to the separately hosted Custom Launch API and its canonical live OpenAPI contract.
+13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. Custom Launch API V1 POST is also read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; held Fee-Enforced V2 writes return `503` with `Retry-After`.
 14. Read fee behavior from verified records. Do not infer it from category.
 15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
 16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
@@ -114,14 +119,18 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 23. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
 24. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
 25. Keep launch visibility separate from claim eligibility. The claim console must independently verify its published launcher, Registry, runtime, fee, recipient, lifecycle, and finality boundary; a visible launch is not automatically claimable.
+26. Keep API availability, fee enforcement, exact-source match, simulation, finality, tradability, claim support, buybacks, and audit status separate. Fee-Enforced V2 stays unavailable while `productionLaunchAuthorized` is false.
 
 ## Fee summary
 
 - Rate: 10 bps = 0.1% = 1,000 ppm.
 - Recipient: `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
+- V2 canary identity: `programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, `launchProfileHash` `sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d`, contract policy `0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517`, permission mask `0x2044`.
 - Current Classic official paths: the platform share is included within the configured trading fee.
-- Future Native Custom official paths: 10 bps is added on top of the creator-defined market fee only when deployed and verified.
+- Canary-stage Custom Fee-Enforced V2 profile: additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool; exact input uses output currency and exact output uses input currency. It is not public. PoolManager ERC-6909 claims remain in the sealed vault and only the fixed reward wallet can claim them.
+- Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate.
 - Active fee-bearing partnership-template paths: exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis, with no additional Native Custom 10 bps. Partner-attributed projects without a qualifying fee path use zero shares.
 - The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.
+- The V2 profile does not add generic tradability, claiming, creator rewards, or buybacks. FADE's current claim adapter is FADE-specific.
 - Claim console: https://claimhazard.vercel.app
 - Read-only claim discovery policy: https://claimhazard.vercel.app/claim-discovery.json

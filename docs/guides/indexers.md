@@ -42,7 +42,7 @@ Pair related events according to the documented deployment contract. An event wi
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
 
-Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. Legacy Registry and GitHub submission intake are closed; the separate Custom Launch API is live. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
+Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 provenance reads/status remain live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Custom Fee-Enforced Launch Profile V2 is pinned for a private canary, returns `503` with `Retry-After` at its public write boundary, and must not be indexed as deployed. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
 
 ## Ordering and identity
 

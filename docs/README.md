@@ -8,13 +8,14 @@ Use these docs to verify origin and decide which market features your product ca
 | Goal | Surface |
 | --- | --- |
 | Discover launches and verify provenance | [Developer read API](../README.md), no API key required |
-| Prepare a new Custom launch | [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md), using a wallet-bound API key from [API key management](https://programmable.market/developers/api-keys) |
-| Generate a Custom launch client | [Canonical live OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
+| Inspect Custom request provenance and status | [Custom Launch API guide](https://programmable.market/developers/custom-launch-api-v1.md), using a wallet-bound API key from [API key management](https://programmable.market/developers/api-keys); V1 POST is read-only |
+| Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
+| Inspect the held fee-enforced release candidate | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [held V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json); neither authorizes a public route |
 | Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) |
 
-The Custom Launch API is separately hosted at `https://api.programmable.market`. It validates and prepares a Router
-action but does not sign or broadcast the wallet transaction. Its schemas remain in the canonical live OpenAPI contract
-instead of being copied into this read/discovery repository.
+The Custom Launch API is separately hosted at `https://api.programmable.market`. Its provenance reads and status remain
+live, but V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; it currently prepares no Router action. Its
+schemas remain in the canonical V1 OpenAPI contract instead of being copied into this read/discovery repository.
 
 The versioned launch requirements likewise remain owned by Programmable Launch Policy instead of being duplicated here.
 
@@ -35,6 +36,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 - [Trading terminals and scanners](guides/terminals-and-scanners.md)
 - [Launch providers](guides/launch-providers.md)
+- [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)
 - [Wallets and explorers](guides/wallets.md)
 - [Indexers and data platforms](guides/indexers.md)
 - [Apps, games, and bots](guides/apps-and-games.md)
@@ -58,7 +60,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 ## Product status in one paragraph
 
-Classic launch discovery and Custom Registry generation 1 are live on Ethereum. The authenticated Custom Launch API is live; legacy Registry and GitHub submission intake are closed. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Its finalized onchain canary covers `CustomGraph`, with no separate Classic onchain canary. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Custom Launch API V1 provenance reads and status remain live, but POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; legacy Registry and GitHub submission intake are closed. Custom Fee-Enforced Launch Profile V2 is a separate pinned private-canary release candidate that remains publicly unavailable and whose held writes return `503` with `Retry-After`. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Its finalized onchain canary covers `CustomGraph`, with no separate Classic onchain canary. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

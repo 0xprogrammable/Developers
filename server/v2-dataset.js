@@ -462,17 +462,227 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches are discoverable. The Custom Launch API is live; legacy Registry and GitHub submission intake are closed."
+          ? "Approved Custom Registry launches are discoverable. Custom Launch API V1 reads and status remain live, but POST is read-only; legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
     },
     customLaunchApi: {
       status: "live",
+      scope: "provenance-only",
+      feeEnforcement: "not-established-by-api",
+      writeStatus: "read-only",
+      postResponse: {
+        httpStatus: 409,
+        code: "CUSTOM_LAUNCH_V1_READ_ONLY",
+        retryable: false,
+      },
       readyzUrl: "https://api.programmable.market/readyz",
       guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
       openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
     },
+    customFeeEnforcedLaunchProfileV2:
+      manifest?.customFeeEnforcedLaunchProfileV2 ?? {
+        schemaVersion: "programmable.custom-fee-enforced-launch-profile.v2",
+        profileId:
+          "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
+        profileRevision: 1,
+        profileVersion: "2.0.0-rc.1",
+        publicCategory: "custom",
+        registryRelationship: "independent-from-custom-registry-generation-2",
+        releaseStage: "release-candidate",
+        status: "unavailable",
+        activationStatus: "canary",
+        productionLaunchAuthorized: false,
+        guideUrl:
+          "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
+        api: {
+          apiVersion: "2",
+          availability: "dark-release-candidate",
+          publiclyRoutable: false,
+          collectionPath: "/v2/custom-launches",
+          singleResourcePath: "/v2/custom-launches/{requestId}",
+          openApiUrl: "https://programmable.market/openapi/custom-launch-v2.json",
+          walletBoundary: "separate-wallet-signature",
+          listReconciliation: "bounded-opportunistic-for-pending-records",
+          recommendedPollingPath: "single-resource",
+          heldResponse: {
+            httpStatus: 503,
+            retryAfter: "required",
+            retryable: true,
+          },
+        },
+        cli: {
+          packageName: "@programmable/launch",
+          version: "2.0.0-rc.1",
+          distributionStatus: "github-release-candidate",
+          releaseUrl:
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1",
+          packageAssetUrl:
+            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz",
+          commands: ["pack", "validate", "submit", "status"],
+        },
+        requestContract: {
+          configSchema: "programmable.launch-pack-config.v2",
+          createRequestSchema: "programmable.custom-launch-create-request.v2",
+          attestationSchema: "programmable.agent-launch-attestation.v2",
+          targetRoles: [
+            "token",
+            "customModule",
+            "feeVault",
+            "feeHook",
+            "poolInitializer",
+          ],
+          verificationBundleRequired: true,
+          runtimeImmutablesRequired: true,
+          launchProfileHashRequired: true,
+          launchIntentHashRequired: true,
+        },
+        moduleSemantics: {
+          mode: "isolated-external-module",
+          callback: "afterSwap",
+          arbitraryCallbacks: false,
+          maximumCustomReturnDelta: 0,
+          customDeltaAccount: "0x0000000000000000000000000000000000000000",
+        },
+        finalArtifactLiterals: {
+          status: "pinned-release-candidate",
+          launchProfileHash:
+            "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+          contractPolicyId:
+            "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
+        },
+        artifactCommitments: {
+          compiler: {
+            version: "0.8.26+commit.8a97fa7a",
+            evmVersion: "cancun",
+            optimizer: { enabled: true, runs: 1000 },
+            viaIR: false,
+            metadata: { bytecodeHash: "ipfs", appendCBOR: true },
+            settingsHash:
+              "0xd8985cd6554daab2848a8df4d90f9d5e0d81f15d062ee04bcd8414f292ccaf43",
+          },
+          components: [
+            {
+              role: "token",
+              contractName: "ProgrammableLaunchTokenV2",
+              standardJsonInputSha256:
+                "sha256:72af5d9faedef9188f1d9e20e2d8a37557e2bb14d44be54ce3aacb11c71ef877",
+              creationBytecodeHash:
+                "0x71660c7252993788cbab7c257ce654622c5661611623c4cb288f68f157d1b25d",
+              runtimeTemplateCodeHash:
+                "0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef",
+              runtimeCodeHash:
+                "0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef",
+            },
+            {
+              role: "feeVault",
+              contractName: "ProgrammableFeeVaultV2",
+              standardJsonInputSha256:
+                "sha256:af2508146771a53b2c44b0be2b108a4dc3d692148595cae2ce63f1bf815667a3",
+              creationBytecodeHash:
+                "0x053476bd624631357dfe15ec172bd046f6a4621003d3293a16fb87dce1ba70bd",
+              runtimeTemplateCodeHash:
+                "0x8a55169728ba90b1fdb275b06c6b6be0467282327c73e9324c08c78e5f62c359",
+              runtimeCodeHash:
+                "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5",
+            },
+            {
+              role: "feeHook",
+              contractName: "ProgrammableIsolatedAfterSwapFeeHookV2",
+              standardJsonInputSha256:
+                "sha256:58b041ccea068f16f6b9a93e57c7b29578bdfc93a72306ced57800145f0db019",
+              creationBytecodeHash:
+                "0x1a54813e879edb214d24e97b1f50575f290503f46ea35c1fe40b45114983cdf9",
+              runtimeTemplateCodeHash:
+                "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+              runtimeCodeHash:
+                "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+            },
+            {
+              role: "poolInitializer",
+              contractName: "ProgrammableFeePoolInitializerV2",
+              standardJsonInputSha256:
+                "sha256:3c2b96af0fc57aea1925fe4ccf6efb937f70df4358bba8889d8406c00607695f",
+              creationBytecodeHash:
+                "0x690a30ab2f5ee0c42856a9627cb46d79b5ebc4fa0a2f4c75c3a6f3e077cbbbeb",
+              runtimeTemplateCodeHash:
+                "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d",
+              runtimeCodeHash:
+                "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d",
+            },
+          ],
+        },
+        requiredBindings: {
+          exactPoolId: "per-launch-required",
+          initialSqrtPriceX96: "per-launch-required",
+          authorizedInitializer: "per-launch-required",
+          canonicalPoolManager: {
+            address: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+            runtimeCodeHash:
+              "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
+          },
+          actualHookRuntimeCodeHash:
+            "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+          actualVaultRuntimeCodeHash:
+            "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5",
+          compositionHash: "per-launch-required",
+        },
+        feeSemantics: {
+          ratePpm: 1000,
+          rateBps: 10,
+          denominatorPpm: 1_000_000,
+          chargeMode: "additive",
+          basis: "gross-unspecified-pool-currency-amount",
+          assetMode: "unspecified-pool-currency-per-swap",
+          exactInputFeeAsset: "output-currency",
+          exactOutputFeeAsset: "input-currency",
+          scope: "exact-bound-pool",
+          appliesOn: "successful-swaps-only",
+          recipient: "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+          settlementMode: "pool-manager-erc6909-claims-in-sealed-vault",
+          claimAuthority:
+            "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+          claimSurface: "fixed-reward-wallet-only",
+          requiredHookFlags: "0x2044",
+          requiredHookFlagsStatus: "pinned-release-candidate",
+          separateComponents: [
+            "liquidity-provider-fee",
+            "protocol-fee",
+            "creator-fee",
+            "network-gas",
+          ],
+        },
+        evidenceStatus: {
+          profileArtifacts: "exact-pinned-release-candidate",
+          securityReview: "release-blockers-open",
+          successfulSimulation: "unavailable",
+          onchainDeployment: "unavailable",
+          onchainFeeReadback: "unavailable",
+          finalizedCanary: "unavailable",
+          sourceExactMatch: "unavailable",
+          securityAudit: "not-claimed",
+          genericTradability: "not-claimed",
+          genericClaiming: "not-available",
+          buybacks: "not-available",
+        },
+        activationRequirements: [
+          "cli-published",
+          "backend-route-public",
+          "profile-artifacts-pinned",
+          "security-review-release-blockers-closed",
+          "canonical-pool-manager-runtime-bound",
+          "hook-vault-runtime-identities-bound",
+          "pool-initialization-front-run-protected",
+          "exact-pool-id-enforced",
+          "composition-hash-bound",
+          "successful-pinned-simulation",
+          "onchain-deployment-finalized",
+          "onchain-fee-readback-confirmed",
+          "finalized-canary",
+          "source-exact-match",
+        ],
+      },
     feeds: {
       manifest: "ready",
       launches: feeds,

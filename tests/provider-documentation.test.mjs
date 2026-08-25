@@ -26,7 +26,9 @@ describe("launch-provider documentation", () => {
 
     assert.match(guide, /Custom Registry generation 1 is live/i);
     assert.match(guide, /Legacy Registry and GitHub submission intake are closed/i);
-    assert.match(guide, /Custom Launch API is live/i);
+    assert.match(guide, /409 CUSTOM_LAUNCH_V1_READ_ONLY/i);
+    assert.match(guide, /503.*Retry-After/i);
+    assert.match(guide, /Fee-Enforced Launch Profile V2 remains unavailable/i);
     assert.match(guide, /Programmable adapter/);
     assert.match(guide, /Provider factory callback/);
     assert.match(guide, /webhook.*does not prove/is);

@@ -237,6 +237,9 @@ Do not infer fees from category or marketing text. Read the record and its verif
 
 Registry-backed records also expose a closed `feePolicy.mode`:
 
+This is the Custom Registry record model. Its `native` mode is not the Custom
+Fee-Enforced Launch Profile V2 and cannot activate that separate API profile.
+
 | Kind | Required policy |
 | --- | --- |
 | `native` | 10 bps total and 10 bps Programmable; `chargeMode: "verified-official-market-path-only"`; `normalProgrammableTenBpsApplied: true` |

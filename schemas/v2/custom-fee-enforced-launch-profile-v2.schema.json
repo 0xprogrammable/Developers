@@ -1,0 +1,513 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json",
+  "title": "Programmable Custom Fee-Enforced Launch Profile V2 release-candidate status",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "profileId",
+    "profileRevision",
+    "profileVersion",
+    "publicCategory",
+    "registryRelationship",
+    "releaseStage",
+    "status",
+    "activationStatus",
+    "productionLaunchAuthorized",
+    "guideUrl",
+    "api",
+    "cli",
+    "requestContract",
+    "moduleSemantics",
+    "finalArtifactLiterals",
+    "artifactCommitments",
+    "requiredBindings",
+    "feeSemantics",
+    "evidenceStatus",
+    "activationRequirements"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "programmable.custom-fee-enforced-launch-profile.v2"
+    },
+    "profileId": {
+      "const": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1"
+    },
+    "profileRevision": {
+      "const": 1
+    },
+    "profileVersion": {
+      "const": "2.0.0-rc.1"
+    },
+    "publicCategory": {
+      "const": "custom"
+    },
+    "registryRelationship": {
+      "const": "independent-from-custom-registry-generation-2"
+    },
+    "releaseStage": {
+      "const": "release-candidate"
+    },
+    "status": {
+      "const": "unavailable"
+    },
+    "activationStatus": {
+      "const": "canary"
+    },
+    "productionLaunchAuthorized": {
+      "const": false
+    },
+    "guideUrl": {
+      "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md"
+    },
+    "api": {
+      "type": "object",
+      "required": [
+        "apiVersion",
+        "availability",
+        "publiclyRoutable",
+        "collectionPath",
+        "singleResourcePath",
+        "openApiUrl",
+        "walletBoundary",
+        "listReconciliation",
+        "recommendedPollingPath",
+        "heldResponse"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "2"
+        },
+        "availability": {
+          "const": "dark-release-candidate"
+        },
+        "publiclyRoutable": {
+          "const": false
+        },
+        "collectionPath": {
+          "const": "/v2/custom-launches"
+        },
+        "singleResourcePath": {
+          "const": "/v2/custom-launches/{requestId}"
+        },
+        "openApiUrl": {
+          "const": "https://programmable.market/openapi/custom-launch-v2.json"
+        },
+        "walletBoundary": {
+          "const": "separate-wallet-signature"
+        },
+        "listReconciliation": {
+          "const": "bounded-opportunistic-for-pending-records"
+        },
+        "recommendedPollingPath": {
+          "const": "single-resource"
+        },
+        "heldResponse": {
+          "type": "object",
+          "required": [
+            "httpStatus",
+            "retryAfter",
+            "retryable"
+          ],
+          "properties": {
+            "httpStatus": {
+              "const": 503
+            },
+            "retryAfter": {
+              "const": "required"
+            },
+            "retryable": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cli": {
+      "type": "object",
+      "required": [
+        "packageName",
+        "version",
+        "distributionStatus",
+        "releaseUrl",
+        "packageAssetUrl",
+        "commands"
+      ],
+      "properties": {
+        "packageName": {
+          "const": "@programmable/launch"
+        },
+        "version": {
+          "const": "2.0.0-rc.1"
+        },
+        "distributionStatus": {
+          "const": "github-release-candidate"
+        },
+        "releaseUrl": {
+          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1"
+        },
+        "packageAssetUrl": {
+          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz"
+        },
+        "commands": {
+          "const": [
+            "pack",
+            "validate",
+            "submit",
+            "status"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "requestContract": {
+      "type": "object",
+      "required": [
+        "configSchema",
+        "createRequestSchema",
+        "attestationSchema",
+        "targetRoles",
+        "verificationBundleRequired",
+        "runtimeImmutablesRequired",
+        "launchProfileHashRequired",
+        "launchIntentHashRequired"
+      ],
+      "properties": {
+        "configSchema": {
+          "const": "programmable.launch-pack-config.v2"
+        },
+        "createRequestSchema": {
+          "const": "programmable.custom-launch-create-request.v2"
+        },
+        "attestationSchema": {
+          "const": "programmable.agent-launch-attestation.v2"
+        },
+        "targetRoles": {
+          "const": [
+            "token",
+            "customModule",
+            "feeVault",
+            "feeHook",
+            "poolInitializer"
+          ]
+        },
+        "verificationBundleRequired": {
+          "const": true
+        },
+        "runtimeImmutablesRequired": {
+          "const": true
+        },
+        "launchProfileHashRequired": {
+          "const": true
+        },
+        "launchIntentHashRequired": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "moduleSemantics": {
+      "type": "object",
+      "required": [
+        "mode",
+        "callback",
+        "arbitraryCallbacks",
+        "maximumCustomReturnDelta",
+        "customDeltaAccount"
+      ],
+      "properties": {
+        "mode": {
+          "const": "isolated-external-module"
+        },
+        "callback": {
+          "const": "afterSwap"
+        },
+        "arbitraryCallbacks": {
+          "const": false
+        },
+        "maximumCustomReturnDelta": {
+          "const": 0
+        },
+        "customDeltaAccount": {
+          "const": "0x0000000000000000000000000000000000000000"
+        }
+      },
+      "additionalProperties": false
+    },
+    "finalArtifactLiterals": {
+      "type": "object",
+      "required": [
+        "status",
+        "launchProfileHash",
+        "contractPolicyId"
+      ],
+      "properties": {
+        "status": {
+          "const": "pinned-release-candidate"
+        },
+        "launchProfileHash": {
+          "const": "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d"
+        },
+        "contractPolicyId": {
+          "const": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517"
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifactCommitments": {
+      "const": {
+        "compiler": {
+          "version": "0.8.26+commit.8a97fa7a",
+          "evmVersion": "cancun",
+          "optimizer": {
+            "enabled": true,
+            "runs": 1000
+          },
+          "viaIR": false,
+          "metadata": {
+            "bytecodeHash": "ipfs",
+            "appendCBOR": true
+          },
+          "settingsHash": "0xd8985cd6554daab2848a8df4d90f9d5e0d81f15d062ee04bcd8414f292ccaf43"
+        },
+        "components": [
+          {
+            "role": "token",
+            "contractName": "ProgrammableLaunchTokenV2",
+            "standardJsonInputSha256": "sha256:72af5d9faedef9188f1d9e20e2d8a37557e2bb14d44be54ce3aacb11c71ef877",
+            "creationBytecodeHash": "0x71660c7252993788cbab7c257ce654622c5661611623c4cb288f68f157d1b25d",
+            "runtimeTemplateCodeHash": "0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef",
+            "runtimeCodeHash": "0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef"
+          },
+          {
+            "role": "feeVault",
+            "contractName": "ProgrammableFeeVaultV2",
+            "standardJsonInputSha256": "sha256:af2508146771a53b2c44b0be2b108a4dc3d692148595cae2ce63f1bf815667a3",
+            "creationBytecodeHash": "0x053476bd624631357dfe15ec172bd046f6a4621003d3293a16fb87dce1ba70bd",
+            "runtimeTemplateCodeHash": "0x8a55169728ba90b1fdb275b06c6b6be0467282327c73e9324c08c78e5f62c359",
+            "runtimeCodeHash": "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5"
+          },
+          {
+            "role": "feeHook",
+            "contractName": "ProgrammableIsolatedAfterSwapFeeHookV2",
+            "standardJsonInputSha256": "sha256:58b041ccea068f16f6b9a93e57c7b29578bdfc93a72306ced57800145f0db019",
+            "creationBytecodeHash": "0x1a54813e879edb214d24e97b1f50575f290503f46ea35c1fe40b45114983cdf9",
+            "runtimeTemplateCodeHash": "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067",
+            "runtimeCodeHash": "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067"
+          },
+          {
+            "role": "poolInitializer",
+            "contractName": "ProgrammableFeePoolInitializerV2",
+            "standardJsonInputSha256": "sha256:3c2b96af0fc57aea1925fe4ccf6efb937f70df4358bba8889d8406c00607695f",
+            "creationBytecodeHash": "0x690a30ab2f5ee0c42856a9627cb46d79b5ebc4fa0a2f4c75c3a6f3e077cbbbeb",
+            "runtimeTemplateCodeHash": "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d",
+            "runtimeCodeHash": "0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d"
+          }
+        ]
+      }
+    },
+    "requiredBindings": {
+      "type": "object",
+      "required": [
+        "exactPoolId",
+        "initialSqrtPriceX96",
+        "authorizedInitializer",
+        "canonicalPoolManager",
+        "actualHookRuntimeCodeHash",
+        "actualVaultRuntimeCodeHash",
+        "compositionHash"
+      ],
+      "properties": {
+        "exactPoolId": {
+          "const": "per-launch-required"
+        },
+        "initialSqrtPriceX96": {
+          "const": "per-launch-required"
+        },
+        "authorizedInitializer": {
+          "const": "per-launch-required"
+        },
+        "canonicalPoolManager": {
+          "type": "object",
+          "required": [
+            "address",
+            "runtimeCodeHash"
+          ],
+          "properties": {
+            "address": {
+              "const": "0x000000000004444c5dc75cB358380D2e3dE08A90"
+            },
+            "runtimeCodeHash": {
+              "const": "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293"
+            }
+          },
+          "additionalProperties": false
+        },
+        "actualHookRuntimeCodeHash": {
+          "const": "0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067"
+        },
+        "actualVaultRuntimeCodeHash": {
+          "const": "0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5"
+        },
+        "compositionHash": {
+          "const": "per-launch-required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "feeSemantics": {
+      "type": "object",
+      "required": [
+        "ratePpm",
+        "rateBps",
+        "denominatorPpm",
+        "chargeMode",
+        "basis",
+        "assetMode",
+        "exactInputFeeAsset",
+        "exactOutputFeeAsset",
+        "scope",
+        "appliesOn",
+        "recipient",
+        "settlementMode",
+        "claimAuthority",
+        "claimSurface",
+        "requiredHookFlags",
+        "requiredHookFlagsStatus",
+        "separateComponents"
+      ],
+      "properties": {
+        "ratePpm": {
+          "const": 1000
+        },
+        "rateBps": {
+          "const": 10
+        },
+        "denominatorPpm": {
+          "const": 1000000
+        },
+        "chargeMode": {
+          "const": "additive"
+        },
+        "basis": {
+          "const": "gross-unspecified-pool-currency-amount"
+        },
+        "assetMode": {
+          "const": "unspecified-pool-currency-per-swap"
+        },
+        "exactInputFeeAsset": {
+          "const": "output-currency"
+        },
+        "exactOutputFeeAsset": {
+          "const": "input-currency"
+        },
+        "scope": {
+          "const": "exact-bound-pool"
+        },
+        "appliesOn": {
+          "const": "successful-swaps-only"
+        },
+        "recipient": {
+          "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+        },
+        "settlementMode": {
+          "const": "pool-manager-erc6909-claims-in-sealed-vault"
+        },
+        "claimAuthority": {
+          "const": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+        },
+        "claimSurface": {
+          "const": "fixed-reward-wallet-only"
+        },
+        "requiredHookFlags": {
+          "const": "0x2044"
+        },
+        "requiredHookFlagsStatus": {
+          "const": "pinned-release-candidate"
+        },
+        "separateComponents": {
+          "const": [
+            "liquidity-provider-fee",
+            "protocol-fee",
+            "creator-fee",
+            "network-gas"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidenceStatus": {
+      "type": "object",
+      "required": [
+        "profileArtifacts",
+        "securityReview",
+        "successfulSimulation",
+        "onchainDeployment",
+        "onchainFeeReadback",
+        "finalizedCanary",
+        "sourceExactMatch",
+        "securityAudit",
+        "genericTradability",
+        "genericClaiming",
+        "buybacks"
+      ],
+      "properties": {
+        "profileArtifacts": {
+          "const": "exact-pinned-release-candidate"
+        },
+        "securityReview": {
+          "const": "release-blockers-open"
+        },
+        "successfulSimulation": {
+          "const": "unavailable"
+        },
+        "onchainDeployment": {
+          "const": "unavailable"
+        },
+        "onchainFeeReadback": {
+          "const": "unavailable"
+        },
+        "finalizedCanary": {
+          "const": "unavailable"
+        },
+        "sourceExactMatch": {
+          "const": "unavailable"
+        },
+        "securityAudit": {
+          "const": "not-claimed"
+        },
+        "genericTradability": {
+          "const": "not-claimed"
+        },
+        "genericClaiming": {
+          "const": "not-available"
+        },
+        "buybacks": {
+          "const": "not-available"
+        }
+      },
+      "additionalProperties": false
+    },
+    "activationRequirements": {
+      "const": [
+        "cli-published",
+        "backend-route-public",
+        "profile-artifacts-pinned",
+        "security-review-release-blockers-closed",
+        "canonical-pool-manager-runtime-bound",
+        "hook-vault-runtime-identities-bound",
+        "pool-initialization-front-run-protected",
+        "exact-pool-id-enforced",
+        "composition-hash-bound",
+        "successful-pinned-simulation",
+        "onchain-deployment-finalized",
+        "onchain-fee-readback-confirmed",
+        "finalized-canary",
+        "source-exact-match"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

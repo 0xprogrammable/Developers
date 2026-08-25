@@ -14,6 +14,7 @@
     "deployments",
     "customRegistry",
     "launchStampRouter",
+    "customFeeEnforcedLaunchProfileV2",
     "platformFee",
     "endpoints",
     "compatibility"
@@ -111,6 +112,9 @@
     },
     "launchStampRouter": {
       "$ref": "#/$defs/launchStampRouter"
+    },
+    "customFeeEnforcedLaunchProfileV2": {
+      "$ref": "custom-fee-enforced-launch-profile-v2.schema.json"
     },
     "registryGenerations": {
       "type": "array",
@@ -1667,11 +1671,19 @@
         "nativeCustom": {
           "type": "object",
           "required": [
+            "status",
+            "activationStatus",
             "totalFeeBps",
             "programmableShareBps",
             "scope"
           ],
           "properties": {
+            "status": {
+              "const": "unavailable"
+            },
+            "activationStatus": {
+              "const": "fee-enforced-v2-canary"
+            },
             "totalFeeBps": {
               "const": 10
             },
@@ -1687,6 +1699,8 @@
         "partnerTemplate": {
           "type": "object",
           "required": [
+            "status",
+            "activationStatus",
             "totalFeeBps",
             "partnerShareBps",
             "programmableShareBps",
@@ -1695,6 +1709,12 @@
             "additionalNativeFeeBps"
           ],
           "properties": {
+            "status": {
+              "const": "unavailable"
+            },
+            "activationStatus": {
+              "const": "no-verified-path"
+            },
             "totalFeeBps": {
               "const": 20
             },

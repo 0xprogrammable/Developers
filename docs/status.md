@@ -8,8 +8,16 @@ GET https://developers.programmable.family/api/v2/manifest
 ```
 
 This status page covers the unauthenticated read/discovery API. The separately hosted
-[Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md) is live and uses wallet-bound authentication to
-prepare Router actions. Its machine readiness endpoint is [`https://api.programmable.market/readyz`](https://api.programmable.market/readyz).
+[Custom Launch API V1](https://programmable.market/developers/custom-launch-api-v1.md)
+keeps provenance reads and status live, but its POST surface is read-only: it
+returns HTTP `409`, code `CUSTOM_LAUNCH_V1_READ_ONLY`, and is nonretryable. Its
+machine readiness endpoint is [`https://api.programmable.market/readyz`](https://api.programmable.market/readyz).
+The separate
+[Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)
+is pinned for a private canary and is not publicly available. Its held machine
+contract is published at
+[`https://programmable.market/openapi/custom-launch-v2.json`](https://programmable.market/openapi/custom-launch-v2.json);
+the OpenAPI document does not authorize a public write.
 
 ## Current availability
 
@@ -17,8 +25,9 @@ prepare Router actions. Its machine readiness endpoint is [`https://api.programm
 | --- | --- | --- | --- | --- |
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
-| Custom Launch API | `custom` | Ethereum | Live | Authenticated API-first preparation with a separate controller-wallet signature |
-| Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | New Custom preparation uses the Custom Launch API |
+| Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status are live; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
+| Custom Fee-Enforced Launch Profile V2 | `custom` | Ethereum | Private canary / publicly unavailable | Exact RC artifacts are pinned; held writes return `503` with `Retry-After`; no deployed fee profile, finalized canary, public route, or production authorization |
+| Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy or V1 write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
@@ -37,7 +46,7 @@ The manifest publishes Router V1 as `live` at `0x8622DD5bAb44185f2A458ac90384Ac9
 
 ## What closed and prelaunch mean
 
-Closed means the legacy Registry and GitHub submission routes are not accepted. Prelaunch refers only to a future Registry generation, provider integration, fixture, or fee path that is available for client development but not active. Neither state describes the live Custom Launch API. In particular:
+Closed means the legacy Registry and GitHub submission routes are not accepted. Prelaunch refers only to a future Registry generation, provider integration, fixture, or fee path that is available for client development but not active. Custom Launch API V1 reads/status remain live, but its POST state is independently read-only. Fee-Enforced V2 is independently pinned for a private canary and remains publicly unavailable. In particular:
 
 - future Custom examples are fixtures, not live assets;
 - approval or submission records do not belong in the public launch feed;
@@ -50,6 +59,12 @@ The v2 manifest reports `customRegistry.status: "live"`, `publicSubmissionsEnabl
 The v2 status response also reports `customRegistryPublication`. The Gen1 canary sets `baselineReady` and can keep `publicationReady` true, but it never sets `sourceConfigured`, `sourceCurrent`, or `sourceReady`. Those source fields advance only for the authenticated, complete, current `programmable-custom-launch-registry-v3` applicant feed. `baselineLaunches` and `applicantLaunches` remain separate. Consumers must not interpret `custom.status: "live"` or the canary alone as proof that a new project is launchable.
 
 Generation 1 is the manifest-published Custom Registry trust root. Its finalized project-only genesis canary is the immutable discovery baseline; legacy Registry and GitHub submission intake are closed. Generation 1 is not evidence that the stronger Generation 2 interface is deployed.
+
+Custom Registry Generation 2 and Custom Fee-Enforced Launch Profile V2 are
+different systems. The first is a future four-contract discovery trust root.
+The second is a closed launch profile for an exact additive fee path. Neither
+is live, neither creates a new category, and evidence for one cannot activate
+the other.
 
 The local Generation 2 release candidate currently snapshots the four-contract Registry, PartnerFactory Registry, fee-policy verifier, atomic registrar, 15-event integration set, and 37-word v4 producer commitment. It is undeployed and not final ABI authority. The Public Registry root is still changing its execution-policy, route, and market-data-source binding contract; final ABI, topics, event count, Solidity hash preimages, artifact hashes, and artifact-set hash will therefore differ. After the final Public commit, Developer must replace the candidate artifacts byte-for-byte and rerun Contract → Approval → Read Model → Developer parity before Generation 2 activation.
 
@@ -72,7 +87,12 @@ Every registered launch is discoverable. Feature availability is separate:
 
 If a requirement is not met, keep the launch visible and mark that feature unavailable. Do not infer support from contract names, metadata text, category, or an unfamiliar market type.
 
-The v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. The separate Custom Launch API owns launch preparation under its own live OpenAPI contract.
+The Developer v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. Custom Launch API V1 POST is also read-only, and Fee-Enforced V2 remains held at its public write boundary.
+
+The status of an API does not establish fee enforcement, an exact-source match,
+a successful simulation, finality, tradability, claim support, or an audit. Read
+each field independently and keep the Fee-Enforced V2 profile unavailable while
+`productionLaunchAuthorized` is false.
 
 ## Ready, degraded, and unavailable
 

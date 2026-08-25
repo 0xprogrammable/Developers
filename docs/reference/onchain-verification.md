@@ -6,9 +6,39 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
-Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed; the separate Custom Launch API is live. An unreleased Generation 2 release candidate exists for conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
+Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 provenance reads/status remain live, but POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. An unreleased Generation 2 release candidate exists for Registry conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
+
+Custom Registry Generation 2 is not Custom Fee-Enforced Launch Profile V2. The
+fee-enforced profile is a separate canary-stage launch contract. It has exact
+pinned release-candidate artifacts, but no published deployment, finalized
+canary, public route, or production authorization. Evidence for either release
+candidate cannot activate the other.
 
 The launch stamp Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
+
+## 2026-08-25 exact-source closeout
+
+The sanitized [exact-source closeout release](https://github.com/0xprogrammable/Developers/releases/tag/exact-source-closeout-2026-08-25)
+binds the five recovered Standard JSON inputs, constructor bytes, local runtime
+reproduction, and provider receipts. Its classifications are deliberately
+narrow:
+
+- Router `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` and Graph deployer
+  `0xB012e4A8F2c5FC4E8E4faCA9D5Ad6FfF13FBA887` reproduce exactly locally and
+  have Etherscan `Exact Match`;
+- FADE token `0x69d278968abf120f878f2e1e016ab615d3686c19` and FADE hook
+  `0xd7451a039373f54e493deE42A751fEcBfAFBa0cc` reproduce exactly locally, but
+  have no public-provider Exact Match in the snapshot;
+- Position fee forwarder `0x4AB7b91fa65E7e406C0E6ca32E4eF63c0777BCe9` reproduces exactly locally,
+  but has no provider Exact Match and shows Etherscan `Similar Match`;
+- Sourcify reports `match`, not `exact_match`, for all five because these
+  legacy deployments omit CBOR metadata; Blockscout remains partial; and the
+  Etherscan API retries for the three non-exact targets were blocked by a
+  missing provider API key.
+
+Local exact reproduction, Sourcify `match`, Blockscout partial, Etherscan
+Similar Match, and Etherscan Exact Match are separate states. None revises
+launch finality or implies an audit.
 
 ## Trust root
 
@@ -69,6 +99,50 @@ The same consistent Router record proves atomic Router execution and stamping fo
 A pull request, permit, approval response, factory response, webhook, token tag, copied event, matching logo, creator field, direct Graph Factory call, or Single Factory call cannot create Router provenance. This check requires an Ethereum RPC endpoint but no Programmable server, database, Registry, indexer, or Supabase project. See [Launch stamp router verification](launch-stamp.md).
 
 The Router records point-in-time provenance. A matching recorded component shell-code hash does not prove the current implementation, beacon, admin, initialization state, or upgrade authority. It also does not establish safety, audit status, liquidity, sellability, route support, or third-party integration.
+
+Router finality is not fee-policy finality. The existing PCAN canary's
+`platformFee` values are a point-in-time configuration observation and do not
+prove the Custom Fee-Enforced Launch Profile V2, its hook/vault path, or future
+swap enforcement.
+
+## Custom Fee-Enforced Launch Profile V2 verification
+
+The V2 profile is pinned for a private canary but remains publicly unavailable
+while `productionLaunchAuthorized` is false. A verifier must use one finalized
+canonical block and require all of the following to agree:
+
+- the exact Router launch identity, profile hash, launch-intent hash and bound
+  pool identity;
+- the exact fee hook, vault, custom module and initializer runtime code hashes;
+- a graph-bound composition hash covering those runtime identities, rather than
+  self-reported profile getters alone;
+- `1,000` ppm over denominator `1,000,000` and recipient
+  `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`;
+- pinned permission mask `0x2044`;
+- gross-unspecified-pool-currency basis and unspecified-pool-currency-per-swap
+  asset mode;
+- exact-input accounting in the output currency and exact-output accounting in
+  the input currency;
+- canonical PoolManager address
+  `0x000000000004444c5dc75cB358380D2e3dE08A90`, runtime hash
+  `0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293`,
+  and reciprocal hook/vault/pool bindings;
+- the initial `sqrtPriceX96`, authorized initializer, actual hook and vault
+  runtime code hashes, and complete composition hash;
+- one exact pool ID enforced by the hook and an initialization authorization
+  that rejects deterministic-address front-running;
+- a sealed binding state with no remaining configuration authority;
+- PoolManager ERC-6909 fee claims held in the sealed vault and claimable only
+  by reward wallet `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`;
+- a successful pinned simulation and a finalized canary for the same profile;
+  and
+- an exact-source match for every exclusive component.
+
+The readback proves only the exact bound pool and profile at that canonical
+block. It does not prove arbitrary-pool coverage, future liveness, liquidity,
+generic tradability, claim support, buybacks, a security audit, or a separate
+custom module's business semantics. Source verification, launch finality and
+fee enforcement remain independently reported states.
 
 ## Separate Custom Registry verification
 

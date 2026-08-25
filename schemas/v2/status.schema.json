@@ -13,6 +13,7 @@
     "classic",
     "custom",
     "customLaunchApi",
+    "customFeeEnforcedLaunchProfileV2",
     "feeds"
   ],
   "properties": {
@@ -74,6 +75,9 @@
     },
     "customLaunchApi": {
       "$ref": "#/$defs/customLaunchApi"
+    },
+    "customFeeEnforcedLaunchProfileV2": {
+      "$ref": "custom-fee-enforced-launch-profile-v2.schema.json"
     },
     "feeds": {
       "type": "object",
@@ -142,6 +146,10 @@
       "type": "object",
       "required": [
         "status",
+        "scope",
+        "feeEnforcement",
+        "writeStatus",
+        "postResponse",
         "readyzUrl",
         "guideUrl",
         "openApiUrl",
@@ -151,6 +159,35 @@
       "properties": {
         "status": {
           "const": "live"
+        },
+        "scope": {
+          "const": "provenance-only"
+        },
+        "feeEnforcement": {
+          "const": "not-established-by-api"
+        },
+        "writeStatus": {
+          "const": "read-only"
+        },
+        "postResponse": {
+          "type": "object",
+          "required": [
+            "httpStatus",
+            "code",
+            "retryable"
+          ],
+          "properties": {
+            "httpStatus": {
+              "const": 409
+            },
+            "code": {
+              "const": "CUSTOM_LAUNCH_V1_READ_ONLY"
+            },
+            "retryable": {
+              "const": false
+            }
+          },
+          "additionalProperties": false
         },
         "readyzUrl": {
           "const": "https://api.programmable.market/readyz"
