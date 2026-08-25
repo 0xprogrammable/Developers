@@ -160,9 +160,9 @@ describe("documentation contract", () => {
       {
         profileId:
           "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
-        profileVersion: "2.0.0-rc.1",
+        profileVersion: "2.0.0-rc.2",
         launchProfileHash:
-          "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+          "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
         status: "unavailable",
@@ -216,7 +216,7 @@ describe("documentation contract", () => {
       ),
       "utf8",
     );
-    assert.match(guide, /pinned `2\.0\.0-rc\.1` canary profile/i);
+    assert.match(guide, /pinned `2\.0\.0-rc\.2` canary profile/i);
     assert.match(
       guide,
       /programmable\.fee-enforced-isolated-after-swap\.zero-delta\.v1/,
@@ -236,7 +236,7 @@ describe("documentation contract", () => {
     assert.match(guide, /pinned permission mask is `0x2044`/i);
     assert.match(
       guide,
-      /sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d/,
+      /sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8/,
     );
     assert.match(
       guide,
@@ -253,9 +253,9 @@ describe("documentation contract", () => {
     );
     assert.match(
       guide,
-      /releases\/tag\/programmable-launch-v2\.0\.0-rc\.1/,
+      /releases\/tag\/programmable-launch-v2\.0\.0-rc\.2/,
     );
-    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0-rc\.1\.tgz/);
+    assert.match(guide, /npm install --global .*programmable-launch-2\.0\.0-rc\.2\.tgz/);
     assert.match(guide, /V2 `submit` remains held/i);
     assert.match(guide, /generic fee claiming for arbitrary hooks/i);
     assert.match(guide, /buybacks/i);

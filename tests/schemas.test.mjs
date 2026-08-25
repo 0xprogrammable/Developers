@@ -94,7 +94,7 @@ describe("JSON Schema registry", () => {
       {
         status: "pinned-release-candidate",
         launchProfileHash:
-          "sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d",
+          "sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
       },
@@ -151,12 +151,12 @@ describe("JSON Schema registry", () => {
     );
     assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.cli, {
       packageName: "@programmable/launch",
-      version: "2.0.0-rc.1",
+      version: "2.0.0-rc.2",
       distributionStatus: "github-release-candidate",
       releaseUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2",
       packageAssetUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz",
       commands: ["pack", "validate", "submit", "status"],
     });
 

@@ -1,6 +1,6 @@
 # Custom Fee-Enforced Launch Profile V2
 
-This guide describes the pinned `2.0.0-rc.1` canary profile. The profile is
+This guide describes the pinned `2.0.0-rc.2` canary profile. The profile is
 available only for a private canary and is not a public launch route today.
 
 Read the current machine state from
@@ -31,8 +31,8 @@ categories remain `classic` and `custom`.
 ## Release-candidate contract
 
 The closed launch-profile identifier is
-`programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `1`,
-profile version `2.0.0-rc.1`.
+`programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `2`,
+profile version `2.0.0-rc.2`.
 
 The release-candidate CLI contract uses package name `@programmable/launch`
 and keeps the four commands `pack`, `validate`, `submit`, and `status`. Its V2
@@ -59,11 +59,11 @@ explicit zero address `0x0000000000000000000000000000000000000000`.
 There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
 
 The CLI is distributed as a GitHub release candidate at
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.1`.
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0-rc.2`.
 Install the immutable release asset directly:
 
 ```sh
-npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.1/programmable-launch-2.0.0-rc.1.tgz
+npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0-rc.2/programmable-launch-2.0.0-rc.2.tgz
 ```
 
 The CLI distribution state is `github-release-candidate`; it is not an npm
@@ -115,7 +115,7 @@ two fee callbacks.
 The pinned release-candidate literals are:
 
 ```text
-launchProfileHash: sha256:c2c8df0ce28ef4eea1d5124bc366c634675873d095e9978bc7e968792a4c738d
+launchProfileHash: sha256:1eca209637922b9a8627d073a6d92fede0ae355fb5bd2dfebe3e5382f12f55f8
 contractPolicyId:  0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517
 ```
 
@@ -133,9 +133,9 @@ hash is
 | Role | Creation bytecode Keccak-256 | Runtime Keccak-256 |
 | --- | --- | --- |
 | `token` | `0x71660c7252993788cbab7c257ce654622c5661611623c4cb288f68f157d1b25d` | `0xf98eb029ee9c1face4b56fafd83612be8b813bf15a402a959ac107de8b203eef` |
-| `feeVault` | `0x053476bd624631357dfe15ec172bd046f6a4621003d3293a16fb87dce1ba70bd` | `0xf9638e198b83c2ada6cfb34d108d2b0a8356fb4679847bd1d5f3127dee1f24d5` |
-| `feeHook` | `0x1a54813e879edb214d24e97b1f50575f290503f46ea35c1fe40b45114983cdf9` | `0xe2bbc60d8e8fbe2fa16576f02785445063acf342cdeb1acfea1539d7cb96f067` |
-| `poolInitializer` | `0x690a30ab2f5ee0c42856a9627cb46d79b5ebc4fa0a2f4c75c3a6f3e077cbbbeb` | `0xe7210ee2a0edac8fe7e90387445d9c0ca26b7fa342e6828371d2db5969ae3c4d` |
+| `feeVault` | `0x0167ff8e72e4739491a8fbf1647cc4f583986f3a43ce16ae5289dd149b9a040c` | `0xf2cbc21a3f07c05909d664ba8d8b66fe6576eb8a5d016faa53e31e73ed6acbd4` |
+| `feeHook` | `0x6cd2dbd66351cf83194fb942ace4b4f4356c9499d567619b15a922d5cad730b3` | `0x0a461fa65d04305fa2e583d9a6fba369b3b2ff66aa5856f56d0782c2ff72e19c` |
+| `poolInitializer` | `0xf6e047132a68eb0692f314975b45af88c6dd873ab7ecaa7b0c3c84a490b9454c` | `0x4df0f570bc27f05baa99ad297e4b7666d15f3101f43ba2e2863ce026432f43e4` |
 
 The vault row is the materialized runtime after its canonical immutable
 PoolManager and Graph Factory bindings; its unmaterialized runtime-template
