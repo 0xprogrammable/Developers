@@ -5,6 +5,7 @@
   "type": "object",
   "required": [
     "schemaVersion",
+    "status",
     "name",
     "timestamp",
     "version",
@@ -13,6 +14,13 @@
   "properties": {
     "schemaVersion": {
       "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "degraded",
+        "unavailable"
+      ]
     },
     "name": {
       "type": "string",

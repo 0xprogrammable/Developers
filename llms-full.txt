@@ -27,8 +27,8 @@ Resolve current versioned launch requirements from Programmable Launch Policy. D
 
 - Network: Ethereum mainnet, chain ID 1.
 - Classic launch discovery: live.
-- Custom Registry submission intake: prelaunch.
-- Authenticated Router-based Custom Launch API: separate from Registry intake and from the unauthenticated read API.
+- Legacy Registry and GitHub submission intake: closed.
+- Authenticated Router-based Custom Launch API: live and separate from legacy intake and from the unauthenticated read API.
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
 - Router V1 launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
@@ -88,7 +88,7 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
 
-The live Custom Registry and its still-prelaunch public submission intake are represented separately. A prelaunch Registry intake state never carries or guesses a different Registry address and does not describe the separate Custom Launch API.
+The live Custom Registry and the closed legacy submission intake are represented separately. A closed intake state never carries or guesses a different Registry address and does not describe the live Custom Launch API.
 
 Top-level `launchStampRouter` is the independent live trust descriptor for Router-stamped Classic and Custom launches. On Ethereum it binds address `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, `64` finality confirmations, and exact permit-authority, Graph Factory, and PoolManager identities. The exact Router V1 ABI URL and published ABI-file SHA-256, Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, source tree/path, Forge extraction path, three event topics and indexed layouts, getter selectors, enum values, EIP-712 permit type, and sole payable atomic selector are published. The generated Forge container hash is intentionally not a trust field. `deploymentEvidence` publishes the finalized Ethereum deployment, runtime identities, and immutable getter observations. `/launchStampRouter/canaryEvidence` is the finalized PCAN test vector and publishes one approved finalized `CustomGraph` canary without inventing another canary ID. Its source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from and does not replace the Router artifact source commit. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. Historical launches are explicitly outside Router V1.
 
@@ -157,7 +157,7 @@ Production cursors are HMAC-signed. `PROGRAMMABLE_CURSOR_SIGNING_KEY` must be a 
 
 The snapshot binds the response to a chain boundary and includes a cursor. Consumers must preserve snapshot and finality information for reconciliation.
 
-The feed can return `status: "degraded"` when canonical event coverage is complete but enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Incomplete canonical event-log coverage instead makes launch-list and token-list routes return retryable `503` rather than a falsely complete list.
+The feed returns `status: "degraded"` or `"unavailable"` when canonical event coverage or enrichment is incomplete. Recognized launches stay in `items` with partial, unavailable, or null fields. Launch-list and token-list remain HTTP `200`; absence is not authoritative until quality returns to `ready`.
 
 ### GET /api/v2/launches/{launchId}
 
@@ -522,7 +522,7 @@ Approval is not launch. A changed commit, artifact, runtime, configuration, chai
 ## Launch provider recipe
 
 1. Use public category `custom` and display label `Programmable Custom`; provider attribution is not a third category.
-2. Resolve the live Custom Registry deployment from the manifest. Keep Registry-based public submission intake and any unapproved provider integration prelaunch. Do not infer Custom Launch API availability from Registry intake state.
+2. Resolve the live Custom Registry deployment from the manifest. Keep legacy Registry and GitHub submission intake closed and any unapproved provider integration prelaunch. Read Custom Launch API availability from its published live status and readiness URL.
 3. Use an atomic Programmable adapter, an allowlisted provider-factory callback, or an authenticated staged workflow whose public registration occurs only after final verification.
 4. Do not treat a frontend request, provider API response, webhook, metadata submission, or caller-supplied transaction hash as canonical provenance.
 5. Bind every approved factory to one provider ID, reviewed runtimeCodeKeccak256 identity, template ID and version; keep runtimeCodeSha256 evidence separate when present.
@@ -585,14 +585,14 @@ Complete provider specification: https://raw.githubusercontent.com/0xprogrammabl
 - Keep the last trusted manifest during brief outages, mark it stale, and do not accept a silent rollback.
 - Do not turn an API or provider error into a security judgment about a token.
 
-Error responses follow the public problem schema and contain a stable code plus human-readable detail.
+Error responses follow the public problem schema and contain a stable code, human-readable detail, `requestId`, numeric HTTP `status`, and ISO timestamp. Send those diagnostics to support, never an API key or Authorization header.
 
 ## Production failure behavior
 
 - Status unavailable: keep last data, mark freshness unknown, pause advancement if required.
 - Manifest unavailable: use last trusted manifest for read-only display, mark stale, accept no new deployment.
 - Feed unavailable: retry without losing durable resume cursor.
-- Event-log coverage incomplete: launch-list and token-list routes return retryable 503; retain the last durable cursor.
+- Event-log coverage incomplete: ingest recognized bounded records from HTTP 200, preserve degraded or unavailable quality, and do not interpret absence as deletion.
 - Enrichment degraded: ingest recognized launches and preserve partial, unavailable, and null identity, supply, timestamp, and provenance fields.
 - Unknown schema major: stop automatic ingestion and require migration.
 - Unknown optional value: keep launch visible and disable unsupported behavior.
@@ -606,8 +606,8 @@ Allowed:
 
 - One versioned integration for every Programmable launch.
 - Classic is live on Ethereum.
-- Custom Registry generation 1 discovery is live on Ethereum; Registry-based public submission intake remains prelaunch.
-- The authenticated Router-based Custom Launch API is a separate preparation surface.
+- Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
+- The authenticated Router-based Custom Launch API is the live separate preparation surface.
 - Router V1 is live on Ethereum for future stamps from block 25717612; its finalized onchain canary covers CustomGraph, with no separate Classic onchain canary.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification.
 - Every registered launch is discoverable.
@@ -618,7 +618,7 @@ Not allowed without separate evidence:
 
 - every launch is safe, audited, or unruggable;
 - every Custom market is chartable or tradable;
-- Registry-based public submission intake is live;
+- the closed legacy Registry or GitHub intake accepts launch submissions;
 - a placeholder Registry is live;
 - Basebit, Aion, or a similarly named project is a live or approved partner without exact evidence;
 - a named terminal or wallet has integrated Programmable;

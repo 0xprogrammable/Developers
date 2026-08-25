@@ -15,6 +15,9 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Keep v2 launch-list and token-list readable across retired legacy-source and incomplete-coverage states, with explicit degraded or unavailable quality and preserved recognized identities.
+- Publish the live Custom Launch API readiness link and mark legacy Registry and GitHub submission intake closed across discovery, manifest, OpenAPI, support, and agent documentation.
+- Add support-safe problem timestamps and expose `Retry-After` alongside request IDs without including credentials.
 - Publish stable prelaunch Generation 2 event-set and release-candidate metadata URLs without adding them to the live manifest.
 - Add the optional provider-attribution schema and fail-closed trust semantics.
 - Add a bounded full-traversal JavaScript reference and define Developer-manifest precedence over the Website operational mirror.

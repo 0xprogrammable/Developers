@@ -10,7 +10,8 @@
     "status",
     "detail",
     "code",
-    "requestId"
+    "requestId",
+    "timestamp"
   ],
   "properties": {
     "schemaVersion": {
@@ -42,6 +43,9 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 256
+    },
+    "timestamp": {
+      "$ref": "common.schema.json#/$defs/isoDateTime"
     },
     "extensions": {
       "$ref": "common.schema.json#/$defs/extensions"

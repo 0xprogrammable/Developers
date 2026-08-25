@@ -79,6 +79,11 @@ describe("JSON Schema registry", () => {
       await readJson(path.join(REPOSITORY_ROOT, "fixtures/v1/token-list.json")),
       "token list",
     );
+    assertValid(
+      registryV2.validator("token-list.schema.json"),
+      await readJson(path.join(REPOSITORY_ROOT, "fixtures/v2/token-list.partial.json")),
+      "partial v2 token list",
+    );
   });
 
   test("strict producer schema rejects fabricated trust and executable adapter fields", async () => {

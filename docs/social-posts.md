@@ -2,11 +2,11 @@
 
 These are copy-ready drafts, not authorization to post. Verify the URL and current status immediately before use.
 
-## Current — Registry discovery live, Registry intake prelaunch
+## Current — Registry discovery and Custom Launch API live
 
-Use only while Registry generation 1 and its finalized canary remain public and Registry-based public submission intake remains prelaunch:
+Use only while Registry generation 1 and its finalized canary remain public, the Custom Launch API remains live, and legacy Registry and GitHub submission intake remain closed:
 
-> Integrate Programmable once. Custom Registry discovery is live with onchain provenance, exact contract identities, finality, and fee disclosures. Registry submission intake remains prelaunch; Router-based launch preparation is documented separately. Docs: https://developers.programmable.family/
+> Programmable Custom discovery is live with onchain provenance, exact contract identities, finality, and fee disclosures. The Custom Launch API is live for Router preparation; legacy Registry and GitHub intake are closed. Docs: https://developers.programmable.family/
 
 ## Live — after the Custom canary
 

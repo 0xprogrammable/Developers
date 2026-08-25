@@ -38,7 +38,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Send the durable resume cursor as `after` for the next poll.
 - [ ] Keep cursors opaque and scoped to API version, chain, and filter.
 - [ ] Make retries, duplicate pages, corrections, and finality updates idempotent.
-- [ ] Preserve the last good state on retryable `503`; do not convert incomplete coverage into an empty feed.
+- [ ] Preserve the last good state when a response-production failure returns retryable `503`; treat incomplete coverage through the successful response's explicit quality instead of replacing it with an empty feed.
 - [ ] Validate representative and live responses against the published JSON Schemas.
 
 ## Finality and reorgs
@@ -100,4 +100,4 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Run schema, fixture, conformance, type, lint, build, security, link, and browser checks appropriate to your integration.
 - [ ] Keep the affected Custom Registry or feed path prelaunch if any required external evidence is absent.
 
-The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. General intake remains prelaunch and must stay disabled independently of discovery.
+The public v2 surface publishes Registry generation 1 and its finalized project-only genesis canary. Legacy Registry and GitHub submission intake are closed and stay disabled independently of discovery; new preparation uses the live Custom Launch API.

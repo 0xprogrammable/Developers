@@ -899,6 +899,16 @@ export function validateManifestSemantics(manifest) {
         "A live Registry must bind the complete active generation",
       ));
     }
+    if (
+      registry.publicSubmissionsEnabled === false &&
+      manifest.publicCategories?.custom?.publicSubmissionStatus !== "closed"
+    ) {
+      findings.push(finding(
+        "LEGACY_CUSTOM_INTAKE_STATE",
+        "/publicCategories/custom/publicSubmissionStatus",
+        "A disabled live Registry must publish legacy Custom submission intake as closed",
+      ));
+    }
   }
   if (registry?.status === "live" && manifest.schemaVersion === "1.0.0"
     && (registry.address === null || registry.startBlock === null

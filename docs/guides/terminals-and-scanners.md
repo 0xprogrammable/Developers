@@ -21,7 +21,7 @@ The manifest records the historical Classic V2 hook and the current Classic V3 h
 
 ## Current Custom boundary
 
-Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Registry-based public submission intake remains prelaunch and must not be inferred from discovery state. The separate Custom Launch API prepares Router-based launches under its own authenticated contract.
+Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. The separate Custom Launch API is live and prepares Router-based launches under its own authenticated contract.
 
 Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 
@@ -75,7 +75,7 @@ Name, symbol, decimals, supply, and timestamp can be null or unavailable when en
 
 Do not show a launch as older because your indexer discovered it late. Sort by canonical launch block position and use the onchain timestamp when it is available.
 
-When the feed status is `degraded`, canonical event coverage can still be complete while enrichment is incomplete. Ingest the records and preserve their partial provenance and unavailable fields. A retryable `503` from the launch-list route instead means the API is not publishing an incomplete event-log coverage boundary.
+When the feed status is `degraded`, canonical event coverage or enrichment is incomplete. Ingest recognized records, preserve partial provenance and unavailable fields, and do not treat absence as an authoritative deletion. The launch-list route returns these bounded records with HTTP `200`; `503` is reserved for a transient failure that prevents the response from being produced.
 
 Use market kind, capabilities, and optional extensions for secondary details. This keeps filtering stable while allowing new designs.
 

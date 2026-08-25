@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-Custom has separate lifecycle states. Router-based launch preparation is available through the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Custom Registry discovery is live, while Registry-based public submission intake remains prelaunch. The read API publishes only launches with recognized onchain evidence.
+Custom has separate lifecycle states. Router-based launch preparation is live through the authenticated [Custom Launch API](https://programmable.market/developers/custom-launch-api-v1.md). Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed. The read API publishes only launches with recognized onchain evidence.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 
@@ -71,7 +71,7 @@ No. A recognized onchain event remains discoverable when name, symbol, decimals,
 
 ## When does the feed return 503?
 
-For completeness gating, launch-list and token-list routes return a retryable `503` when Classic event coverage is incomplete. Custom and unfiltered routes also require the authenticated Registry to be current and complete; `category=classic` remains independent. Missing metadata or supply alone produces degraded enrichment rather than hiding recognized launches. During partial coverage, a known detail record can still be returned; an unknown address is not treated as a definitive `404` until coverage is complete.
+Launch-list and token-list routes do not turn incomplete source coverage into a blanket `503`. They return the recognized bounded records they can establish and mark feed quality `degraded` or `unavailable` as appropriate. A retryable `503` is reserved for a failure that prevents the response itself from being produced. Missing metadata, market enrichment, or supply produces degraded quality rather than hiding recognized launches. During partial coverage, a known detail record can still be returned; an unknown address is not treated as a definitive `404` until coverage is complete.
 
 ## How does the 0.1% fee work?
 

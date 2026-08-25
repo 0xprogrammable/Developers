@@ -58,7 +58,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 ## Product status in one paragraph
 
-Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Registry-based public submission intake remains prelaunch; that state is independent from the authenticated Custom Launch API. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Its finalized onchain canary covers `CustomGraph`, with no separate Classic onchain canary. Historical Stock-Paired records are not part of the v2 Custom classification. Every registered v2 launch is discoverable through one envelope; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery and Custom Registry generation 1 are live on Ethereum. The authenticated Custom Launch API is live; legacy Registry and GitHub submission intake are closed. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Its finalized onchain canary covers `CustomGraph`, with no separate Classic onchain canary. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

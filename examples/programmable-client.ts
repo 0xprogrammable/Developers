@@ -2,6 +2,7 @@ const DEFAULT_ORIGIN = "https://developers.programmable.family"
 
 export type Category = "classic" | "custom"
 export type FinalityState = "observed" | "confirmed" | "finalized" | "orphaned"
+export type FeedQuality = "ready" | "degraded" | "unavailable"
 
 export interface TokenIdentity {
   address: string
@@ -57,8 +58,8 @@ export interface LaunchRecord {
 
 export interface LaunchFeed {
   schemaVersion: string
-  status: string
-  snapshot: Record<string, unknown>
+  status: FeedQuality
+  snapshot: Record<string, unknown> | null
   items: LaunchRecord[]
   page: {
     hasMore: boolean
@@ -66,6 +67,16 @@ export interface LaunchFeed {
     resumeCursor: string | null
     [field: string]: unknown
   }
+  [field: string]: unknown
+}
+
+export interface TokenList {
+  schemaVersion: string
+  status: FeedQuality
+  name: string
+  timestamp: string
+  version: { major: 2; minor: number; patch: number }
+  tokens: Array<Record<string, unknown>>
   [field: string]: unknown
 }
 
@@ -126,8 +137,11 @@ export class ProgrammableClient {
     return this.get(`/api/v2/launches/${chainId}/${tokenAddress}`)
   }
 
-  tokenList(query: Pick<LaunchQuery, "chainId"> = {}): Promise<Record<string, unknown>> {
-    return this.get("/api/v2/token-list", { chainId: query.chainId })
+  tokenList(query: Pick<LaunchQuery, "chainId" | "category"> = {}): Promise<TokenList> {
+    return this.get("/api/v2/token-list", {
+      chainId: query.chainId,
+      category: query.category,
+    })
   }
 
   private async get<T>(

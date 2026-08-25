@@ -3,7 +3,7 @@
 # Programmable developer reference
 
 Unauthenticated read and discovery contracts for detecting and verifying Programmable launches. The authenticated
-Custom Launch API is a separate preparation surface with its own canonical guide and OpenAPI contract.
+Custom Launch API is live as a separate preparation surface with its own canonical guide, readiness URL and OpenAPI contract.
 
 ## Choose the API surface
 

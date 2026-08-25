@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches.",
+  "description": "Canonical discovery for Programmable Classic and approved Programmable Custom launches, with the live Custom Launch API linked separately.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -28,11 +28,11 @@
     },
     "custom": {
       "discoveryStatus": "live",
-      "publicSubmissionStatus": "prelaunch",
+      "publicSubmissionStatus": "closed",
       "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
       "registryStartBlock": "25701139",
       "registryGeneration": "1",
-      "note": "Finalized approved Custom Registry launches are discoverable. General public submissions remain prelaunch."
+      "note": "Custom Launch API is live. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "compatibility": {
@@ -44,6 +44,15 @@
     "deploymentAddresses": "resolve-from-manifest"
   },
   "extensions": {
+    "programmable.custom-launch-api": {
+      "status": "live",
+      "apiBaseUrl": "https://api.programmable.market",
+      "readyzUrl": "https://api.programmable.market/readyz",
+      "guideUrl": "https://programmable.market/developers/custom-launch-api-v1.md",
+      "openApiUrl": "https://programmable.market/openapi/custom-launch-v1.json",
+      "apiKeyManagementUrl": "https://programmable.market/developers/api-keys",
+      "walletBoundary": "separate-wallet-signature"
+    },
     "programmable.legacy-v1": {
       "status": "supported",
       "apiBaseUrl": "https://developers.programmable.family/api/v1",

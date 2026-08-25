@@ -71,7 +71,7 @@ An empty `markets` array is valid. It means the launch currently has no register
 
 `status: "degraded"` can accompany valid recognized launch items when metadata, supply, or block-timestamp enrichment is incomplete. Preserve null and unavailable fields and inspect each record's `identityStatus`, `supplyStatus`, metadata trust, and `provenanceStatus`. Incomplete enrichment does not remove a recognized launch.
 
-If canonical event-log coverage is incomplete, the launch feed and token list are not published as complete results; retryable requests return `503` instead.
+If canonical event-log coverage is incomplete, launch-list and token-list return the recognized bounded subset with `status: "degraded"` or `"unavailable"`. Process present records, but do not interpret absence as deletion or complete history.
 
 ## 5. Consume the feed in JavaScript
 
@@ -234,7 +234,7 @@ Before shipping:
 - Preserve project-only records with `token: null`; key them by `projectId` and `launchId`, and retain their authenticated `assets` graph.
 - Preserve the onchain launch timestamp rather than the time your service first observed the record.
 - Accept a null timestamp, partial identity or provenance, and unavailable supply without dropping a recognized launch.
-- Treat a degraded response as usable but incomplete enrichment; do not convert null into zero or guessed metadata.
+- Treat a degraded or unavailable response as a bounded partial view; keep recognized records, do not convert null into zero, and do not interpret absence as deletion.
 - Treat `observed` and `confirmed` records as non-final. If a later poll marks a launch `orphaned`, apply that correction idempotently; otherwise reconcile non-final records against later snapshots.
 - Keep registered launches visible when a market or capability is unknown; do not invent another category.
 - Accept multiple primary or secondary tokens, contract markets, and open asset roles without selecting an invented canonical token.
@@ -242,7 +242,7 @@ Before shipping:
 - Do not render a chart or trade button without the corresponding verified support.
 - Treat creator metadata and external links as untrusted display data.
 - Map only `classic` to `Programmable Classic` and `custom` to `Programmable Custom`; keep partner, template, model, hook, and market kind as secondary data.
-- Keep Custom inactive while the manifest reports a prelaunch Registry, null address or start block, or disabled public submissions.
+- Keep unsupported Registry generations and provider paths inactive when their deployment evidence is absent. Route new preparation to the live Custom Launch API; legacy Registry and GitHub submission intake are closed.
 - Partition checkpoints by API major version, chain, and filter scope.
 - Display `Programmable Verified` only from an effective structured review bound to the deployed revision.
 - Keep partner attribution independent from fee state. A partner-attributed project without a verified fee path uses `no-qualifying-market` and zero shares; an active partnership-template fee path uses 20 bps split 15/5 with no extra Native Custom 10 bps.

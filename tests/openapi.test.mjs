@@ -54,11 +54,17 @@ describe("OpenAPI v2 contract", () => {
 
   test("keeps read-only discovery separate from API-first launch preparation", () => {
     assert.match(spec.info.description, /API-first write path/u);
+    assert.equal(
+      spec.components.schemas.WellKnownDocument.properties.publicCategories
+        .properties.custom.properties.publicSubmissionStatus.const,
+      "closed",
+    );
     assert.match(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.description,
-      /Legacy Custom Registry intake status/u,
+      /Legacy Registry and GitHub submission intake status/u,
     );
+    assert.match(spec.paths["/api/v2/status"].get.description, /readiness link/u);
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });
 
