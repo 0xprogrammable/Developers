@@ -453,6 +453,28 @@ describe("Router Custom v2 projection", () => {
       finding.code === "FEE_POLICY_REQUIRED"));
   });
 
+  test("publishes a finalized launch when the source cursor equals its launch block", async () => {
+    const payload = currentSourcePayload();
+    const next = payload.entries.find((entry) => entry.symbol === "NEXT");
+    assert.ok(next);
+    payload.asOfBlock = next.launchStampProvenance.blockNumber;
+    payload.asOfBlockHash = next.launchStampProvenance.blockHash;
+    recommitSourcePayload(payload);
+    serveSource(payload);
+
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.equal(snapshot.verifiedIdentityCount, 3);
+    const record = snapshot.records.find((entry) =>
+      entry.token.symbol === "NEXT");
+    assert.ok(record);
+    assert.equal(
+      record.extensions["programmable/router-stamp-v1"].snapshotAsOfBlock,
+      next.launchStampProvenance.blockNumber,
+    );
+    assert.equal(isRouterStampedCustom(record, manifest), true);
+  });
+
   test("does not treat a valid response self-hash as publication authority", async () => {
     const payload = currentSourcePayload();
     serveSource(payload, { receiptStatus: "0x0" });

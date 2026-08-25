@@ -217,7 +217,9 @@ function canonicalRouterEntry(raw, binding, boundary, requirePinned = true) {
     BigInt(blockNumber) < BigInt(binding.startBlock) ||
     BigInt(finalizedAtBlockNumber) <
       BigInt(blockNumber) + BigInt(binding.finalityConfirmations) ||
-    BigInt(finalizedAtBlockNumber) > BigInt(boundary.asOfBlock) ||
+    // The snapshot cursor bounds launch events, while finalizedAtBlockNumber
+    // independently proves the required confirmation depth was observed.
+    BigInt(blockNumber) > BigInt(boundary.asOfBlock) ||
     !HASH32.test(raw.launchId ?? "") || !HASH32.test(raw.stampHash ?? "") ||
     !HASH32.test(raw.transactionHash ?? "") ||
     !HASH32.test(raw.blockHash ?? "") ||
@@ -1235,7 +1237,7 @@ export function hasExactRouterStampedCustomRecordShape(record) {
       safeDecimal(extension.finalizedAtBlockNumber) !== null &&
       BigInt(extension.finalizedAtBlockNumber) >=
         BigInt(extension.blockNumber) + BigInt(extension.finalityConfirmations) &&
-      BigInt(extension.finalizedAtBlockNumber) <=
+      BigInt(extension.blockNumber) <=
         BigInt(extension.snapshotAsOfBlock) &&
       extension.feePolicyStatus === "unavailable"
   );
