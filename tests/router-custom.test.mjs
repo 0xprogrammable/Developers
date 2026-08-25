@@ -184,10 +184,177 @@ function recommitSourcePayload(payload) {
   return payload;
 }
 
-function serveSource(payload) {
-  globalThis.fetch = async (url) => {
-    assert.equal(String(url), ROUTER_CUSTOM_SOURCE_URL);
-    return new Response(JSON.stringify(payload), {
+function quantity(value) {
+  return `0x${BigInt(value).toString(16)}`;
+}
+
+function word(value) {
+  if (typeof value === "number" || typeof value === "bigint") {
+    return BigInt(value).toString(16).padStart(64, "0");
+  }
+  assert.equal(typeof value, "string");
+  const raw = value.startsWith("0x") ? value.slice(2) : value;
+  assert.match(raw, /^[0-9a-f]+$/i);
+  return raw.toLowerCase().padStart(64, "0");
+}
+
+function rpcIdentity(entry) {
+  const provenance = entry.launchStampProvenance;
+  return {
+    launchId: provenance.launchId.toLowerCase(),
+    stampHash: provenance.stampHash.toLowerCase(),
+    transactionHash: provenance.transactionHash.toLowerCase(),
+    blockNumber: provenance.blockNumber,
+    blockHash: provenance.blockHash.toLowerCase(),
+    transactionIndex: provenance.transactionIndex,
+    logIndex: provenance.launchLogIndex,
+    launchedAt: entry.launchedAt,
+    launchWallet: provenance.launchWallet,
+    tokenAddress: entry.tokenAddress,
+    hookAddress: entry.hookAddress,
+    poolManagerAddress: provenance.poolManagerAddress,
+    poolId: provenance.poolId,
+    routeLauncherAddress: provenance.routeLauncherAddress,
+    routeLauncherRuntimeCodeHash: provenance.routeLauncherRuntimeCodeHash,
+  };
+}
+
+function launchLog(identity) {
+  return {
+    address: manifest.launchStampRouter.address,
+    topics: [
+      manifest.launchStampRouter.events.launchStamped.topic0,
+      identity.launchId,
+      `0x${word(identity.tokenAddress)}`,
+      `0x${word(identity.hookAddress)}`,
+    ],
+    data: `0x${[
+      identity.poolManagerAddress,
+      identity.poolId,
+      identity.stampHash,
+    ].map(word).join("")}`,
+    blockNumber: quantity(identity.blockNumber),
+    blockHash: identity.blockHash,
+    transactionHash: identity.transactionHash,
+    transactionIndex: quantity(identity.transactionIndex),
+    logIndex: quantity(identity.logIndex),
+    removed: false,
+  };
+}
+
+function stampRecord(identity) {
+  return `0x${[
+    1,
+    identity.launchWallet,
+    identity.tokenAddress,
+    identity.hookAddress,
+    identity.poolManagerAddress,
+    identity.poolId,
+    `0x${"1".repeat(64)}`,
+    `0x${"2".repeat(64)}`,
+    `0x${"3".repeat(64)}`,
+    identity.routeLauncherAddress,
+    identity.routeLauncherRuntimeCodeHash,
+    `0x${"4".repeat(64)}`,
+    `0x${"5".repeat(64)}`,
+    identity.stampHash,
+  ].map(word).join("")}`;
+}
+
+function serveSource(payload, options = {}) {
+  const chainPayload = options.chainPayload ?? currentSourcePayload();
+  const identities = chainPayload.entries.map(rpcIdentity);
+  const byLaunch = new Map(identities.map((entry) => [entry.launchId, entry]));
+  const next = identities.find((entry) =>
+    BigInt(entry.blockNumber) > BigInt(bundledSource.asOfBlock));
+  assert.ok(next);
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url) === ROUTER_CUSTOM_SOURCE_URL) {
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const request = JSON.parse(String(init.body));
+    const [first, second] = request.params ?? [];
+    let result;
+    if (request.method === "eth_getBlockByNumber") {
+      if (first === "finalized") {
+        result = {
+          number: quantity(chainPayload.asOfBlock),
+          hash: chainPayload.asOfBlockHash,
+          timestamp: quantity(Date.parse(chainPayload.generatedAt) / 1_000),
+        };
+      } else {
+        const blockNumber = Number(BigInt(first));
+        const identity = identities.find((entry) =>
+          Number(entry.blockNumber) === blockNumber);
+        const isSourceBoundary = blockNumber === Number(payload.asOfBlock);
+        result = {
+          number: first,
+          hash: identity?.blockHash ?? (
+            isSourceBoundary ? payload.asOfBlockHash : chainPayload.asOfBlockHash
+          ),
+          timestamp: quantity(identity
+            ? Date.parse(identity.launchedAt) / 1_000
+            : Date.parse(payload.generatedAt) / 1_000),
+        };
+      }
+    } else if (request.method === "eth_blockNumber") {
+      result = quantity(Number(chainPayload.asOfBlock) + 10);
+    } else if (request.method === "eth_chainId") {
+      result = "0x1";
+    } else if (request.method === "eth_getLogs") {
+      const fromBlock = Number(BigInt(first.fromBlock));
+      const toBlock = Number(BigInt(first.toBlock));
+      result = Number(next.blockNumber) >= fromBlock &&
+        Number(next.blockNumber) <= toBlock
+        ? [launchLog(next)]
+        : [];
+    } else if (request.method === "eth_getTransactionReceipt") {
+      const identity = identities.find((entry) =>
+        entry.transactionHash === String(first).toLowerCase());
+      result = identity ? {
+        status: options.receiptStatus ?? "0x1",
+        to: manifest.launchStampRouter.address,
+        transactionHash: identity.transactionHash,
+        blockNumber: quantity(identity.blockNumber),
+        blockHash: identity.blockHash,
+        transactionIndex: quantity(identity.transactionIndex),
+        logs: [launchLog(identity)],
+      } : null;
+    } else if (request.method === "eth_call") {
+      const data = first.data.toLowerCase();
+      if (data.startsWith(manifest.launchStampRouter.getters.record.selector)) {
+        const identity = byLaunch.get(`0x${data.slice(-64)}`);
+        assert.ok(identity);
+        result = stampRecord(identity);
+      } else if (data.startsWith(manifest.launchStampRouter.getters.token.selector)) {
+        const address = `0x${data.slice(-40)}`;
+        result = identities.find((entry) =>
+          entry.tokenAddress.toLowerCase() === address)?.launchId ??
+          `0x${"0".repeat(64)}`;
+      } else if (data.startsWith(
+        manifest.launchStampRouter.getters.stampProof.selector,
+      )) {
+        const address = `0x${data.slice(-40)}`;
+        const identity = identities.find((entry) =>
+          entry.tokenAddress.toLowerCase() === address);
+        result = identity
+          ? `0x${word(identity.launchId)}${word(identity.stampHash)}`
+          : `0x${"0".repeat(128)}`;
+      } else {
+        assert.fail(`unexpected eth_call ${data.slice(0, 10)}`);
+      }
+      assert.ok(second);
+    } else {
+      assert.fail(`unexpected RPC method ${request.method}`);
+    }
+    return new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      id: request.id,
+      result,
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -228,7 +395,7 @@ describe("Router Custom v2 projection", () => {
     );
   });
 
-  test("automatically accepts a complete commitment-bound current snapshot", async () => {
+  test("accepts a complete snapshot only with exact finalized Router evidence", async () => {
     const payload = currentSourcePayload();
     serveSource(payload);
     const snapshot = await readRouterCustomRecords(manifest);
@@ -286,6 +453,80 @@ describe("Router Custom v2 projection", () => {
       finding.code === "FEE_POLICY_REQUIRED"));
   });
 
+  test("does not treat a valid response self-hash as publication authority", async () => {
+    const payload = currentSourcePayload();
+    serveSource(payload, { receiptStatus: "0x0" });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "last-known-good");
+    assert.equal(snapshot.verifiedIdentityCount, 2);
+    assert.ok(!snapshot.records.some((record) => record.token.symbol === "NEXT"));
+  });
+
+  test("accepts a pinned identity at a later finality observation", async () => {
+    const payload = currentSourcePayload();
+    const rehydrated = payload.entries.find((entry) => entry.symbol === "FADE");
+    assert.ok(rehydrated);
+    rehydrated.launchStampProvenance.finalizedAtBlockNumber = "25833400";
+    recommitSourcePayload(payload);
+    serveSource(payload);
+
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.equal(snapshot.verifiedIdentityCount, 3);
+    assert.equal(
+      snapshot.records.find((record) => record.token.symbol === "FADE")
+        .extensions["programmable/router-stamp-v1"].finalizedAtBlockNumber,
+      "25833400",
+    );
+  });
+
+  test("allows only monotonic null-to-validated token metadata enrichment", async () => {
+    const partial = currentSourcePayload();
+    partial.entries.at(-1).name = null;
+    partial.entries.at(-1).symbol = null;
+    delete partial.entries.at(-1).tokenDecimals;
+    recommitSourcePayload(partial);
+    serveSource(partial);
+    const first = await readRouterCustomRecords(manifest);
+    assert.equal(first.status, "current");
+    assert.equal(first.records.find((record) =>
+      record.launchId === `0x${"a".repeat(64)}`).token.identityStatus, "partial");
+
+    resetRouterCustomCacheForTest({ preserveAcceptedSource: true });
+    const enriched = currentSourcePayload();
+    serveSource(enriched);
+    const second = await readRouterCustomRecords(manifest);
+    assert.equal(second.status, "current");
+    assert.equal(second.records.find((record) =>
+      record.launchId === `0x${"a".repeat(64)}`).token.symbol, "NEXT");
+
+    for (const mutate of [
+      (entry) => { entry.name = "Rewritten"; },
+      (entry) => { entry.symbol = null; },
+      (entry) => { delete entry.tokenDecimals; },
+    ]) {
+      resetRouterCustomCacheForTest({ preserveAcceptedSource: true });
+      const changed = currentSourcePayload();
+      mutate(changed.entries.at(-1));
+      recommitSourcePayload(changed);
+      serveSource(changed);
+      const rejected = await readRouterCustomRecords(manifest);
+      assert.equal(rejected.status, "last-known-good");
+      assert.equal(rejected.records.find((record) =>
+        record.launchId === `0x${"a".repeat(64)}`).token.symbol, "NEXT");
+    }
+  });
+
+  test("rejects an immutable launch-time rewrite", async () => {
+    const payload = currentSourcePayload();
+    payload.entries[0].launchedAt = "2026-08-25T16:00:00.000Z";
+    recommitSourcePayload(payload);
+    serveSource(payload);
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "last-known-good");
+    assert.equal(snapshot.verifiedIdentityCount, 2);
+  });
+
   test("keeps every warm accepted finalized identity across later shrink or rewrite", async () => {
     const first = currentSourcePayload();
     serveSource(first);
@@ -327,6 +568,16 @@ describe("Router Custom v2 projection", () => {
         .markets[0].hookAddress,
       "0x2222222222222222222222222222222222222222",
     );
+  });
+
+  test("does not accept a finalized suffix shrink after a cold restart", async () => {
+    const shrunk = currentSourcePayload();
+    shrunk.entries.pop();
+    recommitSourcePayload(shrunk);
+    serveSource(shrunk);
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "last-known-good");
+    assert.equal(snapshot.verifiedIdentityCount, 2);
   });
 
   test("rejects a source mutation under an unchanged commitment", async () => {

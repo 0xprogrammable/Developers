@@ -3,11 +3,22 @@ import { readFile } from "node:fs/promises";
 import { readBoundedJson } from "./bounded-body.js";
 import { canonicalSha256 } from "./canonical.js";
 import { compareLaunchesDescending } from "./normalize.js";
+import {
+  ethCall,
+  parseQuantity,
+  readBlock,
+  readFinalizedBlock,
+  readHeadBlock,
+  readLogs,
+  rpcCall,
+  toQuantity,
+} from "./rpc.js";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
+const QUANTITY = /^0x(?:0|[1-9a-f][0-9a-f]*)$/i;
 const PROHIBITED_TEXT =
   /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u;
 
@@ -47,6 +58,9 @@ const EXPECTED_ENTRY_SHA256_BY_LAUNCH_ID = new Map([
 const ROUTER_CUSTOM_SOURCE_RESPONSE_BYTES = 16 * 1_024 * 1_024;
 const ROUTER_CUSTOM_SOURCE_TIMEOUT_MS = 6_000;
 const ROUTER_CUSTOM_CACHE_MS = 15_000;
+const ROUTER_CUSTOM_FINALIZED_HEAD_MAXIMUM_LAG_BLOCKS = 256;
+const ROUTER_CUSTOM_FINALIZED_SCAN_MAXIMUM_BLOCKS = 250_000;
+const ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS = 10_000;
 // Only records produced after validating the complete source commitment receive
 // this non-serializable capability. A source-shaped object cannot self-assign it.
 const TRUSTED_CURRENT_ROUTER_RECORD = Symbol("trusted-current-router-record");
@@ -100,6 +114,9 @@ function exactKeys(value, expected) {
 function exactRouterBinding(manifest) {
   const router = manifest?.launchStampRouter;
   const runtimeCodeHash = router?.runtimeCodeHash;
+  const getter = (name, signature, selector) =>
+    router?.getters?.[name]?.signature === signature &&
+    router.getters[name].selector === selector;
   if (
     manifest?.chainId !== 1 ||
     !router ||
@@ -114,6 +131,23 @@ function exactRouterBinding(manifest) {
     router.events?.launchStamped?.topic0 !==
       "0x6cf479a102f1eebc9244f48f8d68f6aa52b4c5a4516318df58ba46614a5b14f2" ||
     router.enumValues?.launchKind?.customGraph !== 1 ||
+    !getter("chainId", "CHAIN_ID()", "0x85e1f4d0") ||
+    !getter("graphFactory", "GRAPH_FACTORY()", "0x1cc9e5ce") ||
+    !getter(
+      "graphFactoryRuntimeCodeHash",
+      "GRAPH_FACTORY_RUNTIME_CODE_HASH()",
+      "0x92989a00",
+    ) ||
+    !getter("poolManager", "POOL_MANAGER()", "0x62308e85") ||
+    !getter(
+      "poolManagerRuntimeCodeHash",
+      "POOL_MANAGER_RUNTIME_CODE_HASH()",
+      "0x38d831c4",
+    ) ||
+    !getter("token", "launchIdByToken(address)", "0x1dad847c") ||
+    !getter("pool", "launchIdByPool(address,bytes32)", "0x361df6f3") ||
+    !getter("record", "launchStamp(bytes32)", "0x4c9e4764") ||
+    !getter("stampProof", "stampProof(address)", "0x174b9f9d") ||
     !ADDRESS.test(router.bindings?.graphFactory ?? "") ||
     !HASH32.test(router.bindings?.graphFactoryRuntimeCodeHash ?? "") ||
     !ADDRESS.test(router.bindings?.poolManager ?? "") ||
@@ -127,9 +161,25 @@ function exactRouterBinding(manifest) {
     runtimeCodeHash,
     startBlock: router.startBlock,
     finalityConfirmations: router.finalityConfirmations,
+    launchStampedTopic: router.events.launchStamped.topic0,
+    customGraphKind: router.enumValues.launchKind.customGraph,
     graphFactory: router.bindings.graphFactory,
     graphFactoryRuntimeCodeHash: router.bindings.graphFactoryRuntimeCodeHash,
     poolManager: router.bindings.poolManager,
+    poolManagerRuntimeCodeHash: router.bindings.poolManagerRuntimeCodeHash,
+    getters: Object.freeze({
+      chainId: router.getters.chainId.selector,
+      graphFactory: router.getters.graphFactory.selector,
+      graphFactoryRuntimeCodeHash:
+        router.getters.graphFactoryRuntimeCodeHash.selector,
+      poolManager: router.getters.poolManager.selector,
+      poolManagerRuntimeCodeHash:
+        router.getters.poolManagerRuntimeCodeHash.selector,
+      token: router.getters.token.selector,
+      pool: router.getters.pool.selector,
+      record: router.getters.record.selector,
+      stampProof: router.getters.stampProof.selector,
+    }),
   };
 }
 
@@ -404,6 +454,259 @@ function sourceEntry(raw, binding, boundary) {
   }, binding, boundary, false);
 }
 
+function abiWords(value, count, label) {
+  if (
+    typeof value !== "string" ||
+    value.length !== 2 + count * 64 ||
+    !/^0x[0-9a-f]+$/i.test(value)
+  ) {
+    throw new Error(`${label} is not canonical ABI data`);
+  }
+  return Array.from({ length: count }, (_, index) =>
+    `0x${value.slice(2 + index * 64, 2 + (index + 1) * 64).toLowerCase()}`);
+}
+
+function abiAddress(word, label) {
+  if (!/^0x0{24}[0-9a-f]{40}$/i.test(word)) {
+    throw new Error(`${label} is not a canonical ABI address`);
+  }
+  return `0x${word.slice(-40).toLowerCase()}`;
+}
+
+function abiSafeInteger(word, label) {
+  const value = BigInt(word);
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) {
+    throw new Error(`${label} exceeds the safe integer range`);
+  }
+  return number;
+}
+
+function encodedAddress(address) {
+  if (!ADDRESS.test(address)) throw new Error("Router address input is invalid");
+  return address.slice(2).toLowerCase().padStart(64, "0");
+}
+
+function decodedLaunchLog(raw, binding) {
+  if (
+    !raw || typeof raw !== "object" ||
+    !sameHex(raw.address, binding.address) ||
+    !Array.isArray(raw.topics) || raw.topics.length !== 4 ||
+    !sameHex(raw.topics[0], binding.launchStampedTopic) ||
+    !HASH32.test(raw.topics[1] ?? "") ||
+    raw.removed === true ||
+    !QUANTITY.test(raw.blockNumber ?? "") ||
+    !QUANTITY.test(raw.transactionIndex ?? "") ||
+    !QUANTITY.test(raw.logIndex ?? "") ||
+    !HASH32.test(raw.blockHash ?? "") ||
+    !HASH32.test(raw.transactionHash ?? "")
+  ) {
+    throw new Error("Router Custom launch log is malformed");
+  }
+  const data = abiWords(raw.data, 3, "Router Custom launch log data");
+  return Object.freeze({
+    launchId: raw.topics[1].toLowerCase(),
+    tokenAddress: abiAddress(raw.topics[2], "Router launch token"),
+    hookAddress: abiAddress(raw.topics[3], "Router launch hook"),
+    poolManagerAddress: abiAddress(data[0], "Router launch PoolManager"),
+    poolId: data[1],
+    stampHash: data[2],
+    transactionHash: raw.transactionHash.toLowerCase(),
+    blockNumber: String(parseQuantity(raw.blockNumber)),
+    blockHash: raw.blockHash.toLowerCase(),
+    transactionIndex: parseQuantity(raw.transactionIndex),
+    logIndex: parseQuantity(raw.logIndex),
+  });
+}
+
+function launchLogKey(log) {
+  return `${log.transactionHash}:${log.logIndex}`;
+}
+
+function decodedStampRecord(value) {
+  const words = abiWords(value, 14, "Router launchStamp result");
+  return Object.freeze({
+    kind: abiSafeInteger(words[0], "Router launch kind"),
+    launchWallet: abiAddress(words[1], "Router launch wallet"),
+    tokenAddress: abiAddress(words[2], "Router launch token"),
+    hookAddress: abiAddress(words[3], "Router launch hook"),
+    poolManagerAddress: abiAddress(words[4], "Router launch PoolManager"),
+    poolId: words[5],
+    poolKeyHash: words[6],
+    componentSetHash: words[7],
+    routePayloadHash: words[8],
+    routeLauncherAddress: abiAddress(words[9], "Router route launcher"),
+    routeLauncherRuntimeCodeHash: words[10],
+    expectedResultHash: words[11],
+    permitDigest: words[12],
+    stampHash: words[13],
+  });
+}
+
+async function readStampRecord(binding, launchId, blockNumber, provider) {
+  return decodedStampRecord(await ethCall(
+    binding.address,
+    `${binding.getters.record}${launchId.slice(2)}`,
+    provider,
+    blockNumber,
+  ));
+}
+
+function requireCustomRecordMatchesLog(record, log, binding) {
+  if (
+    record.kind !== binding.customGraphKind ||
+    !sameHex(record.tokenAddress, log.tokenAddress) ||
+    !sameHex(record.hookAddress, log.hookAddress) ||
+    !sameHex(record.poolManagerAddress, log.poolManagerAddress) ||
+    !sameHex(record.poolManagerAddress, binding.poolManager) ||
+    !sameHex(record.poolId, log.poolId) ||
+    !sameHex(record.stampHash, log.stampHash) ||
+    !sameHex(record.routeLauncherAddress, binding.graphFactory) ||
+    !sameHex(
+      record.routeLauncherRuntimeCodeHash,
+      binding.graphFactoryRuntimeCodeHash,
+    ) ||
+    [
+      record.poolKeyHash,
+      record.componentSetHash,
+      record.routePayloadHash,
+      record.expectedResultHash,
+      record.permitDigest,
+      record.stampHash,
+    ].some((value) => value === `0x${"0".repeat(64)}`)
+  ) {
+    throw new Error("Router Custom finalized record does not match its launch log");
+  }
+}
+
+async function finalizedCustomLaunchLogs(binding, finalized) {
+  const checkpoint = Number(BigInt(EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock));
+  if (finalized.blockNumber < checkpoint) {
+    throw new Error("Router finalized boundary regressed behind the trust checkpoint");
+  }
+  const gap = finalized.blockNumber - checkpoint;
+  if (gap > ROUTER_CUSTOM_FINALIZED_SCAN_MAXIMUM_BLOCKS) {
+    throw new Error("Router finalized scan requires a refreshed trust checkpoint");
+  }
+  const logs = [];
+  for (
+    let fromBlock = checkpoint + 1;
+    fromBlock <= finalized.blockNumber;
+    fromBlock += ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS
+  ) {
+    const toBlock = Math.min(
+      finalized.blockNumber,
+      fromBlock + ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS - 1,
+    );
+    const response = await readLogs({
+      address: binding.address,
+      fromBlock: toQuantity(fromBlock),
+      toBlock: toQuantity(toBlock),
+      topics: [binding.launchStampedTopic],
+    }, finalized.provider);
+    logs.push(...response.logs.map((raw) => decodedLaunchLog(raw, binding)));
+  }
+  const unique = new Set();
+  const records = new Map();
+  const custom = [];
+  for (const log of logs) {
+    const key = launchLogKey(log);
+    if (unique.has(key)) throw new Error("Router finalized scan returned duplicates");
+    unique.add(key);
+    const record = await readStampRecord(
+      binding,
+      log.launchId,
+      finalized.blockNumber,
+      finalized.provider,
+    );
+    if (record.kind !== binding.customGraphKind) continue;
+    requireCustomRecordMatchesLog(record, log, binding);
+    records.set(log.launchId, record);
+    custom.push(log);
+  }
+  return { logs: custom, records };
+}
+
+async function requireFinalizedSourceEntry(entry, log, record, binding, finalized) {
+  if (
+    entry.launchId.toLowerCase() !== log.launchId ||
+    !sameHex(entry.tokenAddress, log.tokenAddress) ||
+    !sameHex(entry.hookAddress, log.hookAddress) ||
+    !sameHex(entry.poolManagerAddress, log.poolManagerAddress) ||
+    !sameHex(entry.poolId, log.poolId) ||
+    !sameHex(entry.stampHash, log.stampHash) ||
+    !sameHex(entry.transactionHash, log.transactionHash) ||
+    entry.blockNumber !== log.blockNumber ||
+    !sameHex(entry.blockHash, log.blockHash) ||
+    entry.transactionIndex !== log.transactionIndex ||
+    entry.logIndex !== log.logIndex ||
+    !sameHex(entry.launchWallet, record.launchWallet) ||
+    BigInt(entry.blockNumber) + BigInt(binding.finalityConfirmations) >
+      BigInt(finalized.blockNumber)
+  ) {
+    throw new Error("Router Custom source entry lacks exact finalized evidence");
+  }
+
+  const receiptResponse = await rpcCall(
+    "eth_getTransactionReceipt",
+    [entry.transactionHash],
+    { preferredProvider: finalized.provider },
+  );
+  const receipt = receiptResponse.result;
+  if (
+    !receipt || receipt.status !== "0x1" ||
+    !sameHex(receipt.to, binding.address) ||
+    !sameHex(receipt.transactionHash, entry.transactionHash) ||
+    !sameHex(receipt.blockHash, entry.blockHash) ||
+    String(parseQuantity(receipt.blockNumber)) !== entry.blockNumber ||
+    parseQuantity(receipt.transactionIndex) !== entry.transactionIndex ||
+    !Array.isArray(receipt.logs)
+  ) {
+    throw new Error("Router Custom launch receipt is not successful and canonical");
+  }
+  const receiptLog = receipt.logs
+    .filter((raw) =>
+      sameHex(raw?.address, binding.address) &&
+      sameHex(raw?.topics?.[0], binding.launchStampedTopic))
+    .map((raw) => decodedLaunchLog(raw, binding))
+    .find((candidate) => launchLogKey(candidate) === launchLogKey(log));
+  if (!receiptLog || receiptLog.launchId !== log.launchId) {
+    throw new Error("Router Custom launch receipt does not contain the stamped event");
+  }
+
+  const tokenLaunchId = await ethCall(
+    binding.address,
+    `${binding.getters.token}${encodedAddress(entry.tokenAddress)}`,
+    finalized.provider,
+    finalized.blockNumber,
+  );
+  const stampProof = abiWords(await ethCall(
+    binding.address,
+    `${binding.getters.stampProof}${encodedAddress(entry.tokenAddress)}`,
+    finalized.provider,
+    finalized.blockNumber,
+  ), 2, "Router stampProof result");
+  if (
+    !sameHex(tokenLaunchId, entry.launchId) ||
+    !sameHex(stampProof[0], entry.launchId) ||
+    !sameHex(stampProof[1], entry.stampHash)
+  ) {
+    throw new Error("Router Custom token lookup does not match the finalized stamp");
+  }
+
+  const launchBlock = await readBlock(
+    Number(BigInt(entry.blockNumber)),
+    finalized.provider,
+  );
+  if (
+    !sameHex(launchBlock.blockHash, entry.blockHash) ||
+    launchBlock.timestamp === null ||
+    new Date(launchBlock.timestamp * 1_000).toISOString() !== entry.launchedAt
+  ) {
+    throw new Error("Router Custom launch timestamp is not canonical");
+  }
+}
+
 async function currentSource(manifest) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ROUTER_CUSTOM_SOURCE_TIMEOUT_MS);
@@ -432,6 +735,8 @@ async function currentSource(manifest) {
     }
     const binding = exactRouterBinding(manifest);
     const boundary = sourceBoundary(payload, binding);
+    // This is a transport-integrity check only. Publication authority comes
+    // from the finalized Router logs, record getter, token proof and receipt.
     const computedCommitment = canonicalSha256(
       ROUTER_CUSTOM_SNAPSHOT_SCHEMA,
       {
@@ -454,6 +759,66 @@ async function currentSource(manifest) {
     const entries = validateCurrentIdentitySet(
       payload.entries.map((entry) => sourceEntry(entry, binding, boundary)),
     );
+    const finalized = await readFinalizedBlock();
+    const head = await readHeadBlock();
+    const chainId = await rpcCall("eth_chainId", [], {
+      preferredProvider: finalized.provider,
+    });
+    if (
+      parseQuantity(chainId.result) !== binding.chainId ||
+      !HASH32.test(finalized.blockHash ?? "") ||
+      head.blockNumber < finalized.blockNumber ||
+      head.blockNumber - finalized.blockNumber >
+        ROUTER_CUSTOM_FINALIZED_HEAD_MAXIMUM_LAG_BLOCKS
+    ) {
+      throw new Error("Router Custom finalized freshness is unavailable");
+    }
+    const sourceBlockNumber = Number(BigInt(boundary.asOfBlock));
+    if (
+      !Number.isSafeInteger(sourceBlockNumber) ||
+      sourceBlockNumber > head.blockNumber ||
+      (boundary.status === "current" &&
+        head.blockNumber - sourceBlockNumber >
+          ROUTER_CUSTOM_FINALIZED_HEAD_MAXIMUM_LAG_BLOCKS)
+    ) {
+      throw new Error("Router Custom source freshness is invalid");
+    }
+    const sourceBlock = await readBlock(sourceBlockNumber, finalized.provider);
+    if (!sameHex(sourceBlock.blockHash, boundary.asOfBlockHash)) {
+      throw new Error("Router Custom source boundary is not canonical");
+    }
+
+    const chain = await finalizedCustomLaunchLogs(binding, finalized);
+    const additions = entries.filter((entry) =>
+      !EXPECTED_ENTRY_SHA256_BY_LAUNCH_ID.has(entry.launchId.toLowerCase()));
+    if (
+      additions.some((entry) =>
+        BigInt(entry.blockNumber) <= BigInt(EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock)) ||
+      additions.length !== chain.logs.length
+    ) {
+      throw new Error("Router Custom source is not the complete finalized suffix");
+    }
+    const sourceByLaunch = new Map(
+      additions.map((entry) => [entry.launchId.toLowerCase(), entry]),
+    );
+    for (const log of chain.logs) {
+      const entry = sourceByLaunch.get(log.launchId);
+      const record = chain.records.get(log.launchId);
+      if (!entry || !record) {
+        throw new Error("Router Custom source omitted a finalized launch");
+      }
+      await requireFinalizedSourceEntry(
+        entry,
+        log,
+        record,
+        binding,
+        finalized,
+      );
+    }
+    const closing = await readBlock(finalized.blockNumber, finalized.provider);
+    if (!sameHex(closing.blockHash, finalized.blockHash)) {
+      throw new Error("Router Custom finalized boundary changed during verification");
+    }
     return {
       ...boundary,
       snapshotSha256: canonicalSha256(
@@ -510,15 +875,20 @@ function immutableEntryBinding(entry) {
     blockHash: entry.blockHash.toLowerCase(),
     transactionIndex: entry.transactionIndex,
     logIndex: entry.logIndex,
+    launchedAt: entry.launchedAt,
     launchWallet: entry.launchWallet.toLowerCase(),
     tokenAddress: entry.tokenAddress.toLowerCase(),
-    tokenDecimals: entry.tokenDecimals,
     hookAddress: entry.hookAddress.toLowerCase(),
     poolManagerAddress: entry.poolManagerAddress.toLowerCase(),
     poolId: entry.poolId.toLowerCase(),
     routeLauncherAddress: entry.routeLauncherAddress.toLowerCase(),
     routeLauncherRuntimeCodeHash: entry.routeLauncherRuntimeCodeHash.toLowerCase(),
   });
+}
+
+function preservesOptionalMetadata(previous, next) {
+  return ["tokenName", "tokenSymbol", "tokenDecimals"].every((field) =>
+    previous[field] === null || previous[field] === next[field]);
 }
 
 function lastKnownGoodSnapshot(snapshot) {
@@ -530,28 +900,26 @@ function lastKnownGoodSnapshot(snapshot) {
 function selectSnapshot(fallback, current) {
   const fallbackBlock = BigInt(fallback.asOfBlock);
   const currentBlock = BigInt(current.asOfBlock);
-  if (currentBlock < fallbackBlock) return fallback;
+  if (currentBlock < fallbackBlock) {
+    throw new Error("Router Custom current source regressed behind its accepted boundary");
+  }
   if (
     currentBlock === fallbackBlock &&
-    (current.asOfBlockHash !== fallback.asOfBlockHash ||
-      current.sourceIdentityCommitment !== fallback.sourceIdentityCommitment)
+    current.asOfBlockHash !== fallback.asOfBlockHash
   ) {
     throw new Error("Router Custom sources conflict at one boundary");
   }
   const currentByLaunch = new Map(
     current.entries.map((entry) => [entry.launchId.toLowerCase(), entry]),
   );
-  const exactPinnedFallback = fallback.snapshotSha256 ===
-    EXPECTED_BUNDLED_SNAPSHOT_SHA256;
   for (const fallbackEntry of fallback.entries) {
     const currentEntry = currentByLaunch.get(fallbackEntry.launchId.toLowerCase());
     if (
       !currentEntry ||
       currentEntry.tokenAddress.toLowerCase() !==
         fallbackEntry.tokenAddress.toLowerCase() ||
-      (exactPinnedFallback &&
-        currentEntry.entrySha256 !== fallbackEntry.entrySha256) ||
-      immutableEntryBinding(currentEntry) !== immutableEntryBinding(fallbackEntry)
+      immutableEntryBinding(currentEntry) !== immutableEntryBinding(fallbackEntry) ||
+      !preservesOptionalMetadata(fallbackEntry, currentEntry)
     ) {
       throw new Error("Router Custom current source is not an immutable superset");
     }
@@ -736,6 +1104,20 @@ export function hasExactRouterStampedCustomRecordShape(record) {
   const pinnedEntrySha256 = typeof record?.launchId === "string"
     ? EXPECTED_ENTRY_SHA256_BY_LAUNCH_ID.get(record.launchId.toLowerCase())
     : null;
+  const pinnedEvidenceWithoutSnapshot = Boolean(
+    pinnedEntrySha256 && extension &&
+      extension.entrySha256 === pinnedEntrySha256 &&
+      extension.sourceIdentityCommitment ===
+        EXPECTED_SNAPSHOT_BOUNDARY.sourceIdentityCommitment &&
+      extension.snapshotGeneratedAt === EXPECTED_SNAPSHOT_BOUNDARY.generatedAt &&
+      extension.snapshotAsOfBlock === EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock &&
+      sameHex(extension.snapshotAsOfBlockHash,
+        EXPECTED_SNAPSHOT_BOUNDARY.asOfBlockHash),
+  );
+  const coherentPinnedEvidence = extension?.snapshotSha256 ===
+    EXPECTED_BUNDLED_SNAPSHOT_SHA256
+    ? pinnedEvidenceWithoutSnapshot
+    : !pinnedEvidenceWithoutSnapshot;
   let computedEntrySha256 = null;
   try {
     computedEntrySha256 = extension && market
@@ -834,17 +1216,7 @@ export function hasExactRouterStampedCustomRecordShape(record) {
       safeInstant(extension.snapshotGeneratedAt) !== null &&
       safeDecimal(extension.snapshotAsOfBlock) !== null &&
       HASH32.test(extension.snapshotAsOfBlockHash ?? "") &&
-      (!pinnedEntrySha256 || (
-        extension.snapshotSha256 === EXPECTED_BUNDLED_SNAPSHOT_SHA256 &&
-        extension.entrySha256 === pinnedEntrySha256 &&
-        computedEntrySha256 === pinnedEntrySha256 &&
-        extension.sourceIdentityCommitment ===
-          EXPECTED_SNAPSHOT_BOUNDARY.sourceIdentityCommitment &&
-        extension.snapshotGeneratedAt === EXPECTED_SNAPSHOT_BOUNDARY.generatedAt &&
-        extension.snapshotAsOfBlock === EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock &&
-        sameHex(extension.snapshotAsOfBlockHash,
-          EXPECTED_SNAPSHOT_BOUNDARY.asOfBlockHash)
-      )) &&
+      coherentPinnedEvidence &&
       extension.chainId === record.chainId &&
       extension.launchKind === ROUTER_CUSTOM_MODEL &&
       sameHex(extension.launchId, record.launchId) &&
