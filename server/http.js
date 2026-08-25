@@ -14,6 +14,7 @@ import {
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const SORT_KEY_PATTERN = /^\d{16}:\d{10}:\d{10}:(?:0x[0-9a-f]{40}|[0-9a-f]{64})$/;
 const OPAQUE_CURSOR_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const ROUTER_IDENTITY_COMMITMENT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const CURSOR_VERSION = 2;
 const MAX_CURSOR_LENGTH = 1_024;
 const LOCAL_CURSOR_SIGNING_KEY =
@@ -283,8 +284,12 @@ function validSnapshot(snapshot) {
     "finality",
     "indexedAt",
   ];
+  const sourceVectorKeys = [...registryAwareKeys, "sources"];
+  const hasSourceVector = hasExactKeys(snapshot, sourceVectorKeys);
   return Boolean(
-    (hasExactKeys(snapshot, legacyKeys) || hasExactKeys(snapshot, registryAwareKeys)) &&
+    (hasExactKeys(snapshot, legacyKeys) ||
+      hasExactKeys(snapshot, registryAwareKeys) ||
+      hasSourceVector) &&
       typeof snapshot.blockNumber === "string" &&
       snapshot.blockNumber.length <= 78 &&
       /^(0|[1-9]\d*)$/.test(snapshot.blockNumber) &&
@@ -296,8 +301,144 @@ function validSnapshot(snapshot) {
       Number.isFinite(Date.parse(snapshot.indexedAt)) &&
       ["observed", "confirmed", "finalized"].includes(snapshot.finality) &&
       (!Object.hasOwn(snapshot, "customRegistryHighWaterGeneration") ||
-        validRegistryGeneration(snapshot.customRegistryHighWaterGeneration)),
+        validRegistryGeneration(snapshot.customRegistryHighWaterGeneration)) &&
+      (!hasSourceVector || validSnapshotSources(snapshot)),
   );
+}
+
+function validSourceBoundary(value) {
+  return Boolean(
+    value &&
+      hasExactKeys(value, ["blockHash", "blockNumber", "finality"]) &&
+      typeof value.blockNumber === "string" &&
+      value.blockNumber.length <= 78 &&
+      /^(0|[1-9]\d*)$/.test(value.blockNumber) &&
+      /^0x[0-9a-fA-F]{64}$/.test(value.blockHash) &&
+      ["observed", "confirmed", "finalized"].includes(value.finality),
+  );
+}
+
+function validSnapshotSources(snapshot) {
+  const sources = snapshot.sources;
+  if (
+    !hasExactKeys(sources, ["classicIndexer", "customRegistry", "routerCustom"])
+  ) {
+    return false;
+  }
+  const classicValid = sources.classicIndexer === null ||
+    validSourceBoundary(sources.classicIndexer);
+  const registryValid = sources.customRegistry === null || Boolean(
+    hasExactKeys(sources.customRegistry, ["highWaterGeneration"]) &&
+      validRegistryGeneration(sources.customRegistry.highWaterGeneration) &&
+      sources.customRegistry.highWaterGeneration !== null &&
+      sources.customRegistry.highWaterGeneration ===
+        snapshot.customRegistryHighWaterGeneration,
+  );
+  const router = sources.routerCustom;
+  const routerValid = router === null || Boolean(
+    router &&
+      hasExactKeys(router, [
+        "blockHash",
+        "blockNumber",
+        "finality",
+        "identityCommitment",
+      ]) &&
+      validSourceBoundary({
+        blockHash: router.blockHash,
+        blockNumber: router.blockNumber,
+        finality: router.finality,
+      }) &&
+      validRouterIdentityCommitment(router.identityCommitment),
+  );
+  return classicValid && registryValid && routerValid;
+}
+
+function validRouterIdentityCommitment(value) {
+  return value === null || ROUTER_IDENTITY_COMMITMENT_PATTERN.test(value);
+}
+
+function scopeUsesRouterIdentity(scope) {
+  return /^v2:(?:all|custom):(?:all|[1-9]\d*)$/.test(scope);
+}
+
+function compactSnapshot(snapshot) {
+  if (snapshot === null || !Object.hasOwn(snapshot, "sources")) return snapshot;
+  const sources = snapshot.sources;
+  return {
+    b: snapshot.blockNumber,
+    h: snapshot.blockHash,
+    i: snapshot.indexedAt,
+    f: snapshot.finality,
+    g: snapshot.customRegistryHighWaterGeneration,
+    x: [
+      sources.classicIndexer === null
+        ? null
+        : [
+            sources.classicIndexer.blockNumber,
+            sources.classicIndexer.blockHash,
+            sources.classicIndexer.finality,
+          ],
+      sources.customRegistry === null
+        ? null
+        : [sources.customRegistry.highWaterGeneration],
+      sources.routerCustom === null
+        ? null
+        : [
+            sources.routerCustom.blockNumber,
+            sources.routerCustom.blockHash,
+            sources.routerCustom.finality,
+            sources.routerCustom.identityCommitment,
+          ],
+    ],
+  };
+}
+
+function expandSnapshot(value) {
+  if (validSnapshot(value)) return value;
+  if (
+    !value ||
+    !hasExactKeys(value, ["b", "f", "g", "h", "i", "x"]) ||
+    !Array.isArray(value.x) ||
+    value.x.length !== 3
+  ) {
+    return undefined;
+  }
+  const [classic, registry, router] = value.x;
+  if (
+    (classic !== null && (!Array.isArray(classic) || classic.length !== 3)) ||
+    (registry !== null && (!Array.isArray(registry) || registry.length !== 1)) ||
+    (router !== null && (!Array.isArray(router) || router.length !== 4))
+  ) {
+    return undefined;
+  }
+  const expanded = {
+    blockNumber: value.b,
+    blockHash: value.h,
+    indexedAt: value.i,
+    finality: value.f,
+    customRegistryHighWaterGeneration: value.g,
+    sources: {
+      classicIndexer: classic === null
+        ? null
+        : {
+            blockNumber: classic[0],
+            blockHash: classic[1],
+            finality: classic[2],
+          },
+      customRegistry: registry === null
+        ? null
+        : { highWaterGeneration: registry[0] },
+      routerCustom: router === null
+        ? null
+        : {
+            blockNumber: router[0],
+            blockHash: router[1],
+            finality: router[2],
+            identityCommitment: router[3],
+          },
+    },
+  };
+  return validSnapshot(expanded) ? expanded : undefined;
 }
 
 function validRegistryGeneration(value) {
@@ -320,11 +461,15 @@ export function encodeResumeCursor(
   highWater,
   scope = "all",
   registryHighWaterGeneration = scope === "classic" ? null : "0",
+  routerIdentityCommitment = undefined,
 ) {
   if (
     !SORT_KEY_PATTERN.test(highWater) ||
     !validScope(scope) ||
-    !validRegistryGeneration(registryHighWaterGeneration)
+    !validRegistryGeneration(registryHighWaterGeneration) ||
+    (routerIdentityCommitment !== undefined &&
+      (!scopeUsesRouterIdentity(scope) ||
+        !validRouterIdentityCommitment(routerIdentityCommitment)))
   ) {
     throw new Error("invalid resume cursor components");
   }
@@ -334,20 +479,28 @@ export function encodeResumeCursor(
     h: highWater,
     c: scope,
     g: registryHighWaterGeneration,
+    ...(routerIdentityCommitment === undefined
+      ? {}
+      : { r: routerIdentityCommitment }),
   });
 }
 
 export function decodeResumeCursor(value) {
   const parsed = decodeOpaqueCursor(value);
   if (parsed === null || parsed === undefined) return parsed;
+  const legacyShape = hasExactKeys(parsed, ["c", "g", "h", "t", "v"]);
+  const routerAwareShape = hasExactKeys(parsed, ["c", "g", "h", "r", "t", "v"]);
   if (
-    !hasExactKeys(parsed, ["c", "g", "h", "t", "v"]) ||
+    (!legacyShape && !routerAwareShape) ||
     parsed.v !== CURSOR_VERSION ||
     parsed.t !== "r" ||
     !SORT_KEY_PATTERN.test(parsed.h) ||
     !validScope(parsed.c) ||
     !validRegistryGeneration(parsed.g) ||
-    (parsed.c === "classic" ? parsed.g !== null : parsed.g === null)
+    (parsed.c === "classic" ? parsed.g !== null : parsed.g === null) ||
+    (routerAwareShape &&
+      (!scopeUsesRouterIdentity(parsed.c) ||
+        !validRouterIdentityCommitment(parsed.r)))
   ) {
     return undefined;
   }
@@ -355,6 +508,7 @@ export function decodeResumeCursor(value) {
     highWater: parsed.h,
     scope: parsed.c,
     registryHighWaterGeneration: parsed.g,
+    ...(routerAwareShape ? { routerIdentityCommitment: parsed.r } : {}),
   };
 }
 
@@ -366,6 +520,7 @@ export function encodePageCursor(
   after = null,
   registryHighWaterGeneration = scope === "classic" ? null : "0",
   afterRegistryHighWaterGeneration = scope === "classic" ? null : "0",
+  routerReplay = undefined,
 ) {
   if (
     !SORT_KEY_PATTERN.test(highWater) ||
@@ -380,8 +535,12 @@ export function encodePageCursor(
     (registryHighWaterGeneration !== null &&
       afterRegistryHighWaterGeneration !== null &&
       BigInt(registryHighWaterGeneration) < BigInt(afterRegistryHighWaterGeneration)) ||
+    (routerReplay !== undefined &&
+      (typeof routerReplay !== "boolean" ||
+        !scopeUsesRouterIdentity(scope) ||
+        !snapshot?.sources)) ||
     (after !== null && !SORT_KEY_PATTERN.test(after)) ||
-    (after !== null && position <= after)
+    (after !== null && position <= after && routerReplay !== true)
   ) {
     throw new Error("invalid page cursor components");
   }
@@ -391,33 +550,47 @@ export function encodePageCursor(
     h: highWater,
     p: position,
     c: scope,
-    s: snapshot,
+    s: compactSnapshot(snapshot),
     a: after,
     g: registryHighWaterGeneration,
     ag: afterRegistryHighWaterGeneration,
+    ...(routerReplay === undefined ? {} : { rr: routerReplay }),
   });
 }
 
 export function decodePageCursor(value) {
   const parsed = decodeOpaqueCursor(value);
   if (parsed === null || parsed === undefined) return parsed;
+  const legacyShape = hasExactKeys(
+    parsed,
+    ["a", "ag", "c", "g", "h", "p", "s", "t", "v"],
+  );
+  const routerAwareShape = hasExactKeys(
+    parsed,
+    ["a", "ag", "c", "g", "h", "p", "rr", "s", "t", "v"],
+  );
+  const snapshot = expandSnapshot(parsed.s);
   if (
-    !hasExactKeys(parsed, ["a", "ag", "c", "g", "h", "p", "s", "t", "v"]) ||
+    (!legacyShape && !routerAwareShape) ||
     parsed.v !== CURSOR_VERSION ||
     parsed.t !== "p" ||
     !SORT_KEY_PATTERN.test(parsed.h) ||
     !SORT_KEY_PATTERN.test(parsed.p) ||
     parsed.h < parsed.p ||
     !validScope(parsed.c) ||
-    !validSnapshot(parsed.s) ||
+    snapshot === undefined ||
     !validRegistryGeneration(parsed.g) ||
     !validRegistryGeneration(parsed.ag) ||
     (parsed.c === "classic"
       ? parsed.g !== null || parsed.ag !== null
       : parsed.g === null || parsed.ag === null) ||
     (parsed.g !== null && parsed.ag !== null && BigInt(parsed.g) < BigInt(parsed.ag)) ||
+    (routerAwareShape &&
+      (typeof parsed.rr !== "boolean" ||
+        !scopeUsesRouterIdentity(parsed.c) ||
+        !snapshot?.sources)) ||
     (parsed.a !== null && !SORT_KEY_PATTERN.test(parsed.a)) ||
-    (parsed.a !== null && parsed.p <= parsed.a)
+    (parsed.a !== null && parsed.p <= parsed.a && parsed.rr !== true)
   ) {
     return undefined;
   }
@@ -425,10 +598,11 @@ export function decodePageCursor(value) {
     highWater: parsed.h,
     position: parsed.p,
     scope: parsed.c,
-    snapshot: parsed.s,
+    snapshot,
     after: parsed.a,
     registryHighWaterGeneration: parsed.g,
     afterRegistryHighWaterGeneration: parsed.ag,
+    ...(routerAwareShape ? { routerReplay: parsed.rr } : {}),
   };
 }
 

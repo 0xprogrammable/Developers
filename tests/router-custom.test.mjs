@@ -536,8 +536,17 @@ describe("Router Custom v2 projection", () => {
       "Router Custom service status",
     );
     const feed = launchFeedPayload(projected, { category: "custom", limit: 100 });
-    assert.equal(feed.snapshot.blockNumber, snapshot.asOfBlock);
-    assert.equal(feed.snapshot.blockHash, snapshot.asOfBlockHash);
+    assert.equal(feed.snapshot.blockNumber, "25833000");
+    assert.equal(feed.snapshot.blockHash, `0x${"e".repeat(64)}`);
+    assert.equal(feed.snapshot.sources.routerCustom.blockNumber, snapshot.asOfBlock);
+    assert.equal(
+      feed.snapshot.sources.routerCustom.blockHash,
+      snapshot.asOfBlockHash,
+    );
+    assert.equal(
+      feed.snapshot.sources.routerCustom.identityCommitment,
+      snapshot.sourceIdentityCommitment,
+    );
     assert.ok(feed.items.every((record) =>
       record.extensions["programmable/classification"].basis ===
         "canonical-launch-stamp-router"));

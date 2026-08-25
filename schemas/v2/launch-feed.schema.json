@@ -76,6 +76,7 @@
         "blockHash",
         "indexedAt",
         "finality",
+        "sources",
         "cursor"
       ],
       "properties": {
@@ -98,11 +99,111 @@
         "customRegistryHighWaterGeneration": {
           "$ref": "common.schema.json#/$defs/nullableDecimalString"
         },
+        "sources": {
+          "type": "object",
+          "required": [
+            "classicIndexer",
+            "customRegistry",
+            "routerCustom"
+          ],
+          "properties": {
+            "classicIndexer": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/sourceBoundary"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "customRegistry": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "highWaterGeneration"
+                  ],
+                  "properties": {
+                    "highWaterGeneration": {
+                      "$ref": "common.schema.json#/$defs/decimalString"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "routerCustom": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "blockNumber",
+                    "blockHash",
+                    "finality",
+                    "identityCommitment"
+                  ],
+                  "properties": {
+                    "blockNumber": {
+                      "$ref": "common.schema.json#/$defs/decimalString"
+                    },
+                    "blockHash": {
+                      "$ref": "common.schema.json#/$defs/hash32"
+                    },
+                    "finality": {
+                      "enum": [
+                        "observed",
+                        "confirmed",
+                        "finalized"
+                      ]
+                    },
+                    "identityCommitment": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
         "cursor": {
           "type": "string",
           "minLength": 1,
           "maxLength": 1024,
           "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceBoundary": {
+      "type": "object",
+      "required": [
+        "blockNumber",
+        "blockHash",
+        "finality"
+      ],
+      "properties": {
+        "blockNumber": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "finality": {
+          "enum": [
+            "observed",
+            "confirmed",
+            "finalized"
+          ]
         }
       },
       "additionalProperties": false

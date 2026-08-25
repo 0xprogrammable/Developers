@@ -43,7 +43,7 @@ The response has this stable root shape:
 ```text
 schemaVersion  response schema version
 status         feed lifecycle and availability
-snapshot       block/finality boundary used for this response
+snapshot       conservative aggregate boundary plus per-source boundaries
 items          normalized launch records
 page           cursor and hasMore state
 ```
@@ -70,6 +70,8 @@ Registry-backed records can also include `platformId`, `publicLabel`, `caip2`, `
 An empty `markets` array is valid. It means the launch currently has no registered market; it does not permit a client to fabricate a pool, price, liquidity, volume, chart, or swap action.
 
 `status: "degraded"` can accompany valid recognized launch items when metadata, supply, or block-timestamp enrichment is incomplete. Preserve null and unavailable fields and inspect each record's `identityStatus`, `supplyStatus`, metadata trust, and `provenanceStatus`. Incomplete enrichment does not remove a recognized launch.
+
+The snapshot's top-level block is the lowest represented chain boundary; it never advances to the faster source while another source lags. Inspect `snapshot.sources.classicIndexer`, `snapshot.sources.customRegistry`, and `snapshot.sources.routerCustom` for the exact source vector. Router Custom commitment changes intentionally replay Router identities during an `after` poll so a newly published identity with an older launch block cannot be skipped. Upsert by `launchId` and treat that replay as at-least-once delivery.
 
 If canonical event-log coverage is incomplete, launch-list and token-list return the recognized bounded subset with `status: "degraded"` or `"unavailable"`. Process present records, but do not interpret absence as deletion or complete history.
 

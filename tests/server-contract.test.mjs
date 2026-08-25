@@ -117,6 +117,10 @@ describe("server cursor contract", () => {
     const key = record(100, 2, 7, "a").sortKey;
     const encoded = encodeCursor(key);
     assert.equal(decodeCursor(encoded), key);
+    assert.equal(
+      Object.hasOwn(decodeResumeCursor(encoded), "routerIdentityCommitment"),
+      false,
+    );
     assert.equal(decodeCursor("not-a-cursor"), undefined);
     const replacement = encoded.endsWith("A") ? "B" : "A";
     assert.equal(decodeCursor(`${encoded.slice(0, -1)}${replacement}`), undefined);
@@ -208,6 +212,7 @@ describe("server cursor contract", () => {
     const decodedPage = decodePageCursor(pageCursor);
     assert.equal(decodedPage.highWater, highWater);
     assert.deepEqual(decodedPage.snapshot, snapshot);
+    assert.equal(Object.hasOwn(decodedPage, "routerReplay"), false);
 
     const frozenView = changed.filter(
       (item) => item.sortKey <= decodedPage.highWater,
