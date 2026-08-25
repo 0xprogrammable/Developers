@@ -36,7 +36,7 @@ Future official Native Custom market paths add the 10 bps Programmable platform 
 
 If the creator-defined market fee is `X`, the supported official path charges `X + 10 bps`.
 
-Registry-based public submission intake remains prelaunch. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. This Registry state does not describe the separate Custom Launch API. A fixture or draft must not claim that a future fee path is already onchain-verified.
+Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. The separate Custom Launch API is live, but API availability does not prove a fee path. A fixture or draft must not claim that a future fee path is already onchain-verified.
 
 Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
 

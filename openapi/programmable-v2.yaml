@@ -9,9 +9,9 @@ info:
 
     Classic is live on Ethereum. Custom discovery includes Registry-verified and
     finalized Router-stamped launches. The separate authenticated Custom Launch
-    API at `https://api.programmable.market` is the API-first write path; this v2
+    API at `https://api.programmable.market` is the live API-first write path; this v2
     service remains read only. Its `publicSubmissionStatus` field describes only
-    the legacy Registry intake, which remains prelaunch. Historical Stock-Paired
+    the closed legacy Registry and GitHub submission intake. Historical Stock-Paired
     launches are not part of the version 2 Programmable Custom classification.
 
     Within v2, existing fields keep their type and meaning. New deployments,
@@ -75,7 +75,7 @@ paths:
       summary: Read API and data-pipeline status
       description: |
         Reports service availability separately from Classic discovery,
-        Custom public-submission readiness and feed freshness. A successful
+        feed freshness and the live Custom Launch API readiness link. A successful
         HTTP response is not itself proof that indexed data is current.
       responses:
         "200":
@@ -164,7 +164,8 @@ paths:
         decimal integer strings. Persist `page.resumeCursor` after processing a
         completed poll and pass it back as `after`. `page.nextCursor` is only
         for continuing the current page traversal. `after` and `cursor` must
-        not be sent together.
+        not be sent together. Coverage gaps do not hide recognized records:
+        the response remains HTTP 200 with `status: degraded` or `unavailable`.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"
@@ -173,7 +174,7 @@ paths:
         - $ref: "#/components/parameters/LimitQuery"
       responses:
         "200":
-          description: Cursor-paginated launch feed.
+          description: Cursor-paginated launch feed, including bounded recognized records when quality is degraded or unavailable.
           headers:
             Cache-Control:
               $ref: "#/components/headers/CacheControl"
@@ -272,14 +273,16 @@ paths:
       summary: Read the token-list compatibility projection
       description: |
         Returns a token-list-compatible projection for integrations that need
-        token identity and metadata. Use the launch feed for markets,
-        capabilities, provenance, finality and complete fee disclosure.
+        token identity and metadata. The top-level `status` reports projection
+        quality, and recognized complete token identities remain present when
+        unrelated coverage or market enrichment is incomplete. Use the launch
+        feed for markets, capabilities, provenance, finality and complete fee disclosure.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"
       responses:
         "200":
-          description: Token-list compatibility document.
+          description: Token-list compatibility document with explicit ready, degraded or unavailable quality.
           headers:
             Cache-Control:
               $ref: "#/components/headers/CacheControl"
@@ -419,8 +422,8 @@ components:
                 discoveryStatus:
                   const: live
                 publicSubmissionStatus:
-                  const: prelaunch
-                  description: Legacy Custom Registry intake status. This does not describe the separate authenticated API-first Custom Launch route.
+                  const: closed
+                  description: Legacy Registry and GitHub submission intake status. The separate authenticated Custom Launch API is live.
                 registryAddress:
                   type: string
                   pattern: ^0x[0-9a-fA-F]{40}$

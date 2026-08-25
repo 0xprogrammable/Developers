@@ -16,8 +16,8 @@ The API obtains a fresh request-bound credential for every Registry page. That c
 lane, target, path, opaque cursor, and page limit; it is never sent to a browser or written into a public manifest.
 
 Do not configure a placeholder URL or static Registry bearer token. When the deployment overlay is absent or the
-Registry does not report `ready / complete / current`, Custom and unfiltered feeds return retryable `503`. The
-Classic-only feed remains available through `category=classic` when its chain coverage is complete.
+Registry does not report `ready / complete / current`, launch-list and token-list publish only recognized bounded records
+with `degraded` or `unavailable` quality. They never expose the Registry credential or claim a complete snapshot.
 
 ## Bootstrap sequence
 
@@ -54,7 +54,7 @@ Track:
 - indexer observation to API publication latency; and
 - API publication to website or downstream ingestion latency.
 
-If the projection is stale, keep the last known data with a visible stale state. Do not relabel stale data as current. A `degraded` feed with complete event coverage can still publish recognized launches; enrichment gaps remain explicit on each record.
+If the projection is stale, keep the last known data with a visible stale state. Do not relabel stale data as current. A `degraded` or `unavailable` feed can still publish recognized launches; coverage and enrichment gaps remain explicit.
 
 Publish measured latency distributions and their observation window when making realtime claims. Do not promise same-second discovery without production evidence.
 
@@ -116,8 +116,8 @@ Read-only GET requests are safe to retry with bounded exponential backoff and ji
 | --- | --- |
 | Status unavailable | Keep last data, mark freshness unknown, pause cursor advancement if necessary |
 | Manifest unavailable | Use last trusted manifest for read-only display, mark stale, do not accept new deployments |
-| Classic event-log coverage incomplete | Affected launch-list and token-list routes return retryable `503`; retain the last durable cursor |
-| Custom Registry unconfigured, incomplete, stale, or invalid | Custom and unfiltered routes return retryable `503`; Classic-only remains independently available |
+| Classic event-log coverage incomplete | Ingest recognized bounded records from HTTP `200`, keep quality degraded or unavailable, and do not treat absence as deletion |
+| Custom Registry unconfigured, incomplete, stale, or invalid | Preserve any recognized Custom identities, keep quality degraded or unavailable, and do not claim completeness |
 | Enrichment degraded | Ingest recognized launches and preserve partial, unavailable, or null metadata, supply, provenance, and timestamp fields |
 | Launch page unavailable for another transient failure | Retry without losing the last durable cursor |
 | Unknown schema major | Stop automatic ingestion and require an upgrade |

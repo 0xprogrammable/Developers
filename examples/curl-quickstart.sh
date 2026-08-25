@@ -25,6 +25,9 @@ get_json() {
 printf '%s\n' 'Manifest and deployment discovery'
 get_json "$api_base/api/v2/manifest"
 
+printf '\n%s\n' 'Status and feed quality'
+get_json "$api_base/api/v2/status"
+
 printf '\n%s\n' 'Launch feed'
 if [ -n "$cursor" ]; then
   encoded_cursor=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$cursor")

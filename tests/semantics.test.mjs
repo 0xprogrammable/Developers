@@ -146,6 +146,18 @@ describe("semantic conformance", () => {
     );
   });
 
+  test("requires the disabled legacy Custom intake to be described as closed", async () => {
+    const manifest = await readJson(
+      path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
+    );
+    manifest.publicCategories.custom.publicSubmissionStatus = "prelaunch";
+    assert.ok(
+      validateManifestSemantics(manifest).some(
+        (finding) => finding.code === "LEGACY_CUSTOM_INTAKE_STATE",
+      ),
+    );
+  });
+
   test("rejects conflated Registry registration and finalization authority", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),

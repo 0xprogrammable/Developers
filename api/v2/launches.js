@@ -2,7 +2,6 @@ import { API_V2_SCHEMA_VERSION } from "../../server/constants.js";
 import {
   feedStatusV2,
   getV2Dataset,
-  isV2DatasetPublishable,
   publicLaunchV2,
 } from "../../server/v2-dataset.js";
 import {
@@ -215,16 +214,6 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
       !dataset.status.supportedChainIds?.includes(chainId)
     ) {
       error(req, res, 400, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
-      return;
-    }
-    if (!isV2DatasetPublishable(dataset, category)) {
-      error(
-        req,
-        res,
-        503,
-        "INDEX_COVERAGE_INCOMPLETE",
-        "The launch feed is waiting for complete chain coverage",
-      );
       return;
     }
     const payload = launchFeedPayload(dataset, {

@@ -12,6 +12,7 @@
     "chains",
     "classic",
     "custom",
+    "customLaunchApi",
     "feeds"
   ],
   "properties": {
@@ -70,6 +71,9 @@
     },
     "custom": {
       "$ref": "#/$defs/categoryStatus"
+    },
+    "customLaunchApi": {
+      "$ref": "#/$defs/customLaunchApi"
     },
     "feeds": {
       "type": "object",
@@ -133,6 +137,38 @@
         "degraded",
         "unavailable"
       ]
+    },
+    "customLaunchApi": {
+      "type": "object",
+      "required": [
+        "status",
+        "readyzUrl",
+        "guideUrl",
+        "openApiUrl",
+        "apiKeyManagementUrl",
+        "walletBoundary"
+      ],
+      "properties": {
+        "status": {
+          "const": "live"
+        },
+        "readyzUrl": {
+          "const": "https://api.programmable.market/readyz"
+        },
+        "guideUrl": {
+          "const": "https://programmable.market/developers/custom-launch-api-v1.md"
+        },
+        "openApiUrl": {
+          "const": "https://programmable.market/openapi/custom-launch-v1.json"
+        },
+        "apiKeyManagementUrl": {
+          "const": "https://programmable.market/developers/api-keys"
+        },
+        "walletBoundary": {
+          "const": "separate-wallet-signature"
+        }
+      },
+      "additionalProperties": false
     },
     "customRegistryPublication": {
       "type": "object",

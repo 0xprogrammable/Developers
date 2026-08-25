@@ -20,7 +20,7 @@ Cursors are opaque. Return them unchanged. A replayed page must be harmless.
 
 For applicant ingestion, require `customRegistryPublication.expectedSourceId === customRegistryPublication.observedSourceId`, `sourceConfigured`, `sourceCurrent`, and `sourceReady`. The current Generation 1 source is `programmable-custom-launch-registry-v3`; do not substitute the Website v1 presentation mirror or merge it with the Developer manifest. Treat `baselineLaunches` as canary coverage and `applicantLaunches` as the separate real-applicant count.
 
-A `degraded` feed still contains recognized events when canonical event coverage is complete but enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. If event-log coverage itself is incomplete, launch-list and token-list routes return a retryable `503` rather than a partial list.
+A `degraded` feed still contains recognized events when canonical event coverage or enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. Launch-list and token-list return the bounded recognized subset with HTTP `200` and explicit quality; never interpret an absent record in a degraded or unavailable response as deletion.
 
 ## Direct onchain path
 
@@ -42,7 +42,7 @@ Pair related events according to the documented deployment contract. An event wi
 
 Legacy indexer records can carry `provenanceStatus: "partial"` because their normalized source lacks some canonical event coordinates. Preserve that state and do not silently promote it to verified.
 
-Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. Registry-based public submission intake remains disabled; this does not describe the separate Custom Launch API. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
+Custom Registry generation 1 is live. Read its exact address, start block, canonical event topics, ABI, and finality requirement from the manifest, and use the finalized genesis canary as the first lifecycle record. Legacy Registry and GitHub submission intake are closed; the separate Custom Launch API is live. Follow the complete [direct onchain verification guide](../reference/onchain-verification.md).
 
 ## Ordering and identity
 

@@ -74,7 +74,7 @@ An unknown value is not itself an error or security finding. It is an instructio
 
 ## Custom activation
 
-Custom Registry discovery is live while Registry-based public submission intake remains prelaunch. Future Registry intake activation is represented independently by manifest state and new launch records; it does not require a new public category or a different launch schema. The separately hosted Custom Launch API has its own authenticated contract.
+Custom Registry discovery is live while legacy Registry and GitHub submission intake are closed. Any future Registry contract change remains independent from public category and launch-schema compatibility. The separately hosted Custom Launch API is live under its own authenticated contract.
 
 Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 

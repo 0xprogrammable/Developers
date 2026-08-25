@@ -37,7 +37,7 @@ export function applyCors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Accept, Content-Type, If-None-Match");
   res.setHeader(
     "Access-Control-Expose-Headers",
-    "ETag, X-Programmable-Status, X-Request-Id",
+    "ETag, Retry-After, X-Programmable-Status, X-Request-Id",
   );
 }
 
@@ -68,6 +68,9 @@ export function json(req, res, statusCode, payload, options = {}) {
   if (options.apiStatus) {
     res.setHeader("X-Programmable-Status", options.apiStatus);
   }
+  if (options.retryAfter) {
+    res.setHeader("Retry-After", options.retryAfter);
+  }
 
   if (statusCode === 200 && header(req, "if-none-match") === etag) {
     res.status(304).end();
@@ -79,6 +82,7 @@ export function json(req, res, statusCode, payload, options = {}) {
 
 export function error(req, res, statusCode, code, message, details) {
   const requestId = randomUUID();
+  const timestamp = new Date().toISOString();
   const normalizedCode = String(code)
     .toLowerCase()
     .replace(/_/g, "-")
@@ -98,6 +102,7 @@ export function error(req, res, statusCode, code, message, details) {
       detail: message,
       code: normalizedCode,
       requestId,
+      timestamp,
       ...(details === undefined
         ? {}
         : { extensions: { "programmable/details": details } }),
@@ -107,6 +112,7 @@ export function error(req, res, statusCode, code, message, details) {
       apiStatus: "error",
       contentType: "application/problem+json; charset=utf-8",
       requestId,
+      retryAfter: statusCode === 429 || statusCode === 503 ? "30" : null,
     },
   );
 }

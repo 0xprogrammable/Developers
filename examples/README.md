@@ -11,6 +11,9 @@ The shared client retries transient network, rate-limit, and server failures up 
 `Retry-After` value and never changes an opaque cursor between attempts. Override the per-attempt timeout with
 `PROGRAMMABLE_REQUEST_TIMEOUT_MS` or the retry count with `PROGRAMMABLE_RETRY_ATTEMPTS`.
 
+Launch-list and token-list can return HTTP `200` with `degraded` or `unavailable` quality. Process recognized records,
+keep their unavailable fields explicit, and do not treat an absent record in such a response as deletion.
+
 ## Run against the public API
 
 Node.js 20 or later is required.
@@ -51,7 +54,7 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
 | [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Dependency-light JSON-RPC verification for a Router-stamped Classic or Custom token, v4 pool, or exclusive component at the manifest-listed Router |
 | [`verify-launch-stamp-viem.ts`](verify-launch-stamp-viem.ts) | Equivalent Router point lookup with viem and the same concrete-block, runtime, and record checks |
-| [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest and paginated launch feed with curl |
+| [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest, explicit status and paginated launch feed with curl |
 
 ## Live Router lookup
 

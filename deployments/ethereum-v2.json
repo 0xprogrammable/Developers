@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "3",
-  "generatedAt": "2026-08-12T13:35:10Z",
+  "manifestVersion": "4",
+  "generatedAt": "2026-08-25T05:35:51Z",
   "chainId": 1,
   "chains": [
     {
@@ -26,8 +26,8 @@
     },
     "custom": {
       "discoveryStatus": "live",
-      "publicSubmissionStatus": "prelaunch",
-      "note": "Finalized approved Custom Registry launches are discoverable. General public submissions remain prelaunch."
+      "publicSubmissionStatus": "closed",
+      "note": "Custom Launch API is live. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "deployments": [
@@ -116,7 +116,7 @@
     "eventTopic": "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a",
     "abiUrl": "https://developers.programmable.family/abis/ethereum/programmable-custom-registry-v1.json",
     "finalityConfirmations": 64,
-    "note": "Registry discovery is live for finalized approved launches. General public submissions remain prelaunch."
+    "note": "Registry discovery is live for finalized approved launches. Legacy Registry and GitHub submission intake are closed; the separate Custom Launch API is live."
   },
   "launchStampRouter": {
     "version": "1",

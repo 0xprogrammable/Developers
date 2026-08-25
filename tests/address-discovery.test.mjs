@@ -131,11 +131,20 @@ describe("documentation contract", () => {
     );
     assert.deepEqual(wellKnown.publicCategories.custom, {
       discoveryStatus: "live",
-      publicSubmissionStatus: "prelaunch",
+      publicSubmissionStatus: "closed",
       registryAddress: manifest.customRegistry.address,
       registryStartBlock: manifest.customRegistry.startBlock,
       registryGeneration: manifest.customRegistry.generation,
-      note: "Finalized approved Custom Registry launches are discoverable. General public submissions remain prelaunch.",
+      note: "Custom Launch API is live. Legacy Registry and GitHub submission intake are closed.",
+    });
+    assert.deepEqual(wellKnown.extensions["programmable.custom-launch-api"], {
+      status: "live",
+      apiBaseUrl: "https://api.programmable.market",
+      readyzUrl: "https://api.programmable.market/readyz",
+      guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
+      openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
+      apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
+      walletBoundary: "separate-wallet-signature",
     });
     assert.deepEqual(
       schemaIndex.schemas.map(({ name }) => name),

@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, and the synchronization or finality boundary needed to interpret feed responses.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, and the live Custom Launch API readiness URL.
 
 Use it to distinguish:
 
@@ -35,7 +35,7 @@ Use it to distinguish:
 
 Do not treat HTTP 200 alone as proof that every launch source or execution adapter is live.
 
-The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` while still returning recognized launches with partial enrichment. Incomplete Classic event coverage or an unconfigured, incomplete, or non-current Custom Registry makes the affected aggregate route unavailable instead of returning a falsely complete list. `category=classic` remains independent from Custom Registry availability.
+The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` or `unavailable` while still returning recognized bounded records. These quality values make incomplete Classic coverage or an unconfigured, incomplete, or non-current Custom Registry explicit without hiding known identities.
 
 The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes. `publicationReady` is the complete route gate. `baselineReady` describes only the immutable Gen1 canary, while `sourceConfigured`, `sourceCurrent`, and `sourceReady` separately describe the authenticated applicant source. `expectedSourceId` and `observedSourceId` make the active producer generation explicit. `baselineLaunches` and `applicantLaunches` are separate, so the canary never inflates the applicant count. `activeGeneration`, `requiresLiveSource`, and `publishedRegistries` describe the manifest-selected Registry boundary. A `null` object means the status was produced before dataset projection and must not be treated as source readiness.
 
@@ -94,7 +94,7 @@ Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kin
 
 For authenticated Custom launches, `extensions["programmable/registry-v2"]` preserves the exact `sourceKind`, source/finality binding hashes, and the optional presentation snapshot. The presentation version, binding hash, and display-only draft are always all null or all present. Consumers must not use presentation content as launch, token, market, fee, or execution authority.
 
-When event coverage is complete but metadata, supply, receipt, or block-timestamp enrichment is incomplete, the response can be `degraded`. The recognized item remains present and carries partial, unavailable, or null values. Consumers must not discard it or synthesize missing data.
+When event coverage, metadata, supply, receipt, or block-timestamp enrichment is incomplete, the response is `degraded` or `unavailable`. Recognized items remain present and carry partial, unavailable, or null values. Consumers must not discard them, synthesize missing data, or interpret absence as an authoritative deletion.
 
 When `page.hasMore` is true, continue the current traversal with:
 
@@ -146,7 +146,7 @@ This path is a convenience lookup for token-backed records. A project-only recor
 
 Returns a wallet-friendly token-list compatibility projection. Use the launch feed when you need full provenance, market support, fee data, non-final records, or reorg state.
 
-A token list is a convenience projection of finalized records with complete token identity. A recognized launch with partial identity remains available in the launch feed but is not promoted into the compatibility token list until identity is complete. Token identity remains chain ID plus contract address.
+A token list is a convenience projection of finalized records with complete token identity. Its top-level `status` reports `ready`, `degraded`, or `unavailable`. A recognized launch with partial identity remains available in the launch feed but is not promoted into the compatibility token list until identity is complete. Token identity remains chain ID plus contract address.
 
 ## Query parameters
 
@@ -168,23 +168,23 @@ v2 never returns transaction payloads, calldata, approvals, or submission endpoi
 
 ## Response handling
 
-Successful responses use JSON. Error responses follow the repository problem schema and include a stable machine-readable type plus human-readable detail.
+Successful responses use JSON. Error responses follow the repository problem schema and include a stable machine-readable type, human-readable detail, `requestId`, numeric HTTP `status`, and ISO timestamp. Support reports should include those three diagnostic fields and must never include an API key or Authorization header.
 
 Clients should handle at least:
 
 | Status | Meaning | Client behavior |
 | --- | --- | --- |
-| `200` | Successful response | Validate and process |
+| `200` | Successful response, possibly with degraded or unavailable data quality | Validate, process recognized records, and inspect the body status |
 | `304` | Cached representation remains current | Reuse the cached body associated with the ETag |
 | `400` | Invalid input or cursor | Correct the request; do not retry unchanged |
 | `404` | No registered launch for that asset | Show not found; do not call it unsafe |
 | `405` | Method not supported | Use the documented read-only GET method |
 | `429` | Rate limited | Honor `Retry-After` and back off |
-| `503` | Required Classic coverage or authenticated Custom Registry completeness/freshness is unavailable | Preserve the last good state and retry later |
+| `503` | A transient failure prevented the response from being produced | Preserve the last good state, honor `Retry-After`, and retry later |
 
 Do not turn a provider error into a security judgment about a token.
 
-For completeness gating, incomplete Classic event coverage returns a retryable `503`. Custom and unfiltered launch/token-list requests also return `503` until the authenticated Registry reports `ready / complete / current`. A Classic-only request remains available with `category=classic`. A known detail record can still be returned during partial coverage; an unknown address returns `503` instead of a potentially false `404` until every source that could contain it is complete. Missing ERC-20 metadata or supply alone does not cause a coverage `503`.
+Launch-list and token-list do not convert coverage gaps into a blanket `503`; they return recognized bounded records with explicit quality. A known detail record can still be returned during partial coverage, while an unknown detail address returns `503` instead of a potentially false `404` until every source that could contain it is complete. Missing ERC-20 metadata, market enrichment, or supply never hides a recognized launch.
 
 ## Caching and freshness
 

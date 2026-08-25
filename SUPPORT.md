@@ -1,6 +1,8 @@
 # Support
 
-The Programmable Developer Platform is supported in public through this GitHub repository.
+The Programmable Developer Platform is supported in public through this GitHub repository. GitHub Issues are for integration support only; legacy Registry and GitHub launch submission intake are closed.
+
+For Custom Launch API availability, check [`https://api.programmable.market/readyz`](https://api.programmable.market/readyz). The authenticated API and its readiness endpoint are separate from this unauthenticated read API.
 
 ## Ask a question or report a problem
 
@@ -17,11 +19,12 @@ Search existing issues before opening a new one. Include enough information to r
 - the repository release, commit, API version, or schema version;
 - the chain ID and relevant contract addresses;
 - the endpoint, request, or fixture involved;
+- the error `requestId`, numeric HTTP `status`, and ISO `timestamp`;
 - the expected and observed result;
 - transaction hashes, block numbers, and log indexes when relevant;
 - a minimal code sample with all secrets removed.
 
-Do not post private keys, seed phrases, API keys, access tokens, personal data, or other credentials.
+Do not post private keys, seed phrases, API keys, access tokens, Authorization headers, personal data, or other credentials. Redact the complete credential value rather than masking only part of it.
 
 ## Report a security issue
 

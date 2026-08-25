@@ -137,7 +137,7 @@ describe("version 2 classification", () => {
     );
   });
 
-  test("publishes Registry discovery while keeping general intake prelaunch", async () => {
+  test("publishes Registry discovery while keeping legacy intake closed", async () => {
     const manifest = await developerManifestV2();
     const projected = projectV2Dataset({
       records: [internalRecord(classic, "0001"), genesisCanary],
@@ -150,6 +150,7 @@ describe("version 2 classification", () => {
       "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
     );
     assert.equal(manifest.customRegistry.publicSubmissionsEnabled, false);
+    assert.equal(manifest.publicCategories.custom.publicSubmissionStatus, "closed");
     const registry = manifest.registryGenerations.find((generation) =>
       generation.generation === "1"
     );
@@ -176,6 +177,14 @@ describe("version 2 classification", () => {
     });
     assert.equal(manifest.deployments.some((item) => item.modelId === "stock-paired"), false);
     assert.equal(publicStatus.custom.status, "live");
+    assert.deepEqual(publicStatus.customLaunchApi, {
+      status: "live",
+      readyzUrl: "https://api.programmable.market/readyz",
+      guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
+      openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
+      apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
+      walletBoundary: "separate-wallet-signature",
+    });
     assert.deepEqual(
       publicStatus.customRegistryPublication,
       projected.status.customRegistryPublication,

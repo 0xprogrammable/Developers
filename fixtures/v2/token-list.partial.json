@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "2.0.0",
+  "status": "degraded",
+  "name": "Programmable",
+  "timestamp": "2026-08-25T05:32:01.476Z",
+  "version": {
+    "major": 2,
+    "minor": 0,
+    "patch": 0
+  },
+  "keywords": [
+    "programmable",
+    "uniswap-v4",
+    "ethereum"
+  ],
+  "tokens": []
+}

@@ -41,11 +41,11 @@ The pagination model, response shape and read-only security boundary remain the 
 5. Map only `classic` and `custom` to the two exact display labels above.
 6. Remove v1 Stock-Paired records from any Programmable Custom filter.
 7. Resolve Classic launchers and the Custom Registry from the v2 manifest.
-8. Keep the Custom filter visible but empty while `custom.status` is `prelaunch`.
+8. Keep the Custom filter visible when no matching records are returned; inspect response quality and do not treat a degraded or unavailable absence as deletion.
 9. Enable a Custom record only when its registry provenance is `verified`.
 
 ## Availability
 
-Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Registry-based public submission intake remains prelaunch and is represented separately by `publicSubmissionsEnabled: false`; this state does not describe the separate Custom Launch API.
+Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Legacy Registry and GitHub submission intake are closed and represented separately by `publicSubmissionsEnabled: false`; the authenticated Custom Launch API is live under its own contract.
 
 API v1 remains supported and has no retirement date. New integrations should use v2.

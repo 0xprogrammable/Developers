@@ -14,6 +14,7 @@ import {
   tokenListPayload,
 } from "../api/v2/token-list.js";
 import { decodePageCursor, decodeResumeCursor } from "../server/http.js";
+import { assertValid, createSchemaRegistry } from "../scripts/lib/schema.mjs";
 import {
   PLATFORM_FEE_RECIPIENT,
   validateLaunchSemantics,
@@ -211,7 +212,7 @@ describe("v2 API contract", () => {
     assert.deepEqual(custom.body.items, []);
   });
 
-  test("fails the Custom-only route closed when a live Registry source is stale", async () => {
+  test("keeps the Custom route readable with unavailable quality when its source is stale", async () => {
     const current = dataset([launch(10)], {
       customRegistry: { status: "unavailable", highWaterGeneration: "8" },
       customRegistryPublication: {
@@ -224,8 +225,9 @@ describe("v2 API contract", () => {
     const handler = createLaunchesHandler(async () => current);
 
     const custom = await call(handler, { category: "custom" });
-    assert.equal(custom.status, 503);
-    assert.equal(custom.body.code, "index-coverage-incomplete");
+    assert.equal(custom.status, 200);
+    assert.equal(custom.body.status, "unavailable");
+    assert.deepEqual(custom.body.items, []);
 
     const combined = await call(handler);
     assert.equal(combined.status, 200);
@@ -233,7 +235,7 @@ describe("v2 API contract", () => {
     assert.equal(combined.body.items.length, 1);
   });
 
-  test("fails every non-Classic feed closed when active Gen2 coverage is stale", async () => {
+  test("publishes the recognized subset with degraded quality when Gen2 coverage is stale", async () => {
     const current = dataset([launch(10)], {
       customRegistry: {
         status: "unavailable",
@@ -253,10 +255,13 @@ describe("v2 API contract", () => {
     const handler = createLaunchesHandler(async () => current);
 
     const combined = await call(handler);
-    assert.equal(combined.status, 503);
-    assert.equal(combined.body.code, "index-coverage-incomplete");
+    assert.equal(combined.status, 200);
+    assert.equal(combined.body.status, "degraded");
+    assert.deepEqual(combined.body.items.map((item) => item.launchId), ["fixture:10"]);
     const custom = await call(handler, { category: "custom" });
-    assert.equal(custom.status, 503);
+    assert.equal(custom.status, 200);
+    assert.equal(custom.body.status, "unavailable");
+    assert.deepEqual(custom.body.items, []);
     const classicOnly = await call(handler, { category: "classic" });
     assert.equal(classicOnly.status, 200);
   });
@@ -329,10 +334,74 @@ describe("v2 API contract", () => {
       ),
       false,
     );
+    assert.equal(payload.status, "ready");
 
     const handler = createTokenListHandler(async () => dataset([record]));
     const response = await call(handler, {}, "/api/v2/token-list");
     assert.equal(response.status, 200);
+    assert.equal(response.body.status, "ready");
+  });
+
+  test("keeps recognized launch and token identities visible under partial coverage", async () => {
+    const recognized = launch(10);
+    const current = dataset([recognized]);
+    current.status.status = "partial";
+    current.status.coverage.status = "partial";
+
+    const launchResponse = await call(
+      createLaunchesHandler(async () => current),
+    );
+    assert.equal(launchResponse.status, 200);
+    assert.equal(launchResponse.body.status, "degraded");
+    assert.deepEqual(
+      launchResponse.body.items.map((item) => item.launchId),
+      [recognized.launchId],
+    );
+
+    const tokenResponse = await call(
+      createTokenListHandler(async () => current),
+      {},
+      "/api/v2/token-list",
+    );
+    assert.equal(tokenResponse.status, 200);
+    assert.equal(tokenResponse.body.status, "degraded");
+    assert.deepEqual(
+      tokenResponse.body.tokens.map((token) => token.address),
+      [recognized.token.address],
+    );
+  });
+
+  test("returns support-safe error metadata without credentials", async () => {
+    const response = await call(
+      createLaunchesHandler(async () => dataset([])),
+      { category: "invalid" },
+    );
+    assert.equal(response.status, 400);
+    assert.equal(response.body.status, 400);
+    assert.equal(response.body.requestId, response.headers.get("x-request-id"));
+    assert.ok(Number.isFinite(Date.parse(response.body.timestamp)));
+    assert.equal("apiKey" in response.body, false);
+    assert.equal("authorization" in response.body, false);
+    assertValid(
+      (await createSchemaRegistry("v2")).validator("problem.schema.json"),
+      response.body,
+      "v2 problem response",
+    );
+  });
+
+  test("exposes Retry-After for a transient response-production failure", async () => {
+    const response = await call(
+      createLaunchesHandler(async () => {
+        throw new Error("synthetic upstream failure");
+      }),
+    );
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("retry-after"), "30");
+    assert.match(
+      response.headers.get("access-control-expose-headers"),
+      /Retry-After/,
+    );
+    assert.ok(Number.isFinite(Date.parse(response.body.timestamp)));
   });
 
   test("accepts synthetic Basebit and Aion policy shapes only at exact 15/5 without a native overlay", () => {

@@ -374,9 +374,22 @@ export function isV2DatasetPublishable(dataset, category = null) {
 }
 
 export function feedStatusV2(dataset, category = null) {
-  if (!isV2DatasetPublishable(dataset, category)) return "unavailable";
   const classic = feedStatus(dataset.status.status);
   const publication = dataset.status.customRegistryPublication;
+  const selectedRecords = dataset.records.filter((record) =>
+    category === null || record.category === category);
+  const classicCoverageReady = Boolean(
+    dataset.status.coverage?.status === "complete" &&
+      dataset.status.coverage?.checkpoint,
+  );
+  const customPublicationIncomplete =
+    category !== "classic" &&
+    publication?.status === "live" &&
+    publication.publicationReady !== true;
+
+  if (!classicCoverageReady || customPublicationIncomplete || classic === "unavailable") {
+    return selectedRecords.length > 0 ? "degraded" : "unavailable";
+  }
   if (
     category !== "classic" &&
     publication?.status === "live" &&
@@ -396,13 +409,37 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
   const routesAvailable = Boolean(
     status.coverage?.status === "complete" && status.coverage?.checkpoint,
   );
-  const feeds = routesAvailable ? feedStatus(status.status) : "unavailable";
+  const publishedRecords = Number.isSafeInteger(status.counts?.total)
+    ? status.counts.total
+    : 0;
+  const publishedClassic = Number.isSafeInteger(status.counts?.classic)
+    ? status.counts.classic
+    : 0;
+  const publishedCustom = Number.isSafeInteger(status.counts?.custom)
+    ? status.counts.custom
+    : 0;
+  const classicFeed = routesAvailable
+    ? feedStatus(status.status)
+    : publishedClassic > 0
+      ? "degraded"
+      : "unavailable";
   const customLive = customRegistryStatus === "live";
   const customFeed = customLive
     ? status.customRegistryPublication?.publicationReady === true
-      ? feeds
-      : "unavailable"
+      ? routesAvailable
+        ? feedStatus(status.status)
+        : publishedCustom > 0
+          ? "degraded"
+          : "unavailable"
+      : publishedCustom > 0
+        ? "degraded"
+        : "unavailable"
     : "ready";
+  const feeds = classicFeed === "ready" && customFeed === "ready"
+    ? "ready"
+    : publishedRecords > 0
+      ? "degraded"
+      : "unavailable";
   return {
     schemaVersion: API_V2_SCHEMA_VERSION,
     apiVersion: "2",
@@ -425,8 +462,16 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches are discoverable as Programmable Custom."
+          ? "Approved Custom Registry launches are discoverable. The Custom Launch API is live; legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
+    },
+    customLaunchApi: {
+      status: "live",
+      readyzUrl: "https://api.programmable.market/readyz",
+      guideUrl: "https://programmable.market/developers/custom-launch-api-v1.md",
+      openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
+      apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
+      walletBoundary: "separate-wallet-signature",
     },
     feeds: {
       manifest: "ready",

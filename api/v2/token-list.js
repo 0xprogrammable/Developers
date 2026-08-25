@@ -2,7 +2,6 @@ import { API_V2_SCHEMA_VERSION } from "../../server/constants.js";
 import {
   feedStatusV2,
   getV2Dataset,
-  isV2DatasetPublishable,
 } from "../../server/v2-dataset.js";
 import {
   error,
@@ -26,6 +25,7 @@ export function tokenListPayload(
   generatedAt,
   category = null,
   chainId = null,
+  status = "ready",
 ) {
   const finalizedRecords = records.filter(
     (record) =>
@@ -84,6 +84,7 @@ export function tokenListPayload(
 
   return {
     schemaVersion: API_V2_SCHEMA_VERSION,
+    status,
     name: "Programmable",
     timestamp: generatedAt,
     version: { major: 2, minor: 0, patch: 0 },
@@ -122,16 +123,7 @@ export function createTokenListHandler(loadDataset = getV2Dataset) {
       error(req, res, 400, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
       return;
     }
-    if (!isV2DatasetPublishable(dataset, category)) {
-      error(
-        req,
-        res,
-        503,
-        "INDEX_COVERAGE_INCOMPLETE",
-        "The token list is waiting for complete chain coverage",
-      );
-      return;
-    }
+    const status = feedStatusV2(dataset, category);
     json(
       req,
       res,
@@ -141,8 +133,9 @@ export function createTokenListHandler(loadDataset = getV2Dataset) {
         dataset.status.generatedAt,
         category,
         chainId,
+        status,
       ),
-      { apiStatus: feedStatusV2(dataset, category) },
+      { apiStatus: status },
     );
   } catch {
     error(
