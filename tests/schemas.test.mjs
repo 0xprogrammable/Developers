@@ -185,12 +185,12 @@ describe("JSON Schema registry", () => {
     );
     assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.cli, {
       packageName: "@programmable/launch",
-      version: "2.0.0",
+      version: "2.0.1",
       distributionStatus: "github-release",
       releaseUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.0",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
       packageAssetUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.0/programmable-launch-2.0.0.tgz",
+        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz",
       commands: ["pack", "validate", "submit", "status"],
     });
 
