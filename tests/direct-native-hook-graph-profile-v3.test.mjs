@@ -241,13 +241,17 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.equal(profile.profileId, "programmable.direct-native-hook-graph.v1");
     assert.equal(profile.profileRevision, 3);
-    assert.equal(profile.profileVersion, "3.1.0");
+    assert.equal(profile.profileVersion, "3.2.0");
     assert.equal(
       profile.compatibility.profileVersion3_0_0,
       "retained-exact-read-and-retry",
     );
     assert.equal(
       profile.compatibility.profileVersion3_1_0,
+      "retained-exact-read-and-retry",
+    );
+    assert.equal(
+      profile.compatibility.profileVersion3_2_0,
       "active-for-new-packs",
     );
     assert.equal(profile.publicCategory, "custom");
@@ -400,6 +404,34 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         method: "GET",
         path: "/v3/capabilities",
         authentication: "none",
+        projectMetadata: {
+          schemaVersion: "programmable.project-metadata.v1",
+          inputSchemaVersion: "programmable.project-metadata-input.v1",
+          requiredForProfileVersion: "3.2.0",
+          legacyWithoutMetadataProfileVersions: ["2.0.0", "3.0.0", "3.1.0"],
+          requiredFields: [
+            "token.name",
+            "token.symbol",
+            "presentation.description",
+            "presentation.image",
+            "presentation.links",
+          ],
+          imageMayBeNull: true,
+          maximumLinks: 32,
+          linkKinds: [
+            "website",
+            "documentation",
+            "x",
+            "telegram",
+            "discord",
+            "github",
+            "other",
+          ],
+          projectMetadataHashDomain: "programmable.project-metadata.v1",
+          graphBundleHashBindingDomain:
+            "programmable.custom-graph-project-metadata.v1",
+          postDeploymentTokenReadbackRequired: true,
+        },
       },
       preflight: {
         method: "POST",
@@ -418,6 +450,21 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
           walletSignatureRequiredLater: true,
           walletBroadcastByService: false,
         },
+      },
+      finalizedMetadata: {
+        method: "GET",
+        path: "/v3/finalized-custom-launches",
+        authentication: "none",
+        responseSchemaVersion:
+          "programmable.finalized-custom-launch-metadata-list.v1",
+        openApiOperationId: "listFinalizedCustomLaunchMetadataV3",
+        pagination: "opaque-cursor",
+        minimumLimit: 1,
+        maximumLimit: 25,
+        defaultLimit: 10,
+        finalityScope: "finalized-profile-3.2.0-only",
+        cacheControl: "public, max-age=15, stale-while-revalidate=300",
+        sourceLkg: "none",
       },
       lifecycleQueue: {
         resourceField: "lifecycleQueue",
@@ -445,6 +492,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
       packConfigSchemaSha256:
         "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+      finalizedMetadataUrl:
+        "https://api.programmable.market/v3/finalized-custom-launches",
     });
     assert.deepEqual(profile.cli.fundingAuthorizationPatch, {
       schemaVersion: "programmable.eip3009-authorization-patch.v2",
@@ -472,25 +521,25 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.3.1");
+    assert.equal(profile.cli.releaseVersion, "3.3.2");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
-    assert.equal(profile.cli.minimumSupportingVersion, "3.1.0");
+    assert.equal(profile.cli.minimumSupportingVersion, "3.2.0");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.1",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.2",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2",
+      "sha256:096b2e09514437907c50fd3f7dc9415c426f4496d65572316d208f22a7ef389f",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -651,8 +700,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       wellKnown.extensions["programmable.custom-launch-api"];
 
     assert.equal(extension.profileRevision, 3);
-    assert.equal(extension.profileVersion, "3.1.0");
-    assert.deepEqual(extension.compatibleProfileVersions, ["3.0.0", "3.1.0"]);
+    assert.equal(extension.profileVersion, "3.2.0");
+    assert.deepEqual(extension.compatibleProfileVersions, ["3.1.0", "3.0.0"]);
     assert.deepEqual(
       extension.cli,
       (await developerManifestV2())[PROFILE_KEY].cli,
@@ -720,6 +769,28 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /programmable\.custom-launch-lifecycle-queue\.v3/u);
     assert.match(guide, /not added to the Developer launch or token-list feeds/iu);
     assert.match(guide, /wallet-handoff URL with an explicit expiry/iu);
+    assert.match(guide, /programmable\.project-metadata\.v1/u);
+    assert.match(guide, /programmable\.launch-presentation-draft\.v1/u);
+    assert.match(guide, /projectMetadataHash/u);
+    assert.match(guide, /unboundGraphBundleHash/u);
+    assert.match(guide, /programmable\.custom-graph-project-metadata\.v1/u);
+    assert.match(guide, /programmable\.project-token-metadata-binding\.v1/u);
+    assert.match(guide, /postDeploymentReadback/u);
+    assert.match(guide, /\{kind, uri\}/u);
+    assert.match(guide, /`website`, `documentation`, `x`, `telegram`, `discord`/u);
+    assert.match(guide, /GET|curl[\s\S]+\/v3\/finalized-custom-launches/iu);
+    assert.match(guide, /programmable\.finalized-custom-launch-metadata-list\.v1/u);
+    assert.match(guide, /resourceId` is a pagination\/resource coordinate, not\s+Router identity/iu);
+    assert.match(readme, /metadata-bound\s+`graphBundleHash`/iu);
+    assert.match(llms, /images and links remain untrusted display data/iu);
+    assert.match(llmsFull, /unique UTF-8-sorted `\{kind,uri\}` links array/iu);
+    assert.match(readOpenApi, /programmable\.project-metadata\.v1/u);
+    assert.match(readOpenApi, /post-deployment readback/iu);
+    assert.match(readOpenApi, /operationId: listFinalizedCustomLaunchMetadataV3/u);
+    assert.match(
+      readOpenApi,
+      /FinalizedCustomLaunchMetadataListV1/u,
+    );
     assert.match(readme, /programmable\.custom-launch-preflight\.v1/u);
     assert.match(llms, /quota-free `POST \/v3\/custom-launches\/preflight`/u);
     assert.match(llmsFull, /all 14 Uniswap v4 permissions/iu);
@@ -728,10 +799,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.1\.tgz\.sha256/u);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.2\.tgz\.sha256/u);
     assert.match(
       guide,
-      /npm install --global \.\/programmable-launch-3\.3\.1\.tgz/u,
+      /npm install --global \.\/programmable-launch-3\.3\.2\.tgz/u,
     );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);

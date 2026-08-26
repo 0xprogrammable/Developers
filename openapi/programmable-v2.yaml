@@ -80,6 +80,58 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
 
+  /v3/finalized-custom-launches:
+    get:
+      servers:
+        - url: https://api.programmable.market
+          description: Production Custom Launch API read surface
+      tags: [Launches]
+      operationId: listFinalizedCustomLaunchMetadataV3
+      summary: List finalized V3 project metadata
+      description: |
+        Returns a bounded, unauthenticated metadata snapshot for finalized
+        profile `3.2.0` launches. This route belongs to the separate Custom
+        Launch API host, not the Developer read API host. Follow every opaque
+        cursor to complete one snapshot. Items exclude pending and legacy
+        requests, controller addresses, credentials, and request bytes.
+        `resourceId` is not Router identity; bind `routerLaunchId` to the
+        matching canonical Router event token, hook, PoolManager, and pool ID.
+        Creator presentation remains untrusted display data and is not onchain
+        token identity, safety, liquidity, or tradeability evidence.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size. Defaults to 10. Duplicate parameters are rejected.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 10
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor from the previous page. Duplicate parameters are rejected.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Finalized Custom launch metadata, newest first.
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: public, max-age=15, stale-while-revalidate=300
+          content:
+            application/json:
+              schema:
+                $ref: https://programmable.market/openapi/custom-launch-v3.json#/components/schemas/FinalizedCustomLaunchMetadataListV1
+        "400":
+          description: Invalid or duplicated pagination parameter (`INVALID_PAGINATION`).
+        "503":
+          description: Finalized V3 metadata source is unavailable (`CUSTOM_LAUNCH_V3_UNAVAILABLE`).
+
   /api/v2/status:
     get:
       tags: [Discovery]
@@ -173,7 +225,19 @@ paths:
         or legacy GitHub fallback. The linked pack-config schema defines
         `programmable.eip3009-authorization-patch.v2` with static
         `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and
-        `vArgumentPath`; v1 remains compatible for exact retries. Admission is
+        `vArgumentPath`; v1 remains compatible for exact retries. New profile
+        `3.2.0` requests require
+        `programmable.project-metadata.v1`; the declaration hash is bound into
+        the graph hash, prepared resource, launch ID, and wallet-reviewed Router
+        transaction. `programmable.project-token-metadata-binding.v1` records
+        deterministic name and symbol extraction, but finalized token metadata
+        still requires post-deployment readback. Descriptions, images, and links
+        remain untrusted display data and never authorize execution. The
+        canonical V3 resource always carries immutable `launchProfileVersion`;
+        `projectMetadata` and `projectMetadataHash` are non-null exactly for
+        `3.2.0` and null for compatible `2.0.0`, `3.0.0`, and `3.1.0` resources.
+        The canonical conditional schema remains in the linked Custom Launch V3
+        OpenAPI rather than being redefined here. Admission is
         not an audit or a safety, honeypot, liquidity,
         tradeability, or fee-behavior guarantee. Finalized consistent Router launches may enter
         the launch feed; token-list projection additionally requires a token

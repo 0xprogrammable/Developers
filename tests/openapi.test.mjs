@@ -47,6 +47,7 @@ describe("OpenAPI v2 contract", () => {
       "/api/v2/manifest",
       "/api/v2/status",
       "/api/v2/token-list",
+      "/v3/finalized-custom-launches",
     ]);
     const operations = Object.values(spec.paths).map((item) => item.get.operationId);
     assert.equal(new Set(operations).size, operations.length);
@@ -106,6 +107,26 @@ describe("OpenAPI v2 contract", () => {
     );
     assert.equal(spec.paths["/v2/custom-launches"], undefined);
     assert.equal(spec.paths["/v3/custom-launches"], undefined);
+    const finalizedMetadata = spec.paths["/v3/finalized-custom-launches"].get;
+    assert.deepEqual(finalizedMetadata.servers, [
+      {
+        url: "https://api.programmable.market",
+        description: "Production Custom Launch API read surface",
+      },
+    ]);
+    assert.equal(
+      finalizedMetadata.operationId,
+      "listFinalizedCustomLaunchMetadataV3",
+    );
+    assert.equal(
+      finalizedMetadata.responses["200"].content["application/json"].schema.$ref,
+      "https://programmable.market/openapi/custom-launch-v3.json#/components/schemas/FinalizedCustomLaunchMetadataListV1",
+    );
+    assert.match(finalizedMetadata.responses["400"].description, /INVALID_PAGINATION/u);
+    assert.match(
+      finalizedMetadata.responses["503"].description,
+      /CUSTOM_LAUNCH_V3_UNAVAILABLE/u,
+    );
     assert.match(
       spec.paths["/api/v2/manifest"].get.description,
       /(all|every) valid Uniswap v4\s+permission mask/u,
@@ -113,12 +134,14 @@ describe("OpenAPI v2 contract", () => {
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });
 
-  test("resolves every local component and repository schema reference", async () => {
+  test("resolves local references and pins the canonical external V3 response", async () => {
     const local = [];
     const relative = [];
+    const external = [];
     visit(spec, (value) => {
       if (typeof value.$ref !== "string") return;
       if (value.$ref.startsWith("#/")) local.push(value.$ref);
+      else if (value.$ref.startsWith("https://")) external.push(value.$ref);
       else relative.push(value.$ref);
     });
     assert.ok(local.length > 0);
@@ -129,6 +152,9 @@ describe("OpenAPI v2 contract", () => {
       assert.ok(!reference.includes("#"), reference);
       await access(path.resolve(path.dirname(file), reference));
     }
+    assert.deepEqual(external, [
+      "https://programmable.market/openapi/custom-launch-v3.json#/components/schemas/FinalizedCustomLaunchMetadataListV1",
+    ]);
   });
 
   test("documents problem JSON and filter parity on every v2 feed route", () => {
