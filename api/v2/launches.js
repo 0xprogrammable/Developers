@@ -86,7 +86,7 @@ function currentSnapshot(
     const rightBlock = BigInt(right.blockNumber);
     return leftBlock < rightBlock ? -1 : leftBlock > rightBlock ? 1 : 0;
   });
-  const selected = candidates[0];
+  const selected = candidates.at(-1);
   const sameBoundary = candidates.filter((candidate) =>
     candidate.blockNumber === selected.blockNumber);
   if (sameBoundary.some((candidate) =>
