@@ -1369,6 +1369,26 @@
       "activationStatus": "live"
     },
     "liquidityPolicy": {
+      "intentSchemaVersion": "programmable.direct-native-liquidity-model-intent.v1",
+      "assessmentSchemaVersion": "programmable.direct-native-liquidity-model-assessment.v1",
+      "currentCliEmitsExplicitModel": true,
+      "legacyV3OmissionResolvesTo": "external-concentrated-liquidity",
+      "models": {
+        "external-concentrated-liquidity": {
+          "declaredLaunchState": "liquidity_required",
+          "initialLiquidityProvidedByLaunch": false
+        },
+        "launch-seeded-concentrated-liquidity": {
+          "declaredLaunchState": "assessment_required",
+          "exactGraphTargetRequired": true,
+          "assessmentMayBeSelfDeclaredPassed": false
+        },
+        "hook-inventory-custom-accounting": {
+          "declaredLaunchState": "assessment_required",
+          "exactHookTargetAndReturnDeltaPermissionRequired": true,
+          "assessmentMayBeSelfDeclaredPassed": false
+        }
+      },
       "poolInitializationCreatesLiquidity": false,
       "tradingVolumeCreatesConcentratedLiquidity": false,
       "normalConcentratedLiquidity": {

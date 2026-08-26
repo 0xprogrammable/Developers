@@ -121,6 +121,20 @@ describe("Direct Native Hook Graph Profile V2 production discovery", () => {
     );
     assert.equal(profile.platformFeeConformance.receiptAuthority, "platform-only");
     assert.equal(profile.platformFeeConformance.receiptDigest, "per-launch");
+    assert.deepEqual(Object.keys(profile.liquidityPolicy.models), [
+      "external-concentrated-liquidity",
+      "launch-seeded-concentrated-liquidity",
+      "hook-inventory-custom-accounting",
+    ]);
+    assert.equal(
+      profile.liquidityPolicy.models["external-concentrated-liquidity"].declaredLaunchState,
+      "liquidity_required",
+    );
+    assert.equal(
+      profile.liquidityPolicy.models["hook-inventory-custom-accounting"]
+        .assessmentMayBeSelfDeclaredPassed,
+      false,
+    );
     assert.equal(profile.liquidityPolicy.poolInitializationCreatesLiquidity, false);
     assert.equal(
       profile.liquidityPolicy.tradingVolumeCreatesConcentratedLiquidity,

@@ -28,5 +28,6 @@ console.log(JSON.stringify({
     object(profile.hookPermissions).maximumMask,
   ],
   fundingModes: object(profile.fundingPolicy).supportedModes,
+  liquidityModels: Object.keys(object(object(profile.liquidityPolicy).models)),
   walletSignsSeparately: true,
 }, null, 2));

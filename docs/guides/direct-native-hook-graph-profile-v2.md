@@ -59,6 +59,22 @@ therefore starts with an empty pool until the project or another participant
 supplies a position. The profile does not provide a generic liquidity lock or
 withdrawal restriction.
 
+The current CLI binds one explicit liquidity intent into the request hash:
+
+- `external-concentrated-liquidity` records `liquidity_required`; launch finality
+  does not claim the empty pool is tradeable.
+- `launch-seeded-concentrated-liquidity` names the exact graph target that
+  supplies a position and remains `assessment_required` until the seed,
+  custody, withdrawal, buy, and sell checks have separate evidence.
+- `hook-inventory-custom-accounting` names the exact hook inventory path,
+  requires a swap return-delta permission, and remains `assessment_required`
+  until settlement, solvency, backing, withdrawal, buy, and sell checks have
+  separate evidence.
+
+A request can only declare required checks; it cannot declare its own pass.
+Older V3 request bytes without this field remain readable as the external
+liquidity model, but new CLI output always includes the explicit hash binding.
+
 A custom-accounting hook may validly start with zero classical LP only when its
 exact graph already supplies and settles the inventory or backing required for
 swaps. Volume may build backing only when that behavior is implemented in the
