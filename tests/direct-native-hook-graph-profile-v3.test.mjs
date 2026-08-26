@@ -60,6 +60,16 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.equal(profile.publicCategory, "custom");
     assert.equal(profile.status, "live");
     assert.equal(profile.productionLaunchAuthorized, true);
+    assert.equal(profile.platformFeePolicy.rateDenominator, "1000000");
+    assert.equal(
+      profile.platformFeePolicy.programmableFeeHundredthsOfBip,
+      "1000",
+    );
+    assert.deepEqual(
+      Object.keys(profile.platformFeePolicy.accountingModes).sort(),
+      ["additive-platform-share", "inclusive-selected-total"],
+    );
+    assert.equal(profile.platformFeePolicy.admissionCertifiesFeeBehavior, false);
 
     assert.equal(manifest.directNativeHookGraphProfileV2.profileRevision, 2);
     assert.equal(manifest.directNativeHookGraphProfileV2.profileVersion, "2.0.0");
@@ -203,6 +213,18 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.equal(extension.profileVersion, "3.0.0");
     assert.deepEqual(extension.platformAdmissionPolicy,
       (await developerManifestV2())[PROFILE_KEY].platformAdmissionPolicy);
+    assert.deepEqual(
+      extension.platformFeePolicy,
+      (await developerManifestV2())[PROFILE_KEY].platformFeePolicy,
+    );
+    assert.equal(
+      (await developerManifestV2()).platformFee.customPublicSubmissions.scope,
+      "legacy-fee-enforced-isolated-after-swap-profile-only",
+    );
+    assert.equal(
+      (await developerManifestV2()).platformFee.customPublicSubmissions.profileId,
+      "programmable.fee-enforced-isolated-after-swap.zero-delta.v1",
+    );
     assert.match(guide, /not a security audit/iu);
     assert.match(guide, /honeypot-free guarantee/iu);
     assert.match(guide, /liquidity or tradeability/iu);
@@ -211,6 +233,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /generic buyback/iu);
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
     assert.match(guide, /releaseLocatorStatus: pending-publication/iu);
+    assert.match(guide, /additive-platform-share/iu);
+    assert.match(guide, /inclusive-selected-total/iu);
     assert.match(
       readme,
       /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,

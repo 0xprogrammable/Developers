@@ -105,6 +105,23 @@ Router simulation is one deterministic preflight against one exact state and
 transaction. It is not production-outcome evidence and cannot predict later
 admin actions, market conditions, third-party liquidity, or integrations.
 
+## Platform fee accounting
+
+Each Revision 3 request selects and binds one of two platform-fee accounting
+modes. `additive-platform-share` adds the Programmable `1,000 / 1,000,000`
+share to the project-selected fee. `inclusive-selected-total` treats the
+selected total as inclusive and reserves the same Programmable share inside
+that total. Integrators must read the selected mode, assessment base, fee
+currency, rounding, and claim mode from the exact request; they must not infer
+added-on-top behavior from the `custom` category.
+
+The machine descriptor publishes both allowed accounting modes, the 10 bps
+Programmable share, assessment pairs, and claim modes. The older top-level
+`customPublicSubmissions.chargeMode: added-on-top` field is scoped only to the
+legacy Fee-Enforced Isolated After-Swap profile. It does not describe Revision
+3. The admission receipt deliberately declares `feeBehaviorClaim: false`, so
+separate onchain evidence is still required for actual accrual or payment.
+
 Pool initialization creates no concentrated liquidity, and trading volume does
 not create a Uniswap LP position. A normal pool needs a project or third-party
 position. A zero-classical-LP custom-accounting design is possible only when

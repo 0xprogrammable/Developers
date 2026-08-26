@@ -283,6 +283,56 @@
         "perLaunchAdmissionRequired": true,
         "universalHookApproval": false
       },
+      "platformFeePolicy": {
+        "schemaVersion": "programmable.platform-fee-policy.v1",
+        "applicability": "successful-pool-swaps",
+        "rateDenominator": "1000000",
+        "programmableFeeHundredthsOfBip": "1000",
+        "roundingMode": "floor",
+        "claimAuthority": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+        "claimAuthorityAndPayoutRecipientAreDistinctRoles": true,
+        "accountingModes": {
+          "additive-platform-share": {
+            "applicantSelectedRangeHundredthsOfBip": {
+              "minimum": "0",
+              "maximum": "998999"
+            },
+            "projectFormula": "applicant-selected",
+            "programmableFormula": "1000",
+            "effectiveTotalFormula": "applicant-selected-plus-1000"
+          },
+          "inclusive-selected-total": {
+            "applicantSelectedRangeHundredthsOfBip": {
+              "minimum": "0",
+              "maximum": "999999"
+            },
+            "projectFormula": "max-applicant-selected-and-1000-minus-1000",
+            "programmableFormula": "1000",
+            "effectiveTotalFormula": "max-applicant-selected-and-1000"
+          }
+        },
+        "assessmentPairs": [
+          {
+            "assessmentBase": "executed-gross-declared-quote",
+            "feeCurrency": "declared-quote-currency"
+          },
+          {
+            "assessmentBase": "settled-input-before-platform-fee",
+            "feeCurrency": "input-currency"
+          }
+        ],
+        "claimModes": {
+          "immutable-payout-recipient": {
+            "payoutRecipientRequiredInSelection": true,
+            "payoutRecipientMustEqualClaimAuthority": true
+          },
+          "claim-authority-selected-recipient": {
+            "payoutRecipientMustBeAbsentFromSelection": true,
+            "authenticatedClaimDestinationConstraint": "nonzero-address"
+          }
+        },
+        "admissionCertifiesFeeBehavior": false
+      },
       "platformAdmissionPolicy": {
         "schemaVersion": "programmable.direct-native-platform-admission-policy.v1",
         "mode": "deterministic-exact-source-graph-static-baseline-v1",
