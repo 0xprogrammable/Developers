@@ -181,7 +181,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
   });
 
   test("documents the assurance and feature boundaries", async () => {
-    const [guide, llms, wellKnown, schemaIndex] = await Promise.all([
+    const [guide, readme, llms, wellKnown, schemaIndex] = await Promise.all([
       readFile(
         path.join(
           REPOSITORY_ROOT,
@@ -189,6 +189,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         ),
         "utf8",
       ),
+      readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8"),
       readFile(path.join(REPOSITORY_ROOT, "llms.txt"), "utf8"),
       readJson(
         path.join(REPOSITORY_ROOT, "public/.well-known/programmable.json"),
@@ -210,6 +211,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /generic buyback/iu);
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
     assert.match(guide, /releaseLocatorStatus: pending-publication/iu);
+    assert.match(
+      readme,
+      /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,
+    );
     assert.match(llms, /launch-admission-only/iu);
     assert.ok(
       schemaIndex.schemas.some(
