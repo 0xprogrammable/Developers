@@ -172,7 +172,7 @@ describe("documentation contract", () => {
       registryStartBlock: manifest.customRegistry.startBlock,
       registryGeneration: manifest.customRegistry.generation,
       note:
-        "Custom Launch API V2 is public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed.",
+        "Custom Launch API V2 and V3 are public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed.",
     });
     const customLaunchApi = wellKnown.extensions["programmable.custom-launch-api"];
     const { publicRelease, versions, legacyIntake, ...v1Surface } = customLaunchApi;
@@ -212,6 +212,18 @@ describe("documentation contract", () => {
         replayHttpStatus: 200,
         retryAfter: "honor-on-429-or-503",
       },
+      v3: {
+        status: "live",
+        collectionPath: "/v3/custom-launches",
+        fundingAuthorizationPath:
+          "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+        fundingAuthorizationMethod: "POST",
+        openApiPath: "/openapi/custom-launch-v3.json",
+        profileId: "programmable.direct-native-hook-graph.v1",
+        profileRevision: 2,
+        authentication: "wallet-bound-api-key",
+        walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
+      },
     });
     assert.deepEqual(legacyIntake, {
       registry: "closed",
@@ -245,6 +257,35 @@ describe("documentation contract", () => {
         },
         note:
           "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live.",
+      },
+    );
+    assert.equal(
+      wellKnown.extensions["programmable.direct-native-hook-graph-profile-v1"]
+        .note,
+      "Retained preview contract only. This revision remains gated and publishes no launch; public Custom Launch API V3 and CLI 3.0.0 use the separate production V2 descriptor.",
+    );
+    const directNativeV2 = manifest.directNativeHookGraphProfileV2;
+    assert.deepEqual(
+      wellKnown.extensions["programmable.direct-native-hook-graph-profile-v2"],
+      {
+        discoverySchemaVersion: directNativeV2.schemaVersion,
+        discoverySchemaUrl:
+          "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json",
+        profileSchemaVersion: directNativeV2.profileSchemaVersion,
+        profileId: directNativeV2.profileId,
+        profileRevision: directNativeV2.profileRevision,
+        profileVersion: directNativeV2.profileVersion,
+        publicCategory: directNativeV2.publicCategory,
+        status: directNativeV2.status,
+        releaseStage: directNativeV2.releaseStage,
+        activationStatus: directNativeV2.activationStatus,
+        productionLaunchAuthorized:
+          directNativeV2.productionLaunchAuthorized,
+        api: directNativeV2.api,
+        cli: directNativeV2.cli,
+        statusUrl: "https://developers.programmable.family/api/v2/status",
+        manifestUrl: "https://developers.programmable.family/api/v2/manifest",
+        guideUrl: directNativeV2.guideUrl,
       },
     );
     assert.deepEqual(
