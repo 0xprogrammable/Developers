@@ -96,7 +96,35 @@ linked pack-config schema defines the additive
 `programmable.eip3009-authorization-patch.v2` contract: static
 `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`
 values identify the four authorization leaves while v1 remains readable for
-exact retries.
+exact retries. New profile `3.2.0` requests also carry required
+`programmable.project-metadata.v1` and its `projectMetadataHash`. The CLI keeps
+the raw graph digest in `unboundGraphBundleHash` and publishes a metadata-bound
+`graphBundleHash`. The prepared resource repeats both hashes, the exact
+metadata, and `programmable.project-token-metadata-binding.v1`; finalized token
+name and symbol still require `postDeploymentReadback: required`. These fields
+describe reviewed launch input. They do not make descriptions, images, links,
+or token reads platform-verified and cannot be used as calldata or wallet
+authority.
+
+The canonical Custom Launch V3 resource always includes immutable
+`launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, or `3.2.0`.
+Required `projectMetadata` and `projectMetadataHash` keys are non-null exactly
+for `3.2.0` and null for the three compatible legacy versions. The prepared
+artifact has no separate `launchProfileVersion`; current artifacts carry
+metadata, metadata hash, and `unboundGraphBundleHash`, while legacy artifacts
+omit those three fields. The canonical conditional schema stays in the public
+Custom Launch V3 OpenAPI and is not redefined here.
+
+The same descriptor publishes `api.selfServe.finalizedMetadata` and
+`api.agentIntegration.finalizedMetadataUrl`. They identify unauthenticated
+`GET https://api.programmable.market/v3/finalized-custom-launches`, whose
+canonical operation is `listFinalizedCustomLaunchMetadataV3` in the Custom
+Launch V3 OpenAPI contract. The opaque-cursor response contains only finalized
+profile `3.2.0` metadata ledgers, with a maximum page size of 25. It contains no
+pending or legacy request, controller, credential, or request bytes. Complete
+all pages, then join by `routerLaunchId` and matching canonical Router event
+identities. `resourceId` is not Router provenance and presentation data does
+not establish onchain token identity, safety, liquidity, or tradeability.
 
 `directNativeHookGraphProfileV2` remains the compatible Revision 2 descriptor.
 It binds project-owned token and hook artifacts in exact acyclic graphs of

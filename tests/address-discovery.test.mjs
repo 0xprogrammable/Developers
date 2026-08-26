@@ -203,6 +203,8 @@ describe("documentation contract", () => {
           "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
         packConfigSchemaSha256:
           "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+        finalizedMetadataUrl:
+          "https://api.programmable.market/v3/finalized-custom-launches",
       },
     });
     assert.equal(customLaunchApi.publicRelease.status, "live");
@@ -233,9 +235,9 @@ describe("documentation contract", () => {
         openApiPath: "/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
         profileRevision: 3,
-        profileVersion: "3.1.0",
+        profileVersion: "3.2.0",
         compatibleProfileRevisions: [2, 3],
-        compatibleProfileVersions: ["3.0.0", "3.1.0"],
+        compatibleProfileVersions: ["3.1.0", "3.0.0"],
         authentication: "wallet-bound-api-key",
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
         selfServe: {
@@ -243,6 +245,38 @@ describe("documentation contract", () => {
             method: "GET",
             path: "/v3/capabilities",
             authentication: "none",
+            projectMetadata: {
+              schemaVersion: "programmable.project-metadata.v1",
+              inputSchemaVersion: "programmable.project-metadata-input.v1",
+              requiredForProfileVersion: "3.2.0",
+              legacyWithoutMetadataProfileVersions: [
+                "2.0.0",
+                "3.0.0",
+                "3.1.0",
+              ],
+              requiredFields: [
+                "token.name",
+                "token.symbol",
+                "presentation.description",
+                "presentation.image",
+                "presentation.links",
+              ],
+              imageMayBeNull: true,
+              maximumLinks: 32,
+              linkKinds: [
+                "website",
+                "documentation",
+                "x",
+                "telegram",
+                "discord",
+                "github",
+                "other",
+              ],
+              projectMetadataHashDomain: "programmable.project-metadata.v1",
+              graphBundleHashBindingDomain:
+                "programmable.custom-graph-project-metadata.v1",
+              postDeploymentTokenReadbackRequired: true,
+            },
           },
           preflight: {
             method: "POST",
@@ -261,6 +295,21 @@ describe("documentation contract", () => {
               walletSignatureRequiredLater: true,
               walletBroadcastByService: false,
             },
+          },
+          finalizedMetadata: {
+            method: "GET",
+            path: "/v3/finalized-custom-launches",
+            authentication: "none",
+            responseSchemaVersion:
+              "programmable.finalized-custom-launch-metadata-list.v1",
+            openApiOperationId: "listFinalizedCustomLaunchMetadataV3",
+            pagination: "opaque-cursor",
+            minimumLimit: 1,
+            maximumLimit: 25,
+            defaultLimit: 10,
+            finalityScope: "finalized-profile-3.2.0-only",
+            cacheControl: "public, max-age=15, stale-while-revalidate=300",
+            sourceLkg: "none",
           },
           lifecycleQueue: {
             resourceField: "lifecycleQueue",

@@ -7,7 +7,7 @@ public Custom Launch API V3 on Ethereum Mainnet. Its identity is:
 | --- | --- |
 | Profile ID | `programmable.direct-native-hook-graph.v1` |
 | Profile revision | `3` |
-| Profile version | `3.1.0` |
+| Profile version | `3.2.0` |
 | Profile schema | `programmable.direct-native-hook-graph-profile.v3` |
 | Selection binding | `programmable.direct-native-hook-graph-profile-selection-binding.v3` |
 | Public category | `custom` |
@@ -19,11 +19,11 @@ requests use the separately hosted authenticated API at
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
 contract.
 
-Revision 3 is additive. New packs use `3.1.0`; exact `3.0.0` request bytes stay
-readable and retryable under their original admission policy. Revision 2 also
-remains published and compatible. The only public categories remain `classic`
-and `custom`. Legacy Registry and GitHub submission intake are closed; neither
-is a fallback launch route.
+Revision 3 is additive. New metadata-bound packs use `3.2.0`; exact `3.1.0` and
+`3.0.0` request bytes stay readable and retryable under their original
+admission policies. Revision 2 profile `2.0.0` also remains published and
+compatible. The only public categories remain `classic` and `custom`. Legacy Registry and
+GitHub submission intake are closed; neither is a fallback launch route.
 
 ## Self-serve capabilities and preflight
 
@@ -112,6 +112,116 @@ The request must bind the complete deterministic artifact closure, including:
 - target manifest, graph links, values, and CREATE2 address locators; and
 - creation and runtime identities for every target.
 
+Profile `3.2.0` also requires a closed `projectMetadata` declaration. A cold
+agent supplies every key, using `null` for an absent image and `[]` for no
+links:
+
+```json
+{
+  "projectMetadata": {
+    "schemaVersion": "programmable.project-metadata.v1",
+    "token": {
+      "name": "Example Token",
+      "symbol": "EXAMPLE"
+    },
+    "presentation": {
+      "schemaVersion": "programmable.launch-presentation-draft.v1",
+      "description": "Example project description",
+      "image": null,
+      "links": []
+    }
+  }
+}
+```
+
+A non-null image declares exact `uri`, `contentSha256`, `mediaType`,
+`byteLength`, `width`, and `height` values. Each link is exactly `{kind, uri}`.
+Token names are limited to 64 UTF-8 bytes and symbols to 16 UTF-8 bytes. Image
+URIs are canonical public HTTPS URLs without a query or fragment, canonical
+`ipfs:` CIDs, or canonical `ar:` transaction URIs. Link URIs are canonical
+public HTTPS URLs.
+Allowed kinds are `website`, `documentation`, `x`, `telegram`, `discord`,
+`github`, and `other`; at most 32 links are accepted. Link items are unique and
+UTF-8 sorted by `kind + NUL + uri`. A URL alone does not bind image bytes: the
+content digest, media type, byte length, and dimensions remain part of the
+declaration.
+
+The CLI derives `projectMetadataHash` with the
+`programmable.project-metadata.v1` domain. It keeps the raw graph hash as
+`unboundGraphBundleHash`, then derives the request `graphBundleHash` with the
+`programmable.custom-graph-project-metadata.v1` domain over canonical JCS
+`{graphBundleHash: <raw>, projectMetadataHash}`. The resulting graph hash,
+request hash, prepared resource, onchain `launchId`, and wallet-reviewed Router
+transaction therefore refer to the same declared metadata. Changing a name,
+symbol, description, image, or link requires a new pack and changes the bound
+launch identity.
+
+The derived `tokenMetadataBinding` uses
+`programmable.project-token-metadata-binding.v1`. It states whether `name` and
+`symbol` are deterministically extractable from a constructor or initializer
+argument, including the argument index and name, or marks the field
+`not-deterministically-extractable`. Its `declarationBinding` is
+`request-and-launch-id` and `postDeploymentReadback` is always `required`.
+Hash binding proves what the controller reviewed; it is not proof that a
+deployed token returns those values until the finalized onchain readback
+succeeds.
+
+Every V3 resource carries required immutable `launchProfileVersion` with exact
+value `2.0.0`, `3.0.0`, `3.1.0`, or `3.2.0`. Its `projectMetadata` and
+`projectMetadataHash` keys are always present: both are non-null exactly for
+`3.2.0`, and both are null for legacy `2.0.0`, `3.0.0`, and `3.1.0` resources.
+The `3.2.0` prepared artifact carries `projectMetadata`,
+`projectMetadataHash`, and `unboundGraphBundleHash`; legacy prepared artifacts
+omit those three exact fields. A prepared artifact does not carry a separate
+`launchProfileVersion`; read it from the immutable resource.
+
+Exact legacy request bytes without `projectMetadata` remain readable and
+retryable under their original compatibility contracts. New `3.2.0` packs must
+not omit metadata or rely on a later editable metadata submission.
+
+### Finalized metadata snapshot
+
+Indexers and presentation clients can read the separate unauthenticated,
+finalized-only snapshot:
+
+```sh
+curl --fail --get \
+  --data-urlencode 'limit=10' \
+  https://api.programmable.market/v3/finalized-custom-launches
+```
+
+`limit` is `1` through `25` and defaults to `10`; `cursor` is an opaque value
+returned by the previous page. Each parameter may appear at most once. Invalid
+pagination returns `400 INVALID_PAGINATION`; temporary source unavailability
+returns `503 CUSTOM_LAUNCH_V3_UNAVAILABLE`. A successful response uses
+`programmable.finalized-custom-launch-metadata-list.v1`, orders items by
+`createdAt` descending and then `resourceId` descending, and returns
+`nextCursor` or `null`. Follow every cursor to complete that bounded snapshot.
+
+Each `programmable.finalized-custom-launch-metadata.v1` item includes:
+
+- `routerLaunchId`, chain, Router, token, hook, PoolManager, and pool ID;
+- exact `projectMetadata` and `projectMetadataHash`;
+- request, launch-intent, bound graph, raw graph, and artifact hashes;
+- declared-versus-observed token name and symbol with `matching`, `mismatch`,
+  or `unavailable` readback status; and
+- finalized transaction, block, log, confirmation-depth, and persisted
+  finalized-checkpoint evidence.
+
+The endpoint emits only finalized profile `3.2.0` rows with a complete metadata
+ledger. It never emits pending or legacy requests, controller addresses, API
+keys, or request bytes. `resourceId` is a pagination/resource coordinate, not
+Router identity. Join and key records by the finalized `routerLaunchId` and
+matching Router event token, hook, and pool evidence. Router evidence remains
+authoritative if creator presentation is absent, unavailable, or unsuitable
+for display.
+
+The response cache policy is `public, max-age=15, stale-while-revalidate=300`.
+The source API returns no last-known-good snapshot on a source failure. A
+consumer that keeps a bounded last-known-good view must label its source and
+age explicitly and must never use absence from a degraded page as evidence
+that a finalized Router launch does not exist.
+
 This is a general project-hook lane, not a universal approval for a hook name,
 repository, source revision, or future build. Each exact launch request has its
 own admission and Router simulation.
@@ -141,7 +251,7 @@ the complete role-aware blocking rules from the machine descriptor:
 }
 ```
 
-Profile `3.1.0` has exactly seven objective static hard blocks:
+Profile `3.2.0` retains exactly seven objective static hard blocks:
 
 - runtime `CALLCODE`, runtime `SELFDESTRUCT`, or an exact source
   self-destruct surface on any target;
@@ -152,7 +262,7 @@ Profile `3.1.0` has exactly seven objective static hard blocks:
 Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, blocklist,
 transfer-control, external-dependency, liquidity-custody, transfer-fee,
 runtime-child-contract, incomplete-analysis, and review-required callback
-findings are not categorical `3.1.0` deployment blocks. They remain visible in
+findings are not categorical `3.2.0` deployment blocks. They remain visible in
 `needsEvidenceFindingCodes` and select the applicable evidence tier. Return
 delta permissions and `hook-inventory-custom-accounting` require the advanced
 behavior vector set covering delta solvency, backing, refunds, and withdrawal.
@@ -290,7 +400,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.1`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.2`, with exactly four commands:
 
 ```text
 pack
@@ -299,11 +409,11 @@ submit
 status
 ```
 
-The immutable `3.3.1` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.1`.
+The immutable `3.3.2` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.2`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2`.
+`tarballSha256: sha256:096b2e09514437907c50fd3f7dc9415c426f4496d65572316d208f22a7ef389f`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -312,17 +422,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2
+  PROGRAMMABLE_LAUNCH_SHA256=096b2e09514437907c50fd3f7dc9415c426f4496d65572316d208f22a7ef389f
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.1.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.1.tgz.sha256)" = \
+    --output programmable-launch-3.3.2.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.2.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.1.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz
-  shasum -a 256 --check programmable-launch-3.3.1.tgz.sha256
-  npm install --global ./programmable-launch-3.3.1.tgz
+    --output programmable-launch-3.3.2.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz
+  shasum -a 256 --check programmable-launch-3.3.2.tgz.sha256
+  npm install --global ./programmable-launch-3.3.2.tgz
   programmable-launch --version
 )
 ```
