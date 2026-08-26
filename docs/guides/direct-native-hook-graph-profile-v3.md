@@ -7,7 +7,7 @@ public Custom Launch API V3 on Ethereum Mainnet. Its identity is:
 | --- | --- |
 | Profile ID | `programmable.direct-native-hook-graph.v1` |
 | Profile revision | `3` |
-| Profile version | `3.0.0` |
+| Profile version | `3.1.0` |
 | Profile schema | `programmable.direct-native-hook-graph-profile.v3` |
 | Selection binding | `programmable.direct-native-hook-graph-profile-selection-binding.v3` |
 | Public category | `custom` |
@@ -19,9 +19,11 @@ requests use the separately hosted authenticated API at
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
 contract.
 
-Revision 3 is additive. Revision 2 remains published and compatible, and the
-only public categories remain `classic` and `custom`. Legacy Registry and
-GitHub submission intake are closed; neither is a fallback launch route.
+Revision 3 is additive. New packs use `3.1.0`; exact `3.0.0` request bytes stay
+readable and retryable under their original admission policy. Revision 2 also
+remains published and compatible. The only public categories remain `classic`
+and `custom`. Legacy Registry and GitHub submission intake are closed; neither
+is a fallback launch route.
 
 ## Self-serve capabilities and preflight
 
@@ -45,8 +47,10 @@ links back to the canonical remediation catalog and guide.
 The response repeats the closed side-effect boundary:
 `quotaConsumed: false`, `nonceAllocated: false`, `persisted: false`,
 `walletSignatureRequiredLater: true`, and
-`walletBroadcastByService: false`. It also returns `requestId`; report that ID
-to support without including the API key. A throttled or temporarily
+`walletBroadcastByService: false`. The response body binds `requestHash`,
+`profileRevision`, and `serverTime`; the support request ID is returned in the
+`X-Request-Id` response header. Report that header without including the API
+key. A throttled or temporarily
 unavailable request may return `429` or `503`. Honor `Retry-After` and retry only
 the same exact request bytes when the response says the operation is retryable.
 
@@ -54,6 +58,13 @@ the same exact request bytes when the response says the operation is retryable.
 `standard_swap_compatible`, `advanced_custom_accounting`, or
 `governed_external_trust`. The tier names the evidence route that applies; it
 does not rank projects, certify safety, or replace the returned finding lists.
+
+The response also includes platform-authored `riskClassification`,
+`behaviorEvidence`, and `productTruthAxes`. Static classification can make the
+deployment axis `eligible`, but preflight keeps routing and featured placement
+false. Behavior evidence lists the exact swap, liquidity, callback, fee, and,
+when applicable, custom-accounting vectors. A missing runtime executor remains
+`not_executed`; a client or agent cannot turn it into `verified`.
 
 ### Eligibility is not lifecycle evidence
 
@@ -66,13 +77,14 @@ The three `launchEligibility` booleans answer different preflight questions:
 - `featured` is a separate presentation decision. It is not implied by
   deployment, routing, verification, finality, or indexing.
 
-Keep the later evidence axes independent: deployment requires a wallet-sent
-transaction and finality; trading requires production route and market
-evidence; fee behavior requires exact deployed accrual and routing evidence;
-source verification requires an exact source/build/runtime match; indexing
-requires finalized canonical-Router ingestion; featured placement remains a
-separate product decision. A positive preflight field establishes none of the
-other axes.
+Keep the six named product truth axes independent: `deployment`, `trading`,
+`platform_fee_evidence`, `source_verification`, `indexing`, and `featured`.
+Deployment requires a wallet-sent transaction and finality; trading requires
+production route and market evidence; fee behavior requires exact deployed
+accrual and routing evidence; source verification requires an exact
+source/build/runtime match; indexing requires finalized canonical-Router
+ingestion; featured placement remains a separate product decision. A positive
+field on one axis establishes none of the others.
 
 ## General graph lane
 
@@ -129,21 +141,27 @@ the complete role-aware blocking rules from the machine descriptor:
 }
 ```
 
-The machine descriptor publishes role-aware blocking rules. Incomplete analysis
-blocks any target. Unresolved v4 callback authentication or an enabled
-permission without a concrete reachable callback implementation blocks the hook. A
-mutable blocklist, transfer restriction, public mint, or pause surface blocks
-the token. A mutable token tax or fee surface also blocks the token, while hook
-dynamic-fee logic remains representable. Proxy, upgrade, self-destruct, `CALLCODE`, `DELEGATECALL`, or
-`SELFDESTRUCT` findings block when they apply to the token or hook.
+Profile `3.1.0` has exactly seven objective static hard blocks:
 
-Every static finding that does not match one of those code-and-role rules is a
-bound, visible warning rather than an automatic block. That includes runtime
-`CREATE` or `CREATE2`, generic mutable admin surfaces, hook-role dynamic-fee
-surfaces, non-token pause surfaces, and the listed opcode findings on other
-support roles. The full report hash and every warning remain bound to the
-admission evidence. There are no project-specific exceptions. A project does
-not receive a clean or safe label merely because the blocking list is empty.
+- runtime `CALLCODE`, runtime `SELFDESTRUCT`, or an exact source
+  self-destruct surface on any target;
+- a definitively missing or invalid PoolManager callback guard;
+- a literal callback guard bound to the wrong PoolManager; or
+- an enabled hook permission whose callback implementation is missing.
+
+Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, blocklist,
+transfer-control, external-dependency, liquidity-custody, transfer-fee,
+runtime-child-contract, incomplete-analysis, and review-required callback
+findings are not categorical `3.1.0` deployment blocks. They remain visible in
+`needsEvidenceFindingCodes` and select the applicable evidence tier. Return
+delta permissions and `hook-inventory-custom-accounting` require the advanced
+behavior vector set covering delta solvency, backing, refunds, and withdrawal.
+This evidence-only treatment is not approval: unresolved evidence keeps
+trading, platform-fee conformance, and feature placement unverified.
+
+The full report hash and every finding remain bound to the admission evidence.
+There are no project-specific exceptions. A project does not receive a clean
+or safe label merely because the seven hard-block codes are absent.
 
 `no_blocking_static_finding` produces only the verdict
 `admitted_to_router_simulation`. It does not authorize a transaction. The
@@ -217,6 +235,14 @@ do not convert it into a reusable credential, and keep the API key out of the
 wallet context. Opening the handoff does not authorize a transaction; the
 controller wallet still reviews and signs, and the service never broadcasts on
 its behalf.
+
+Authenticated single-resource responses can include `lifecycleQueue` using
+[`programmable.custom-launch-lifecycle-queue.v3`](../../schemas/v2/custom-launch-lifecycle-queue-v3.schema.json).
+Its state, generation, bounded retry delay, expiry, and stable error code are
+operational polling metadata only. Poll the returned single-resource `GET`
+path. Queue completion is not onchain finality, and a queue retry does not
+change launch status by itself. This field belongs to the authenticated launch
+resource; it is not added to the Developer launch or token-list feeds.
 
 ## Existing-project agent integration
 

@@ -30,6 +30,191 @@ function sourceStatus() {
   };
 }
 
+const STANDARD_BEHAVIOR_VECTORS = [
+  ["swap.zero-for-one.exact-input.multi-size", "swap", ["routability"]],
+  ["swap.zero-for-one.exact-output.multi-size", "swap", ["routability"]],
+  ["swap.one-for-zero.exact-input.multi-size", "swap", ["routability"]],
+  ["swap.one-for-zero.exact-output.multi-size", "swap", ["routability"]],
+  ["swap.second-user", "swap", ["routability"]],
+  ["swap.time-advance", "swap", ["routability"]],
+  ["liquidity.lifecycle.add-remove-withdraw", "liquidity", ["routability"]],
+  ["callback.unauthorized-rejected", "callback-authentication", [
+    "deployability-hard-invariant",
+    "routability",
+  ]],
+  ["fee.programmable-ten-bps", "platform-fee", [
+    "deployability-hard-invariant",
+    "platform-fee-conformance",
+    "routability",
+  ]],
+  ["fee.no-bypass", "platform-fee", [
+    "deployability-hard-invariant",
+    "platform-fee-conformance",
+    "routability",
+  ]],
+  ["fee.no-overcharge", "platform-fee", [
+    "deployability-hard-invariant",
+    "platform-fee-conformance",
+    "routability",
+  ]],
+  ["fee.claim-isolation", "platform-fee", [
+    "deployability-hard-invariant",
+    "platform-fee-conformance",
+    "routability",
+  ]],
+];
+
+function preflightResponse() {
+  const requiredVectors = STANDARD_BEHAVIOR_VECTORS.map(
+    ([vectorId, category, claimAxes]) => ({
+      vectorId,
+      category,
+      requirement: "required",
+      claimAxes,
+    }),
+  );
+  const vectorIds = requiredVectors.map(({ vectorId }) => vectorId);
+  const hardInvariantIds = requiredVectors
+    .filter(({ claimAxes }) => claimAxes.includes("deployability-hard-invariant"))
+    .map(({ vectorId }) => vectorId);
+  const feeIds = requiredVectors
+    .filter(({ claimAxes }) => claimAxes.includes("platform-fee-conformance"))
+    .map(({ vectorId }) => vectorId);
+  const digest = (character) => `sha256:${character.repeat(64)}`;
+  return {
+    schemaVersion: "programmable.custom-launch-preflight.v1",
+    requestHash: digest("1"),
+    profileRevision: 3,
+    serverTime: "2026-08-26T12:34:56.000Z",
+    disposition: "needs_evidence",
+    launchEligibility: {
+      deployable: true,
+      routable: false,
+      featured: false,
+    },
+    evidenceTier: "standard_swap_compatible",
+    riskClassification: {
+      schemaVersion: "programmable.platform-admission-risk-classification.v3",
+      classifierVersion: "1.0.0",
+      evidenceAuthority: "deterministic-static-classification",
+      disposition: "needs_evidence",
+      launchEligibility: {
+        deployable: true,
+        routable: false,
+        featured: false,
+        basis: "static-admission-only",
+      },
+      evidenceTier: "standard_swap_compatible",
+      evidenceTierStatus: "required",
+      hardBlockFindingCodes: [],
+      needsEvidenceFindingCodes: [],
+      requiredEvidence: [
+        "callback.pool-manager-authentication",
+        "launch.router-simulation",
+        "liquidity.declared-lifecycle-and-withdrawal",
+        "platform-fee.ten-bps-no-bypass-no-overcharge-claim-isolation",
+        "swap.four-quadrant-multi-size",
+        "swap.second-user-and-time",
+      ],
+      behaviorEvidenceStatus: "not_executed",
+      approvalAuthority: false,
+      safetyClaim: false,
+      feeBehaviorClaim: false,
+      limitations: ["Static admission does not prove runtime behavior."],
+    },
+    behaviorEvidence: {
+      schemaVersion: "programmable.custom-launch-behavior-summary.v1",
+      subjectSha256: digest("2"),
+      requirements: {
+        schemaVersion: "programmable.custom-launch-behavior-requirements.v1",
+        vectorSetVersion: "1.0.0",
+        riskClass: "standard-swaps",
+        hookPermissionMask: 192,
+        liquidityModel: "external-concentrated-liquidity",
+        vectors: requiredVectors,
+        requirementsSha256: digest("3"),
+      },
+      status: "not_executed",
+      execution: null,
+      vectors: requiredVectors.map(({ vectorId, category, claimAxes }) => ({
+        vectorId,
+        category,
+        claimAxes,
+        status: "not_executed",
+        evidenceSha256: null,
+        reasonCode: "BEHAVIOR_RUNNER_NOT_CONFIGURED",
+      })),
+      outstandingVectorIds: vectorIds,
+      claimAxes: {
+        deployability: {
+          status: "behavior-hard-invariants-required",
+          scope: "behavior-only",
+          requiredVectorIds: hardInvariantIds,
+          outstandingVectorIds: hardInvariantIds,
+        },
+        platformFeeConformance: {
+          status: "not_verified",
+          requiredVectorIds: feeIds,
+          outstandingVectorIds: feeIds,
+        },
+        routability: {
+          status: "not_verified",
+          requiredVectorIds: vectorIds,
+          outstandingVectorIds: vectorIds,
+        },
+        featured: {
+          status: "external-evidence-required",
+          derivedFromBehaviorEvidence: false,
+        },
+        finality: {
+          status: "independent-evidence-required",
+          derivedFromBehaviorEvidence: false,
+        },
+      },
+    },
+    productTruthAxes: {
+      deployment: {
+        status: "eligible",
+        basis: "static-admission-only",
+        transactionExecuted: false,
+      },
+      trading: {
+        status: "not_verified",
+        basis: "runtime-behavior-evidence-required",
+      },
+      platform_fee_evidence: {
+        status: "not_verified",
+        basis: "exact-fee-behavior-evidence-required",
+      },
+      source_verification: {
+        status: "not_verified",
+        basis: "provider-exact-match-required",
+      },
+      indexing: {
+        status: "not_indexed",
+        basis: "finalized-router-identity-required",
+      },
+      featured: {
+        status: "not_featured",
+        basis: "separate-product-evidence-required",
+      },
+    },
+    hardBlockFindingCodes: [],
+    needsEvidenceFindingCodes: [],
+    warningFindingCodes: [],
+    staticBaseline: {
+      schemaVersion: "programmable.custom-launch-static-baseline-gate.v1",
+      disposition: "no_static_finding",
+    },
+    remediations: [],
+    quotaConsumed: false,
+    nonceAllocated: false,
+    persisted: false,
+    walletSignatureRequiredLater: true,
+    walletBroadcastByService: false,
+  };
+}
+
 describe("Direct Native Hook Graph Profile V3 discovery", () => {
   test("publishes the active general lane without changing Revision 2", async () => {
     const manifest = await readJson(
@@ -56,7 +241,15 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.equal(profile.profileId, "programmable.direct-native-hook-graph.v1");
     assert.equal(profile.profileRevision, 3);
-    assert.equal(profile.profileVersion, "3.0.0");
+    assert.equal(profile.profileVersion, "3.1.0");
+    assert.equal(
+      profile.compatibility.profileVersion3_0_0,
+      "retained-exact-read-and-retry",
+    );
+    assert.equal(
+      profile.compatibility.profileVersion3_1_0,
+      "active-for-new-packs",
+    );
     assert.equal(profile.publicCategory, "custom");
     assert.equal(profile.status, "live");
     assert.equal(profile.productionLaunchAuthorized, true);
@@ -124,19 +317,13 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       exactSourceCompilerGraphBindingRequired: true,
       staticBaselineGateVersion: "1.0.0",
       blockingFindingRules: [
-        { code: "SOURCE_TARGET_ANALYSIS_INCOMPLETE", targetRoles: ["any"] },
-        { code: "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED", targetRoles: ["hook"] },
+        { code: "RUNTIME_CALLCODE", targetRoles: ["any"] },
+        { code: "RUNTIME_SELFDESTRUCT", targetRoles: ["any"] },
+        { code: "SOURCE_SELFDESTRUCT_SURFACE", targetRoles: ["any"] },
+        { code: "V4_CALLBACK_AUTHENTICATION_MISSING", targetRoles: ["hook"] },
+        { code: "V4_CALLBACK_AUTHENTICATION_INVALID", targetRoles: ["hook"] },
+        { code: "V4_CALLBACK_POOL_MANAGER_MISMATCH", targetRoles: ["hook"] },
         { code: "V4_ENABLED_CALLBACK_IMPLEMENTATION_MISSING", targetRoles: ["hook"] },
-        { code: "SOURCE_MUTABLE_BLOCKLIST_SURFACE", targetRoles: ["token"] },
-        { code: "SOURCE_MUTABLE_TRANSFER_RESTRICTION", targetRoles: ["token"] },
-        { code: "SOURCE_PUBLIC_MINT_SURFACE", targetRoles: ["token"] },
-        { code: "SOURCE_MUTABLE_PAUSE_SURFACE", targetRoles: ["token"] },
-        { code: "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE", targetRoles: ["token"] },
-        { code: "SOURCE_PROXY_OR_UPGRADE_SURFACE", targetRoles: ["token", "hook"] },
-        { code: "SOURCE_SELFDESTRUCT_SURFACE", targetRoles: ["token", "hook"] },
-        { code: "RUNTIME_CALLCODE", targetRoles: ["token", "hook"] },
-        { code: "RUNTIME_DELEGATECALL", targetRoles: ["token", "hook"] },
-        { code: "RUNTIME_SELFDESTRUCT", targetRoles: ["token", "hook"] },
       ],
       warningDisposition: "bound-and-visible",
       noBlockingFindingDisposition: "router-simulation-eligible",
@@ -147,6 +334,32 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       safetyClaim: false,
       feeBehaviorClaim: false,
     });
+    assert.equal(policy.blockingFindingRules.length, 7);
+    for (const evidenceOnly of [
+      "RUNTIME_DELEGATECALL",
+      "SOURCE_PROXY_OR_UPGRADE_SURFACE",
+      "SOURCE_PUBLIC_MINT_SURFACE",
+      "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
+      "SOURCE_MUTABLE_PAUSE_SURFACE",
+      "SOURCE_LIQUIDITY_LOCK_OR_CUSTODY_SURFACE",
+    ]) {
+      assert.ok(
+        profile.evidenceClassification.needsEvidenceFindingCodes.includes(
+          evidenceOnly,
+        ),
+        evidenceOnly,
+      );
+    }
+    assert.deepEqual(
+      profile.evidenceClassification.advancedBehaviorEvidenceFeatures,
+      [
+        "beforeSwapReturnDelta",
+        "afterSwapReturnDelta",
+        "afterAddLiquidityReturnDelta",
+        "afterRemoveLiquidityReturnDelta",
+        "hook-inventory-custom-accounting",
+      ],
+    );
     assert.equal(
       profile.staticBaselineDisclosure.receiptEvidenceDisposition,
       "no_blocking_static_finding",
@@ -196,7 +409,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         responseSchemaVersion: "programmable.custom-launch-preflight.v1",
         responseSchemaUrl:
           "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
-        requestId: "response-body-and-x-request-id",
+        requestId: "x-request-id-header",
         retryAfter: "honor-on-429-or-503",
         sideEffects: {
           quotaConsumed: false,
@@ -205,6 +418,14 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
           walletSignatureRequiredLater: true,
           walletBroadcastByService: false,
         },
+      },
+      lifecycleQueue: {
+        resourceField: "lifecycleQueue",
+        schemaVersion: "programmable.custom-launch-lifecycle-queue.v3",
+        schemaUrl:
+          "https://developers.programmable.family/schemas/v2/custom-launch-lifecycle-queue-v3.schema.json",
+        canonicalPollingPath: "/v3/custom-launches/{launchId}",
+        queueStateIsLaunchFinality: false,
       },
       walletHandoff: {
         availableAfter: "authorized",
@@ -284,50 +505,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
   test("publishes a strict quota-free preflight response schema", async () => {
     const registry = await createSchemaRegistry("v2");
     const validate = registry.validator("custom-launch-preflight-v1.schema.json");
-    const response = {
-      schemaVersion: "programmable.custom-launch-preflight.v1",
-      requestId: "req_preflight_01",
-      disposition: "unsupported",
-      launchEligibility: {
-        deployable: false,
-        routable: false,
-        featured: false,
-      },
-      evidenceTier: "launch_mechanics_verified",
-      hardBlockFindingCodes: ["SOURCE_MUTABLE_PAUSE_SURFACE"],
-      needsEvidenceFindingCodes: [],
-      warningFindingCodes: [],
-      staticBaseline: {
-        schemaVersion: "programmable.custom-launch-static-baseline-gate.v1",
-        disposition: "action_required",
-      },
-      remediations: [
-        {
-          schemaVersion: "programmable.custom-launch-remediation.v1",
-          remediationId: "PLATFORM_ADMISSION_FINDING",
-          code: "SOURCE_MUTABLE_PAUSE_SURFACE",
-          stage: "admission",
-          targetId: "token",
-          targetRole: "token",
-          sourcePath: "src/Token.sol",
-          expected: "No mutable pause surface on the project token",
-          observed: "Mutable pause surface detected",
-          requiredChange: "Remove the mutable pause surface and rerun preflight",
-          catalogUrl:
-            "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
-          guideUrl:
-            "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
-          retryable: false,
-          requiresNewRequest: true,
-          resumeAt: "inspect-project",
-        },
-      ],
-      quotaConsumed: false,
-      nonceAllocated: false,
-      persisted: false,
-      walletSignatureRequiredLater: true,
-      walletBroadcastByService: false,
-    };
+    const response = preflightResponse();
 
     for (const disposition of [
       "supported",
@@ -361,6 +539,62 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.equal(validate({ ...response, walletBroadcastByService: true }), false);
     assert.equal(validate({ ...response, evidenceTier: "unverified" }), false);
     assert.equal(validate({ ...response, disposition: "approved" }), false);
+    assert.equal(validate({ ...response, requestHash: "1".repeat(64) }), false);
+    assert.equal(validate({ ...response, requestId: "not-in-response-body" }), false);
+    assert.equal(validate({
+      ...response,
+      productTruthAxes: {
+        ...response.productTruthAxes,
+        trading: { status: "verified", basis: "client-declared" },
+      },
+    }), false);
+    assert.equal(validate({
+      ...response,
+      behaviorEvidence: {
+        ...response.behaviorEvidence,
+        vectors: response.behaviorEvidence.vectors.map((vector, index) => (
+          index === 0 ? { ...vector, status: "verified" } : vector
+        )),
+      },
+    }), false);
+  });
+
+  test("publishes the bounded authenticated lifecycle queue without changing feeds", async () => {
+    const registry = await createSchemaRegistry("v2");
+    const validate = registry.validator(
+      "custom-launch-lifecycle-queue-v3.schema.json",
+    );
+    const queue = {
+      schemaVersion: "programmable.custom-launch-lifecycle-queue.v3",
+      state: "queued",
+      reason: "request-created",
+      generation: 1,
+      attemptCount: 0,
+      pollAfterSeconds: 1,
+      nextAttemptAt: "2026-08-26T12:35:00.000Z",
+      leaseExpiresAt: null,
+      workExpiresAt: "2026-08-26T13:35:00.000Z",
+      lastErrorCode: null,
+      updatedAt: "2026-08-26T12:34:56.000Z",
+      polling: {
+        method: "GET",
+        path: "/v3/custom-launches/123e4567-e89b-12d3-a456-426614174000",
+      },
+    };
+    assertValid(validate, queue, "queued lifecycle projection");
+    assert.equal(validate({ ...queue, pollAfterSeconds: 0 }), false);
+    assert.equal(validate({
+      ...queue,
+      state: "completed",
+      nextAttemptAt: null,
+    }), false);
+
+    const [launchSchema, tokenListSchema] = await Promise.all([
+      readFile(path.join(REPOSITORY_ROOT, "schemas/v2/launch.schema.json"), "utf8"),
+      readFile(path.join(REPOSITORY_ROOT, "schemas/v2/token-list.schema.json"), "utf8"),
+    ]);
+    assert.doesNotMatch(launchSchema, /lifecycleQueue/u);
+    assert.doesNotMatch(tokenListSchema, /lifecycleQueue/u);
   });
 
   test("projects the additive descriptor through manifest and status", async () => {
@@ -417,7 +651,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       wellKnown.extensions["programmable.custom-launch-api"];
 
     assert.equal(extension.profileRevision, 3);
-    assert.equal(extension.profileVersion, "3.0.0");
+    assert.equal(extension.profileVersion, "3.1.0");
+    assert.deepEqual(extension.compatibleProfileVersions, ["3.0.0", "3.1.0"]);
     assert.deepEqual(
       extension.cli,
       (await developerManifestV2())[PROFILE_KEY].cli,
@@ -425,6 +660,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.deepEqual(
       extension.platformAdmissionPolicy,
       (await developerManifestV2())[PROFILE_KEY].platformAdmissionPolicy,
+    );
+    assert.deepEqual(
+      extension.evidenceClassification,
+      (await developerManifestV2())[PROFILE_KEY].evidenceClassification,
     );
     assert.deepEqual(
       extension.platformFeePolicy,
@@ -475,6 +714,11 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /hardBlockFindingCodes/u);
     assert.match(guide, /needsEvidenceFindingCodes/u);
     assert.match(guide, /warningFindingCodes/u);
+    assert.match(guide, /exactly seven objective static hard blocks/iu);
+    assert.match(guide, /return\s+delta permissions/iu);
+    assert.match(guide, /X-Request-Id/u);
+    assert.match(guide, /programmable\.custom-launch-lifecycle-queue\.v3/u);
+    assert.match(guide, /not added to the Developer launch or token-list feeds/iu);
     assert.match(guide, /wallet-handoff URL with an explicit expiry/iu);
     assert.match(readme, /programmable\.custom-launch-preflight\.v1/u);
     assert.match(llms, /quota-free `POST \/v3\/custom-launches\/preflight`/u);
@@ -507,6 +751,11 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.ok(
       schemaIndex.schemas.some(
         ({ name }) => name === "custom-launch-preflight-v1",
+      ),
+    );
+    assert.ok(
+      schemaIndex.schemas.some(
+        ({ name }) => name === "custom-launch-lifecycle-queue-v3",
       ),
     );
     assert.doesNotMatch(readOpenApi, /^\s*\/v3\/capabilities:/mu);

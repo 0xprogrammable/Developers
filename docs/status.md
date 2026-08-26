@@ -82,15 +82,18 @@ new category, and evidence for one cannot activate the other.
 `directNativeHookGraphProfileV3` is the additive active descriptor under
 `programmable.direct-native-hook-graph-profile-discovery.v3`. It keeps the
 unchanged profile ID `programmable.direct-native-hook-graph.v1`, advances the
-revision to `3` and version to `3.0.0`, and preserves Revision 2 compatibility.
-The only public categories remain `classic` and `custom`.
+revision to `3` and current version to `3.1.0`. Exact `3.0.0` requests remain
+readable and retryable under their original policy, and Revision 2 remains
+compatible. The only public categories remain `classic` and `custom`.
 
 The separate V3 service publishes unauthenticated `GET /v3/capabilities` and
 authenticated quota-free `POST /v3/custom-launches/preflight`. Preflight uses
 `programmable.custom-launch-preflight.v1`, does not allocate a nonce or persist
 a launch, and cannot sign or broadcast. Hard blocks, missing evidence, and
-warnings remain separately typed. Its deployable, routable, and featured flags
-do not establish deployment, trading, fee behavior, verification, indexing, or
+warnings remain separately typed. The response exposes all six independent
+product truth axes plus platform-owned behavior evidence; no client can declare
+an unexecuted vector verified. Its deployable, routable, and featured flags do
+not establish deployment, trading, fee behavior, verification, indexing, or
 featured placement; each later state requires its own evidence. A wallet
 handoff appears only later with an explicit URL and expiry.
 
@@ -98,12 +101,13 @@ Revision 3 accepts project-supplied token, hook, initializer, and support
 artifacts in exact 3–16-target direct graphs and represents every valid v4 hook
 permission mask. The deterministic baseline binds exact source bytes, compiler
 input and output, settings, graph, creation bytes, and runtime identities.
-Blocking rules are role-aware: incomplete analysis blocks any target;
-unauthenticated callbacks block hooks; token transfer-control and public-mint
-surfaces block tokens; and proxy, self-destruct, `CALLCODE`, `DELEGATECALL`, or
-`SELFDESTRUCT` findings block tokens or hooks. Every unmatched static finding
-is a bound visible warning, with no project-specific exception. Zero blocking
-findings only make the exact request eligible for Router simulation.
+The seven `3.1.0` hard blocks are runtime `CALLCODE`, runtime or source
+self-destruct, definitively missing or invalid PoolManager callback
+authentication, a literal wrong PoolManager, and a missing enabled callback.
+Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, liquidity custody,
+and return-delta/custom-accounting designs require exact evidence instead of a
+categorical rejection. Zero hard blocks only make the exact request eligible
+for later Router simulation; they do not verify runtime behavior.
 
 Authorization requires the exact prepared Router launch transaction to succeed
 as a pinned Ethereum simulation. Neither the static result nor simulation is a

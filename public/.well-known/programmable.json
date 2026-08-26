@@ -107,9 +107,14 @@
           "openApiPath": "/openapi/custom-launch-v3.json",
           "profileId": "programmable.direct-native-hook-graph.v1",
           "profileRevision": 3,
+          "profileVersion": "3.1.0",
           "compatibleProfileRevisions": [
             2,
             3
+          ],
+          "compatibleProfileVersions": [
+            "3.0.0",
+            "3.1.0"
           ],
           "authentication": "wallet-bound-api-key",
           "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
@@ -126,7 +131,7 @@
               "launchQuota": "not-consumed",
               "responseSchemaVersion": "programmable.custom-launch-preflight.v1",
               "responseSchemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
-              "requestId": "response-body-and-x-request-id",
+              "requestId": "x-request-id-header",
               "retryAfter": "honor-on-429-or-503",
               "sideEffects": {
                 "quotaConsumed": false,
@@ -135,6 +140,13 @@
                 "walletSignatureRequiredLater": true,
                 "walletBroadcastByService": false
               }
+            },
+            "lifecycleQueue": {
+              "resourceField": "lifecycleQueue",
+              "schemaVersion": "programmable.custom-launch-lifecycle-queue.v3",
+              "schemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-lifecycle-queue-v3.schema.json",
+              "canonicalPollingPath": "/v3/custom-launches/{launchId}",
+              "queueStateIsLaunchFinality": false
             },
             "walletHandoff": {
               "availableAfter": "authorized",
@@ -265,7 +277,11 @@
       "profileSelectionBindingSchemaVersion": "programmable.direct-native-hook-graph-profile-selection-binding.v3",
       "profileId": "programmable.direct-native-hook-graph.v1",
       "profileRevision": 3,
-      "profileVersion": "3.0.0",
+      "profileVersion": "3.1.0",
+      "compatibleProfileVersions": [
+        "3.0.0",
+        "3.1.0"
+      ],
       "publicCategory": "custom",
       "status": "live",
       "releaseStage": "production",
@@ -302,7 +318,7 @@
             "launchQuota": "not-consumed",
             "responseSchemaVersion": "programmable.custom-launch-preflight.v1",
             "responseSchemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
-            "requestId": "response-body-and-x-request-id",
+            "requestId": "x-request-id-header",
             "retryAfter": "honor-on-429-or-503",
             "sideEffects": {
               "quotaConsumed": false,
@@ -311,6 +327,13 @@
               "walletSignatureRequiredLater": true,
               "walletBroadcastByService": false
             }
+          },
+          "lifecycleQueue": {
+            "resourceField": "lifecycleQueue",
+            "schemaVersion": "programmable.custom-launch-lifecycle-queue.v3",
+            "schemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-lifecycle-queue-v3.schema.json",
+            "canonicalPollingPath": "/v3/custom-launches/{launchId}",
+            "queueStateIsLaunchFinality": false
           },
           "walletHandoff": {
             "availableAfter": "authorized",
@@ -482,13 +505,37 @@
         "staticBaselineGateVersion": "1.0.0",
         "blockingFindingRules": [
           {
-            "code": "SOURCE_TARGET_ANALYSIS_INCOMPLETE",
+            "code": "RUNTIME_CALLCODE",
             "targetRoles": [
               "any"
             ]
           },
           {
-            "code": "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED",
+            "code": "RUNTIME_SELFDESTRUCT",
+            "targetRoles": [
+              "any"
+            ]
+          },
+          {
+            "code": "SOURCE_SELFDESTRUCT_SURFACE",
+            "targetRoles": [
+              "any"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_AUTHENTICATION_MISSING",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_AUTHENTICATION_INVALID",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_POOL_MANAGER_MISMATCH",
             "targetRoles": [
               "hook"
             ]
@@ -496,71 +543,6 @@
           {
             "code": "V4_ENABLED_CALLBACK_IMPLEMENTATION_MISSING",
             "targetRoles": [
-              "hook"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_BLOCKLIST_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_TRANSFER_RESTRICTION",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_PUBLIC_MINT_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_PAUSE_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_PROXY_OR_UPGRADE_SURFACE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "SOURCE_SELFDESTRUCT_SURFACE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_CALLCODE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_DELEGATECALL",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_SELFDESTRUCT",
-            "targetRoles": [
-              "token",
               "hook"
             ]
           }
@@ -573,6 +555,37 @@
         "assurance": "launch-admission-only",
         "safetyClaim": false,
         "feeBehaviorClaim": false
+      },
+      "evidenceClassification": {
+        "schemaVersion": "programmable.platform-admission-risk-classification.v3",
+        "classifierVersion": "1.0.0",
+        "evidenceAuthority": "deterministic-static-classification",
+        "needsEvidenceFindingCodes": [
+          "RUNTIME_CREATE",
+          "RUNTIME_CREATE2",
+          "SOURCE_TARGET_ANALYSIS_INCOMPLETE",
+          "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED",
+          "RUNTIME_DELEGATECALL",
+          "SOURCE_PROXY_OR_UPGRADE_SURFACE",
+          "SOURCE_MUTABLE_PAUSE_SURFACE",
+          "SOURCE_MUTABLE_BLOCKLIST_SURFACE",
+          "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
+          "SOURCE_MUTABLE_TRANSFER_RESTRICTION",
+          "SOURCE_MUTABLE_ADMIN_SURFACE",
+          "SOURCE_PUBLIC_MINT_SURFACE",
+          "SOURCE_EXTERNAL_DEPENDENCY_SURFACE",
+          "SOURCE_TRANSFER_FEE_SURFACE",
+          "SOURCE_LIQUIDITY_LOCK_OR_CUSTODY_SURFACE"
+        ],
+        "advancedBehaviorEvidenceFeatures": [
+          "beforeSwapReturnDelta",
+          "afterSwapReturnDelta",
+          "afterAddLiquidityReturnDelta",
+          "afterRemoveLiquidityReturnDelta",
+          "hook-inventory-custom-accounting"
+        ],
+        "staticEligibilityDoesNotVerifyRouting": true,
+        "staticEligibilityDoesNotVerifyPlatformFee": true
       },
       "staticBaselineDisclosure": {
         "receiptEvidenceDisposition": "no_blocking_static_finding",
