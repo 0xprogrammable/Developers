@@ -303,7 +303,7 @@ The immutable `3.3.0` release locator is
 `https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32`.
+`tarballSha256: sha256:9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -312,7 +312,7 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32
+  PROGRAMMABLE_LAUNCH_SHA256=9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8
   curl --fail --location --proto '=https' --tlsv1.2 \
     --output programmable-launch-3.3.0.tgz.sha256 \
     https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256
