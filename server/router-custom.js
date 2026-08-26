@@ -1286,17 +1286,52 @@ function routerMembershipDigest(record) {
   );
 }
 
-export function createRouterCustomAcceptedMembership(records, manifest) {
+function routerEntryMembershipDigest(record) {
+  if (!hasExactRouterStampedCustomRecordShape(record)) return null;
+  const extension = record.extensions["programmable/router-stamp-v1"];
+  return canonicalSha256(
+    "programmable.router-custom-accepted-entry.v1",
+    {
+      launchId: record.launchId.toLowerCase(),
+      entrySha256: extension.entrySha256,
+    },
+  );
+}
+
+function matchesTransportBoundary(record, boundary) {
+  const extension = record?.extensions?.["programmable/router-stamp-v1"];
+  return Boolean(
+    boundary?.finality === "finalized" &&
+      extension?.snapshotAsOfBlock === boundary.blockNumber &&
+      sameHex(extension?.snapshotAsOfBlockHash, boundary.blockHash) &&
+      extension?.sourceIdentityCommitment === boundary.identityCommitment,
+  );
+}
+
+export function createRouterCustomAcceptedMembership(
+  records,
+  manifest,
+  { transportBoundary = null } = {},
+) {
   const accepted = new Set();
+  const acceptedEntries = new Set();
   for (const record of records ?? []) {
     if (!isRouterStampedCustom(record, manifest)) continue;
     const digest = routerMembershipDigest(record);
     if (digest) accepted.add(digest);
+    const entryDigest = routerEntryMembershipDigest(record);
+    if (entryDigest) acceptedEntries.add(entryDigest);
   }
   const membership = {
     accepts(record) {
       const digest = routerMembershipDigest(record);
-      return digest !== null && accepted.has(digest);
+      if (digest !== null && accepted.has(digest)) return true;
+      // A feed response may retain one accepted snapshot while the upstream
+      // Router cursor advances. Keep the identity exact and bind the older
+      // evidence envelope to the boundary published by that feed response.
+      const entryDigest = routerEntryMembershipDigest(record);
+      return entryDigest !== null && acceptedEntries.has(entryDigest) &&
+        matchesTransportBoundary(record, transportBoundary);
     },
   };
   Object.defineProperty(membership, ACCEPTED_ROUTER_MEMBERSHIP, {
