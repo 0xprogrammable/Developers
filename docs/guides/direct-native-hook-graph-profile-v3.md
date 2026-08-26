@@ -71,12 +71,13 @@ the complete role-aware blocking rules from the machine descriptor:
 The machine descriptor publishes role-aware blocking rules. Incomplete analysis
 blocks any target. Unresolved v4 callback authentication blocks the hook. A
 mutable blocklist, transfer restriction, public mint, or pause surface blocks
-the token. Proxy, upgrade, self-destruct, `CALLCODE`, `DELEGATECALL`, or
+the token. A mutable token tax or fee surface also blocks the token, while hook
+dynamic-fee logic remains representable. Proxy, upgrade, self-destruct, `CALLCODE`, `DELEGATECALL`, or
 `SELFDESTRUCT` findings block when they apply to the token or hook.
 
 Every static finding that does not match one of those code-and-role rules is a
 bound, visible warning rather than an automatic block. That includes runtime
-`CREATE` or `CREATE2`, generic mutable admin surfaces, mutable tax or fee
+`CREATE` or `CREATE2`, generic mutable admin surfaces, hook-role dynamic-fee
 surfaces, non-token pause surfaces, and the listed opcode findings on other
 support roles. The full report hash and every warning remain bound to the
 admission evidence. There are no project-specific exceptions. A project does

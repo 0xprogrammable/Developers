@@ -1626,6 +1626,12 @@
           ]
         },
         {
+          "code": "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
+          "targetRoles": [
+            "token"
+          ]
+        },
+        {
           "code": "SOURCE_PUBLIC_MINT_SURFACE",
           "targetRoles": [
             "token"

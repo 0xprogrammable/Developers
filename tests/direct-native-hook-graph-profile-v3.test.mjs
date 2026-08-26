@@ -99,6 +99,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         { code: "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED", targetRoles: ["hook"] },
         { code: "SOURCE_MUTABLE_BLOCKLIST_SURFACE", targetRoles: ["token"] },
         { code: "SOURCE_MUTABLE_TRANSFER_RESTRICTION", targetRoles: ["token"] },
+        { code: "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE", targetRoles: ["token"] },
         { code: "SOURCE_PUBLIC_MINT_SURFACE", targetRoles: ["token"] },
         { code: "SOURCE_MUTABLE_PAUSE_SURFACE", targetRoles: ["token"] },
         { code: "SOURCE_PROXY_OR_UPGRADE_SURFACE", targetRoles: ["token", "hook"] },
