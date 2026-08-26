@@ -150,9 +150,48 @@ finalized, consistent canonical-Router evidence may create a Custom feed
 identity. Token-list publication additionally requires a recognized token
 identity.
 
+## Existing-project agent integration
+
+Agents must resolve `api.agentIntegration` from the active Revision 3
+descriptor instead of relying on project-specific instructions. It publishes
+the existing-project guide and the canonical machine-readable remediation
+catalog:
+
+```json
+{
+  "remediationCatalogSchemaVersion": "programmable.custom-launch-agent-remediation-catalog.v1",
+  "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
+  "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
+  "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json"
+}
+```
+
+When a submitted resource has status `action_required`, the agent must read its
+stable finding codes and resolve them against that catalog. It must apply the
+catalogued source or configuration changes, rebuild the exact artifacts, run
+`pack` and `validate` again, and submit a new exact request. `action_required`
+is not a manual approval queue, project allowlist, or invitation to use the
+closed Registry or GitHub submission intake. An API key authenticates this
+self-serve flow but does not waive admission rules or provide wallet authority.
+
+New EIP-3009 launch configs use four static ABI paths:
+`nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`.
+Each path starts at a top-level initializer argument and may descend through
+static tuples or fixed-size static arrays. Paths contain 1–16 zero-based
+indices in the range 0–255. The CLI derives and validates the four distinct
+zero leaves as `bytes32`, `bytes32`, `bytes32`, and `uint8`, then emits
+`programmable.eip3009-authorization-patch.v2` with exact fields
+`schemaVersion`, `targetId`, `unsignedInitializerCalldataSha256`,
+`initializerCalldataLengthBytes`, `authorizationEncoding`, and the four paths.
+Its encoding is
+`eip3009-nonce-r-s-v-abi-leaves`. Applicant byte offsets are not accepted.
+The platform fills the final nonce and wallet signature only after the unsigned
+launch intent is fixed. Legacy `programmable.eip3009-signature-patch.v1`
+descriptors remain compatible for exact retries; new requests use v2.
+
 ## CLI contract
 
-Revision 3 requires CLI contract version `3.1.0`, with exactly four commands:
+Revision 3 uses CLI contract version `3.2.0`, with exactly four commands:
 
 ```text
 pack
@@ -161,33 +200,15 @@ submit
 status
 ```
 
-The immutable `3.1.0` release locator is published at
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.1.0`.
-The discovery descriptor reports `releaseLocatorStatus: published`,
-`supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf`.
-Do not install a similarly named package from a registry.
-
-Download and compare the published checksum first. Only then download, verify,
-and install the exact release asset:
-
-```sh
-(
-  set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf
-  curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.1.0.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.1.0.tgz.sha256)" = \
-    "$PROGRAMMABLE_LAUNCH_SHA256"
-  curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.1.0.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz
-  shasum -a 256 --check programmable-launch-3.1.0.tgz.sha256
-  npm install --global ./programmable-launch-3.1.0.tgz
-  programmable-launch --version
-)
-```
+The immutable `3.2.0` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0`.
+This source revision reports `releaseLocatorStatus: pending-publication` and
+`tarballSha256: null` because the immutable asset has not yet supplied its
+checksum. API and compatible predecessor support remain `supportStatus: live`.
+Do not install that locator until discovery reports `published` and a
+non-null SHA-256, then compare the published `.tgz.sha256` before installing.
+Do not install a similarly named package from a registry. CLI `3.1.0` remains
+the compatible published predecessor while the `3.2.0` locator is pending.
 
 The normal flow remains:
 

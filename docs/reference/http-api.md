@@ -88,7 +88,15 @@ for mandatory pinned Router launch simulation. Authorization requires that
 exact simulation. Admission is not an audit or a safety, honeypot, liquidity,
 tradeability, or fee-behavior guarantee. The descriptor names authenticated
 write routes, but this Developer API returns no executable calldata and
-authorizes no transaction.
+authorizes no transaction. Its `api.agentIntegration` object links the
+canonical machine-readable remediation catalog and existing-project guide.
+Agents resolve `action_required` finding codes there, rebuild and resubmit a new
+exact request; there is no project allowlist or legacy GitHub fallback. The
+linked pack-config schema defines the additive
+`programmable.eip3009-authorization-patch.v2` contract: static
+`nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`
+values identify the four authorization leaves while v1 remains readable for
+exact retries.
 
 `directNativeHookGraphProfileV2` remains the compatible Revision 2 descriptor.
 It binds project-owned token and hook artifacts in exact acyclic graphs of
