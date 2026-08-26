@@ -47,8 +47,10 @@ links back to the canonical remediation catalog and guide.
 The response repeats the closed side-effect boundary:
 `quotaConsumed: false`, `nonceAllocated: false`, `persisted: false`,
 `walletSignatureRequiredLater: true`, and
-`walletBroadcastByService: false`. The response body binds `requestHash`,
-`profileRevision`, and `serverTime`; the support request ID is returned in the
+`walletBroadcastByService: false`. The response body binds `requestHash` to the
+server's domain-separated canonical JCS digest; the CLI separately retains the
+raw request-byte SHA-256 for byte-race and retry-journal integrity. The response
+also binds `profileRevision` and `serverTime`; the support request ID is returned in the
 `X-Request-Id` response header. Report that header without including the API
 key. A throttled or temporarily
 unavailable request may return `429` or `503`. Honor `Retry-After` and retry only
@@ -400,7 +402,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.2`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.3`, with exactly four commands:
 
 ```text
 pack
@@ -409,11 +411,11 @@ submit
 status
 ```
 
-The immutable `3.3.2` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.2`.
+The immutable `3.3.3` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.3`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:096b2e09514437907c50fd3f7dc9415c426f4496d65572316d208f22a7ef389f`.
+`tarballSha256: sha256:14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -422,17 +424,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=096b2e09514437907c50fd3f7dc9415c426f4496d65572316d208f22a7ef389f
+  PROGRAMMABLE_LAUNCH_SHA256=14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.2.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.2.tgz.sha256)" = \
+    --output programmable-launch-3.3.3.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.3.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.2.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.2/programmable-launch-3.3.2.tgz
-  shasum -a 256 --check programmable-launch-3.3.2.tgz.sha256
-  npm install --global ./programmable-launch-3.3.2.tgz
+    --output programmable-launch-3.3.3.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz
+  shasum -a 256 --check programmable-launch-3.3.3.tgz.sha256
+  npm install --global ./programmable-launch-3.3.3.tgz
   programmable-launch --version
 )
 ```
