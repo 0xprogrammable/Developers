@@ -17,6 +17,7 @@ import { decodePageCursor, decodeResumeCursor } from "../server/http.js";
 import { assertValid, createSchemaRegistry } from "../scripts/lib/schema.mjs";
 import {
   PLATFORM_FEE_RECIPIENT,
+  validateFeedSemantics,
   validateLaunchSemantics,
 } from "../scripts/lib/semantics.mjs";
 
@@ -226,13 +227,23 @@ describe("v2 API contract", () => {
     const commitmentB = `sha256:${"2".repeat(64)}`;
     const newest = launch(200);
     const existingRouter = routerLaunch(150);
+    const classicCoverage = {
+      status: "complete",
+      checkpoint: {
+        blockNumber: 199,
+        blockHash: `0x${"a".repeat(64)}`,
+        finality: "finalized",
+      },
+    };
     const first = launchFeedPayload(dataset([newest, existingRouter], {
+      coverage: classicCoverage,
       routerCustom: routerStatus(commitmentA, "200"),
     }), { limit: 100 });
 
     const lateOldRouter = routerLaunch(100);
     const polled = launchFeedPayload(
       dataset([newest, existingRouter, lateOldRouter], {
+        coverage: classicCoverage,
         routerCustom: {
           ...routerStatus(commitmentB, "201"),
           verifiedIdentityCount: 2,
@@ -251,6 +262,7 @@ describe("v2 API contract", () => {
     assert.ok(polled.page.nextCursor);
     const replayRemainder = launchFeedPayload(
       dataset([newest, existingRouter, lateOldRouter], {
+        coverage: classicCoverage,
         routerCustom: {
           ...routerStatus(commitmentB, "201"),
           verifiedIdentityCount: 2,
@@ -300,9 +312,15 @@ describe("v2 API contract", () => {
     );
   });
 
-  test("reports per-source boundaries and a conservative aggregate snapshot", () => {
+  test("reports per-source boundaries and a response-wide upper snapshot", () => {
     const commitment = `sha256:${"5".repeat(64)}`;
-    const current = dataset([launch(300), routerLaunch(200)], {
+    const classic = launch(300);
+    classic.launch.blockNumber = "300";
+    classic.launch.logIndex = 0;
+    const custom = routerLaunch(200);
+    custom.launch.blockNumber = "200";
+    custom.launch.logIndex = 0;
+    const current = dataset([classic, custom], {
       coverage: {
         status: "complete",
         checkpoint: {
@@ -315,8 +333,8 @@ describe("v2 API contract", () => {
     });
     const feed = launchFeedPayload(current, { limit: 100 });
 
-    assert.equal(feed.snapshot.blockNumber, "200");
-    assert.equal(feed.snapshot.blockHash, `0x${"b".repeat(64)}`);
+    assert.equal(feed.snapshot.blockNumber, "300");
+    assert.equal(feed.snapshot.blockHash, `0x${"a".repeat(64)}`);
     assert.equal(feed.snapshot.finality, "confirmed");
     assert.deepEqual(feed.snapshot.sources, {
       classicIndexer: {
@@ -332,6 +350,7 @@ describe("v2 API contract", () => {
         identityCommitment: commitment,
       },
     });
+    assert.deepEqual(validateFeedSemantics(feed), []);
   });
 
   test("keeps Custom prelaunch empty while serving complete Classic discovery", async () => {
