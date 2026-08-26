@@ -85,6 +85,9 @@
     "directNativeHookGraphProfileV2": {
       "$ref": "direct-native-hook-graph-profile-discovery-v2.schema.json"
     },
+    "directNativeHookGraphProfileV3": {
+      "$ref": "direct-native-hook-graph-profile-discovery-v3.schema.json"
+    },
     "feeds": {
       "type": "object",
       "required": [

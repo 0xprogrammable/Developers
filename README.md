@@ -12,7 +12,7 @@ for exact project token and hook artifacts on Ethereum Mainnet. V1 reads and sta
 | Surface | Authentication | Purpose | Canonical contract |
 | --- | --- | --- | --- |
 | Developer read API at `developers.programmable.family` | None | Discover launches, resolve deployments and verify provenance | [Read API OpenAPI](openapi/programmable-v2.yaml) |
-| Custom Launch API V3 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v2.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
+| Custom Launch API V3 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
 | Custom Launch API V2 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a deterministic Mainnet launch; the wallet reviews and signs separately | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) and [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Custom Launch API V1 compatibility | Wallet-bound bearer API key | Inspect existing V1 provenance reads and request status; V1 POST is read-only | [V1 compatibility guide](https://programmable.market/developers/custom-launch-api-v1.md) and [V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
 
@@ -41,7 +41,8 @@ bytes.
 | [Custom Launch V1 compatibility](https://programmable.market/openapi/custom-launch-v1.json) | Preserve existing V1 reads/status and the V1 read-only POST boundary |
 | [Custom Fee-Enforced Launch Profile V2](docs/guides/custom-fee-enforced-launch-profile-v2.md) | Verify the exact production profile, 1,000 ppm fee semantics and evidence boundaries |
 | [Direct Native Hook Graph Profile V1](docs/guides/direct-native-hook-graph-profile-v1.md) | Inspect the gated V3 preview contract for a direct project hook, a 3–16-target profile over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, two-stage funding and an inclusive 10-bps platform split |
-| [Direct Native Hook Graph Profile V2](docs/guides/direct-native-hook-graph-profile-v2.md) | Integrate the live V3 contract for 3–16 exact targets, all valid v4 permission masks, three funding modes, per-launch conformance and truthful liquidity boundaries |
+| [Direct Native Hook Graph Profile V3](docs/guides/direct-native-hook-graph-profile-v3.md) | Integrate the active general V3 lane for exact project graphs, deterministic static admission, mandatory Router simulation, and explicit non-guarantees |
+| [Direct Native Hook Graph Profile V2](docs/guides/direct-native-hook-graph-profile-v2.md) | Integrate the retained compatible Revision 2 contract for 3–16 exact targets, all valid v4 permission masks, three funding modes, and per-launch conformance |
 | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) | Resolve the current versioned requirements without relying on copied policy text |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.

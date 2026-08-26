@@ -49,7 +49,7 @@ collapse those components into “10 bps total.”
 
 Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V2 is a separate authenticated public preparation path; V1 POST remains read-only. API availability does not prove that any specific launch accrued or paid a fee. A request hash, Router stamp, or successful HTTP response is not fee-payment evidence.
 
-Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record.
+Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record. The top-level `customPublicSubmissions.chargeMode: added-on-top` compatibility field is scoped only to the legacy Fee-Enforced Isolated After-Swap profile and does not describe Direct Native Hook Graph V3.
 
 There is no partner share in this fee-enforced launch profile.
 The current FADE claim adapter is specific to FADE. It is not a generic fee
@@ -58,14 +58,23 @@ claim or buyback interface for V2 or arbitrary hooks.
 See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
 for the exact authorization and polling boundaries.
 
+## Direct Native Hook Graph Profile V3
+
+The active Revision 3 admission receipt declares `feeBehaviorClaim: false`.
+Admission therefore does not certify that a deployed hook accrues, routes, or
+pays a fee. Read the exact request and graph binding for the selected fee policy,
+and require separate onchain evidence for accrual or claimability. LP fees,
+project economics, the Programmable charge, and network gas remain separate
+disclosures. Generic fee claiming and buyback management are not live.
+
 ## Direct Native Hook Graph Profile V2
 
-The live V2 descriptor requires `1,000` hundredths of a bip for Programmable
+The retained compatible V2 descriptor requires `1,000` hundredths of a bip for Programmable
 on each successful swap under the exact selected assessment base and fee
 currency: `1,000 / 1,000,000 = 0.10% = 10 bps`. A launch selects either an
 additive platform share or an inclusive selected total. The effective project
 share and total therefore depend on that declared accounting mode; consumers
-must not present every V3 launch as additive or every V3 launch as inclusive.
+must not present every V2 launch as additive or every V2 launch as inclusive.
 
 The LP fee, project economics, Programmable share, and gas are separate. A
 platform-issued per-launch receipt binds the final graph and fee behavior before

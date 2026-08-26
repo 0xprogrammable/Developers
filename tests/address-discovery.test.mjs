@@ -220,7 +220,8 @@ describe("documentation contract", () => {
         fundingAuthorizationMethod: "POST",
         openApiPath: "/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
-        profileRevision: 2,
+        profileRevision: 3,
+        compatibleProfileRevisions: [2, 3],
         authentication: "wallet-bound-api-key",
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
       },
@@ -262,7 +263,7 @@ describe("documentation contract", () => {
     assert.equal(
       wellKnown.extensions["programmable.direct-native-hook-graph-profile-v1"]
         .note,
-      "Retained preview contract only. This revision remains gated and publishes no launch; public Custom Launch API V3 and CLI 3.0.0 use the separate production V2 descriptor.",
+      "Retained preview contract only. This revision remains gated and publishes no launch; production clients use the additive V2 or V3 descriptor.",
     );
     const directNativeV2 = manifest.directNativeHookGraphProfileV2;
     assert.deepEqual(
@@ -297,6 +298,7 @@ describe("documentation contract", () => {
         "custom-fee-enforced-launch-profile-v2",
         "direct-native-hook-graph-profile-discovery-v1",
         "direct-native-hook-graph-profile-discovery-v2",
+        "direct-native-hook-graph-profile-discovery-v3",
         "launch-feed",
         "launch",
         "manifest",

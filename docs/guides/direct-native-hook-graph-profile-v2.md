@@ -1,7 +1,8 @@
 # Direct Native Hook Graph Profile V2
 
-The Direct Native Hook Graph V2 descriptor is the live discovery contract for
-the public Custom Launch API V3 production profile. It remains part of the
+The Direct Native Hook Graph V2 descriptor is the retained compatible discovery
+contract for the public Custom Launch API V3. New general-lane integrations use
+[Revision 3](direct-native-hook-graph-profile-v3.md). Revision 2 remains part of the
 `custom` category. It does not create a third public launch category and does
 not change the retained V1 discovery or Custom Launch API V1/V2 contracts.
 

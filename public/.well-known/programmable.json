@@ -99,7 +99,11 @@
           "fundingAuthorizationMethod": "POST",
           "openApiPath": "/openapi/custom-launch-v3.json",
           "profileId": "programmable.direct-native-hook-graph.v1",
-          "profileRevision": 2,
+          "profileRevision": 3,
+          "compatibleProfileRevisions": [
+            2,
+            3
+          ],
           "authentication": "wallet-bound-api-key",
           "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
         }
@@ -162,7 +166,7 @@
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
       "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
-      "note": "Retained preview contract only. This revision remains gated and publishes no launch; public Custom Launch API V3 and CLI 3.0.0 use the separate production V2 descriptor."
+      "note": "Retained preview contract only. This revision remains gated and publishes no launch; production clients use the additive V2 or V3 descriptor."
     },
     "programmable.direct-native-hook-graph-profile-v2": {
       "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v2",
@@ -216,6 +220,254 @@
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
       "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md"
+    },
+    "programmable.direct-native-hook-graph-profile-v3": {
+      "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v3",
+      "discoverySchemaUrl": "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v3.schema.json",
+      "profileSchemaVersion": "programmable.direct-native-hook-graph-profile.v3",
+      "profileSelectionBindingSchemaVersion": "programmable.direct-native-hook-graph-profile-selection-binding.v3",
+      "profileId": "programmable.direct-native-hook-graph.v1",
+      "profileRevision": 3,
+      "profileVersion": "3.0.0",
+      "publicCategory": "custom",
+      "status": "live",
+      "releaseStage": "production",
+      "activationStatus": "live",
+      "productionLaunchAuthorized": true,
+      "api": {
+        "apiVersion": "3",
+        "baseUrl": "https://api.programmable.market",
+        "routeId": "custom-launch:create:v3",
+        "supportStatus": "live",
+        "availability": "public-authenticated",
+        "publiclyRoutable": true,
+        "collectionPath": "/v3/custom-launches",
+        "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+        "fundingAuthorizationMethod": "POST",
+        "openApiPath": "/openapi/custom-launch-v3.json",
+        "openApiStatus": "live",
+        "createRequestSchema": "programmable.custom-launch-create-request.v3",
+        "resourceSchema": "programmable.custom-launch.v3",
+        "profileSchema": "programmable.direct-native-hook-graph-profile.v3",
+        "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v3",
+        "authentication": "wallet-bound-api-key",
+        "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+      },
+      "cli": {
+        "packageName": "@programmable/launch",
+        "releaseVersion": "3.1.0",
+        "releaseLocatorStatus": "published",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.1.0",
+        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz",
+        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz.sha256",
+        "tarballSha256": "sha256:ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf",
+        "supportStatus": "live",
+        "minimumSupportingVersion": "3.1.0",
+        "packConfigSchema": "programmable.launch-pack-config.v3",
+        "createRequestSchema": "programmable.custom-launch-create-request.v3",
+        "commands": [
+          "pack",
+          "validate",
+          "submit",
+          "status"
+        ],
+        "maySign": false,
+        "mayBroadcast": false
+      },
+      "generalLane": {
+        "executionMode": "direct-create2-graph",
+        "minimumTargets": 3,
+        "maximumTargets": 16,
+        "directTargetsOnly": true,
+        "projectSuppliedTokenHookInitializerAndSupportTargets": true,
+        "hookPermissionMaskMinimum": 0,
+        "hookPermissionMaskMaximum": 16383,
+        "allValidUniswapV4PermissionMasksRepresentable": true,
+        "exactSourceCompilerAndGraphBindingRequired": true,
+        "perLaunchAdmissionRequired": true,
+        "universalHookApproval": false
+      },
+      "platformFeePolicy": {
+        "schemaVersion": "programmable.platform-fee-policy.v1",
+        "applicability": "successful-pool-swaps",
+        "rateDenominator": "1000000",
+        "programmableFeeHundredthsOfBip": "1000",
+        "roundingMode": "floor",
+        "claimAuthority": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+        "claimAuthorityAndPayoutRecipientAreDistinctRoles": true,
+        "accountingModes": {
+          "additive-platform-share": {
+            "applicantSelectedRangeHundredthsOfBip": {
+              "minimum": "0",
+              "maximum": "998999"
+            },
+            "projectFormula": "applicant-selected",
+            "programmableFormula": "1000",
+            "effectiveTotalFormula": "applicant-selected-plus-1000"
+          },
+          "inclusive-selected-total": {
+            "applicantSelectedRangeHundredthsOfBip": {
+              "minimum": "0",
+              "maximum": "999999"
+            },
+            "projectFormula": "max-applicant-selected-and-1000-minus-1000",
+            "programmableFormula": "1000",
+            "effectiveTotalFormula": "max-applicant-selected-and-1000"
+          }
+        },
+        "assessmentPairs": [
+          {
+            "assessmentBase": "executed-gross-declared-quote",
+            "feeCurrency": "declared-quote-currency"
+          },
+          {
+            "assessmentBase": "settled-input-before-platform-fee",
+            "feeCurrency": "input-currency"
+          }
+        ],
+        "claimModes": {
+          "immutable-payout-recipient": {
+            "payoutRecipientRequiredInSelection": true,
+            "payoutRecipientMustEqualClaimAuthority": true
+          },
+          "claim-authority-selected-recipient": {
+            "payoutRecipientMustBeAbsentFromSelection": true,
+            "authenticatedClaimDestinationConstraint": "nonzero-address"
+          }
+        },
+        "admissionCertifiesFeeBehavior": false
+      },
+      "platformAdmissionPolicy": {
+        "schemaVersion": "programmable.direct-native-platform-admission-policy.v1",
+        "mode": "deterministic-exact-source-graph-static-baseline-v1",
+        "receiptSchemaVersion": "programmable.platform-admission-receipt.v1",
+        "engineId": "programmable.direct-native-static-admission",
+        "engineVersion": "1.0.0",
+        "exactSourceCompilerGraphBindingRequired": true,
+        "staticBaselineGateVersion": "1.0.0",
+        "blockingFindingRules": [
+          {
+            "code": "SOURCE_TARGET_ANALYSIS_INCOMPLETE",
+            "targetRoles": [
+              "any"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "V4_ENABLED_CALLBACK_IMPLEMENTATION_MISSING",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "SOURCE_MUTABLE_BLOCKLIST_SURFACE",
+            "targetRoles": [
+              "token"
+            ]
+          },
+          {
+            "code": "SOURCE_MUTABLE_TRANSFER_RESTRICTION",
+            "targetRoles": [
+              "token"
+            ]
+          },
+          {
+            "code": "SOURCE_PUBLIC_MINT_SURFACE",
+            "targetRoles": [
+              "token"
+            ]
+          },
+          {
+            "code": "SOURCE_MUTABLE_PAUSE_SURFACE",
+            "targetRoles": [
+              "token"
+            ]
+          },
+          {
+            "code": "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
+            "targetRoles": [
+              "token"
+            ]
+          },
+          {
+            "code": "SOURCE_PROXY_OR_UPGRADE_SURFACE",
+            "targetRoles": [
+              "token",
+              "hook"
+            ]
+          },
+          {
+            "code": "SOURCE_SELFDESTRUCT_SURFACE",
+            "targetRoles": [
+              "token",
+              "hook"
+            ]
+          },
+          {
+            "code": "RUNTIME_CALLCODE",
+            "targetRoles": [
+              "token",
+              "hook"
+            ]
+          },
+          {
+            "code": "RUNTIME_DELEGATECALL",
+            "targetRoles": [
+              "token",
+              "hook"
+            ]
+          },
+          {
+            "code": "RUNTIME_SELFDESTRUCT",
+            "targetRoles": [
+              "token",
+              "hook"
+            ]
+          }
+        ],
+        "warningDisposition": "bound-and-visible",
+        "noBlockingFindingDisposition": "router-simulation-eligible",
+        "blockingFindingDisposition": "action-required",
+        "routerSimulationRequiredBeforeAuthorization": true,
+        "receiptAuthority": "platform-only",
+        "assurance": "launch-admission-only",
+        "safetyClaim": false,
+        "feeBehaviorClaim": false
+      },
+      "staticBaselineDisclosure": {
+        "receiptEvidenceDisposition": "no_blocking_static_finding",
+        "receiptVerdict": "admitted_to_router_simulation",
+        "zeroBlockingFindingsDisposition": "router-simulation-eligible",
+        "blockingFindingsResourceStatus": "action_required",
+        "fullStaticReportHashBound": true,
+        "allWarningFindingsBound": true,
+        "unmatchedFindingsBecomeWarnings": true,
+        "projectSpecificExceptions": false,
+        "warningsAndReportHashesRemainBound": true,
+        "warningsRemainVisible": true
+      },
+      "assuranceBoundary": {
+        "launchAdmissionOnly": true,
+        "auditClaim": false,
+        "safetyClaim": false,
+        "honeypotFreeClaim": false,
+        "liquidityClaim": false,
+        "tradeabilityClaim": false,
+        "feeBehaviorClaim": false,
+        "routerSimulationIsNotProductionOutcomeEvidence": true
+      },
+      "featureStatus": {
+        "genericClaiming": "not-live",
+        "genericBuybacks": "not-live"
+      },
+      "statusUrl": "https://developers.programmable.family/api/v2/status",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
+      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v3.md"
     },
     "programmable.legacy-v1": {
       "status": "supported",

@@ -24,8 +24,9 @@ V1 reads and status remain compatible; V1 POST remains read-only and returns non
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Custom Launch API V2 | `custom` | Ethereum | Public | Wallet-bound API keys may prepare and track deterministic launches; the controller wallet reviews and signs separately |
-| Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Public | Exact 3–16-target project token and hook graphs support all valid v4 masks and three funding modes; every accepted launch requires exact graph conformance before separate wallet review |
-| Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the live V2 descriptor |
+| Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Active general lane with exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
+| Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Retained compatible | Revision 2 remains published for compatible exact-graph clients |
+| Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the active V3 or compatible V2 descriptor |
 | Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status remain compatible; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
 | Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy or V1 write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
@@ -75,9 +76,34 @@ The second is the public production launch profile for one exact additive fee
 path. Generation 2 remains inactive; the V2 profile is live. Neither creates a
 new category, and evidence for one cannot activate the other.
 
-## Direct Native Hook Graph V2 production profile
+## Direct Native Hook Graph V3 general lane
 
-`directNativeHookGraphProfileV2` is the additive live descriptor under
+`directNativeHookGraphProfileV3` is the additive active descriptor under
+`programmable.direct-native-hook-graph-profile-discovery.v3`. It keeps the
+unchanged profile ID `programmable.direct-native-hook-graph.v1`, advances the
+revision to `3` and version to `3.0.0`, and preserves Revision 2 compatibility.
+The only public categories remain `classic` and `custom`.
+
+Revision 3 accepts project-supplied token, hook, initializer, and support
+artifacts in exact 3–16-target direct graphs and represents every valid v4 hook
+permission mask. The deterministic baseline binds exact source bytes, compiler
+input and output, settings, graph, creation bytes, and runtime identities.
+Blocking rules are role-aware: incomplete analysis blocks any target;
+unauthenticated callbacks block hooks; token transfer-control and public-mint
+surfaces block tokens; and proxy, self-destruct, `CALLCODE`, `DELEGATECALL`, or
+`SELFDESTRUCT` findings block tokens or hooks. Every unmatched static finding
+is a bound visible warning, with no project-specific exception. Zero blocking
+findings only make the exact request eligible for Router simulation.
+
+Authorization requires the exact prepared Router launch transaction to succeed
+as a pinned Ethereum simulation. Neither the static result nor simulation is a
+security audit, honeypot-free guarantee, liquidity or tradeability proof, or
+fee-behavior certification. Generic claiming for arbitrary hooks and generic
+buybacks are not live. See the [Revision 3 contract](guides/direct-native-hook-graph-profile-v3.md).
+
+## Direct Native Hook Graph V2 compatible profile
+
+`directNativeHookGraphProfileV2` is the retained compatible descriptor under
 `programmable.direct-native-hook-graph-profile-discovery.v2`. It preserves the
 only public categories, `classic` and `custom`, and leaves the V1 descriptor
 unchanged. It describes the separate authenticated Custom Launch API V3 route;
@@ -124,8 +150,9 @@ The descriptor is fail-closed: `status: "gated"`,
 CLI candidate `not-published`, and exact profile admission under the existing
 immutable permit authority is pending. The current
 launch and token-list feeds publish no prelaunch record for it. Production V3
-clients use `directNativeHookGraphProfileV2`; the live V2 descriptor does not
-retroactively activate V1. Generic fee claiming and buybacks remain not live. See the
+clients use `directNativeHookGraphProfileV3` or the retained compatible
+`directNativeHookGraphProfileV2`; neither live descriptor
+retroactively activates V1. Generic fee claiming and buybacks remain not live. See the
 [versioned preview contract](guides/direct-native-hook-graph-profile-v1.md).
 
 The local Generation 2 release candidate currently snapshots the four-contract Registry, PartnerFactory Registry, fee-policy verifier, atomic registrar, 15-event integration set, and 37-word v4 producer commitment. It is undeployed and not final ABI authority. The Public Registry root is still changing its execution-policy, route, and market-data-source binding contract; final ABI, topics, event count, Solidity hash preimages, artifact hashes, and artifact-set hash will therefore differ. After the final Public commit, Developer must replace the candidate artifacts byte-for-byte and rerun Contract → Approval → Read Model → Developer parity before Generation 2 activation.

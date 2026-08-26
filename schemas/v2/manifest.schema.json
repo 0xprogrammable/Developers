@@ -122,6 +122,9 @@
     "directNativeHookGraphProfileV2": {
       "$ref": "direct-native-hook-graph-profile-discovery-v2.schema.json"
     },
+    "directNativeHookGraphProfileV3": {
+      "$ref": "direct-native-hook-graph-profile-discovery-v3.schema.json"
+    },
     "registryGenerations": {
       "type": "array",
       "items": {
@@ -1672,7 +1675,7 @@
           "$ref": "#/$defs/feeState"
         },
         "customPublicSubmissions": {
-          "$ref": "#/$defs/feeState"
+          "$ref": "#/$defs/customPublicSubmissionFeeState"
         },
         "nativeCustom": {
           "type": "object",
@@ -1771,6 +1774,34 @@
             "policy-specific-no-overlay",
             null
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "customPublicSubmissionFeeState": {
+      "type": "object",
+      "required": [
+        "status",
+        "chargeMode",
+        "scope",
+        "profileId",
+        "profileRevision"
+      ],
+      "properties": {
+        "status": {
+          "const": "live"
+        },
+        "chargeMode": {
+          "const": "added-on-top"
+        },
+        "scope": {
+          "const": "legacy-fee-enforced-isolated-after-swap-profile-only"
+        },
+        "profileId": {
+          "const": "programmable.fee-enforced-isolated-after-swap.zero-delta.v1"
+        },
+        "profileRevision": {
+          "const": 3
         }
       },
       "additionalProperties": false
