@@ -161,15 +161,35 @@ submit
 status
 ```
 
-At the revision represented by this document, the immutable `3.1.0` release
-locator has not been published. The discovery descriptor therefore reports
-`releaseLocatorStatus: pending-publication` and deliberately does not guess a
-GitHub tag or tarball URL. Do not install a similarly named package from a
-registry. Use the V3 OpenAPI directly until the descriptor publishes the
-immutable release URL, or keep CLI `3.0.0` requests on the retained Revision 2
-contract.
+The immutable `3.1.0` release locator is published at
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.1.0`.
+The discovery descriptor reports `releaseLocatorStatus: published`,
+`supportStatus: live`, the exact tarball and checksum URLs, and
+`tarballSha256: sha256:ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf`.
+Do not install a similarly named package from a registry.
 
-Once the locator is published, the normal flow remains:
+Download and compare the published checksum first. Only then download, verify,
+and install the exact release asset:
+
+```sh
+(
+  set -eu
+  PROGRAMMABLE_LAUNCH_SHA256=ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf
+  curl --fail --location --proto '=https' --tlsv1.2 \
+    --output programmable-launch-3.1.0.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.1.0.tgz.sha256)" = \
+    "$PROGRAMMABLE_LAUNCH_SHA256"
+  curl --fail --location --proto '=https' --tlsv1.2 \
+    --output programmable-launch-3.1.0.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz
+  shasum -a 256 --check programmable-launch-3.1.0.tgz.sha256
+  npm install --global ./programmable-launch-3.1.0.tgz
+  programmable-launch --version
+)
+```
+
+The normal flow remains:
 
 ```text
 pack -> validate -> submit -> status -> separate wallet review and signature
