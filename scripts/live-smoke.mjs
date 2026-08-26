@@ -99,13 +99,17 @@ assertNoFindings(
   "live manifest",
 );
 const acceptedRouterCustom = await readRouterCustomRecords(manifestResult.value);
+
+const feedResult = await boundedJson("/launches?limit=100", "launch-feed.schema.json");
 const acceptedRouterCustomMembership = createRouterCustomAcceptedMembership(
   acceptedRouterCustom.records,
   manifestResult.value,
+  {
+    transportBoundary:
+      feedResult.value.snapshot?.sources?.routerCustom ?? null,
+  },
 );
 const semanticOptions = { acceptedRouterCustomMembership };
-
-const feedResult = await boundedJson("/launches?limit=100", "launch-feed.schema.json");
 assertNoFindings(validateFeedSemantics(feedResult.value), "live launch feed");
 for (const [index, launch] of feedResult.value.items.entries()) {
   assertNoFindings(

@@ -453,6 +453,42 @@ describe("Router Custom v2 projection", () => {
       finding.code === "FEE_POLICY_REQUIRED"));
   });
 
+  test("accepts a cached Router record bound to its feed snapshot", async () => {
+    const payload = currentSourcePayload();
+    serveSource(payload);
+    const snapshot = await readRouterCustomRecords(manifest);
+    const record = JSON.parse(JSON.stringify(publicLaunchV2(
+      snapshot.records.find((entry) => entry.token.symbol === "NEXT"),
+    )));
+    const extension = record.extensions["programmable/router-stamp-v1"];
+    extension.snapshotSha256 = `sha256:${"1".repeat(64)}`;
+    extension.sourceIdentityCommitment = `sha256:${"2".repeat(64)}`;
+    extension.snapshotGeneratedAt = "2026-08-25T16:30:30.000Z";
+    extension.snapshotAsOfBlock = "25833390";
+    extension.snapshotAsOfBlockHash = `0x${"3".repeat(64)}`;
+    const transportBoundary = {
+      blockNumber: extension.snapshotAsOfBlock,
+      blockHash: extension.snapshotAsOfBlockHash,
+      finality: "finalized",
+      identityCommitment: extension.sourceIdentityCommitment,
+    };
+    const membership = createRouterCustomAcceptedMembership(
+      snapshot.records,
+      manifest,
+      { transportBoundary },
+    );
+
+    assert.deepEqual(validateLaunchSemantics(record, {
+      acceptedRouterCustomMembership: membership,
+    }), []);
+
+    record.extensions["programmable/router-stamp-v1"]
+      .sourceIdentityCommitment = `sha256:${"4".repeat(64)}`;
+    assert.ok(validateLaunchSemantics(record, {
+      acceptedRouterCustomMembership: membership,
+    }).some((finding) => finding.code === "FEE_POLICY_REQUIRED"));
+  });
+
   test("publishes a finalized launch when the source cursor equals its launch block", async () => {
     const payload = currentSourcePayload();
     const next = payload.entries.find((entry) => entry.symbol === "NEXT");
