@@ -145,7 +145,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     });
   });
 
-  test("publishes the live API and checksum-bound CLI locator", async () => {
+  test("publishes the live API and evidence-bound CLI locator", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
     );
@@ -153,24 +153,60 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
 
     assert.equal(profile.api.apiVersion, "3");
     assert.equal(profile.api.publiclyRoutable, true);
-    assert.equal(profile.cli.releaseVersion, "3.1.0");
+    assert.deepEqual(profile.api.agentIntegration, {
+      remediationCatalogSchemaVersion:
+        "programmable.custom-launch-agent-remediation-catalog.v1",
+      remediationCatalogUrl:
+        "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
+      existingProjectGuideUrl:
+        "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
+      packConfigSchemaUrl:
+        "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
+    });
+    assert.deepEqual(profile.cli.fundingAuthorizationPatch, {
+      schemaVersion: "programmable.eip3009-authorization-patch.v2",
+      authorizationEncoding: "eip3009-nonce-r-s-v-abi-leaves",
+      requiredFields: [
+        "schemaVersion",
+        "targetId",
+        "unsignedInitializerCalldataSha256",
+        "initializerCalldataLengthBytes",
+        "authorizationEncoding",
+        "nonceArgumentPath",
+        "rArgumentPath",
+        "sArgumentPath",
+        "vArgumentPath",
+      ],
+      requiredArgumentPaths: [
+        "nonceArgumentPath",
+        "rArgumentPath",
+        "sArgumentPath",
+        "vArgumentPath",
+      ],
+      argumentPathSemantics: "zero-based-static-abi-paths",
+      argumentPathMaximumDepth: 16,
+      argumentPathIndexMinimum: 0,
+      argumentPathIndexMaximum: 255,
+      legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
+    });
+    assert.equal(profile.cli.releaseVersion, "3.2.0");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.1.0",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.1.0/programmable-launch-3.1.0.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:ef0e450c7bf372b9d475be8d527bee6c2a6e4d4469266ef09f9922ca9dd7edaf",
+      "sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -228,6 +264,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       ]);
     const extension =
       wellKnown.extensions["programmable.direct-native-hook-graph-profile-v3"];
+    const customLaunchApi =
+      wellKnown.extensions["programmable.custom-launch-api"];
 
     assert.equal(extension.profileRevision, 3);
     assert.equal(extension.profileVersion, "3.0.0");
@@ -240,6 +278,14 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.deepEqual(
       extension.platformFeePolicy,
       (await developerManifestV2())[PROFILE_KEY].platformFeePolicy,
+    );
+    assert.deepEqual(
+      extension.api.agentIntegration,
+      (await developerManifestV2())[PROFILE_KEY].api.agentIntegration,
+    );
+    assert.deepEqual(
+      customLaunchApi.agentIntegration,
+      (await developerManifestV2())[PROFILE_KEY].api.agentIntegration,
     );
     assert.equal(
       (await developerManifestV2()).platformFee.customPublicSubmissions.scope,
@@ -256,12 +302,23 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /generic fee claiming/iu);
     assert.match(guide, /generic buyback/iu);
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
+    assert.match(guide, /custom-launch-agent-remediation-v1\.json/u);
+    assert.match(guide, /schemas\/custom-launch\/v3\/pack-config\.json/u);
+    assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
+    assert.match(guide, /nonceArgumentPath/u);
+    assert.match(guide, /rArgumentPath/u);
+    assert.match(guide, /sArgumentPath/u);
+    assert.match(guide, /vArgumentPath/u);
+    assert.match(guide, /`action_required`\s+is not a manual approval queue/iu);
+    assert.match(llms, /custom-launch-agent-remediation-v1\.json/u);
+    assert.match(llms, /programmable\.eip3009-authorization-patch\.v2/u);
+    assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.1\.0\.tgz\.sha256/u);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.2\.0\.tgz\.sha256/u);
     assert.match(
       guide,
-      /npm install --global \.\/programmable-launch-3\.1\.0\.tgz/u,
+      /npm install --global \.\/programmable-launch-3\.2\.0\.tgz/u,
     );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);

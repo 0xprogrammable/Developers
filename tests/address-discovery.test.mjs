@@ -192,6 +192,16 @@ describe("documentation contract", () => {
       openApiUrl: "https://programmable.market/openapi/custom-launch-v1.json",
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
+      agentIntegration: {
+        remediationCatalogSchemaVersion:
+          "programmable.custom-launch-agent-remediation-catalog.v1",
+        remediationCatalogUrl:
+          "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
+        existingProjectGuideUrl:
+          "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
+        packConfigSchemaUrl:
+          "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
+      },
     });
     assert.equal(customLaunchApi.publicRelease.status, "live");
     assert.equal(customLaunchApi.publicRelease.apiVersion, "2");

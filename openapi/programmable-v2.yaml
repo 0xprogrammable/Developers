@@ -166,7 +166,15 @@ paths:
         No blocking finding makes the exact request eligible for mandatory Router
         simulation; it does not authorize a launch. A blocking finding returns
         `action_required`. An exact Router launch simulation is required before
-        authorization. Admission is not an audit or a safety, honeypot, liquidity,
+        authorization. Its `api.agentIntegration` object links the canonical
+        machine-readable remediation catalog and existing-project guide. Agents
+        resolve returned finding codes there, repair and rebuild the exact
+        project, then submit a new exact request; there is no project allowlist
+        or legacy GitHub fallback. The linked pack-config schema defines
+        `programmable.eip3009-authorization-patch.v2` with static
+        `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and
+        `vArgumentPath`; v1 remains compatible for exact retries. Admission is
+        not an audit or a safety, honeypot, liquidity,
         tradeability, or fee-behavior guarantee. Finalized consistent Router launches may enter
         the launch feed; token-list projection additionally requires a token
         identity. Neither descriptor is a third public category, and this
