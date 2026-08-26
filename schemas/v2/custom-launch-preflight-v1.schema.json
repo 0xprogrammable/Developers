@@ -1,0 +1,1056 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+  "title": "Programmable Custom Launch V3 preflight response",
+  "description": "Quota-free, non-persisting V3 classification of one exact request. Deployment eligibility, behavior evidence, trading, platform-fee evidence, source verification, indexing, and featured placement remain independent claims.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "requestHash",
+    "profileRevision",
+    "serverTime",
+    "disposition",
+    "launchEligibility",
+    "evidenceTier",
+    "riskClassification",
+    "behaviorEvidence",
+    "productTruthAxes",
+    "hardBlockFindingCodes",
+    "needsEvidenceFindingCodes",
+    "warningFindingCodes",
+    "staticBaseline",
+    "remediations",
+    "quotaConsumed",
+    "nonceAllocated",
+    "persisted",
+    "walletSignatureRequiredLater",
+    "walletBroadcastByService"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "programmable.custom-launch-preflight.v1"
+    },
+    "requestHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "profileRevision": {
+      "enum": [
+        2,
+        3
+      ]
+    },
+    "serverTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "disposition": {
+      "enum": [
+        "supported",
+        "supported_with_warnings",
+        "needs_evidence",
+        "unsupported"
+      ]
+    },
+    "launchEligibility": {
+      "type": "object",
+      "required": [
+        "deployable",
+        "routable",
+        "featured"
+      ],
+      "properties": {
+        "deployable": {
+          "type": "boolean",
+          "description": "Static deployment eligibility only; it is not proof that a transaction executed."
+        },
+        "routable": {
+          "const": false,
+          "description": "Static preflight cannot establish production routing."
+        },
+        "featured": {
+          "const": false,
+          "description": "Static preflight cannot establish featured placement."
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidenceTier": {
+      "$ref": "#/$defs/evidenceTier"
+    },
+    "riskClassification": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/riskClassification"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Present for profile revision 3 and null for retained revision-2 compatibility."
+    },
+    "behaviorEvidence": {
+      "$ref": "#/$defs/behaviorEvidence"
+    },
+    "productTruthAxes": {
+      "$ref": "#/$defs/productTruthAxes"
+    },
+    "hardBlockFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "needsEvidenceFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "warningFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "staticBaseline": {
+      "type": "object",
+      "description": "The existing canonical static-baseline report returned by the V3 backend. This Developers schema keeps that separately versioned report opaque rather than redefining it.",
+      "minProperties": 1
+    },
+    "remediations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/remediation"
+      }
+    },
+    "quotaConsumed": {
+      "const": false
+    },
+    "nonceAllocated": {
+      "const": false
+    },
+    "persisted": {
+      "const": false
+    },
+    "walletSignatureRequiredLater": {
+      "const": true
+    },
+    "walletBroadcastByService": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "findingCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "findingCodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/findingCode"
+      },
+      "uniqueItems": true
+    },
+    "evidenceTier": {
+      "enum": [
+        "launch_mechanics_verified",
+        "standard_swap_compatible",
+        "advanced_custom_accounting",
+        "governed_external_trust"
+      ]
+    },
+    "riskClassification": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "classifierVersion",
+        "evidenceAuthority",
+        "disposition",
+        "launchEligibility",
+        "evidenceTier",
+        "evidenceTierStatus",
+        "hardBlockFindingCodes",
+        "needsEvidenceFindingCodes",
+        "requiredEvidence",
+        "behaviorEvidenceStatus",
+        "approvalAuthority",
+        "safetyClaim",
+        "feeBehaviorClaim",
+        "limitations"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.platform-admission-risk-classification.v3"
+        },
+        "classifierVersion": {
+          "const": "1.0.0"
+        },
+        "evidenceAuthority": {
+          "const": "deterministic-static-classification"
+        },
+        "disposition": {
+          "enum": [
+            "hard_blocked",
+            "needs_evidence"
+          ]
+        },
+        "launchEligibility": {
+          "type": "object",
+          "required": [
+            "deployable",
+            "routable",
+            "featured",
+            "basis"
+          ],
+          "properties": {
+            "deployable": {
+              "type": "boolean"
+            },
+            "routable": {
+              "const": false
+            },
+            "featured": {
+              "const": false
+            },
+            "basis": {
+              "enum": [
+                "hard-blocking-static-finding",
+                "static-admission-only"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "evidenceTier": {
+          "$ref": "#/$defs/evidenceTier"
+        },
+        "evidenceTierStatus": {
+          "enum": [
+            "failed",
+            "required"
+          ]
+        },
+        "hardBlockFindingCodes": {
+          "$ref": "#/$defs/findingCodes"
+        },
+        "needsEvidenceFindingCodes": {
+          "$ref": "#/$defs/findingCodes"
+        },
+        "requiredEvidence": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "launch.router-simulation",
+              "launch.exact-target-analysis",
+              "launch.child-contract-lifecycle-and-codehash",
+              "callback.pool-manager-authentication",
+              "swap.four-quadrant-multi-size",
+              "swap.second-user-and-time",
+              "liquidity.declared-lifecycle-and-withdrawal",
+              "liquidity.lock-release-and-custody",
+              "custom-accounting.delta-solvency-backing-refund-withdrawal",
+              "governance.authority-bounds-delay-and-upgrade-path",
+              "external-dependency.codehash-liveness-staleness-and-trust",
+              "platform-fee.ten-bps-no-bypass-no-overcharge-claim-isolation"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "behaviorEvidenceStatus": {
+          "const": "not_executed"
+        },
+        "approvalAuthority": {
+          "const": false
+        },
+        "safetyClaim": {
+          "const": false
+        },
+        "feeBehaviorClaim": {
+          "const": false
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "behaviorVectorId": {
+      "enum": [
+        "swap.zero-for-one.exact-input.multi-size",
+        "swap.zero-for-one.exact-output.multi-size",
+        "swap.one-for-zero.exact-input.multi-size",
+        "swap.one-for-zero.exact-output.multi-size",
+        "swap.second-user",
+        "swap.time-advance",
+        "liquidity.lifecycle.add-remove-withdraw",
+        "callback.unauthorized-rejected",
+        "fee.programmable-ten-bps",
+        "fee.no-bypass",
+        "fee.no-overcharge",
+        "fee.claim-isolation",
+        "custom-accounting.delta-solvency",
+        "custom-accounting.inventory-backing",
+        "custom-accounting.refund",
+        "custom-accounting.withdrawal"
+      ]
+    },
+    "behaviorCategory": {
+      "enum": [
+        "swap",
+        "liquidity",
+        "callback-authentication",
+        "platform-fee",
+        "custom-accounting"
+      ]
+    },
+    "behaviorClaimAxis": {
+      "enum": [
+        "deployability-hard-invariant",
+        "platform-fee-conformance",
+        "routability"
+      ]
+    },
+    "requiredBehaviorVector": {
+      "type": "object",
+      "required": [
+        "vectorId",
+        "category",
+        "requirement",
+        "claimAxes"
+      ],
+      "properties": {
+        "vectorId": {
+          "$ref": "#/$defs/behaviorVectorId"
+        },
+        "category": {
+          "$ref": "#/$defs/behaviorCategory"
+        },
+        "requirement": {
+          "const": "required"
+        },
+        "claimAxes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/behaviorClaimAxis"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "behaviorRequirements": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "vectorSetVersion",
+        "riskClass",
+        "hookPermissionMask",
+        "liquidityModel",
+        "vectors",
+        "requirementsSha256"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-behavior-requirements.v1"
+        },
+        "vectorSetVersion": {
+          "const": "1.0.0"
+        },
+        "riskClass": {
+          "enum": [
+            "standard-swaps",
+            "advanced-custom-accounting"
+          ]
+        },
+        "hookPermissionMask": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16383
+        },
+        "liquidityModel": {
+          "enum": [
+            "external-concentrated-liquidity",
+            "launch-seeded-concentrated-liquidity",
+            "hook-inventory-custom-accounting"
+          ]
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/requiredBehaviorVector"
+          },
+          "uniqueItems": true
+        },
+        "requirementsSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "notExecutedReason": {
+      "enum": [
+        "GENERIC_ROUTER_SIMULATION_ONLY",
+        "BEHAVIOR_RUNNER_NOT_CONFIGURED",
+        "BEHAVIOR_RUNNER_UNAVAILABLE",
+        "VECTOR_NOT_SUPPORTED_BY_RUNNER",
+        "VECTOR_PREREQUISITE_UNAVAILABLE"
+      ]
+    },
+    "behaviorExecutionVector": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "vectorId",
+            "status",
+            "evidenceSha256",
+            "reasonCode"
+          ],
+          "properties": {
+            "vectorId": {
+              "$ref": "#/$defs/behaviorVectorId"
+            },
+            "status": {
+              "const": "verified"
+            },
+            "evidenceSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "reasonCode": {
+              "type": "null"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "vectorId",
+            "status",
+            "evidenceSha256",
+            "reasonCode"
+          ],
+          "properties": {
+            "vectorId": {
+              "$ref": "#/$defs/behaviorVectorId"
+            },
+            "status": {
+              "const": "failed"
+            },
+            "evidenceSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "reasonCode": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "vectorId",
+            "status",
+            "evidenceSha256",
+            "reasonCode"
+          ],
+          "properties": {
+            "vectorId": {
+              "$ref": "#/$defs/behaviorVectorId"
+            },
+            "status": {
+              "const": "not_executed"
+            },
+            "evidenceSha256": {
+              "type": "null"
+            },
+            "reasonCode": {
+              "$ref": "#/$defs/notExecutedReason"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "behaviorExecution": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "subjectSha256",
+        "requirementsSha256",
+        "evidenceAuthority",
+        "runnerId",
+        "runnerVersion",
+        "runnerBuildSha256",
+        "executedAt",
+        "vectors"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-behavior-execution.v1"
+        },
+        "subjectSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "requirementsSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidenceAuthority": {
+          "const": "platform-runtime-executor"
+        },
+        "runnerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "runnerVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "runnerBuildSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "executedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/behaviorExecutionVector"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "behaviorVectorSummary": {
+      "type": "object",
+      "required": [
+        "vectorId",
+        "category",
+        "claimAxes",
+        "status",
+        "evidenceSha256",
+        "reasonCode"
+      ],
+      "properties": {
+        "vectorId": {
+          "$ref": "#/$defs/behaviorVectorId"
+        },
+        "category": {
+          "$ref": "#/$defs/behaviorCategory"
+        },
+        "claimAxes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/behaviorClaimAxis"
+          },
+          "uniqueItems": true
+        },
+        "status": {
+          "enum": [
+            "required",
+            "not_executed",
+            "verified",
+            "failed"
+          ]
+        },
+        "evidenceSha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasonCode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "verified"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceSha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "reasonCode": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceSha256": {
+                "$ref": "#/$defs/sha256"
+              },
+              "reasonCode": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "required",
+                  "not_executed"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidenceSha256": {
+                "type": "null"
+              },
+              "reasonCode": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "behaviorVerificationAxis": {
+      "type": "object",
+      "required": [
+        "status",
+        "requiredVectorIds",
+        "outstandingVectorIds"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_verified",
+            "verified",
+            "blocked"
+          ]
+        },
+        "requiredVectorIds": {
+          "$ref": "#/$defs/behaviorVectorIds"
+        },
+        "outstandingVectorIds": {
+          "$ref": "#/$defs/behaviorVectorIds"
+        }
+      },
+      "additionalProperties": false
+    },
+    "behaviorClaimAxes": {
+      "type": "object",
+      "required": [
+        "deployability",
+        "platformFeeConformance",
+        "routability",
+        "featured",
+        "finality"
+      ],
+      "properties": {
+        "deployability": {
+          "type": "object",
+          "required": [
+            "status",
+            "scope",
+            "requiredVectorIds",
+            "outstandingVectorIds"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "behavior-hard-invariants-required",
+                "behavior-hard-invariants-verified",
+                "blocked"
+              ]
+            },
+            "scope": {
+              "const": "behavior-only"
+            },
+            "requiredVectorIds": {
+              "$ref": "#/$defs/behaviorVectorIds"
+            },
+            "outstandingVectorIds": {
+              "$ref": "#/$defs/behaviorVectorIds"
+            }
+          },
+          "additionalProperties": false
+        },
+        "platformFeeConformance": {
+          "$ref": "#/$defs/behaviorVerificationAxis"
+        },
+        "routability": {
+          "$ref": "#/$defs/behaviorVerificationAxis"
+        },
+        "featured": {
+          "type": "object",
+          "required": [
+            "status",
+            "derivedFromBehaviorEvidence"
+          ],
+          "properties": {
+            "status": {
+              "const": "external-evidence-required"
+            },
+            "derivedFromBehaviorEvidence": {
+              "const": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "finality": {
+          "type": "object",
+          "required": [
+            "status",
+            "derivedFromBehaviorEvidence"
+          ],
+          "properties": {
+            "status": {
+              "const": "independent-evidence-required"
+            },
+            "derivedFromBehaviorEvidence": {
+              "const": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "behaviorVectorIds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/behaviorVectorId"
+      },
+      "uniqueItems": true
+    },
+    "behaviorEvidence": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "subjectSha256",
+        "requirements",
+        "status",
+        "execution",
+        "vectors",
+        "outstandingVectorIds",
+        "claimAxes"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-behavior-summary.v1"
+        },
+        "subjectSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "requirements": {
+          "$ref": "#/$defs/behaviorRequirements"
+        },
+        "status": {
+          "enum": [
+            "required",
+            "not_executed",
+            "verified",
+            "failed"
+          ]
+        },
+        "execution": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/behaviorExecution"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/behaviorVectorSummary"
+          }
+        },
+        "outstandingVectorIds": {
+          "$ref": "#/$defs/behaviorVectorIds"
+        },
+        "claimAxes": {
+          "$ref": "#/$defs/behaviorClaimAxes"
+        }
+      },
+      "additionalProperties": false
+    },
+    "productTruthAxes": {
+      "type": "object",
+      "required": [
+        "deployment",
+        "trading",
+        "platform_fee_evidence",
+        "source_verification",
+        "indexing",
+        "featured"
+      ],
+      "properties": {
+        "deployment": {
+          "type": "object",
+          "required": [
+            "status",
+            "basis",
+            "transactionExecuted"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "eligible",
+                "blocked"
+              ]
+            },
+            "basis": {
+              "enum": [
+                "static-admission-only",
+                "hard-blocking-static-finding"
+              ]
+            },
+            "transactionExecuted": {
+              "const": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "trading": {
+          "$ref": "#/$defs/notVerifiedTradingAxis"
+        },
+        "platform_fee_evidence": {
+          "$ref": "#/$defs/notVerifiedPlatformFeeAxis"
+        },
+        "source_verification": {
+          "$ref": "#/$defs/notVerifiedSourceAxis"
+        },
+        "indexing": {
+          "type": "object",
+          "required": [
+            "status",
+            "basis"
+          ],
+          "properties": {
+            "status": {
+              "const": "not_indexed"
+            },
+            "basis": {
+              "const": "finalized-router-identity-required"
+            }
+          },
+          "additionalProperties": false
+        },
+        "featured": {
+          "type": "object",
+          "required": [
+            "status",
+            "basis"
+          ],
+          "properties": {
+            "status": {
+              "const": "not_featured"
+            },
+            "basis": {
+              "const": "separate-product-evidence-required"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "notVerifiedTradingAxis": {
+      "type": "object",
+      "required": [
+        "status",
+        "basis"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_verified"
+        },
+        "basis": {
+          "const": "runtime-behavior-evidence-required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "notVerifiedPlatformFeeAxis": {
+      "type": "object",
+      "required": [
+        "status",
+        "basis"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_verified"
+        },
+        "basis": {
+          "const": "exact-fee-behavior-evidence-required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "notVerifiedSourceAxis": {
+      "type": "object",
+      "required": [
+        "status",
+        "basis"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_verified"
+        },
+        "basis": {
+          "const": "provider-exact-match-required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "remediation": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "remediationId",
+        "code",
+        "stage",
+        "targetId",
+        "targetRole",
+        "sourcePath",
+        "expected",
+        "observed",
+        "requiredChange",
+        "catalogUrl",
+        "guideUrl",
+        "retryable",
+        "requiresNewRequest",
+        "resumeAt"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-remediation.v1"
+        },
+        "remediationId": {
+          "enum": [
+            "PLATFORM_ADMISSION_FINDING",
+            "PROFILE_INVALID",
+            "ROUTER_SIMULATION_REVERTED",
+            "ROUTER_SIMULATION_UNAVAILABLE"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/findingCode"
+        },
+        "stage": {
+          "enum": [
+            "admission",
+            "validation-or-admission",
+            "simulation"
+          ]
+        },
+        "targetId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetRole": {
+          "enum": [
+            "token",
+            "hook",
+            "initializer",
+            "platform-fee-binding",
+            "other",
+            null
+          ]
+        },
+        "sourcePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requiredChange": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalogUrl": {
+          "const": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json"
+        },
+        "guideUrl": {
+          "const": "https://programmable.market/docs/developers/custom-launch#existing-project-integration"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "requiresNewRequest": {
+          "type": "boolean"
+        },
+        "resumeAt": {
+          "enum": [
+            "pack",
+            "inspect-project",
+            "status"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

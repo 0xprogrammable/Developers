@@ -233,9 +233,50 @@ describe("documentation contract", () => {
         openApiPath: "/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
         profileRevision: 3,
+        profileVersion: "3.1.0",
         compatibleProfileRevisions: [2, 3],
+        compatibleProfileVersions: ["3.0.0", "3.1.0"],
         authentication: "wallet-bound-api-key",
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
+        selfServe: {
+          capabilities: {
+            method: "GET",
+            path: "/v3/capabilities",
+            authentication: "none",
+          },
+          preflight: {
+            method: "POST",
+            path: "/v3/custom-launches/preflight",
+            authentication: "wallet-bound-api-key",
+            launchQuota: "not-consumed",
+            responseSchemaVersion: "programmable.custom-launch-preflight.v1",
+            responseSchemaUrl:
+              "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+            requestId: "x-request-id-header",
+            retryAfter: "honor-on-429-or-503",
+            sideEffects: {
+              quotaConsumed: false,
+              nonceAllocated: false,
+              persisted: false,
+              walletSignatureRequiredLater: true,
+              walletBroadcastByService: false,
+            },
+          },
+          lifecycleQueue: {
+            resourceField: "lifecycleQueue",
+            schemaVersion: "programmable.custom-launch-lifecycle-queue.v3",
+            schemaUrl:
+              "https://developers.programmable.family/schemas/v2/custom-launch-lifecycle-queue-v3.schema.json",
+            canonicalPollingPath: "/v3/custom-launches/{launchId}",
+            queueStateIsLaunchFinality: false,
+          },
+          walletHandoff: {
+            availableAfter: "authorized",
+            urlAndExpiryPublished: true,
+            walletSignatureRequired: true,
+            walletBroadcastByService: false,
+          },
+        },
       },
     });
     assert.deepEqual(legacyIntake, {
@@ -308,6 +349,8 @@ describe("documentation contract", () => {
         "canonical-custom-registry-record-v3",
         "canonical-custom-registry-record-v4",
         "custom-fee-enforced-launch-profile-v2",
+        "custom-launch-preflight-v1",
+        "custom-launch-lifecycle-queue-v3",
         "direct-native-hook-graph-profile-discovery-v1",
         "direct-native-hook-graph-profile-discovery-v2",
         "direct-native-hook-graph-profile-discovery-v3",

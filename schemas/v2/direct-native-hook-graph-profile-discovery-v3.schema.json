@@ -22,6 +22,7 @@
     "generalLane",
     "platformFeePolicy",
     "platformAdmissionPolicy",
+    "evidenceClassification",
     "staticBaselineDisclosure",
     "assuranceBoundary",
     "featureStatus",
@@ -44,7 +45,7 @@
       "const": 3
     },
     "profileVersion": {
-      "const": "3.0.0"
+      "const": "3.1.0"
     },
     "publicCategory": {
       "const": "custom"
@@ -83,6 +84,43 @@
         "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v3",
         "authentication": "wallet-bound-api-key",
         "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
+        "selfServe": {
+          "capabilities": {
+            "method": "GET",
+            "path": "/v3/capabilities",
+            "authentication": "none"
+          },
+          "preflight": {
+            "method": "POST",
+            "path": "/v3/custom-launches/preflight",
+            "authentication": "wallet-bound-api-key",
+            "launchQuota": "not-consumed",
+            "responseSchemaVersion": "programmable.custom-launch-preflight.v1",
+            "responseSchemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+            "requestId": "x-request-id-header",
+            "retryAfter": "honor-on-429-or-503",
+            "sideEffects": {
+              "quotaConsumed": false,
+              "nonceAllocated": false,
+              "persisted": false,
+              "walletSignatureRequiredLater": true,
+              "walletBroadcastByService": false
+            }
+          },
+          "lifecycleQueue": {
+            "resourceField": "lifecycleQueue",
+            "schemaVersion": "programmable.custom-launch-lifecycle-queue.v3",
+            "schemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-lifecycle-queue-v3.schema.json",
+            "canonicalPollingPath": "/v3/custom-launches/{launchId}",
+            "queueStateIsLaunchFinality": false
+          },
+          "walletHandoff": {
+            "availableAfter": "authorized",
+            "urlAndExpiryPublished": true,
+            "walletSignatureRequired": true,
+            "walletBroadcastByService": false
+          }
+        },
         "agentIntegration": {
           "remediationCatalogSchemaVersion": "programmable.custom-launch-agent-remediation-catalog.v1",
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
@@ -95,12 +133,12 @@
     "cli": {
       "const": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.2.1",
+        "releaseVersion": "3.3.0",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256",
-        "tarballSha256": "sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0",
+        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz",
+        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256",
+        "tarballSha256": "sha256:9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8",
         "supportStatus": "live",
         "minimumSupportingVersion": "3.1.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
@@ -153,7 +191,9 @@
         "customLaunchApiV3": "public-production-profile",
         "profileRevision1": "retained-gated-preview",
         "profileRevision2": "retained-live-compatible",
-        "profileRevision3": "active-general-lane"
+        "profileRevision3": "active-general-lane",
+        "profileVersion3_0_0": "retained-exact-read-and-retry",
+        "profileVersion3_1_0": "active-for-new-packs"
       }
     },
     "generalLane": {
@@ -163,12 +203,47 @@
         "maximumTargets": 16,
         "directTargetsOnly": true,
         "projectSuppliedTokenHookInitializerAndSupportTargets": true,
+        "projectOwnedRoles": [
+          "token",
+          "hook"
+        ],
         "hookPermissionMaskMinimum": 0,
         "hookPermissionMaskMaximum": 16383,
         "allValidUniswapV4PermissionMasksRepresentable": true,
+        "supportedHookPermissions": [
+          "beforeInitialize",
+          "afterInitialize",
+          "beforeAddLiquidity",
+          "afterAddLiquidity",
+          "beforeRemoveLiquidity",
+          "afterRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeDonate",
+          "afterDonate",
+          "beforeSwapReturnDelta",
+          "afterSwapReturnDelta",
+          "afterAddLiquidityReturnDelta",
+          "afterRemoveLiquidityReturnDelta"
+        ],
+        "quoteCurrencyKinds": [
+          "native",
+          "erc20"
+        ],
+        "fundingModes": [
+          "none",
+          "wallet-transaction-value",
+          "eip-3009-receive-with-authorization"
+        ],
+        "liquidityModels": [
+          "external-concentrated-liquidity",
+          "launch-seeded-concentrated-liquidity",
+          "hook-inventory-custom-accounting"
+        ],
         "exactSourceCompilerAndGraphBindingRequired": true,
         "perLaunchAdmissionRequired": true,
-        "universalHookApproval": false
+        "universalHookApproval": false,
+        "structuralSupportIsUniversalCompatibility": false
       }
     },
     "platformFeePolicy": {
@@ -234,13 +309,37 @@
         "staticBaselineGateVersion": "1.0.0",
         "blockingFindingRules": [
           {
-            "code": "SOURCE_TARGET_ANALYSIS_INCOMPLETE",
+            "code": "RUNTIME_CALLCODE",
             "targetRoles": [
               "any"
             ]
           },
           {
-            "code": "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED",
+            "code": "RUNTIME_SELFDESTRUCT",
+            "targetRoles": [
+              "any"
+            ]
+          },
+          {
+            "code": "SOURCE_SELFDESTRUCT_SURFACE",
+            "targetRoles": [
+              "any"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_AUTHENTICATION_MISSING",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_AUTHENTICATION_INVALID",
+            "targetRoles": [
+              "hook"
+            ]
+          },
+          {
+            "code": "V4_CALLBACK_POOL_MANAGER_MISMATCH",
             "targetRoles": [
               "hook"
             ]
@@ -248,71 +347,6 @@
           {
             "code": "V4_ENABLED_CALLBACK_IMPLEMENTATION_MISSING",
             "targetRoles": [
-              "hook"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_BLOCKLIST_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_TRANSFER_RESTRICTION",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_PUBLIC_MINT_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_PAUSE_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
-            "targetRoles": [
-              "token"
-            ]
-          },
-          {
-            "code": "SOURCE_PROXY_OR_UPGRADE_SURFACE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "SOURCE_SELFDESTRUCT_SURFACE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_CALLCODE",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_DELEGATECALL",
-            "targetRoles": [
-              "token",
-              "hook"
-            ]
-          },
-          {
-            "code": "RUNTIME_SELFDESTRUCT",
-            "targetRoles": [
-              "token",
               "hook"
             ]
           }
@@ -325,6 +359,39 @@
         "assurance": "launch-admission-only",
         "safetyClaim": false,
         "feeBehaviorClaim": false
+      }
+    },
+    "evidenceClassification": {
+      "const": {
+        "schemaVersion": "programmable.platform-admission-risk-classification.v3",
+        "classifierVersion": "1.0.0",
+        "evidenceAuthority": "deterministic-static-classification",
+        "needsEvidenceFindingCodes": [
+          "RUNTIME_CREATE",
+          "RUNTIME_CREATE2",
+          "SOURCE_TARGET_ANALYSIS_INCOMPLETE",
+          "V4_CALLBACK_AUTHENTICATION_REVIEW_REQUIRED",
+          "RUNTIME_DELEGATECALL",
+          "SOURCE_PROXY_OR_UPGRADE_SURFACE",
+          "SOURCE_MUTABLE_PAUSE_SURFACE",
+          "SOURCE_MUTABLE_BLOCKLIST_SURFACE",
+          "SOURCE_MUTABLE_TAX_OR_FEE_SURFACE",
+          "SOURCE_MUTABLE_TRANSFER_RESTRICTION",
+          "SOURCE_MUTABLE_ADMIN_SURFACE",
+          "SOURCE_PUBLIC_MINT_SURFACE",
+          "SOURCE_EXTERNAL_DEPENDENCY_SURFACE",
+          "SOURCE_TRANSFER_FEE_SURFACE",
+          "SOURCE_LIQUIDITY_LOCK_OR_CUSTODY_SURFACE"
+        ],
+        "advancedBehaviorEvidenceFeatures": [
+          "beforeSwapReturnDelta",
+          "afterSwapReturnDelta",
+          "afterAddLiquidityReturnDelta",
+          "afterRemoveLiquidityReturnDelta",
+          "hook-inventory-custom-accounting"
+        ],
+        "staticEligibilityDoesNotVerifyRouting": true,
+        "staticEligibilityDoesNotVerifyPlatformFee": true
       }
     },
     "staticBaselineDisclosure": {

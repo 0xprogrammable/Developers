@@ -7,7 +7,7 @@ public Custom Launch API V3 on Ethereum Mainnet. Its identity is:
 | --- | --- |
 | Profile ID | `programmable.direct-native-hook-graph.v1` |
 | Profile revision | `3` |
-| Profile version | `3.0.0` |
+| Profile version | `3.1.0` |
 | Profile schema | `programmable.direct-native-hook-graph-profile.v3` |
 | Selection binding | `programmable.direct-native-hook-graph-profile-selection-binding.v3` |
 | Public category | `custom` |
@@ -19,9 +19,72 @@ requests use the separately hosted authenticated API at
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
 contract.
 
-Revision 3 is additive. Revision 2 remains published and compatible, and the
-only public categories remain `classic` and `custom`. Legacy Registry and
-GitHub submission intake are closed; neither is a fallback launch route.
+Revision 3 is additive. New packs use `3.1.0`; exact `3.0.0` request bytes stay
+readable and retryable under their original admission policy. Revision 2 also
+remains published and compatible. The only public categories remain `classic`
+and `custom`. Legacy Registry and GitHub submission intake are closed; neither
+is a fallback launch route.
+
+## Self-serve capabilities and preflight
+
+Use the separately hosted V3 API to discover support before creating a launch:
+
+| Surface | Authentication | Effect |
+| --- | --- | --- |
+| `GET /v3/capabilities` | None | Publishes the current structural V3 support envelope |
+| `POST /v3/custom-launches/preflight` | Wallet-bound API key | Classifies one exact request without consuming launch quota, allocating a nonce, or persisting a launch |
+
+The preflight response uses
+[`programmable.custom-launch-preflight.v1`](../../schemas/v2/custom-launch-preflight-v1.schema.json).
+Its `disposition` is exactly `supported`, `supported_with_warnings`,
+`needs_evidence`, or `unsupported`. `hardBlockFindingCodes`,
+`needsEvidenceFindingCodes`, and `warningFindingCodes` are separate lists;
+clients must not collapse them into one pass/fail flag. `staticBaseline` remains
+the backend's separately versioned canonical report, while each `remediations`
+entry uses the typed `programmable.custom-launch-remediation.v1` contract and
+links back to the canonical remediation catalog and guide.
+
+The response repeats the closed side-effect boundary:
+`quotaConsumed: false`, `nonceAllocated: false`, `persisted: false`,
+`walletSignatureRequiredLater: true`, and
+`walletBroadcastByService: false`. The response body binds `requestHash`,
+`profileRevision`, and `serverTime`; the support request ID is returned in the
+`X-Request-Id` response header. Report that header without including the API
+key. A throttled or temporarily
+unavailable request may return `429` or `503`. Honor `Retry-After` and retry only
+the same exact request bytes when the response says the operation is retryable.
+
+`evidenceTier` is one of `launch_mechanics_verified`,
+`standard_swap_compatible`, `advanced_custom_accounting`, or
+`governed_external_trust`. The tier names the evidence route that applies; it
+does not rank projects, certify safety, or replace the returned finding lists.
+
+The response also includes platform-authored `riskClassification`,
+`behaviorEvidence`, and `productTruthAxes`. Static classification can make the
+deployment axis `eligible`, but preflight keeps routing and featured placement
+false. Behavior evidence lists the exact swap, liquidity, callback, fee, and,
+when applicable, custom-accounting vectors. A missing runtime executor remains
+`not_executed`; a client or agent cannot turn it into `verified`.
+
+### Eligibility is not lifecycle evidence
+
+The three `launchEligibility` booleans answer different preflight questions:
+
+- `deployable` means the request may continue toward later build, admission,
+  simulation, and wallet stages. It does not mean a contract is deployed.
+- `routable` means the declared shape can use the V3 Router path subject to the
+  remaining exact checks. It does not prove a production buy or sell.
+- `featured` is a separate presentation decision. It is not implied by
+  deployment, routing, verification, finality, or indexing.
+
+Keep the six named product truth axes independent: `deployment`, `trading`,
+`platform_fee_evidence`, `source_verification`, `indexing`, and `featured`.
+Deployment requires a wallet-sent transaction and finality; trading requires
+production route and market evidence; fee behavior requires exact deployed
+accrual and routing evidence; source verification requires an exact
+source/build/runtime match; indexing requires finalized canonical-Router
+ingestion; featured placement remains a separate product decision. A positive
+field on one axis establishes none of the others.
 
 ## General graph lane
 
@@ -30,6 +93,16 @@ artifacts in one atomic acyclic graph of 3–16 direct targets. Every valid
 Uniswap v4 hook permission mask from `0` through `16383` is representable when
 its callback dependencies, declared permissions, compiled permissions, and
 mined hook-address bits agree.
+
+That structural envelope includes project-owned token and hook artifacts, all
+14 Uniswap v4 permissions, ERC-20 or native quote currency, and the existing
+funding modes `none`, `wallet-transaction-value`, and
+`eip-3009-receive-with-authorization`. The existing liquidity models remain
+`external-concentrated-liquidity`, `launch-seeded-concentrated-liquidity`, and
+`hook-inventory-custom-accounting`. Structural representation is not universal
+compatibility: permission dependencies, currency ordering, settlement,
+inventory, liquidity, fee, admission, and simulation checks still apply to the
+exact request.
 
 The request must bind the complete deterministic artifact closure, including:
 
@@ -68,21 +141,27 @@ the complete role-aware blocking rules from the machine descriptor:
 }
 ```
 
-The machine descriptor publishes role-aware blocking rules. Incomplete analysis
-blocks any target. Unresolved v4 callback authentication or an enabled
-permission without a concrete reachable callback implementation blocks the hook. A
-mutable blocklist, transfer restriction, public mint, or pause surface blocks
-the token. A mutable token tax or fee surface also blocks the token, while hook
-dynamic-fee logic remains representable. Proxy, upgrade, self-destruct, `CALLCODE`, `DELEGATECALL`, or
-`SELFDESTRUCT` findings block when they apply to the token or hook.
+Profile `3.1.0` has exactly seven objective static hard blocks:
 
-Every static finding that does not match one of those code-and-role rules is a
-bound, visible warning rather than an automatic block. That includes runtime
-`CREATE` or `CREATE2`, generic mutable admin surfaces, hook-role dynamic-fee
-surfaces, non-token pause surfaces, and the listed opcode findings on other
-support roles. The full report hash and every warning remain bound to the
-admission evidence. There are no project-specific exceptions. A project does
-not receive a clean or safe label merely because the blocking list is empty.
+- runtime `CALLCODE`, runtime `SELFDESTRUCT`, or an exact source
+  self-destruct surface on any target;
+- a definitively missing or invalid PoolManager callback guard;
+- a literal callback guard bound to the wrong PoolManager; or
+- an enabled hook permission whose callback implementation is missing.
+
+Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, blocklist,
+transfer-control, external-dependency, liquidity-custody, transfer-fee,
+runtime-child-contract, incomplete-analysis, and review-required callback
+findings are not categorical `3.1.0` deployment blocks. They remain visible in
+`needsEvidenceFindingCodes` and select the applicable evidence tier. Return
+delta permissions and `hook-inventory-custom-accounting` require the advanced
+behavior vector set covering delta solvency, backing, refunds, and withdrawal.
+This evidence-only treatment is not approval: unresolved evidence keeps
+trading, platform-fee conformance, and feature placement unverified.
+
+The full report hash and every finding remain bound to the admission evidence.
+There are no project-specific exceptions. A project does not receive a clean
+or safe label merely because the seven hard-block codes are absent.
 
 `no_blocking_static_finding` produces only the verdict
 `admitted_to_router_simulation`. It does not authorize a transaction. The
@@ -150,6 +229,21 @@ finalized, consistent canonical-Router evidence may create a Custom feed
 identity. Token-list publication additionally requires a recognized token
 identity.
 
+The authorized resource supplies a wallet-handoff URL with an explicit expiry.
+Treat both as response data for that exact request: reject an expired handoff,
+do not convert it into a reusable credential, and keep the API key out of the
+wallet context. Opening the handoff does not authorize a transaction; the
+controller wallet still reviews and signs, and the service never broadcasts on
+its behalf.
+
+Authenticated single-resource responses can include `lifecycleQueue` using
+[`programmable.custom-launch-lifecycle-queue.v3`](../../schemas/v2/custom-launch-lifecycle-queue-v3.schema.json).
+Its state, generation, bounded retry delay, expiry, and stable error code are
+operational polling metadata only. Poll the returned single-resource `GET`
+path. Queue completion is not onchain finality, and a queue retry does not
+change launch status by itself. This field belongs to the authenticated launch
+resource; it is not added to the Developer launch or token-list feeds.
+
 ## Existing-project agent integration
 
 Agents must resolve `api.agentIntegration` from the active Revision 3
@@ -174,6 +268,10 @@ catalogued source or configuration changes, rebuild the exact artifacts, run
 is not a manual approval queue, project allowlist, or invitation to use the
 closed Registry or GitHub submission intake. An API key authenticates this
 self-serve flow but does not waive admission rules or provide wallet authority.
+Run quota-free preflight before creating a durable request. Resolve hard blocks,
+missing evidence, and warnings by their separate code arrays and typed
+remediations; never rewrite a hard block as a warning or treat a warning-free
+response as a security claim.
 
 New EIP-3009 launch configs use four static ABI paths:
 `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`.
@@ -192,7 +290,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.2.1`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.0`, with exactly four commands:
 
 ```text
 pack
@@ -201,11 +299,11 @@ submit
 status
 ```
 
-The immutable `3.2.1` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1`.
+The immutable `3.3.0` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807`.
+`tarballSha256: sha256:9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -214,17 +312,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807
+  PROGRAMMABLE_LAUNCH_SHA256=9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.2.1.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.2.1.tgz.sha256)" = \
+    --output programmable-launch-3.3.0.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.0.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.2.1.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz
-  shasum -a 256 --check programmable-launch-3.2.1.tgz.sha256
-  npm install --global ./programmable-launch-3.2.1.tgz
+    --output programmable-launch-3.3.0.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz
+  shasum -a 256 --check programmable-launch-3.3.0.tgz.sha256
+  npm install --global ./programmable-launch-3.3.0.tgz
   programmable-launch --version
 )
 ```
