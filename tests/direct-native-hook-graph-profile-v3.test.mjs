@@ -162,6 +162,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
       packConfigSchemaUrl:
         "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
+      packConfigSchemaSha256:
+        "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
     });
     assert.deepEqual(profile.cli.fundingAuthorizationPatch, {
       schemaVersion: "programmable.eip3009-authorization-patch.v2",
@@ -189,24 +191,25 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.2.0");
+    assert.equal(profile.cli.releaseVersion, "3.2.1");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
+    assert.equal(profile.cli.minimumSupportingVersion, "3.1.0");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba",
+      "sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -304,6 +307,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
     assert.match(guide, /custom-launch-agent-remediation-v1\.json/u);
     assert.match(guide, /schemas\/custom-launch\/v3\/pack-config\.json/u);
+    assert.match(
+      guide,
+      /packConfigSchemaSha256[^\n]+sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c/u,
+    );
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(guide, /nonceArgumentPath/u);
     assert.match(guide, /rArgumentPath/u);
@@ -315,10 +322,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.2\.0\.tgz\.sha256/u);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.2\.1\.tgz\.sha256/u);
     assert.match(
       guide,
-      /npm install --global \.\/programmable-launch-3\.2\.0\.tgz/u,
+      /npm install --global \.\/programmable-launch-3\.2\.1\.tgz/u,
     );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);

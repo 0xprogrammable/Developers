@@ -201,6 +201,8 @@ describe("documentation contract", () => {
           "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
         packConfigSchemaUrl:
           "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
+        packConfigSchemaSha256:
+          "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
       },
     });
     assert.equal(customLaunchApi.publicRelease.status, "live");
