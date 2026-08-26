@@ -11,10 +11,12 @@ Use these docs to verify origin and decide which market features your product ca
 | Prepare and track a public Custom launch | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch), using a wallet-bound API key from [API key management](https://programmable.market/developers/api-keys); wallet signing stays separate |
 | Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
 | Integrate the public fee-enforced profile | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
+| Integrate the live V3 direct-hook graph contract | [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md), with exact 3–16-target graphs, all valid v4 masks, three funding modes and per-launch conformance |
+| Inspect the retained V3 preview | [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md), preserved unchanged for discovery compatibility |
 | Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) |
 
-The Custom Launch API is separately hosted at `https://api.programmable.market`. V2 prepares and tracks public Mainnet
-launches while the controller wallet reviews and signs separately. V1 reads/status remain compatible, but V1 POST
+The Custom Launch API is separately hosted at `https://api.programmable.market`. V2 retains its exact fee-enforced
+route and V3 prepares general project-owned token and hook graphs while the controller wallet reviews and signs separately. V1 reads/status remain compatible, but V1 POST
 returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. The V1 and V2 schemas remain in their canonical OpenAPI
 contracts instead of being copied into this read/discovery repository.
 
@@ -38,6 +40,8 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 - [Trading terminals and scanners](guides/terminals-and-scanners.md)
 - [Launch providers](guides/launch-providers.md)
 - [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)
+- [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md)
+- [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md)
 - [Wallets and explorers](guides/wallets.md)
 - [Indexers and data platforms](guides/indexers.md)
 - [Apps, games, and bots](guides/apps-and-games.md)
@@ -61,7 +65,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 ## Product status in one paragraph
 
-Classic launch discovery, Custom Registry generation 1 and the authenticated Custom Launch API V2 are live on Ethereum. V1 reads/status remain compatible while V1 POST stays read-only; legacy Registry and GitHub submission intake are closed. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery, Custom Registry generation 1, and authenticated Custom Launch API V2 and V3 are live on Ethereum. V1 reads/status remain compatible while V1 POST stays read-only; legacy Registry and GitHub submission intake are closed. V3 accepts exact 3–16-target project token and hook graphs, all valid v4 permission masks, `none`, wallet transaction value, or EIP-3009 funding, and requires an exact per-launch conformance receipt before authorization. The retained Direct Native Hook Graph V1 descriptor remains a gated preview for compatibility. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

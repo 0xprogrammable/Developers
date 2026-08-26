@@ -24,6 +24,7 @@ node examples/wallet-provenance.mjs 0x0000000000000000000000000000000000000000 1
 node examples/indexer-cursor.mjs
 node examples/app-capabilities.mjs
 node examples/app-capabilities.mjs uniswap-v4:swap
+node examples/profile-discovery.mjs
 sh examples/curl-quickstart.sh
 ```
 
@@ -52,6 +53,7 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
 | [`indexer-cursor.mjs`](indexer-cursor.mjs) | Separates page traversal from a durable high-water cursor and avoids checkpointing degraded data |
 | [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
+| [`profile-discovery.mjs`](profile-discovery.mjs) | Reads the live Direct Native Hook Graph V2 descriptor without constructing a request or wallet transaction |
 | [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Dependency-light JSON-RPC verification for a Router-stamped Classic or Custom token, v4 pool, or exclusive component at the manifest-listed Router |
 | [`verify-launch-stamp-viem.ts`](verify-launch-stamp-viem.ts) | Equivalent Router point lookup with viem and the same concrete-block, runtime, and record checks |
 | [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest, explicit status and paginated launch feed with curl |

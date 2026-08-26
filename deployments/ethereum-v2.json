@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "6",
-  "generatedAt": "2026-08-25T20:31:58Z",
+  "manifestVersion": "8",
+  "generatedAt": "2026-08-26T02:30:42Z",
   "chainId": 1,
   "chains": [
     {
@@ -548,6 +548,923 @@
       "dual-rpc-finality-enforced",
       "source-verification-worker-enabled",
       "global-v2-admission-cap-enforced"
+    ]
+  },
+  "directNativeHookGraphProfileV1": {
+    "schemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v1",
+    "profileId": "programmable.direct-native-hook-graph.v1",
+    "profileRevision": 1,
+    "profileVersion": "1.0.0",
+    "publicCategory": "custom",
+    "releaseStage": "preview",
+    "status": "gated",
+    "activationStatus": "integration-pending",
+    "productionLaunchAuthorized": false,
+    "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
+    "api": {
+      "apiVersion": "3",
+      "routeId": "custom-launch:create:v3",
+      "supportStatus": "integration-pending",
+      "availability": "gated",
+      "publiclyRoutable": false,
+      "plannedCollectionPath": "/v3/custom-launches",
+      "plannedFundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+      "plannedFundingAuthorizationMethod": "POST",
+      "plannedFundingAuthorizationOperationRef": "https://programmable.market/openapi/custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post",
+      "createRequestSchema": "programmable.custom-launch-create-request.v3",
+      "resourceSchema": "programmable.custom-launch.v3",
+      "requestSchemaStatus": "candidate-not-published",
+      "plannedOpenApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
+      "openApiStatus": "not-published",
+      "authentication": "wallet-bound-api-key",
+      "walletBoundary": "two-stage-separate-wallet-signatures"
+    },
+    "cli": {
+      "packageName": "@programmable/launch",
+      "currentPublicReleaseVersion": "2.0.1",
+      "candidateVersion": "3.0.0-rc.1",
+      "supportStatus": "candidate-not-published",
+      "minimumSupportingVersion": null,
+      "packConfigSchema": "programmable.launch-pack-config.v3",
+      "createRequestSchema": "programmable.custom-launch-create-request.v3",
+      "plannedCommands": [
+        "pack",
+        "validate",
+        "submit",
+        "status"
+      ]
+    },
+    "compatibility": {
+      "publicCategories": [
+        "classic",
+        "custom"
+      ],
+      "developerDiscoveryApi": "v2-optional-profile-descriptor",
+      "customLaunchApiV1": "unchanged-read-status-post-read-only",
+      "customLaunchApiV2": "unchanged-public-production-profile",
+      "customLaunchApiV3": "gated-not-publicly-routable"
+    },
+    "graphContract": {
+      "executionMode": "direct-create2-graph",
+      "factoryMinimumTargets": 1,
+      "factoryMaximumTargets": 16,
+      "routerMinimumTargets": 2,
+      "routerMaximumTargets": 16,
+      "minimumTargets": 3,
+      "maximumTargets": 16,
+      "topology": "acyclic",
+      "nativeHookTargets": "exactly-one",
+      "initializerTargets": "exactly-one",
+      "requiredDistinctTargetRoles": [
+        "token",
+        "hook",
+        "initializer"
+      ],
+      "exclusiveComponentPerTargetRequired": true,
+      "expectedOutputsPerTarget": 1,
+      "exclusiveComponentsPerTarget": 1,
+      "targetResultIndexMapping": "one-to-one",
+      "componentKinds": [
+        "token",
+        "hook",
+        "other"
+      ],
+      "componentKindByRole": {
+        "token": "token",
+        "hook": "hook",
+        "initializer": "other"
+      },
+      "constructionBinding": "exact-creation-bytecode-constructor-initializer-and-runtime-hashes",
+      "addressLinking": "typed-constructor-and-initializer-address-locators",
+      "atomicity": "all-targets-deploy-and-initialize-or-revert"
+    },
+    "hookPermissions": {
+      "mode": "per-launch-exact",
+      "minimumSelected": 2,
+      "maximumSelected": 14,
+      "selectionModel": "constrained-subset",
+      "arbitraryPowerSetAllowed": false,
+      "supported": [
+        "beforeInitialize",
+        "afterInitialize",
+        "beforeAddLiquidity",
+        "afterAddLiquidity",
+        "beforeRemoveLiquidity",
+        "afterRemoveLiquidity",
+        "beforeSwap",
+        "afterSwap",
+        "beforeDonate",
+        "afterDonate",
+        "beforeSwapReturnDelta",
+        "afterSwapReturnDelta",
+        "afterAddLiquidityReturnDelta",
+        "afterRemoveLiquidityReturnDelta"
+      ],
+      "hookAddressPermissionBitsMatchRequired": true,
+      "compiledPermissionsMatchDeclaredRequired": true,
+      "returnDeltaPolicy": "allowed-only-when-selected-and-exactly-reviewed",
+      "permissionDependencies": {
+        "beforeSwapReturnDelta": "beforeSwap",
+        "afterSwapReturnDelta": "afterSwap",
+        "afterAddLiquidityReturnDelta": "afterAddLiquidity",
+        "afterRemoveLiquidityReturnDelta": "afterRemoveLiquidity"
+      },
+      "zeroPermissionPolicy": "v4-dynamic-fee-valid-but-not-profile-fee-capable",
+      "feeCapabilityRequirement": "before-swap-pair-or-after-swap-pair-required",
+      "currentEnforcementSupport": {
+        "status": "canonical-volume-fee-v2-reference-only",
+        "policyId": "programmable-volume-fee-v2@2.0.0",
+        "referencePermissionMask": "0x20cc",
+        "variableOrCustomConformanceMode": "fail-closed-not-implemented"
+      }
+    },
+    "currencyContract": {
+      "supportedCurrencies": [
+        "erc20",
+        "native"
+      ],
+      "supportedPairs": [
+        "erc20-erc20",
+        "native-erc20"
+      ],
+      "nativeCurrencyAddress": "0x0000000000000000000000000000000000000000",
+      "nativeCurrencyPosition": "currency0-only",
+      "canonicalAddressOrderingRequired": true,
+      "distinctCurrenciesRequired": true,
+      "tokenAndQuoteCurrencyMustEachMatchPoolCurrency": true,
+      "exactPoolKeyRequired": true,
+      "lpFeePipsRange": {
+        "minimum": 0,
+        "maximum": 999999
+      }
+    },
+    "fundingAuthorizations": {
+      "method": "eip-3009-receive-with-authorization",
+      "descriptorSchema": "programmable.funding-authorization-descriptor.v1",
+      "flow": "two-stage-funding-authorization-then-router-transaction",
+      "fundingToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "fundingTokenDomain": {
+        "name": "USD Coin",
+        "version": "2",
+        "chainId": 1
+      },
+      "fundingIntentHash": {
+        "format": "0x-bytes32",
+        "domain": "programmable.direct-native-hook-graph.funding-intent.v1",
+        "algorithm": "keccak256-abi-encode",
+        "abiTypes": "bytes32,uint256,address,address,address,bytes32,bytes32,bytes32,address,address,uint256,uint256,uint256",
+        "orderedFields": [
+          "keccak256Utf8Domain",
+          "chainId",
+          "fundingToken",
+          "router",
+          "graphFactory",
+          "routeNamespace",
+          "routeNonce",
+          "launchIntentHashAsBytes32",
+          "from",
+          "predictedInitializerTo",
+          "exactValue",
+          "validAfter",
+          "validBefore"
+        ]
+      },
+      "nonce": {
+        "format": "0x-bytes32",
+        "domain": "programmable.direct-native-hook-graph.funding-nonce.v1",
+        "algorithm": "keccak256-abi-encode-domain-hash-and-funding-intent-hash"
+      },
+      "launchIntentTransitiveBindings": [
+        "sourceDescriptor",
+        "sourceBundleManifest",
+        "verificationBundle",
+        "graphTemplate",
+        "poolKey",
+        "hook",
+        "currency",
+        "targetRoles",
+        "initializerSignaturePatchDescriptor"
+      ],
+      "preSignatureExclusions": [
+        "v",
+        "r",
+        "s",
+        "initializerCalldataHash",
+        "graphCommitment",
+        "permitDigest"
+      ],
+      "awaitingSignatureStatus": "awaiting_funding_authorization",
+      "signatureSubmission": {
+        "plannedPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+        "format": "strict-65-byte-signature",
+        "serverChecks": [
+          "stored-digest",
+          "eip-712-domain",
+          "wallet-signer",
+          "fixed-v-r-s-descriptor-slots"
+        ]
+      },
+      "stageOne": "wallet-signs-exact-eip-3009-typed-authorization",
+      "stageTwo": "insert-vrs-then-compute-final-graph-commitment-and-wallet-sign-router-transaction",
+      "signatureIncludedInInitialCreateRequest": false,
+      "initializerSignaturePatchSchemaStatus": "not-published",
+      "unlimitedApprovalRequired": false,
+      "apiKeyOrAgentMaySign": false,
+      "apiKeyOrAgentMayBroadcast": false
+    },
+    "platformFee": {
+      "accountingMode": "inclusive-selected-total",
+      "rateDenominator": "1000000",
+      "programmableFeeHundredthsOfBip": "1000",
+      "minimumEffectiveSelectedHundredthsOfBip": "1000",
+      "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "readbackSelectors": {
+        "programmableHundredthsOfBip": "0x8a9585e4",
+        "programmableFeeOwner": "0x21466b6a",
+        "programmableFeePolicyHash": "0x677d6592",
+        "runtimeConfigurationHash": "0xca7751ad"
+      }
+    },
+    "profileSelectionBinding": {
+      "schemaVersion": "programmable.direct-native-hook-graph-profile-selection-binding.v1",
+      "requiredFields": [
+        "schemaVersion",
+        "profileId",
+        "profileRevision",
+        "targetRoles",
+        "routeNamespace",
+        "routeNonce",
+        "hookPermissionMask",
+        "predictedInitializer",
+        "poolKey",
+        "expectedPoolId",
+        "fundingSignaturePatch",
+        "platformFeeBinding"
+      ],
+      "targetRoles": {
+        "requiredFields": [
+          "tokenTargetId",
+          "hookTargetId",
+          "initializerTargetId",
+          "platformFeeBindingTargetId"
+        ],
+        "distinctTargetIds": [
+          "tokenTargetId",
+          "hookTargetId",
+          "initializerTargetId"
+        ],
+        "platformFeeBindingTargetRule": "equals-hook-target-id",
+        "componentKindByRole": {
+          "tokenTargetId": "token",
+          "hookTargetId": "hook",
+          "initializerTargetId": "other"
+        }
+      },
+      "routeBinding": {
+        "requiredFields": [
+          "routeNamespace",
+          "routeNonce"
+        ],
+        "encoding": "lowercase-0x-bytes32"
+      },
+      "hookPermissionMask": {
+        "minimum": 0,
+        "maximum": 16383,
+        "currentCanonicalValue": 8396
+      },
+      "poolKey": {
+        "requiredFields": [
+          "currency0",
+          "currency1",
+          "fee",
+          "tickSpacing",
+          "hooks"
+        ],
+        "currenciesOrderedAndDistinct": true,
+        "staticLpFeePipsRange": {
+          "minimum": 0,
+          "maximum": 999999
+        },
+        "tickSpacingRange": {
+          "minimum": 1,
+          "maximum": 32767
+        }
+      },
+      "fundingSignaturePatch": {
+        "schemaVersion": "programmable.eip3009-signature-patch.v1",
+        "requiredFields": [
+          "schemaVersion",
+          "targetId",
+          "unsignedInitializerCalldataSha256",
+          "initializerCalldataLengthBytes",
+          "signatureEncoding",
+          "rOffsetBytes",
+          "sOffsetBytes",
+          "vOffsetBytes"
+        ]
+      },
+      "platformFeeBinding": {
+        "requiredFields": [
+          "targetId",
+          "accountingMode",
+          "rateDenominator",
+          "programmableFeeHundredthsOfBip",
+          "minimumEffectiveSelectedHundredthsOfBip",
+          "selectedBuyHundredthsOfBip",
+          "selectedSellHundredthsOfBip",
+          "recipient",
+          "readbackSelectors"
+        ],
+        "accountingMode": "inclusive-selected-total",
+        "rateDenominator": "1000000",
+        "programmableFeeHundredthsOfBip": "1000",
+        "minimumEffectiveSelectedHundredthsOfBip": "1000",
+        "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+        "selectedTotalRangeHundredthsOfBip": {
+          "minimum": "0",
+          "maximum": "999999"
+        },
+        "readbackSelectors": {
+          "programmableHundredthsOfBip": "0x8a9585e4",
+          "programmableFeeOwner": "0x21466b6a",
+          "programmableFeePolicyHash": "0x677d6592",
+          "runtimeConfigurationHash": "0xca7751ad"
+        },
+        "effectiveTotalFormula": "max-selected-total-and-1000",
+        "projectFeeFormula": "effective-total-minus-1000",
+        "basis": "executed-gross-quote-currency-volume",
+        "separateLiabilitiesRequired": true
+      }
+    },
+    "admissionTrustRoot": {
+      "kind": "EXISTING_IMMUTABLE_PERMIT_AUTHORITY",
+      "address": "0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b",
+      "runtimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "defaultAction": "DENY",
+      "perLaunchExactReviewRequired": true,
+      "universalHookApproval": false,
+      "selfReportedHookConfigurationSufficient": false
+    },
+    "reviewAdmission": {
+      "status": "per-launch-required-integration-pending",
+      "requiredFields": [
+        "sourceRepositoryHash",
+        "sourceCommitHash",
+        "sourceTreeHash",
+        "compilerInputHash",
+        "compilerOutputHash",
+        "targetManifestHash",
+        "hookCreationCodeHash",
+        "hookRuntimeCodeHash",
+        "initializerCreationCodeHash",
+        "initializerRuntimeCodeHash",
+        "feeConformanceEvidenceHash",
+        "securityReviewHash",
+        "reviewAdmissionHash"
+      ],
+      "perLaunchInitializerBinding": "direct-stamped-target-exact-source-build-runtime-patch-final-calldata-and-simulation",
+      "separateInitializerTrustRootRequired": false
+    },
+    "feePolicy": {
+      "policyId": "programmable-volume-fee-v2@2.0.0",
+      "collectionProfile": "standard-amm",
+      "referenceKernel": {
+        "sourcePath": "skills/programmable-v4-hook-builder/assets/reference-kernels/programmable-volume-fee-v2/src/ProgrammableVolumeFeeHookV2.sol",
+        "permissionMask": "0x20cc",
+        "status": "unaudited-undeployed-reference-only",
+        "exactSourceRevisionBuildAndRuntimeHashesRequiredPerAdmission": true,
+        "differentRuntimeOrPermissionMaskRequiresNewReviewAdmission": true,
+        "variableOrCustomConformanceMode": "fail-closed-not-implemented"
+      }
+    },
+    "feedContract": {
+      "supportStatus": "not-implemented",
+      "category": "custom",
+      "classificationBasis": "canonical-launch-stamp-router",
+      "mechanismId": "direct-native-hook-graph",
+      "extensionId": "programmable/direct-native-hook-graph-v1",
+      "launchFeedPublication": "gated",
+      "tokenListPublication": "gated",
+      "prelaunchProfileRecordsPublished": false,
+      "publicationRequirement": "finalized-canonical-router-launch-after-profile-activation"
+    },
+    "evidenceStatus": {
+      "backendApi": "not-publicly-evidenced",
+      "cli": "candidate-not-published",
+      "admissionTrustRoot": "existing-authority-profile-admission-pending",
+      "finalizedCanary": "not-proven",
+      "sourceExactMatch": "not-proven",
+      "securityReview": "not-complete",
+      "independentAudit": "not-complete",
+      "feedProjection": "not-implemented",
+      "genericClaiming": "not-live",
+      "buybacks": "not-live"
+    },
+    "activationRequirements": [
+      "integration-owner-approval",
+      "v3-openapi-and-request-schema-published",
+      "v3-backend-route-implemented-and-enabled",
+      "v3-cli-release-published",
+      "funding-intent-hash-and-nonce-parity-proven",
+      "launch-intent-transitive-bindings-proven",
+      "initializer-signature-patch-schema-published",
+      "initializer-signature-patch-runtime-verified",
+      "existing-permit-authority-profile-admission-configured",
+      "per-launch-initializer-source-build-runtime-patch-calldata-and-simulation-bound",
+      "canonical-volume-fee-v2-kernel-exact-match-proven",
+      "variable-hook-permission-preflight-enabled",
+      "permission-dependency-and-zero-flag-preflight-enabled",
+      "erc20-and-native-currency-paths-enforced",
+      "inclusive-selected-total-fee-split-bound-and-read-back",
+      "successful-finalized-canary",
+      "feed-projector-enabled-after-finality"
+    ]
+  },
+  "directNativeHookGraphProfileV2": {
+    "schemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v2",
+    "profileSchemaVersion": "programmable.direct-native-hook-graph-profile.v2",
+    "profileId": "programmable.direct-native-hook-graph.v1",
+    "profileRevision": 2,
+    "profileVersion": "2.0.0",
+    "publicCategory": "custom",
+    "releaseStage": "production",
+    "status": "live",
+    "activationStatus": "live",
+    "productionLaunchAuthorized": true,
+    "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md",
+    "api": {
+      "apiVersion": "3",
+      "baseUrl": "https://api.programmable.market",
+      "routeId": "custom-launch:create:v3",
+      "supportStatus": "live",
+      "availability": "public-authenticated",
+      "publiclyRoutable": true,
+      "collectionPath": "/v3/custom-launches",
+      "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+      "fundingAuthorizationMethod": "POST",
+      "openApiPath": "/openapi/custom-launch-v3.json",
+      "openApiStatus": "live",
+      "createRequestSchema": "programmable.custom-launch-create-request.v3",
+      "resourceSchema": "programmable.custom-launch.v3",
+      "profileSchema": "programmable.direct-native-hook-graph-profile.v2",
+      "profileSelectionSchema": "programmable.direct-native-hook-graph-profile-selection.v2",
+      "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
+      "authentication": "wallet-bound-api-key",
+      "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+    },
+    "cli": {
+      "packageName": "@programmable/launch",
+      "releaseVersion": "3.0.0",
+      "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
+      "supportStatus": "live",
+      "minimumSupportingVersion": "3.0.0",
+      "packConfigSchema": "programmable.launch-pack-config.v3",
+      "createRequestSchema": "programmable.custom-launch-create-request.v3",
+      "commands": [
+        "pack",
+        "validate",
+        "submit",
+        "status"
+      ],
+      "maySign": false,
+      "mayBroadcast": false
+    },
+    "compatibility": {
+      "publicCategories": [
+        "classic",
+        "custom"
+      ],
+      "developerDiscoveryApi": "v2-optional-profile-descriptor",
+      "customLaunchApiV1": "unchanged-read-status-post-read-only",
+      "customLaunchApiV2": "unchanged-public-production-profile",
+      "customLaunchApiV3": "public-production-profile",
+      "discoveryV1": "retained-unchanged"
+    },
+    "ownershipContract": {
+      "token": "project-owned-exact-artifact",
+      "hook": "project-owned-exact-artifact",
+      "initializer": "project-owned-exact-artifact",
+      "allGraphTargets": "project-owned-exact-artifacts",
+      "ownershipMeaning": "project-supplied-source-controller-and-artifact-binding-not-custody-guarantee",
+      "platformHookSubstitution": false,
+      "sourceBuildRuntimeBindingRequiredForEveryTarget": true,
+      "ownershipDoesNotAuthorizeLaunch": true
+    },
+    "graphContract": {
+      "executionMode": "direct-create2-graph",
+      "minimumTargets": 3,
+      "maximumTargets": 16,
+      "directTargetsOnly": true,
+      "topology": "acyclic",
+      "requiredDistinctTargetRoles": [
+        "token",
+        "hook",
+        "initializer"
+      ],
+      "targetRoleFields": [
+        "tokenTargetId",
+        "hookTargetId",
+        "initializerTargetId",
+        "platformFeeBindingTargetId"
+      ],
+      "platformFeeBindingTargetRule": "names-exact-hook-or-separate-graph-target",
+      "componentKinds": [
+        "token",
+        "hook",
+        "other"
+      ],
+      "componentKindByRole": {
+        "token": "token",
+        "hook": "hook",
+        "initializer": "other"
+      },
+      "exclusiveComponentPerTargetRequired": true,
+      "expectedOutputsPerTarget": 1,
+      "exclusiveComponentsPerTarget": 1,
+      "targetResultIndexMapping": "one-to-one",
+      "constructionBinding": "exact-creation-bytecode-constructor-initializer-and-runtime-hashes",
+      "addressLinking": "typed-constructor-and-initializer-address-locators",
+      "atomicity": "all-targets-deploy-and-initialize-or-revert"
+    },
+    "hookPermissions": {
+      "mode": "per-launch-variable-exact-mask",
+      "minimumMask": 0,
+      "maximumMask": 16383,
+      "maskEncoding": "uint14",
+      "hookMinerAddressMaskMatchRequired": true,
+      "addressMatchRule": "low-14-hook-address-bits-equal-selected-mask",
+      "compiledPermissionsMatchDeclaredRequired": true,
+      "supported": [
+        "beforeInitialize",
+        "afterInitialize",
+        "beforeAddLiquidity",
+        "afterAddLiquidity",
+        "beforeRemoveLiquidity",
+        "afterRemoveLiquidity",
+        "beforeSwap",
+        "afterSwap",
+        "beforeDonate",
+        "afterDonate",
+        "beforeSwapReturnDelta",
+        "afterSwapReturnDelta",
+        "afterAddLiquidityReturnDelta",
+        "afterRemoveLiquidityReturnDelta"
+      ],
+      "permissionDependencies": {
+        "beforeSwapReturnDelta": "beforeSwap",
+        "afterSwapReturnDelta": "afterSwap",
+        "afterAddLiquidityReturnDelta": "afterAddLiquidity",
+        "afterRemoveLiquidityReturnDelta": "afterRemoveLiquidity"
+      },
+      "zeroMaskAllowed": true,
+      "universalHookApproval": false,
+      "exactGraphConformanceReceiptRequired": true
+    },
+    "currencyContract": {
+      "supportedCurrencies": [
+        "erc20",
+        "native"
+      ],
+      "supportedPairs": [
+        "erc20-erc20",
+        "native-erc20"
+      ],
+      "nativeCurrencyAddress": "0x0000000000000000000000000000000000000000",
+      "nativeCurrencyPosition": "currency0-only",
+      "canonicalAddressOrderingRequired": true,
+      "distinctCurrenciesRequired": true,
+      "tokenAndQuoteCurrencyMustEachMatchPoolCurrency": true,
+      "exactPoolKeyRequired": true,
+      "lpFeePipsRange": {
+        "minimum": 0,
+        "maximum": 999999
+      },
+      "dynamicFeeSentinel": 8388608
+    },
+    "profileSelection": {
+      "schemaVersion": "programmable.direct-native-hook-graph-profile-selection.v2",
+      "requiredFields": [
+        "schemaVersion",
+        "profileId",
+        "profileRevision",
+        "targetRoles",
+        "fundingMode",
+        "accountingMode",
+        "assessmentBase",
+        "feeCurrency",
+        "claimMode",
+        "applicantSelectedBuyHundredthsOfBip",
+        "applicantSelectedSellHundredthsOfBip"
+      ],
+      "conditionalPayoutRecipient": "required-only-for-immutable-payout-recipient",
+      "profileId": "programmable.direct-native-hook-graph.v1",
+      "profileRevision": 2,
+      "targetRoles": {
+        "requiredFields": [
+          "tokenTargetId",
+          "hookTargetId",
+          "initializerTargetId",
+          "platformFeeBindingTargetId"
+        ],
+        "distinctTargetIds": [
+          "tokenTargetId",
+          "hookTargetId",
+          "initializerTargetId"
+        ],
+        "platformFeeBindingTargetRule": "names-exact-hook-or-separate-graph-target"
+      },
+      "fundingModes": [
+        "none",
+        "wallet-transaction-value",
+        "eip-3009-receive-with-authorization"
+      ],
+      "accountingModes": [
+        "additive-platform-share",
+        "inclusive-selected-total"
+      ],
+      "supportedAssessmentPairs": [
+        {
+          "assessmentBase": "executed-gross-declared-quote",
+          "feeCurrency": "declared-quote-currency"
+        },
+        {
+          "assessmentBase": "settled-input-before-platform-fee",
+          "feeCurrency": "input-currency"
+        }
+      ],
+      "claimModes": [
+        "immutable-payout-recipient",
+        "claim-authority-selected-recipient"
+      ]
+    },
+    "profileSelectionBinding": {
+      "schemaVersion": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
+      "requiredFields": [
+        "schemaVersion",
+        "profileId",
+        "profileRevision",
+        "targetRoles",
+        "fundingMode",
+        "routeNamespace",
+        "routeNonce",
+        "hookPermissionMask",
+        "predictedInitializer",
+        "poolKey",
+        "expectedPoolId",
+        "platformFeeBinding"
+      ],
+      "conditionalFundingSignaturePatch": "required-only-for-eip-3009-receive-with-authorization",
+      "transactionValueRule": "exact-prepared-value-required-only-for-wallet-transaction-value",
+      "fundingSignaturePatchSchema": "programmable.eip3009-signature-patch.v1",
+      "hookPermissionMaskRange": {
+        "minimum": 0,
+        "maximum": 16383
+      },
+      "poolKeyFields": [
+        "currency0",
+        "currency1",
+        "fee",
+        "tickSpacing",
+        "hooks"
+      ],
+      "platformFeeBinding": {
+        "schemaVersion": "programmable.platform-fee-binding.v2",
+        "targetIdRule": "equals-target-roles-platform-fee-binding-target-id",
+        "requiredFields": [
+          "schemaVersion",
+          "targetId",
+          "accountingMode",
+          "applicability",
+          "rateDenominator",
+          "programmableFeeHundredthsOfBip",
+          "assessmentBase",
+          "feeCurrency",
+          "roundingMode",
+          "claimAuthority",
+          "claimBinding",
+          "economics"
+        ],
+        "directionalEconomicsFields": [
+          "applicantSelectedHundredthsOfBip",
+          "projectHundredthsOfBip",
+          "effectiveTotalHundredthsOfBip"
+        ]
+      }
+    },
+    "fundingPolicy": {
+      "supportedModes": [
+        "none",
+        "wallet-transaction-value",
+        "eip-3009-receive-with-authorization"
+      ],
+      "none": {
+        "launchFundingRequired": false,
+        "signatureRequired": false,
+        "allDeploymentAndInitializerValuesMustBeZero": true,
+        "fundingAuthorizationMustBeAbsent": true,
+        "fundingSignaturePatchMustBeAbsent": true
+      },
+      "walletTransactionValue": {
+        "method": "wallet-transaction-value",
+        "flow": "prepared-router-transaction-carries-exact-native-value",
+        "exactPreparedTransactionValueRequired": true,
+        "fundingAuthorizationMustBeAbsent": true,
+        "fundingSignaturePatchMustBeAbsent": true,
+        "apiKeyOrAgentMaySign": false,
+        "apiKeyOrAgentMayBroadcast": false
+      },
+      "eip3009": {
+        "method": "eip-3009-receive-with-authorization",
+        "descriptorSchema": "programmable.funding-authorization-descriptor.v1",
+        "signaturePatchSchema": "programmable.eip3009-signature-patch.v1",
+        "flow": "two-stage-funding-authorization-then-router-transaction",
+        "fundingToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "fundingIntentDomain": "programmable.direct-native-hook-graph.funding-intent.v1",
+        "fundingNonceDomain": "programmable.direct-native-hook-graph.funding-nonce.v1",
+        "awaitingSignatureStatus": "awaiting_funding_authorization",
+        "preSignatureExclusions": [
+          "v",
+          "r",
+          "s",
+          "initializerCalldataHash",
+          "graphCommitment",
+          "permitDigest"
+        ],
+        "signatureSubmissionPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+        "signatureSubmissionMethod": "POST",
+        "apiKeyOrAgentMaySign": false,
+        "apiKeyOrAgentMayBroadcast": false
+      }
+    },
+    "platformFeePolicy": {
+      "schemaVersion": "programmable.platform-fee-policy.v1",
+      "applicability": "successful-pool-swaps",
+      "rateDenominator": "1000000",
+      "programmableFeeHundredthsOfBip": "1000",
+      "roundingMode": "floor",
+      "claimAuthority": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+      "claimAuthorityAndPayoutRecipientAreDistinctRoles": true,
+      "accountingModes": {
+        "additive-platform-share": {
+          "applicantSelectedRangeHundredthsOfBip": {
+            "minimum": "0",
+            "maximum": "998999"
+          },
+          "projectFormula": "applicant-selected",
+          "programmableFormula": "1000",
+          "effectiveTotalFormula": "applicant-selected-plus-1000"
+        },
+        "inclusive-selected-total": {
+          "applicantSelectedRangeHundredthsOfBip": {
+            "minimum": "0",
+            "maximum": "999999"
+          },
+          "projectFormula": "max-applicant-selected-and-1000-minus-1000",
+          "programmableFormula": "1000",
+          "effectiveTotalFormula": "max-applicant-selected-and-1000"
+        }
+      },
+      "assessmentPairs": [
+        {
+          "assessmentBase": "executed-gross-declared-quote",
+          "feeCurrency": "declared-quote-currency"
+        },
+        {
+          "assessmentBase": "settled-input-before-platform-fee",
+          "feeCurrency": "input-currency"
+        }
+      ],
+      "claimModes": {
+        "immutable-payout-recipient": {
+          "payoutRecipientRequiredInSelection": true,
+          "payoutRecipientMustEqualClaimAuthority": true
+        },
+        "claim-authority-selected-recipient": {
+          "payoutRecipientMustBeAbsentFromSelection": true,
+          "authenticatedClaimDestinationConstraint": "nonzero-address"
+        }
+      }
+    },
+    "platformFeeConformance": {
+      "schemaVersion": "programmable.platform-fee-conformance-policy.v1",
+      "mode": "platform-issued-exact-graph-receipt-v1",
+      "receiptSchemaVersion": "programmable.platform-fee-conformance-receipt.v1",
+      "runnerId": "programmable.platform-fee-conformance",
+      "runnerVersion": "1.0.0",
+      "vectorSetVersion": "1.0.0",
+      "receiptAuthority": "platform-only",
+      "applicantAssertionAccepted": false,
+      "subject": "final-graph-commitment-and-runtime-set",
+      "subjectBindings": [
+        "launchIntentHash",
+        "profileSelectionBinding",
+        "platformFeeBinding",
+        "graphCommitment",
+        "targetManifest",
+        "creationAndRuntimeCodeHashes",
+        "initializerCalldataHash",
+        "fundingModeAndAuthorizationBoundary"
+      ],
+      "receiptDigest": "per-launch",
+      "activationStatus": "live"
+    },
+    "liquidityPolicy": {
+      "intentSchemaVersion": "programmable.direct-native-liquidity-model-intent.v1",
+      "assessmentSchemaVersion": "programmable.direct-native-liquidity-model-assessment.v1",
+      "currentCliEmitsExplicitModel": true,
+      "legacyV3OmissionResolvesTo": "external-concentrated-liquidity",
+      "models": {
+        "external-concentrated-liquidity": {
+          "declaredLaunchState": "liquidity_required",
+          "initialLiquidityProvidedByLaunch": false
+        },
+        "launch-seeded-concentrated-liquidity": {
+          "declaredLaunchState": "assessment_required",
+          "exactGraphTargetRequired": true,
+          "assessmentMayBeSelfDeclaredPassed": false
+        },
+        "hook-inventory-custom-accounting": {
+          "declaredLaunchState": "assessment_required",
+          "exactHookTargetAndReturnDeltaPermissionRequired": true,
+          "assessmentMayBeSelfDeclaredPassed": false
+        }
+      },
+      "poolInitializationCreatesLiquidity": false,
+      "tradingVolumeCreatesConcentratedLiquidity": false,
+      "normalConcentratedLiquidity": {
+        "initialStateWithoutPosition": "empty-pool",
+        "liquiditySource": "project-or-third-party-position",
+        "lockOrWithdrawalRestrictionProvidedByProfile": false
+      },
+      "customAccounting": {
+        "zeroClassicalLpMayBeValid": true,
+        "condition": "exact-hook-graph-supplies-and-settles-swap-inventory-or-backing",
+        "volumeMayBuildBackingOnlyWhenImplementedByExactHookLogic": true,
+        "genericBackingOrSolvencyGuarantee": false
+      },
+      "launchFunding": "selected-funding-mode-and-exact-graph-specific",
+      "liquidityOrBackingIsNeverInferredFromLaunchFinality": true
+    },
+    "admissionTrustRoot": {
+      "kind": "EXISTING_IMMUTABLE_PERMIT_AUTHORITY",
+      "address": "0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b",
+      "runtimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "defaultAction": "DENY",
+      "perLaunchExactReviewRequired": true,
+      "universalHookApproval": false,
+      "selfReportedHookConfigurationSufficient": false
+    },
+    "reviewAdmission": {
+      "status": "per-launch-exact-artifact-and-conformance-required",
+      "allTargetsExactReviewRequired": true,
+      "requiredBindings": [
+        "sourceRepositoryCommitAndTree",
+        "compilerInputAndOutput",
+        "targetManifest",
+        "creationAndRuntimeCodeHashesForEveryTarget",
+        "poolKeyAndHookPermissionMask",
+        "initializerCalldataAndConditionalSignaturePatch",
+        "platformFeeSelectionAndBinding",
+        "platformIssuedExactGraphConformanceReceipt",
+        "securityReview",
+        "simulation",
+        "finalGraphCommitment"
+      ],
+      "applicantSelfReportMayAuthorize": false
+    },
+    "feedContract": {
+      "supportStatus": "live",
+      "category": "custom",
+      "classificationBasis": "canonical-launch-stamp-router",
+      "mechanismId": "direct-native-hook-graph",
+      "extensionId": "programmable/direct-native-hook-graph-v2",
+      "launchFeedPublication": "finalized-canonical-router-launches",
+      "tokenListPublication": "finalized-router-launches-with-token-identity",
+      "prelaunchProfileRecordsPublished": false,
+      "publicationRequirement": "finalized-consistent-canonical-router-launch"
+    },
+    "evidenceStatus": {
+      "backendApi": "production",
+      "cli": "production",
+      "platformConformanceRunner": "required-per-launch",
+      "platformConformanceReceipt": "required-before-launch-authorization",
+      "permitAuthorityAdmission": "exact-receipt-gated",
+      "finalizedCanary": "not-claimed-by-profile-descriptor",
+      "feedProjection": "finalized-router-only",
+      "productionLaunch": "authorized"
+    },
+    "runtimeRequirements": [
+      "v3-openapi-request-resource-and-profile-schemas",
+      "v3-backend-route",
+      "v3-cli-release-3.0.0-or-newer",
+      "funding-none-wallet-value-and-eip3009-union-parity",
+      "variable-hook-mask-and-hookminer-address-match-enforced",
+      "all-project-owned-target-source-build-runtime-bindings-enforced",
+      "fee-assessment-pair-accounting-and-claim-bindings-enforced",
+      "platform-exact-graph-conformance-runner",
+      "platform-issued-receipt-verification",
+      "existing-permit-authority-profile-revision-2-admission",
+      "canonical-router-finality-before-feed-publication"
     ]
   },
   "registryGenerations": [

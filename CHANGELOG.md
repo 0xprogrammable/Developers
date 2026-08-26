@@ -15,6 +15,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Publish a separately identified Direct Native Hook Graph Profile Discovery V1 schema, manifest/status descriptor and integration guide as a fail-closed Custom Launch API V3 preview for profile version `1.0.0`: 3–16 direct targets over the Router's 2–16 and GraphFactory's 1–16 limits, distinct token/hook/initializer roles over `token|hook|other` component kinds, static LP fees no higher than `999999`, constrained v4 permission sets, ERC-20/native currencies, the two-stage `fundingIntentHash` flow, the full V3 selection binding and an inclusive selected-total 10-bps platform split; V1/V2 and the two public categories remain compatible while V3 API, CLI, permit-authority profile admission and feed support stay gated pending integration-owner activation.
 - Clarify the additive v2 Custom source-provenance contract: accepted manifest-bound Registry evidence and consistent finalized canonical-Router `CustomGraph` evidence share the unchanged `custom` category while retaining distinct classification bases; API v1 is unchanged.
 - Project finalized canonical-Router Custom token identities through the v2 launch feed and token list, with a bounded last-known-good snapshot and unavailable rather than invented market, supply, and fee data.
 - Keep v2 launch-list and token-list readable across retired legacy-source and incomplete-coverage states, with explicit degraded or unavailable quality and preserved recognized identities.

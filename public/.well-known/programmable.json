@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical discovery for Programmable Classic and Custom launches, including the public authenticated Custom Launch API V2.",
+  "description": "Canonical discovery for Programmable Classic and Custom launches, including the public authenticated Custom Launch API V2 and V3.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -35,7 +35,7 @@
       "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
       "registryStartBlock": "25701139",
       "registryGeneration": "1",
-      "note": "Custom Launch API V2 is public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed."
+      "note": "Custom Launch API V2 and V3 are public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed."
     }
   },
   "compatibility": {
@@ -91,6 +91,17 @@
           "createHttpStatus": 202,
           "replayHttpStatus": 200,
           "retryAfter": "honor-on-429-or-503"
+        },
+        "v3": {
+          "status": "live",
+          "collectionPath": "/v3/custom-launches",
+          "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+          "fundingAuthorizationMethod": "POST",
+          "openApiPath": "/openapi/custom-launch-v3.json",
+          "profileId": "programmable.direct-native-hook-graph.v1",
+          "profileRevision": 2,
+          "authentication": "wallet-bound-api-key",
+          "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
         }
       },
       "legacyIntake": {
@@ -121,6 +132,90 @@
         "requestBytes": "exact-idempotency-bound-replay"
       },
       "note": "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live."
+    },
+    "programmable.direct-native-hook-graph-profile-v1": {
+      "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v1",
+      "discoverySchemaUrl": "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json",
+      "profileId": "programmable.direct-native-hook-graph.v1",
+      "profileRevision": 1,
+      "profileVersion": "1.0.0",
+      "status": "gated",
+      "releaseStage": "preview",
+      "activationStatus": "integration-pending",
+      "productionLaunchAuthorized": false,
+      "apiVersion": "3",
+      "apiSupportStatus": "integration-pending",
+      "cliCandidateVersion": "3.0.0-rc.1",
+      "cliSupportStatus": "candidate-not-published",
+      "plannedCollectionPath": "/v3/custom-launches",
+      "plannedFundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+      "plannedFundingAuthorizationMethod": "POST",
+      "plannedFundingAuthorizationOperationRef": "https://programmable.market/openapi/custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post",
+      "plannedOpenApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
+      "openApiStatus": "not-published",
+      "fundingFlow": "two-stage-funding-authorization-then-router-transaction",
+      "platformFeeAccountingMode": "inclusive-selected-total",
+      "feedPublicationStatus": "gated",
+      "admissionTrustRootStatus": "existing-authority-profile-admission-pending",
+      "admissionTrustRootAddress": "0x755509eA6e3F5Ec1aA2E797bb68f1B87DD8b886b",
+      "admissionTrustRootRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "statusUrl": "https://developers.programmable.family/api/v2/status",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
+      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
+      "note": "Retained preview contract only. This revision remains gated and publishes no launch; public Custom Launch API V3 and CLI 3.0.0 use the separate production V2 descriptor."
+    },
+    "programmable.direct-native-hook-graph-profile-v2": {
+      "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v2",
+      "discoverySchemaUrl": "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json",
+      "profileSchemaVersion": "programmable.direct-native-hook-graph-profile.v2",
+      "profileId": "programmable.direct-native-hook-graph.v1",
+      "profileRevision": 2,
+      "profileVersion": "2.0.0",
+      "publicCategory": "custom",
+      "status": "live",
+      "releaseStage": "production",
+      "activationStatus": "live",
+      "productionLaunchAuthorized": true,
+      "api": {
+        "apiVersion": "3",
+        "baseUrl": "https://api.programmable.market",
+        "routeId": "custom-launch:create:v3",
+        "supportStatus": "live",
+        "availability": "public-authenticated",
+        "publiclyRoutable": true,
+        "collectionPath": "/v3/custom-launches",
+        "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
+        "fundingAuthorizationMethod": "POST",
+        "openApiPath": "/openapi/custom-launch-v3.json",
+        "openApiStatus": "live",
+        "createRequestSchema": "programmable.custom-launch-create-request.v3",
+        "resourceSchema": "programmable.custom-launch.v3",
+        "profileSchema": "programmable.direct-native-hook-graph-profile.v2",
+        "profileSelectionSchema": "programmable.direct-native-hook-graph-profile-selection.v2",
+        "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
+        "authentication": "wallet-bound-api-key",
+        "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+      },
+      "cli": {
+        "packageName": "@programmable/launch",
+        "releaseVersion": "3.0.0",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
+        "supportStatus": "live",
+        "minimumSupportingVersion": "3.0.0",
+        "packConfigSchema": "programmable.launch-pack-config.v3",
+        "createRequestSchema": "programmable.custom-launch-create-request.v3",
+        "commands": [
+          "pack",
+          "validate",
+          "submit",
+          "status"
+        ],
+        "maySign": false,
+        "mayBroadcast": false
+      },
+      "statusUrl": "https://developers.programmable.family/api/v2/status",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
+      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md"
     },
     "programmable.legacy-v1": {
       "status": "supported",
