@@ -19,8 +19,9 @@ for exact project token and hook artifacts on Ethereum Mainnet. V1 reads and sta
 Create or revoke a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys).
 Store the key in an encrypted secret or `PROGRAMMABLE_API_KEY`, never in a prompt or chat. An API key cannot sign or
 broadcast a transaction. V2 and V3 return a transaction for the connected controller wallet to review and sign separately.
-V1, V2, and V3 request and response schemas remain owned by their respective OpenAPI contracts and are not duplicated in
-this read/discovery repository. Read the current versioned requirements in
+Launch create, resource, and status schemas remain owned by their respective OpenAPI contracts. This read/discovery
+repository publishes only the standalone V3 preflight response contract needed for capability discovery. Read the
+current versioned requirements in
 [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy); this repository does not copy those policy
 bytes.
 
@@ -120,6 +121,8 @@ curl -fsSL https://developers.programmable.family/api/v2/token-list
 No SDK or API key is required for this Developer read API. The Developer v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md). The separate authenticated [Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch) prepare public Mainnet launches; V1 reads/status remain compatible and V1 POST remains read-only.
 
 For an existing Custom project, resolve `directNativeHookGraphProfileV3.api.agentIntegration` from the manifest. It links the canonical [agent remediation catalog](https://programmable.market/policies/custom-launch-agent-remediation-v1.json), pack-config schema, and existing-project guide. A returned `action_required` status means the exact source or configuration must be repaired, repacked, validated, and resubmitted through the API; it is not a manual allowlist or legacy GitHub submission path. New EIP-3009 integrations use `programmable.eip3009-authorization-patch.v2`, whose static ABI paths identify the nonce, `r`, `s`, and `v` leaves without applicant-supplied byte offsets. Exact v1 retries remain compatible.
+
+Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. A later authorized resource supplies an expiring wallet-handoff URL for separate controller-wallet review and signature.
 
 Fee data is market-path evidence, not a category default. Current verified Classic paths and the public fee-enforced Custom profiles have different charge modes. The Custom V2 profile specifies an additive 10 basis points, or 0.1%, on the gross unspecified pool-currency amount for each successful swap through the exact bound pool, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Its sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Direct Native Hook Graph V2 supports an exact per-launch additive or inclusive 10-bps platform share and requires a conformance receipt before authorization. The retained V1 preview reserves 10 bps inside the selected total hook fee but remains gated and is not fee-accrual evidence. Generic fee claiming and buybacks are not live. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
 

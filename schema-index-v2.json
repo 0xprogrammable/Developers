@@ -20,6 +20,10 @@
       "url": "https://developers.programmable.family/schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json"
     },
     {
+      "name": "custom-launch-preflight-v1",
+      "url": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json"
+    },
+    {
       "name": "direct-native-hook-graph-profile-discovery-v1",
       "url": "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json"
     },

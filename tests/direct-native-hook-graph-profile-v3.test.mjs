@@ -70,6 +70,35 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       ["additive-platform-share", "inclusive-selected-total"],
     );
     assert.equal(profile.platformFeePolicy.admissionCertifiesFeeBehavior, false);
+    assert.deepEqual(profile.generalLane.projectOwnedRoles, ["token", "hook"]);
+    assert.deepEqual(profile.generalLane.supportedHookPermissions, [
+      "beforeInitialize",
+      "afterInitialize",
+      "beforeAddLiquidity",
+      "afterAddLiquidity",
+      "beforeRemoveLiquidity",
+      "afterRemoveLiquidity",
+      "beforeSwap",
+      "afterSwap",
+      "beforeDonate",
+      "afterDonate",
+      "beforeSwapReturnDelta",
+      "afterSwapReturnDelta",
+      "afterAddLiquidityReturnDelta",
+      "afterRemoveLiquidityReturnDelta",
+    ]);
+    assert.deepEqual(profile.generalLane.quoteCurrencyKinds, ["native", "erc20"]);
+    assert.deepEqual(profile.generalLane.fundingModes, [
+      "none",
+      "wallet-transaction-value",
+      "eip-3009-receive-with-authorization",
+    ]);
+    assert.deepEqual(profile.generalLane.liquidityModels, [
+      "external-concentrated-liquidity",
+      "launch-seeded-concentrated-liquidity",
+      "hook-inventory-custom-accounting",
+    ]);
+    assert.equal(profile.generalLane.structuralSupportIsUniversalCompatibility, false);
 
     assert.equal(manifest.directNativeHookGraphProfileV2.profileRevision, 2);
     assert.equal(manifest.directNativeHookGraphProfileV2.profileVersion, "2.0.0");
@@ -153,6 +182,37 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
 
     assert.equal(profile.api.apiVersion, "3");
     assert.equal(profile.api.publiclyRoutable, true);
+    assert.deepEqual(profile.api.selfServe, {
+      capabilities: {
+        method: "GET",
+        path: "/v3/capabilities",
+        authentication: "none",
+      },
+      preflight: {
+        method: "POST",
+        path: "/v3/custom-launches/preflight",
+        authentication: "wallet-bound-api-key",
+        launchQuota: "not-consumed",
+        responseSchemaVersion: "programmable.custom-launch-preflight.v1",
+        responseSchemaUrl:
+          "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+        requestId: "response-body-and-x-request-id",
+        retryAfter: "honor-on-429-or-503",
+        sideEffects: {
+          quotaConsumed: false,
+          nonceAllocated: false,
+          persisted: false,
+          walletSignatureRequiredLater: true,
+          walletBroadcastByService: false,
+        },
+      },
+      walletHandoff: {
+        availableAfter: "authorized",
+        urlAndExpiryPublished: true,
+        walletSignatureRequired: true,
+        walletBroadcastByService: false,
+      },
+    });
     assert.deepEqual(profile.api.agentIntegration, {
       remediationCatalogSchemaVersion:
         "programmable.custom-launch-agent-remediation-catalog.v1",
@@ -191,25 +251,25 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.2.1");
+    assert.equal(profile.cli.releaseVersion, "3.3.0");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
     assert.equal(profile.cli.minimumSupportingVersion, "3.1.0");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807",
+      "sha256:f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -219,6 +279,88 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     ]);
     assert.equal(profile.cli.maySign, false);
     assert.equal(profile.cli.mayBroadcast, false);
+  });
+
+  test("publishes a strict quota-free preflight response schema", async () => {
+    const registry = await createSchemaRegistry("v2");
+    const validate = registry.validator("custom-launch-preflight-v1.schema.json");
+    const response = {
+      schemaVersion: "programmable.custom-launch-preflight.v1",
+      requestId: "req_preflight_01",
+      disposition: "unsupported",
+      launchEligibility: {
+        deployable: false,
+        routable: false,
+        featured: false,
+      },
+      evidenceTier: "launch_mechanics_verified",
+      hardBlockFindingCodes: ["SOURCE_MUTABLE_PAUSE_SURFACE"],
+      needsEvidenceFindingCodes: [],
+      warningFindingCodes: [],
+      staticBaseline: {
+        schemaVersion: "programmable.custom-launch-static-baseline-gate.v1",
+        disposition: "action_required",
+      },
+      remediations: [
+        {
+          schemaVersion: "programmable.custom-launch-remediation.v1",
+          remediationId: "PLATFORM_ADMISSION_FINDING",
+          code: "SOURCE_MUTABLE_PAUSE_SURFACE",
+          stage: "admission",
+          targetId: "token",
+          targetRole: "token",
+          sourcePath: "src/Token.sol",
+          expected: "No mutable pause surface on the project token",
+          observed: "Mutable pause surface detected",
+          requiredChange: "Remove the mutable pause surface and rerun preflight",
+          catalogUrl:
+            "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
+          guideUrl:
+            "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
+          retryable: false,
+          requiresNewRequest: true,
+          resumeAt: "inspect-project",
+        },
+      ],
+      quotaConsumed: false,
+      nonceAllocated: false,
+      persisted: false,
+      walletSignatureRequiredLater: true,
+      walletBroadcastByService: false,
+    };
+
+    for (const disposition of [
+      "supported",
+      "supported_with_warnings",
+      "needs_evidence",
+      "unsupported",
+    ]) {
+      assertValid(
+        validate,
+        { ...response, disposition },
+        `V3 preflight disposition ${disposition}`,
+      );
+    }
+    for (const evidenceTier of [
+      "launch_mechanics_verified",
+      "standard_swap_compatible",
+      "advanced_custom_accounting",
+      "governed_external_trust",
+    ]) {
+      assertValid(
+        validate,
+        { ...response, evidenceTier },
+        `V3 preflight evidence tier ${evidenceTier}`,
+      );
+    }
+
+    assert.equal(validate({ ...response, quotaConsumed: true }), false);
+    assert.equal(validate({ ...response, nonceAllocated: true }), false);
+    assert.equal(validate({ ...response, persisted: true }), false);
+    assert.equal(validate({ ...response, walletSignatureRequiredLater: false }), false);
+    assert.equal(validate({ ...response, walletBroadcastByService: true }), false);
+    assert.equal(validate({ ...response, evidenceTier: "unverified" }), false);
+    assert.equal(validate({ ...response, disposition: "approved" }), false);
   });
 
   test("projects the additive descriptor through manifest and status", async () => {
@@ -248,7 +390,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
   });
 
   test("documents the assurance and feature boundaries", async () => {
-    const [guide, readme, llms, llmsFull, wellKnown, schemaIndex] =
+    const [guide, readme, llms, llmsFull, wellKnown, schemaIndex, readOpenApi] =
       await Promise.all([
         readFile(
           path.join(
@@ -264,6 +406,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
           path.join(REPOSITORY_ROOT, "public/.well-known/programmable.json"),
         ),
         readJson(path.join(REPOSITORY_ROOT, "schema-index-v2.json")),
+        readFile(
+          path.join(REPOSITORY_ROOT, "openapi/programmable-v2.yaml"),
+          "utf8",
+        ),
       ]);
     const extension =
       wellKnown.extensions["programmable.direct-native-hook-graph-profile-v3"];
@@ -276,8 +422,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       extension.cli,
       (await developerManifestV2())[PROFILE_KEY].cli,
     );
-    assert.deepEqual(extension.platformAdmissionPolicy,
-      (await developerManifestV2())[PROFILE_KEY].platformAdmissionPolicy);
+    assert.deepEqual(
+      extension.platformAdmissionPolicy,
+      (await developerManifestV2())[PROFILE_KEY].platformAdmissionPolicy,
+    );
     assert.deepEqual(
       extension.platformFeePolicy,
       (await developerManifestV2())[PROFILE_KEY].platformFeePolicy,
@@ -285,6 +433,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.deepEqual(
       extension.api.agentIntegration,
       (await developerManifestV2())[PROFILE_KEY].api.agentIntegration,
+    );
+    assert.deepEqual(
+      extension.api.selfServe,
+      (await developerManifestV2())[PROFILE_KEY].api.selfServe,
     );
     assert.deepEqual(
       customLaunchApi.agentIntegration,
@@ -317,15 +469,25 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /sArgumentPath/u);
     assert.match(guide, /vArgumentPath/u);
     assert.match(guide, /`action_required`\s+is not a manual approval queue/iu);
+    assert.match(guide, /GET \/v3\/capabilities/u);
+    assert.match(guide, /POST \/v3\/custom-launches\/preflight/u);
+    assert.match(guide, /quotaConsumed: false/u);
+    assert.match(guide, /hardBlockFindingCodes/u);
+    assert.match(guide, /needsEvidenceFindingCodes/u);
+    assert.match(guide, /warningFindingCodes/u);
+    assert.match(guide, /wallet-handoff URL with an explicit expiry/iu);
+    assert.match(readme, /programmable\.custom-launch-preflight\.v1/u);
+    assert.match(llms, /quota-free `POST \/v3\/custom-launches\/preflight`/u);
+    assert.match(llmsFull, /all 14 Uniswap v4 permissions/iu);
     assert.match(llms, /custom-launch-agent-remediation-v1\.json/u);
     assert.match(llms, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.2\.1\.tgz\.sha256/u);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.0\.tgz\.sha256/u);
     assert.match(
       guide,
-      /npm install --global \.\/programmable-launch-3\.2\.1\.tgz/u,
+      /npm install --global \.\/programmable-launch-3\.3\.0\.tgz/u,
     );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);
@@ -342,5 +504,12 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
           name === "direct-native-hook-graph-profile-discovery-v3",
       ),
     );
+    assert.ok(
+      schemaIndex.schemas.some(
+        ({ name }) => name === "custom-launch-preflight-v1",
+      ),
+    );
+    assert.doesNotMatch(readOpenApi, /^\s*\/v3\/capabilities:/mu);
+    assert.doesNotMatch(readOpenApi, /^\s*\/v3\/custom-launches\/preflight:/mu);
   });
 });

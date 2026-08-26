@@ -236,6 +236,37 @@ describe("documentation contract", () => {
         compatibleProfileRevisions: [2, 3],
         authentication: "wallet-bound-api-key",
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
+        selfServe: {
+          capabilities: {
+            method: "GET",
+            path: "/v3/capabilities",
+            authentication: "none",
+          },
+          preflight: {
+            method: "POST",
+            path: "/v3/custom-launches/preflight",
+            authentication: "wallet-bound-api-key",
+            launchQuota: "not-consumed",
+            responseSchemaVersion: "programmable.custom-launch-preflight.v1",
+            responseSchemaUrl:
+              "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+            requestId: "response-body-and-x-request-id",
+            retryAfter: "honor-on-429-or-503",
+            sideEffects: {
+              quotaConsumed: false,
+              nonceAllocated: false,
+              persisted: false,
+              walletSignatureRequiredLater: true,
+              walletBroadcastByService: false,
+            },
+          },
+          walletHandoff: {
+            availableAfter: "authorized",
+            urlAndExpiryPublished: true,
+            walletSignatureRequired: true,
+            walletBroadcastByService: false,
+          },
+        },
       },
     });
     assert.deepEqual(legacyIntake, {
@@ -308,6 +339,7 @@ describe("documentation contract", () => {
         "canonical-custom-registry-record-v3",
         "canonical-custom-registry-record-v4",
         "custom-fee-enforced-launch-profile-v2",
+        "custom-launch-preflight-v1",
         "direct-native-hook-graph-profile-discovery-v1",
         "direct-native-hook-graph-profile-discovery-v2",
         "direct-native-hook-graph-profile-discovery-v3",

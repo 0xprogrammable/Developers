@@ -112,7 +112,37 @@
             3
           ],
           "authentication": "wallet-bound-api-key",
-          "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+          "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
+          "selfServe": {
+            "capabilities": {
+              "method": "GET",
+              "path": "/v3/capabilities",
+              "authentication": "none"
+            },
+            "preflight": {
+              "method": "POST",
+              "path": "/v3/custom-launches/preflight",
+              "authentication": "wallet-bound-api-key",
+              "launchQuota": "not-consumed",
+              "responseSchemaVersion": "programmable.custom-launch-preflight.v1",
+              "responseSchemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+              "requestId": "response-body-and-x-request-id",
+              "retryAfter": "honor-on-429-or-503",
+              "sideEffects": {
+                "quotaConsumed": false,
+                "nonceAllocated": false,
+                "persisted": false,
+                "walletSignatureRequiredLater": true,
+                "walletBroadcastByService": false
+              }
+            },
+            "walletHandoff": {
+              "availableAfter": "authorized",
+              "urlAndExpiryPublished": true,
+              "walletSignatureRequired": true,
+              "walletBroadcastByService": false
+            }
+          }
         }
       },
       "legacyIntake": {
@@ -259,6 +289,36 @@
         "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v3",
         "authentication": "wallet-bound-api-key",
         "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
+        "selfServe": {
+          "capabilities": {
+            "method": "GET",
+            "path": "/v3/capabilities",
+            "authentication": "none"
+          },
+          "preflight": {
+            "method": "POST",
+            "path": "/v3/custom-launches/preflight",
+            "authentication": "wallet-bound-api-key",
+            "launchQuota": "not-consumed",
+            "responseSchemaVersion": "programmable.custom-launch-preflight.v1",
+            "responseSchemaUrl": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+            "requestId": "response-body-and-x-request-id",
+            "retryAfter": "honor-on-429-or-503",
+            "sideEffects": {
+              "quotaConsumed": false,
+              "nonceAllocated": false,
+              "persisted": false,
+              "walletSignatureRequiredLater": true,
+              "walletBroadcastByService": false
+            }
+          },
+          "walletHandoff": {
+            "availableAfter": "authorized",
+            "urlAndExpiryPublished": true,
+            "walletSignatureRequired": true,
+            "walletBroadcastByService": false
+          }
+        },
         "agentIntegration": {
           "remediationCatalogSchemaVersion": "programmable.custom-launch-agent-remediation-catalog.v1",
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
@@ -269,12 +329,12 @@
       },
       "cli": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.2.1",
+        "releaseVersion": "3.3.0",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256",
-        "tarballSha256": "sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0",
+        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz",
+        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256",
+        "tarballSha256": "sha256:f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32",
         "supportStatus": "live",
         "minimumSupportingVersion": "3.1.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
@@ -320,12 +380,47 @@
         "maximumTargets": 16,
         "directTargetsOnly": true,
         "projectSuppliedTokenHookInitializerAndSupportTargets": true,
+        "projectOwnedRoles": [
+          "token",
+          "hook"
+        ],
         "hookPermissionMaskMinimum": 0,
         "hookPermissionMaskMaximum": 16383,
         "allValidUniswapV4PermissionMasksRepresentable": true,
+        "supportedHookPermissions": [
+          "beforeInitialize",
+          "afterInitialize",
+          "beforeAddLiquidity",
+          "afterAddLiquidity",
+          "beforeRemoveLiquidity",
+          "afterRemoveLiquidity",
+          "beforeSwap",
+          "afterSwap",
+          "beforeDonate",
+          "afterDonate",
+          "beforeSwapReturnDelta",
+          "afterSwapReturnDelta",
+          "afterAddLiquidityReturnDelta",
+          "afterRemoveLiquidityReturnDelta"
+        ],
+        "quoteCurrencyKinds": [
+          "native",
+          "erc20"
+        ],
+        "fundingModes": [
+          "none",
+          "wallet-transaction-value",
+          "eip-3009-receive-with-authorization"
+        ],
+        "liquidityModels": [
+          "external-concentrated-liquidity",
+          "launch-seeded-concentrated-liquidity",
+          "hook-inventory-custom-accounting"
+        ],
         "exactSourceCompilerAndGraphBindingRequired": true,
         "perLaunchAdmissionRequired": true,
-        "universalHookApproval": false
+        "universalHookApproval": false,
+        "structuralSupportIsUniversalCompatibility": false
       },
       "platformFeePolicy": {
         "schemaVersion": "programmable.platform-fee-policy.v1",

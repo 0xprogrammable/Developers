@@ -25,6 +25,7 @@ V1 reads and status remain compatible; V1 POST remains read-only and returns non
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Custom Launch API V2 | `custom` | Ethereum | Public | Wallet-bound API keys may prepare and track deterministic launches; the controller wallet reviews and signs separately |
 | Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Active general lane with exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
+| V3 capabilities and preflight | `custom` | Ethereum | Public / authenticated | Public capability discovery plus authenticated quota-free classification; no launch quota, nonce, persistence, wallet signature, broadcast, deployment, or feed record is created |
 | Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Retained compatible | Revision 2 remains published for compatible exact-graph clients |
 | Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the active V3 or compatible V2 descriptor |
 | Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status remain compatible; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
@@ -83,6 +84,15 @@ new category, and evidence for one cannot activate the other.
 unchanged profile ID `programmable.direct-native-hook-graph.v1`, advances the
 revision to `3` and version to `3.0.0`, and preserves Revision 2 compatibility.
 The only public categories remain `classic` and `custom`.
+
+The separate V3 service publishes unauthenticated `GET /v3/capabilities` and
+authenticated quota-free `POST /v3/custom-launches/preflight`. Preflight uses
+`programmable.custom-launch-preflight.v1`, does not allocate a nonce or persist
+a launch, and cannot sign or broadcast. Hard blocks, missing evidence, and
+warnings remain separately typed. Its deployable, routable, and featured flags
+do not establish deployment, trading, fee behavior, verification, indexing, or
+featured placement; each later state requires its own evidence. A wallet
+handoff appears only later with an explicit URL and expiry.
 
 Revision 3 accepts project-supplied token, hook, initializer, and support
 artifacts in exact 3–16-target direct graphs and represents every valid v4 hook

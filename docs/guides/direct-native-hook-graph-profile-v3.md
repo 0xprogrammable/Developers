@@ -23,6 +23,57 @@ Revision 3 is additive. Revision 2 remains published and compatible, and the
 only public categories remain `classic` and `custom`. Legacy Registry and
 GitHub submission intake are closed; neither is a fallback launch route.
 
+## Self-serve capabilities and preflight
+
+Use the separately hosted V3 API to discover support before creating a launch:
+
+| Surface | Authentication | Effect |
+| --- | --- | --- |
+| `GET /v3/capabilities` | None | Publishes the current structural V3 support envelope |
+| `POST /v3/custom-launches/preflight` | Wallet-bound API key | Classifies one exact request without consuming launch quota, allocating a nonce, or persisting a launch |
+
+The preflight response uses
+[`programmable.custom-launch-preflight.v1`](../../schemas/v2/custom-launch-preflight-v1.schema.json).
+Its `disposition` is exactly `supported`, `supported_with_warnings`,
+`needs_evidence`, or `unsupported`. `hardBlockFindingCodes`,
+`needsEvidenceFindingCodes`, and `warningFindingCodes` are separate lists;
+clients must not collapse them into one pass/fail flag. `staticBaseline` remains
+the backend's separately versioned canonical report, while each `remediations`
+entry uses the typed `programmable.custom-launch-remediation.v1` contract and
+links back to the canonical remediation catalog and guide.
+
+The response repeats the closed side-effect boundary:
+`quotaConsumed: false`, `nonceAllocated: false`, `persisted: false`,
+`walletSignatureRequiredLater: true`, and
+`walletBroadcastByService: false`. It also returns `requestId`; report that ID
+to support without including the API key. A throttled or temporarily
+unavailable request may return `429` or `503`. Honor `Retry-After` and retry only
+the same exact request bytes when the response says the operation is retryable.
+
+`evidenceTier` is one of `launch_mechanics_verified`,
+`standard_swap_compatible`, `advanced_custom_accounting`, or
+`governed_external_trust`. The tier names the evidence route that applies; it
+does not rank projects, certify safety, or replace the returned finding lists.
+
+### Eligibility is not lifecycle evidence
+
+The three `launchEligibility` booleans answer different preflight questions:
+
+- `deployable` means the request may continue toward later build, admission,
+  simulation, and wallet stages. It does not mean a contract is deployed.
+- `routable` means the declared shape can use the V3 Router path subject to the
+  remaining exact checks. It does not prove a production buy or sell.
+- `featured` is a separate presentation decision. It is not implied by
+  deployment, routing, verification, finality, or indexing.
+
+Keep the later evidence axes independent: deployment requires a wallet-sent
+transaction and finality; trading requires production route and market
+evidence; fee behavior requires exact deployed accrual and routing evidence;
+source verification requires an exact source/build/runtime match; indexing
+requires finalized canonical-Router ingestion; featured placement remains a
+separate product decision. A positive preflight field establishes none of the
+other axes.
+
 ## General graph lane
 
 The project supplies its exact token, hook, initializer, and support-contract
@@ -30,6 +81,16 @@ artifacts in one atomic acyclic graph of 3–16 direct targets. Every valid
 Uniswap v4 hook permission mask from `0` through `16383` is representable when
 its callback dependencies, declared permissions, compiled permissions, and
 mined hook-address bits agree.
+
+That structural envelope includes project-owned token and hook artifacts, all
+14 Uniswap v4 permissions, ERC-20 or native quote currency, and the existing
+funding modes `none`, `wallet-transaction-value`, and
+`eip-3009-receive-with-authorization`. The existing liquidity models remain
+`external-concentrated-liquidity`, `launch-seeded-concentrated-liquidity`, and
+`hook-inventory-custom-accounting`. Structural representation is not universal
+compatibility: permission dependencies, currency ordering, settlement,
+inventory, liquidity, fee, admission, and simulation checks still apply to the
+exact request.
 
 The request must bind the complete deterministic artifact closure, including:
 
@@ -150,6 +211,13 @@ finalized, consistent canonical-Router evidence may create a Custom feed
 identity. Token-list publication additionally requires a recognized token
 identity.
 
+The authorized resource supplies a wallet-handoff URL with an explicit expiry.
+Treat both as response data for that exact request: reject an expired handoff,
+do not convert it into a reusable credential, and keep the API key out of the
+wallet context. Opening the handoff does not authorize a transaction; the
+controller wallet still reviews and signs, and the service never broadcasts on
+its behalf.
+
 ## Existing-project agent integration
 
 Agents must resolve `api.agentIntegration` from the active Revision 3
@@ -174,6 +242,10 @@ catalogued source or configuration changes, rebuild the exact artifacts, run
 is not a manual approval queue, project allowlist, or invitation to use the
 closed Registry or GitHub submission intake. An API key authenticates this
 self-serve flow but does not waive admission rules or provide wallet authority.
+Run quota-free preflight before creating a durable request. Resolve hard blocks,
+missing evidence, and warnings by their separate code arrays and typed
+remediations; never rewrite a hard block as a warning or treat a warning-free
+response as a security claim.
 
 New EIP-3009 launch configs use four static ABI paths:
 `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`.
@@ -192,7 +264,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.2.1`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.0`, with exactly four commands:
 
 ```text
 pack
@@ -201,11 +273,11 @@ submit
 status
 ```
 
-The immutable `3.2.1` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1`.
+The immutable `3.3.0` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807`.
+`tarballSha256: sha256:f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -214,17 +286,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807
+  PROGRAMMABLE_LAUNCH_SHA256=f2c7eece46a682f5e65a27ba85644b2cb36a8ccbe5953531a6cb1ee1971e7c32
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.2.1.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.2.1.tgz.sha256)" = \
+    --output programmable-launch-3.3.0.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.0.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.2.1.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz
-  shasum -a 256 --check programmable-launch-3.2.1.tgz.sha256
-  npm install --global ./programmable-launch-3.2.1.tgz
+    --output programmable-launch-3.3.0.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz
+  shasum -a 256 --check programmable-launch-3.3.0.tgz.sha256
+  npm install --global ./programmable-launch-3.3.0.tgz
   programmable-launch --version
 )
 ```

@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json",
+  "title": "Programmable Custom Launch V3 preflight response",
+  "description": "Quota-free, non-persisting V3 support classification. This response is not approval, deployment, wallet authority, production verification, indexing, trading support, fee-behavior evidence, or featured placement.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "disposition",
+    "launchEligibility",
+    "evidenceTier",
+    "hardBlockFindingCodes",
+    "needsEvidenceFindingCodes",
+    "warningFindingCodes",
+    "staticBaseline",
+    "remediations",
+    "quotaConsumed",
+    "nonceAllocated",
+    "persisted",
+    "walletSignatureRequiredLater",
+    "walletBroadcastByService"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "programmable.custom-launch-preflight.v1"
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "disposition": {
+      "enum": [
+        "supported",
+        "supported_with_warnings",
+        "needs_evidence",
+        "unsupported"
+      ]
+    },
+    "launchEligibility": {
+      "type": "object",
+      "required": [
+        "deployable",
+        "routable",
+        "featured"
+      ],
+      "properties": {
+        "deployable": {
+          "type": "boolean"
+        },
+        "routable": {
+          "type": "boolean"
+        },
+        "featured": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidenceTier": {
+      "enum": [
+        "launch_mechanics_verified",
+        "standard_swap_compatible",
+        "advanced_custom_accounting",
+        "governed_external_trust"
+      ]
+    },
+    "hardBlockFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "needsEvidenceFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "warningFindingCodes": {
+      "$ref": "#/$defs/findingCodes"
+    },
+    "staticBaseline": {
+      "type": "object",
+      "description": "The existing canonical static-baseline report returned by the V3 backend. This Developers schema intentionally keeps that separately versioned report opaque instead of redefining its fields."
+    },
+    "remediations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/remediation"
+      }
+    },
+    "quotaConsumed": {
+      "const": false
+    },
+    "nonceAllocated": {
+      "const": false
+    },
+    "persisted": {
+      "const": false
+    },
+    "walletSignatureRequiredLater": {
+      "const": true
+    },
+    "walletBroadcastByService": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "findingCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "findingCodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/findingCode"
+      },
+      "uniqueItems": true
+    },
+    "remediation": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "remediationId",
+        "code",
+        "stage",
+        "targetId",
+        "targetRole",
+        "sourcePath",
+        "expected",
+        "observed",
+        "requiredChange",
+        "catalogUrl",
+        "guideUrl",
+        "retryable",
+        "requiresNewRequest",
+        "resumeAt"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-remediation.v1"
+        },
+        "remediationId": {
+          "enum": [
+            "PLATFORM_ADMISSION_FINDING",
+            "PROFILE_INVALID",
+            "ROUTER_SIMULATION_REVERTED",
+            "ROUTER_SIMULATION_UNAVAILABLE"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/findingCode"
+        },
+        "stage": {
+          "enum": [
+            "admission",
+            "validation-or-admission",
+            "simulation"
+          ]
+        },
+        "targetId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "targetRole": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "token",
+            "hook",
+            "initializer",
+            "platform-fee-binding",
+            "other",
+            null
+          ]
+        },
+        "sourcePath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requiredChange": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalogUrl": {
+          "const": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json"
+        },
+        "guideUrl": {
+          "const": "https://programmable.market/docs/developers/custom-launch#existing-project-integration"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "requiresNewRequest": {
+          "type": "boolean"
+        },
+        "resumeAt": {
+          "enum": [
+            "pack",
+            "inspect-project",
+            "status"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
