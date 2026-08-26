@@ -771,6 +771,12 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
             manifest.directNativeHookGraphProfileV1,
         }
       : {}),
+    ...(manifest?.directNativeHookGraphProfileV2
+      ? {
+          directNativeHookGraphProfileV2:
+            manifest.directNativeHookGraphProfileV2,
+        }
+      : {}),
     feeds: {
       manifest: "ready",
       launches: feeds,

@@ -1,11 +1,13 @@
 # Direct Native Hook Graph Profile V1
 
-The Direct Native Hook Graph Profile is a versioned preview contract for a
-future Programmable Custom launch path. It describes how a project-owned
+The Direct Native Hook Graph Profile V1 is the retained versioned preview of an
+earlier Programmable Custom launch design. It describes how a project-owned
 Uniswap v4 hook could remain the pool's direct hook while Programmable binds
 the complete deployment graph, funding, fee policy and launch provenance.
 
-It is not live. Resolve `directNativeHookGraphProfileV1` from the current
+This V1 descriptor is not live. Production V3 clients must use the additive
+[V2 profile](direct-native-hook-graph-profile-v2.md). Resolve
+`directNativeHookGraphProfileV1` from the current
 [V2 manifest](https://developers.programmable.family/api/v2/manifest) and
 [V2 status](https://developers.programmable.family/api/v2/status). That
 read-only object uses discovery schema
@@ -16,7 +18,7 @@ Profile version `1.0.0`, revision 1 is intentionally fail-closed:
 - `status` is `gated`;
 - `releaseStage` is `preview`;
 - `productionLaunchAuthorized` is `false`;
-- Custom Launch API V3 is `integration-pending` and not publicly routable;
+- this V1 descriptor's candidate V3 mapping is `integration-pending` and not publicly routable;
 - the `3.0.0-rc.1` CLI candidate is not a published supporting release;
 - the existing immutable Router permit authority defaults to deny and has not admitted this profile; and
 - launch-feed and token-list publication are `gated`.
@@ -38,7 +40,7 @@ namespaced-extension data.
 direct hook, rather than an isolated module behind a different fee hook. It
 does not mean that every pool must use native ETH.
 
-## Planned V3 API and CLI boundary
+## Retained candidate V3 API and CLI boundary
 
 Profile V1 is planned for Custom Launch API V3. The candidate identifiers are:
 
@@ -52,17 +54,17 @@ Profile V1 is planned for Custom Launch API V3. The candidate identifiers are:
 | Funding OpenAPI operation | `custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post` |
 | Pack config | `programmable.launch-pack-config.v3` |
 
-They are not public endpoints yet. The planned
-`https://programmable.market/openapi/custom-launch-v3.json` contract is not
-published, `api.publiclyRoutable` is false, and the API remains
-`integration-pending`. The currently published `@programmable/launch` release
-is `2.0.1`; the `3.0.0-rc.1` candidate is not a published supporting release.
-`minimumSupportingVersion` therefore remains `null`.
+They are not public through this V1 descriptor. Its frozen discovery data still
+records the planned `custom-launch-v3.json` contract as not published,
+`api.publiclyRoutable` as false, and support as `integration-pending`.
+The current V3 OpenAPI and CLI `3.0.0` are public only under the V2 descriptor;
+they do not retroactively activate V1. V1's `3.0.0-rc.1` candidate remains not a
+published supporting release and `minimumSupportingVersion` remains `null`.
 
 The planned command vocabulary remains `pack`, `validate`, `submit` and
 `status`. Those names describe the intended lifecycle, not present support.
-The profile may be marked routable only after the request schema, backend route
-and a supporting CLI release are published together.
+Those names must not be used to infer support from V1. Resolve current support
+from `directNativeHookGraphProfileV2` and the live V3 OpenAPI instead.
 
 An API key authenticates a wallet-bound caller. It never signs, broadcasts or
 authorizes funds. The wallet flow has two separately reviewed signatures: the

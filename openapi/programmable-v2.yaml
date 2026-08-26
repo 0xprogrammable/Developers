@@ -14,6 +14,9 @@ info:
     `409 CUSTOM_LAUNCH_V1_READ_ONLY`; this Developer v2 service also remains read
     only. The separate Custom Launch API V2 is a public authenticated Ethereum
     Mainnet preparation route with an exact fee-enforced production profile.
+    Custom Launch API V3 is the public authenticated general direct-hook graph
+    route for exact project-owned token and hook artifacts. Both keep signing
+    and broadcasting at the controller wallet boundary.
     Its existing `publicSubmissionStatus` field continues to describe the
     closed legacy intake; `customLaunchApiStatus` describes the public V2 API.
     Historical Stock-Paired
@@ -85,8 +88,9 @@ paths:
       description: |
         Reports service availability separately from Classic discovery,
         feed freshness, the Custom Launch API V1 compatibility state, and the
-        exact public Fee-Enforced V2 production profile, and the separately
-        gated Custom Launch API V3 Direct Native Hook Graph V1 preview. A successful HTTP response is not itself proof that indexed
+        exact public Fee-Enforced V2 production profile, the retained gated
+        Direct Native Hook Graph V1 preview, and the live additive V2 descriptor
+        for the public Custom Launch API V3 route. A successful HTTP response is not itself proof that indexed
         data is current, that a fee is enforced, that source is an exact match,
         or that a contract was audited.
       responses:
@@ -146,14 +150,19 @@ paths:
         does not imply named-terminal adoption. Launch submission is not part of
         this read-only API. Custom Launch API V1 POST is also read-only and returns
         nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; public launch preparation
-        uses the separate authenticated V2 API.
-        The gated Direct Native Hook Graph V1 preview is exposed as optional
-        `directNativeHookGraphProfileV1` `custom` contract data. Its planned V3
-        request and two-stage funding-signature routes are not public. It binds
-        1,000 hundredths of a bip inside the selected total fee, not as an
-        additive charge. Existing permit-authority profile admission remains
-        pending, production authority is false, and feeds publish no record for
-        the profile. This read-only V2 OpenAPI does not expose a V3 write route.
+        uses the separate authenticated V2 or V3 API.
+        The gated Direct Native Hook Graph V1 preview remains available as
+        optional `directNativeHookGraphProfileV1` contract data for compatibility.
+        The additive `directNativeHookGraphProfileV2` descriptor is the live
+        Custom Launch API V3 production contract for project-owned token and hook
+        artifacts in exact 3–16-target graphs. It supports every valid Uniswap v4
+        permission mask and the `none`, exact wallet transaction value, and
+        EIP-3009 funding modes. Each accepted launch still requires its own exact
+        graph conformance receipt. Finalized consistent Router launches may enter
+        the launch feed; token-list projection additionally requires a token
+        identity. Neither descriptor is a third public category, and this
+        Developer V2 OpenAPI remains read-only: it describes but does not expose
+        the authenticated V3 write routes or executable wallet calldata.
       responses:
         "200":
           description: Current deployment manifest.
@@ -357,6 +366,8 @@ components:
       $ref: ../schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json
     DirectNativeHookGraphProfileDiscoveryV1:
       $ref: ../schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json
+    DirectNativeHookGraphProfileDiscoveryV2:
+      $ref: ../schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json
     TokenList:
       $ref: ../schemas/v2/token-list.schema.json
     Problem:

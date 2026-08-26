@@ -255,6 +255,7 @@ describe("documentation contract", () => {
         "canonical-custom-registry-record-v4",
         "custom-fee-enforced-launch-profile-v2",
         "direct-native-hook-graph-profile-discovery-v1",
+        "direct-native-hook-graph-profile-discovery-v2",
         "launch-feed",
         "launch",
         "manifest",

@@ -8,6 +8,7 @@ Read API base: https://developers.programmable.family/api/v2
 Full agent context: https://developers.programmable.family/llms-full.txt
 Custom Launch API base: https://api.programmable.market
 Custom Launch API guide: https://programmable.market/docs/developers/custom-launch
+Custom Launch V3 OpenAPI: https://programmable.market/openapi/custom-launch-v3.json
 Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
 Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
 API key management: https://programmable.market/developers/api-keys
@@ -16,20 +17,21 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 ## API surface boundary
 
 - Use the Developer read API without authentication to discover launches and verify provenance.
-- Use the separately hosted Custom Launch API V2 with a wallet-bound bearer API key to prepare and track public Ethereum Mainnet launches. V1 reads/status remain compatible and V1 POST remains read-only.
+- Use the separately hosted Custom Launch API V2 or V3 with a wallet-bound bearer API key to prepare and track public Ethereum Mainnet launches. V3 is the general direct project-hook graph route. V1 reads/status remain compatible and V1 POST remains read-only.
 - An API key is not wallet signing authority. The controller wallet reviews and signs the exact prepared transaction separately; the API never signs or broadcasts it.
 - The canonical V2 Custom Launch request and response schemas are in the V2 Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
 - Resolve current versioned launch requirements from Programmable Launch Policy. Do not rely on copied policy text.
-- Legacy Registry and GitHub submission intake are closed independently of the public authenticated Custom Launch API V2.
+- Legacy Registry and GitHub submission intake are closed independently of the public authenticated Custom Launch API V2 and V3.
 - Custom Fee-Enforced Launch Profile V2 publishes one exact production revision/hash, 1,000 ppm fee semantics and a separate wallet-signature boundary.
-- Direct Native Hook Graph Profile V1 is only an optional discovery descriptor for a planned Custom Launch API V3. Its V3 OpenAPI, routes, supporting CLI, permit-authority profile admission, signature-patch runtime and feeds are not live.
+- Direct Native Hook Graph Profile V1 is only a retained optional preview descriptor. Its candidate V3 mapping remains gated and must not be used; the live V3 contract is Direct Native Hook Graph Profile V2.
+- Direct Native Hook Graph Profile V2 is the additive live Custom Launch API V3 descriptor: exact 3–16-target project token and hook graphs, all valid v4 masks, three funding modes, and an exact per-launch conformance receipt.
 
 ## Current status
 
 - Classic launch discovery is live on Ethereum.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
 - The authenticated Router-based Custom Launch API V2 is public on Ethereum Mainnet and separate from legacy intake and from this unauthenticated read API. V1 reads/status remain compatible; V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
-- Direct Native Hook Graph Profile V1 remains `integration-pending`: the planned V3 routes are not publicly routable, no supporting V3 CLI is published, and launch/token feeds publish no profile records.
+- Direct Native Hook Graph Profile V2 and CLI `3.0.0` are public for Custom Launch API V3. The V1 descriptor remains gated and unchanged for compatibility.
 - Custom Registry Generation 2 remains a separate unavailable release candidate. It does not activate the public fee-enforced profile, and neither creates a third public category.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
@@ -49,11 +51,13 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 ## Start here
 
 - [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
-- [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch): Wallet-bound authentication, public V2 preparation, status polling and separate wallet signing.
+- [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch): Wallet-bound authentication, public V2/V3 preparation, status polling and separate wallet signing.
+- [Custom Launch V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json): Canonical public general project-hook graph machine contract.
 - [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json): Canonical public V2 machine contract.
 - [Custom Launch V1 compatibility OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Existing V1 reads/status and read-only POST contract.
 - [Custom Fee-Enforced Launch Profile V2](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md): Exact 1,000 ppm production semantics, pinned artifacts, polling boundary, and unsupported claims.
 - [Direct Native Hook Graph Profile V1](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md): Gated Custom Launch API V3 preview for profile version `1.0.0`, published through the separate `programmable.direct-native-hook-graph-profile-discovery.v1` descriptor; 3–16 targets over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, ERC-20/native pools, two-stage `fundingIntentHash` signing and an inclusive selected-total fee split; not a live launch route.
+- [Direct Native Hook Graph Profile V2](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md): Live V3 production descriptor for 3–16 exact targets, all valid v4 masks, `none`, wallet-value or EIP-3009 funding, exact per-launch conformance, and truthful normal-LP versus custom-accounting liquidity boundaries.
 - [API key management](https://programmable.market/developers/api-keys): Create or revoke a wallet-bound Custom Launch API key.
 - [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy): Current versioned requirements and machine-readable policy contracts.
 - [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
@@ -80,7 +84,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 ## Reference
 
 - [HTTP API](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
-- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic included-fee semantics, public Custom V2 additive 1,000 ppm semantics, the gated Direct Native V3 inclusive selected-total split, partnership-template 20/15/5 policy, evidence, claims, and scope.
+- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic included-fee semantics, public Custom V2 additive 1,000 ppm semantics, the live Direct Native V3 additive-or-inclusive selection, the retained gated V1 preview, partnership-template 20/15/5 policy, evidence, claims, and scope.
 - [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
 - [JSON Schemas](https://github.com/0xprogrammable/Developers/tree/main/schemas/v2): Normative public response schemas.
 - [Examples](https://github.com/0xprogrammable/Developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
@@ -110,7 +114,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 10. Preserve `launch.timestamp`; do not replace it with first observation time.
 11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
 12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. Public preparation uses the separate authenticated Custom Launch API V2; V1 POST remains read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. Public preparation uses the separate authenticated Custom Launch API V2 or V3; V1 POST remains read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 14. Read fee behavior from verified records. Do not infer it from category.
 15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
 16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
@@ -125,6 +129,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 25. Keep launch visibility separate from claim eligibility. The claim console must independently verify its published launcher, Registry, runtime, fee, recipient, lifecycle, and finality boundary; a visible launch is not automatically claimable.
 26. Keep API availability, fee enforcement, fee accrual, exact-source match, simulation, finality, tradability, claim support, buybacks, and audit status separate. Accept a launch profile only from its exact descriptor with `productionLaunchAuthorized: true`.
 27. Treat the `programmable.direct-native-hook-graph-profile-discovery.v1` object at `directNativeHookGraphProfileV1` as a gated preview while `productionLaunchAuthorized` and `api.publiclyRoutable` are false. It is separate from the V3 request profile schema. Its planned V3 API/CLI vocabulary, graph contract, funding challenge and extension IDs do not create a request route, authorize either wallet signature, create a launch record or add a token-list entry.
+28. Treat `directNativeHookGraphProfileV2` as the live V3 discovery descriptor, not wallet authority. Pool initialization creates no liquidity; zero classical LP is valid only when the exact custom-accounting graph supplies and settles its own inventory or backing. Only finalized consistent Router evidence creates a launch record.
 
 ## Fee summary
 
@@ -133,7 +138,8 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 - V2 production identity: resolve the exact profile revision and `launchProfileHash` from the live manifest; contract policy `0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517`, permission mask `0x2044`.
 - Current Classic official paths: the platform share is included within the configured trading fee.
 - Public Custom Fee-Enforced V2 profile: additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool; exact input uses output currency and exact output uses input currency. PoolManager ERC-6909 claims remain in the sealed vault and only the fixed reward wallet can claim them.
-- Direct Native Hook Graph V1: 1,000 hundredths of a bip is inside the selected total. For each buy/sell direction, `effective total = max(selected total, 1000)` and `project = effective total - 1000`; for example, `30000 = 29000 + 1000`, not `31000`. V3 routing, permit-authority profile admission, finalized canary and feed support remain pending; do not report accrual or launchability.
+- Direct Native Hook Graph V1: retained gated preview with 1,000 hundredths of a bip inside the selected total. It does not authorize the live V3 route and is not accrual or launchability evidence.
+- Direct Native Hook Graph V2: 1,000 hundredths of a bip is required under the exact per-launch selected additive or inclusive accounting mode and assessment pair. A signed conformance receipt is required before authorization; it does not prove fee accrual or claimability.
 - Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate.
 - Active fee-bearing partnership-template paths: exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis, with no additional Native Custom 10 bps. Partner-attributed projects without a qualifying fee path use zero shares.
 - The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.

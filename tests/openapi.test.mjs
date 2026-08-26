@@ -95,6 +95,10 @@ describe("OpenAPI v2 contract", () => {
       spec.components.schemas.DirectNativeHookGraphProfileDiscoveryV1.$ref,
       "../schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json",
     );
+    assert.equal(
+      spec.components.schemas.DirectNativeHookGraphProfileDiscoveryV2.$ref,
+      "../schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json",
+    );
     assert.equal(spec.components.schemas.DirectNativeHookGraphProfileV1, undefined);
     assert.match(
       spec.paths["/api/v2/manifest"].get.description,
@@ -104,7 +108,7 @@ describe("OpenAPI v2 contract", () => {
     assert.equal(spec.paths["/v3/custom-launches"], undefined);
     assert.match(
       spec.paths["/api/v2/manifest"].get.description,
-      /inside the selected total fee/u,
+      /(all|every) valid Uniswap v4\s+permission mask/u,
     );
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });

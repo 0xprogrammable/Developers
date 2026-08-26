@@ -119,6 +119,9 @@
     "directNativeHookGraphProfileV1": {
       "$ref": "direct-native-hook-graph-profile-discovery-v1.schema.json"
     },
+    "directNativeHookGraphProfileV2": {
+      "$ref": "direct-native-hook-graph-profile-discovery-v2.schema.json"
+    },
     "registryGenerations": {
       "type": "array",
       "items": {

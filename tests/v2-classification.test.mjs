@@ -239,6 +239,26 @@ describe("version 2 classification", () => {
       false,
     );
     assert.deepEqual(
+      publicStatus.directNativeHookGraphProfileV2,
+      manifest.directNativeHookGraphProfileV2,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV2.productionLaunchAuthorized,
+      true,
+    );
+    assert.equal(
+      publicStatus.directNativeHookGraphProfileV2.api.publiclyRoutable,
+      true,
+    );
+    assert.deepEqual(
+      publicStatus.directNativeHookGraphProfileV2.fundingPolicy.supportedModes,
+      [
+        "none",
+        "wallet-transaction-value",
+        "eip-3009-receive-with-authorization",
+      ],
+    );
+    assert.deepEqual(
       publicStatus.customRegistryPublication,
       projected.status.customRegistryPublication,
     );

@@ -58,6 +58,21 @@ claim or buyback interface for V2 or arbitrary hooks.
 See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
 for the exact authorization and polling boundaries.
 
+## Direct Native Hook Graph Profile V2
+
+The live V2 descriptor requires `1,000` hundredths of a bip for Programmable
+on each successful swap under the exact selected assessment base and fee
+currency: `1,000 / 1,000,000 = 0.10% = 10 bps`. A launch selects either an
+additive platform share or an inclusive selected total. The effective project
+share and total therefore depend on that declared accounting mode; consumers
+must not present every V3 launch as additive or every V3 launch as inclusive.
+
+The LP fee, project economics, Programmable share, and gas are separate. A
+platform-issued per-launch receipt binds the final graph and fee behavior before
+authorization. It is not evidence that fees have accrued or are claimable.
+Generic fee claiming and buyback management for arbitrary hooks remain not
+live. See the [Direct Native Hook Graph V2 guide](../guides/direct-native-hook-graph-profile-v2.md).
+
 ## Direct Native Hook Graph Profile V1 preview
 
 The Direct Native Hook Graph V1 contract reserves 1,000 hundredths of a bip

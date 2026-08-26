@@ -382,7 +382,10 @@ describe("Direct Native Hook Graph Profile V1 preview", () => {
     );
     for (const source of [guide, status, httpReference]) {
       assert.match(source, /gated preview|preview contract|gated/i);
-      assert.match(source, /integration-pending|not published|not publicly routable/i);
+      assert.match(
+        source,
+        /integration-pending|not published|not publicly routable|remain unpublished|publicly routable through V1/i,
+      );
     }
     assert.match(guide, /3 through 16/i);
     assert.match(guide, /Router target range.*2 through 16/is);
