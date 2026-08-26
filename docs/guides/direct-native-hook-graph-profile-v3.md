@@ -69,7 +69,8 @@ the complete role-aware blocking rules from the machine descriptor:
 ```
 
 The machine descriptor publishes role-aware blocking rules. Incomplete analysis
-blocks any target. Unresolved v4 callback authentication blocks the hook. A
+blocks any target. Unresolved v4 callback authentication or an enabled
+permission without a concrete reachable callback implementation blocks the hook. A
 mutable blocklist, transfer restriction, public mint, or pause surface blocks
 the token. A mutable token tax or fee surface also blocks the token, while hook
 dynamic-fee logic remains representable. Proxy, upgrade, self-destruct, `CALLCODE`, `DELEGATECALL`, or
