@@ -544,7 +544,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V2 is public on Ethereum Mainnet; V1 POST remains read-only, and legacy Registry and GitHub submission intake are closed."
+          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V2 and V3 are public on Ethereum Mainnet; V1 POST remains read-only, and legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
     },
     customLaunchApi: {
@@ -775,6 +775,12 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       ? {
           directNativeHookGraphProfileV2:
             manifest.directNativeHookGraphProfileV2,
+        }
+      : {}),
+    ...(manifest?.directNativeHookGraphProfileV3
+      ? {
+          directNativeHookGraphProfileV3:
+            manifest.directNativeHookGraphProfileV3,
         }
       : {}),
     feeds: {

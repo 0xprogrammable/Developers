@@ -33,8 +33,10 @@ Resolve current versioned launch requirements from Programmable Launch Policy. D
 - Authenticated Router-based Custom Launch API V2: public preparation and status on Ethereum Mainnet, separate wallet review/signature, and separate from legacy intake and the unauthenticated read API.
 - Custom Launch API V1: provenance reads/status remain compatible; POST remains read-only with nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 - Custom Registry Generation 2 is a separate unavailable four-contract discovery trust root. It does not activate the public Custom Fee-Enforced Launch Profile V2, and the public profile does not activate Registry Generation 2.
-- Direct Native Hook Graph Profile V1 is a separately gated retained preview descriptor. Its candidate V3 mapping remains `integration-pending`, `productionLaunchAuthorized` is false, and it publishes no profile records; production V3 clients use the additive V2 descriptor.
-- Direct Native Hook Graph Profile V2 and CLI `3.0.0` are the live Custom Launch API V3 production contract for exact 3–16-target project token and hook graphs, all valid v4 masks, three funding modes, and exact per-launch conformance.
+- Direct Native Hook Graph Profile V1 is a separately gated retained preview descriptor. Its candidate V3 mapping remains `integration-pending`, `productionLaunchAuthorized` is false, and it publishes no profile records; production V3 clients use the active Revision 3 descriptor or the retained compatible Revision 2 descriptor.
+- Direct Native Hook Graph Profile V3 is the active Custom Launch API V3 general lane for exact 3–16-target project graphs and all valid v4 masks. It binds exact source/compiler/graph evidence, applies role-aware blocking rules, keeps every unmatched finding bound and visible as a warning without project exceptions, and requires an exact pinned Router launch simulation before authorization. Blocking findings return `action_required`; zero blocking findings only make the request simulation-eligible.
+- Revision 3 is launch-admission-only. It is not an audit or a safety, honeypot, liquidity, tradeability, or fee-behavior guarantee. Generic claiming and buybacks are not live.
+- CLI contract `3.1.0` has exactly `pack`, `validate`, `submit`, and `status`. Its immutable public release locator is pending publication and must not be guessed. Revision 2 and CLI `3.0.0` remain compatible together.
 - Custom Registry generation 1 discovery: live. Resolve its address and start block from the manifest.
 - Router V1 launch provenance: live on Ethereum from block 25717612. Historical launches are not backfilled.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
@@ -89,6 +91,7 @@ Root fields:
 - customFeeEnforcedLaunchProfileV2
 - directNativeHookGraphProfileV1
 - directNativeHookGraphProfileV2
+- directNativeHookGraphProfileV3
 - platformFee
 - endpoints
 - compatibility
@@ -99,16 +102,25 @@ The manifest supplies deployment IDs, categories, model IDs and versions, origin
 
 The live Custom Registry and the closed legacy submission intake are represented separately. A closed intake state never carries or guesses a different Registry address and does not disable the separate authenticated Custom Launch API V2 or V3. Top-level `customFeeEnforcedLaunchProfileV2` reports the exact public production profile; do not confuse it with Custom Registry Generation 2.
 
-Top-level `directNativeHookGraphProfileV2` is the optional additive live V3
+Top-level `directNativeHookGraphProfileV3` is the optional additive active V3
+general-lane descriptor. It binds 3–16 exact project token, hook, initializer,
+and support targets and represents all valid v4 masks. Its deterministic
+baseline binds exact source/compiler/graph evidence. Its blocking rules are
+role-aware and every unmatched finding remains a bound visible warning without
+project-specific exceptions. Blocking findings produce `action_required`.
+Zero blocking findings only make that
+exact request eligible for mandatory pinned Router launch simulation.
+Authorization requires that exact simulation. Admission does not prove safety,
+honeypot freedom, liquidity, tradeability, or fee behavior.
+
+Top-level `directNativeHookGraphProfileV2` remains the compatible Revision 2
 descriptor. It binds 3–16 exact project token, hook, initializer, and support
 targets, all valid v4 masks, and `none`, exact wallet transaction value, or
-EIP-3009 funding. Exact source/build/runtime evidence, simulation, admission,
-and a platform-issued per-launch graph conformance receipt remain required.
-Normal pool initialization creates no liquidity. Zero classical LP is valid
-only when the reviewed custom-accounting graph supplies and settles its own
-inventory or backing. Only finalized consistent Router evidence creates a
-launch record; finality does not prove liquidity, backing, solvency, a lock, or
-tradability.
+EIP-3009 funding. Normal pool initialization creates no liquidity. Zero
+classical LP is valid only when the reviewed custom-accounting graph supplies
+and settles its own inventory or backing. Only finalized consistent Router
+evidence creates a launch record; finality does not prove liquidity, backing,
+solvency, a lock, or tradability.
 
 Top-level `directNativeHookGraphProfileV1` is an optional v2 discovery
 descriptor with schema
@@ -678,9 +690,9 @@ Allowed:
 - Classic is live on Ethereum.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
 - Custom Launch API V2 public preparation and status are live on Ethereum Mainnet; the controller wallet reviews and signs separately.
-- Custom Launch API V3 and Direct Native Hook Graph Profile V2 are live on Ethereum Mainnet for exact project token and hook graphs; the controller wallet still reviews and signs separately.
+- Custom Launch API V3 and Direct Native Hook Graph Profile V3 are live on Ethereum Mainnet for exact project graphs; the controller wallet still reviews and signs separately. Profile V2 remains compatible.
 - Custom Launch API V1 provenance reads/status remain compatible; POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
-- Direct Native Hook Graph Profile V1 is a retained gated preview; its candidate route mapping authorizes neither wallet signature nor a launch. Production V3 clients use Profile V2.
+- Direct Native Hook Graph Profile V1 is a retained gated preview; its candidate route mapping authorizes neither wallet signature nor a launch. Production V3 clients use active Profile Revision 3 or retained compatible Revision 2.
 - Router V1 is live on Ethereum for future stamps from block 25717612; its finalized onchain canary covers CustomGraph, with no separate Classic onchain canary.
 - Historical Stock-Paired records are excluded from the v2 Programmable Custom classification.
 - Every registered launch is discoverable.

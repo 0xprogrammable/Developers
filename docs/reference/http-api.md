@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, and the live additive Direct Native Hook Graph V2 descriptor for Custom Launch API V3. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 
@@ -61,6 +61,7 @@ launchStampRouter
 customFeeEnforcedLaunchProfileV2
 directNativeHookGraphProfileV1
 directNativeHookGraphProfileV2
+directNativeHookGraphProfileV3
 platformFee
 endpoints
 compatibility
@@ -74,18 +75,30 @@ The Website endpoint `https://programmable.family/api/custom-launch/registry/v1/
 
 The v2 Custom Registry state is live with Registry-based public submissions disabled. Clients discover the active address, generation, start block, event set, ABI, finality policy, and operation-specific authority sets from the manifest. For Generation 1, `authorizedWriters` and `operationAuthorities.registered` identify registration writers; `operationAuthorities.finalized` independently identifies finalizers. A registration writer is not a finalizer merely because both operations emit from the Registry. Clients must not infer that live discovery enables Registry submission intake or use this state to determine availability of the separate Custom Launch API.
 
-`directNativeHookGraphProfileV2` is the optional additive live descriptor for
-Custom Launch API V3. It keeps `category: custom`, binds project-owned token and
-hook artifacts in exact acyclic graphs of 3–16 direct targets, covers every
-valid v4 permission mask, and supports `none`, exact wallet transaction value,
-or EIP-3009 funding. Exact source/build/runtime evidence, simulation, admission,
-and a platform-issued per-launch graph conformance receipt remain required.
-Normal v4 pool initialization creates no liquidity; a zero-classical-LP model
-is valid only when the exact custom-accounting graph supplies and settles its
-own inventory or backing. Finalized Router evidence does not prove liquidity,
-backing, solvency, a lock, or tradability. The descriptor names authenticated
-write routes but this Developer API returns no executable calldata and
+`directNativeHookGraphProfileV3` is the optional additive active general-lane
+descriptor for Custom Launch API V3. It keeps `category: custom`, binds
+project-supplied token, hook, initializer, and support artifacts in exact
+acyclic graphs of 3–16 direct targets, and represents every valid v4 permission
+mask. Its `platformAdmissionPolicy` binds exact source/compiler/graph evidence
+to a deterministic role-aware static baseline. A code blocks only for its
+published target roles; every unmatched finding stays bound and visible as a
+warning, with no project-specific exception. Blocking findings produce
+`action_required`; zero blocking findings only make the exact request eligible
+for mandatory pinned Router launch simulation. Authorization requires that
+exact simulation. Admission is not an audit or a safety, honeypot, liquidity,
+tradeability, or fee-behavior guarantee. The descriptor names authenticated
+write routes, but this Developer API returns no executable calldata and
 authorizes no transaction.
+
+`directNativeHookGraphProfileV2` remains the compatible Revision 2 descriptor.
+It binds project-owned token and hook artifacts in exact acyclic graphs of
+3–16 direct targets, covers every valid v4 permission mask, and supports
+`none`, exact wallet transaction value, or EIP-3009 funding. Its exact
+per-launch conformance receipt remains required. Normal v4 pool
+initialization creates no liquidity; a zero-classical-LP model is valid only
+when the exact custom-accounting graph supplies and settles its own inventory
+or backing. Finalized Router evidence does not prove liquidity, backing,
+solvency, a lock, or tradability.
 
 `directNativeHookGraphProfileV1` is an optional v2 discovery descriptor for a
 future Custom Launch API V3 direct-hook graph path. The descriptor schema is
@@ -99,11 +112,12 @@ the corresponding operation under that path in the planned
 `https://programmable.market/openapi/custom-launch-v3.json` document. Neither is
 publicly routable through V1. The V1 descriptor's planned OpenAPI and CLI state
 remain unpublished even though production V3 is now published under the
-additive V2 descriptor. V1 `productionLaunchAuthorized` is false, admission under the existing immutable
+additive V2 and V3 descriptors. V1 `productionLaunchAuthorized` is false, admission under the existing immutable
 permit authority and the fixed signature-patch evidence are pending, and a
 per-launch initializer is a direct stamped target rather than a separate trust
 root. Clients may inspect the V1 contract but must not construct or submit a
-request from it; production clients use `directNativeHookGraphProfileV2`. An older v2 discovery response
+request from it; production clients use `directNativeHookGraphProfileV3` or the
+retained compatible `directNativeHookGraphProfileV2`. An older v2 discovery response
 may omit the optional field; that omission does not affect `classic`, `custom`,
 Custom Launch API V1 compatibility, or the public V2 production profile.
 
@@ -134,8 +148,8 @@ by a finalized consistent canonical-Router launch and an enabled projector;
 profile documentation, an API key, source review or a prepared graph is not
 launch provenance.
 
-The live V2 descriptor follows the same provenance boundary without the preview
-gate: only a finalized consistent canonical-Router launch may enter the launch
+The active V3 and retained compatible V2 descriptors follow the same provenance
+boundary without the preview gate: only a finalized consistent canonical-Router launch may enter the launch
 feed. Token-list projection additionally requires a recognized token identity.
 Submission, conformance, authorization, or wallet preparation alone never
 creates a public launch record.

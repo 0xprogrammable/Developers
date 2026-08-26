@@ -89,8 +89,9 @@ paths:
         Reports service availability separately from Classic discovery,
         feed freshness, the Custom Launch API V1 compatibility state, and the
         exact public Fee-Enforced V2 production profile, the retained gated
-        Direct Native Hook Graph V1 preview, and the live additive V2 descriptor
-        for the public Custom Launch API V3 route. A successful HTTP response is not itself proof that indexed
+        Direct Native Hook Graph V1 preview, the retained compatible V2 descriptor,
+        and the active additive V3 general-lane descriptor for the public Custom
+        Launch API V3 route. A successful HTTP response is not itself proof that indexed
         data is current, that a fee is enforced, that source is an exact match,
         or that a contract was audited.
       responses:
@@ -158,7 +159,15 @@ paths:
         artifacts in exact 3–16-target graphs. It supports every valid Uniswap v4
         permission mask and the `none`, exact wallet transaction value, and
         EIP-3009 funding modes. Each accepted launch still requires its own exact
-        graph conformance receipt. Finalized consistent Router launches may enter
+        graph conformance receipt. The additive `directNativeHookGraphProfileV3`
+        descriptor publishes the active general lane. Its deterministic exact-source,
+        compiler and graph baseline applies role-aware blocking rules; every
+        unmatched finding remains a bound visible warning without a project exception.
+        No blocking finding makes the exact request eligible for mandatory Router
+        simulation; it does not authorize a launch. A blocking finding returns
+        `action_required`. An exact Router launch simulation is required before
+        authorization. Admission is not an audit or a safety, honeypot, liquidity,
+        tradeability, or fee-behavior guarantee. Finalized consistent Router launches may enter
         the launch feed; token-list projection additionally requires a token
         identity. Neither descriptor is a third public category, and this
         Developer V2 OpenAPI remains read-only: it describes but does not expose
@@ -368,6 +377,8 @@ components:
       $ref: ../schemas/v2/direct-native-hook-graph-profile-discovery-v1.schema.json
     DirectNativeHookGraphProfileDiscoveryV2:
       $ref: ../schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json
+    DirectNativeHookGraphProfileDiscoveryV3:
+      $ref: ../schemas/v2/direct-native-hook-graph-profile-discovery-v3.schema.json
     TokenList:
       $ref: ../schemas/v2/token-list.schema.json
     Problem:

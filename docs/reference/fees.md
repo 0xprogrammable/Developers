@@ -58,9 +58,18 @@ claim or buyback interface for V2 or arbitrary hooks.
 See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
 for the exact authorization and polling boundaries.
 
+## Direct Native Hook Graph Profile V3
+
+The active Revision 3 admission receipt declares `feeBehaviorClaim: false`.
+Admission therefore does not certify that a deployed hook accrues, routes, or
+pays a fee. Read the exact request and graph binding for the selected fee policy,
+and require separate onchain evidence for accrual or claimability. LP fees,
+project economics, the Programmable charge, and network gas remain separate
+disclosures. Generic fee claiming and buyback management are not live.
+
 ## Direct Native Hook Graph Profile V2
 
-The live V2 descriptor requires `1,000` hundredths of a bip for Programmable
+The retained compatible V2 descriptor requires `1,000` hundredths of a bip for Programmable
 on each successful swap under the exact selected assessment base and fee
 currency: `1,000 / 1,000,000 = 0.10% = 10 bps`. A launch selects either an
 additive platform share or an inclusive selected total. The effective project
