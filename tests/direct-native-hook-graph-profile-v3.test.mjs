@@ -472,25 +472,25 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.3.0");
+    assert.equal(profile.cli.releaseVersion, "3.3.1");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
     assert.equal(profile.cli.minimumSupportingVersion, "3.1.0");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.1",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8",
+      "sha256:1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -728,10 +728,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.0\.tgz\.sha256/u);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.1\.tgz\.sha256/u);
     assert.match(
       guide,
-      /npm install --global \.\/programmable-launch-3\.3\.0\.tgz/u,
+      /npm install --global \.\/programmable-launch-3\.3\.1\.tgz/u,
     );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);

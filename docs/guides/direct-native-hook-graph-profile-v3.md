@@ -290,7 +290,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.0`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.1`, with exactly four commands:
 
 ```text
 pack
@@ -299,11 +299,11 @@ submit
 status
 ```
 
-The immutable `3.3.0` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.0`.
+The immutable `3.3.1` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.1`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8`.
+`tarballSha256: sha256:1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -312,17 +312,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=9df577e133bc01d6a569554fcaa4dbd793a0f560df30f830bee40c78f227dac8
+  PROGRAMMABLE_LAUNCH_SHA256=1d5a2649c899b85512bdeca160fd24998b2f0898c042deecb3c5d43e4ae60da2
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.0.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.0.tgz.sha256)" = \
+    --output programmable-launch-3.3.1.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.1.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.0.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.0/programmable-launch-3.3.0.tgz
-  shasum -a 256 --check programmable-launch-3.3.0.tgz.sha256
-  npm install --global ./programmable-launch-3.3.0.tgz
+    --output programmable-launch-3.3.1.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.1/programmable-launch-3.3.1.tgz
+  shasum -a 256 --check programmable-launch-3.3.1.tgz.sha256
+  npm install --global ./programmable-launch-3.3.1.tgz
   programmable-launch --version
 )
 ```
