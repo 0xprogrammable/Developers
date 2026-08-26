@@ -34,7 +34,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 - Classic launch discovery is live on Ethereum.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
 - The authenticated Router-based Custom Launch API V2 is public on Ethereum Mainnet and separate from legacy intake and from this unauthenticated read API. V1 reads/status remain compatible; V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
-- Direct Native Hook Graph Profile V3 is live through API V3 and CLI `3.2.0`, with exactly `pack`, `validate`, `submit`, and `status`. Its immutable GitHub release locator and checksum-bound tarball are published in the active descriptor. Revision 2 remains compatible and the V1 descriptor remains gated.
+- Direct Native Hook Graph Profile V3 is live through API V3 and CLI `3.2.1`, with exactly `pack`, `validate`, `submit`, and `status`. Its immutable GitHub release locator and checksum-bound tarball are published in the active descriptor. Revision 2 remains compatible and the V1 descriptor remains gated.
 - Custom Registry Generation 2 remains a separate unavailable release candidate. It does not activate the public fee-enforced profile, and neither creates a third public category.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - Historical Stock-Paired records are not part of the v2 Programmable Custom classification.

@@ -87,19 +87,20 @@
           "remediationCatalogSchemaVersion": "programmable.custom-launch-agent-remediation-catalog.v1",
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
           "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
-          "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json"
+          "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
+          "packConfigSchemaSha256": "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c"
         }
       }
     },
     "cli": {
       "const": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.2.0",
+        "releaseVersion": "3.2.1",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz.sha256",
-        "tarballSha256": "sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.1",
+        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz",
+        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.1/programmable-launch-3.2.1.tgz.sha256",
+        "tarballSha256": "sha256:f86aa6f65f3ddae7eb5a6b49dc960b0fbdbb853920fb997018d36851db985807",
         "supportStatus": "live",
         "minimumSupportingVersion": "3.1.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
