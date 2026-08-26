@@ -202,13 +202,31 @@ status
 
 The immutable `3.2.0` release locator is
 `https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0`.
-This source revision reports `releaseLocatorStatus: pending-publication` and
-`tarballSha256: null` because the immutable asset has not yet supplied its
-checksum. API and compatible predecessor support remain `supportStatus: live`.
-Do not install that locator until discovery reports `published` and a
-non-null SHA-256, then compare the published `.tgz.sha256` before installing.
-Do not install a similarly named package from a registry. CLI `3.1.0` remains
-the compatible published predecessor while the `3.2.0` locator is pending.
+The discovery descriptor reports `releaseLocatorStatus: published`,
+`supportStatus: live`, the exact tarball and checksum URLs, and
+`tarballSha256: sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba`.
+Do not install a similarly named package from a registry.
+
+Download and compare the published checksum first. Only then download, verify,
+and install the exact release asset:
+
+```sh
+(
+  set -eu
+  PROGRAMMABLE_LAUNCH_SHA256=1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba
+  curl --fail --location --proto '=https' --tlsv1.2 \
+    --output programmable-launch-3.2.0.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.2.0.tgz.sha256)" = \
+    "$PROGRAMMABLE_LAUNCH_SHA256"
+  curl --fail --location --proto '=https' --tlsv1.2 \
+    --output programmable-launch-3.2.0.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz
+  shasum -a 256 --check programmable-launch-3.2.0.tgz.sha256
+  npm install --global ./programmable-launch-3.2.0.tgz
+  programmable-launch --version
+)
+```
 
 The normal flow remains:
 

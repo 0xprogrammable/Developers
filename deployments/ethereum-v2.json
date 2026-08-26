@@ -1508,11 +1508,11 @@
     "cli": {
       "packageName": "@programmable/launch",
       "releaseVersion": "3.2.0",
-      "releaseLocatorStatus": "pending-publication",
+      "releaseLocatorStatus": "published",
       "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.2.0",
       "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz",
       "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.2.0/programmable-launch-3.2.0.tgz.sha256",
-      "tarballSha256": null,
+      "tarballSha256": "sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba",
       "supportStatus": "live",
       "minimumSupportingVersion": "3.1.0",
       "packConfigSchema": "programmable.launch-pack-config.v3",

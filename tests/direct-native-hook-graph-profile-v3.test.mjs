@@ -190,7 +190,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
     assert.equal(profile.cli.releaseVersion, "3.2.0");
-    assert.equal(profile.cli.releaseLocatorStatus, "pending-publication");
+    assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
     assert.equal(
       profile.cli.releaseUrl,
@@ -206,7 +206,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.equal(
       profile.cli.tarballSha256,
-      null,
+      "sha256:1cedbec0f75c19948deb376bbc1a5bc6ec4c0f75a549e6703c0ee62e7a1b1dba",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -313,10 +313,13 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llms, /custom-launch-agent-remediation-v1\.json/u);
     assert.match(llms, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(llmsFull, /not a manual approval queue/iu);
-    assert.match(guide, /releaseLocatorStatus: pending-publication/iu);
+    assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /CLI `3\.1\.0` remains\s+the compatible published predecessor/iu);
-    assert.match(guide, /Do not install that locator until discovery reports `published`/iu);
+    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.2\.0\.tgz\.sha256/u);
+    assert.match(
+      guide,
+      /npm install --global \.\/programmable-launch-3\.2\.0\.tgz/u,
+    );
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);
     assert.match(
@@ -324,8 +327,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,
     );
     assert.match(llms, /launch-admission-only/iu);
-    assert.match(llms, /no claimed checksum/iu);
-    assert.match(llmsFull, /claims no tarball checksum/iu);
+    assert.match(llms, /checksum-bound tarball/iu);
+    assert.match(llmsFull, /checksum-bound tarball/iu);
     assert.ok(
       schemaIndex.schemas.some(
         ({ name }) =>
