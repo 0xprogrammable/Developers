@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "publicLabel": "Programmable Custom",
+  "launchId": "fixture:custom-complete-metadata-prelaunch",
+  "category": "custom",
+  "chainId": 1,
+  "caip2": "eip155:1",
+  "projectId": "fixture-complete-metadata",
+  "model": {
+    "id": "unknown-future-model",
+    "version": null
+  },
+  "template": null,
+  "partner": null,
+  "builder": null,
+  "token": {
+    "address": "0x1111111111111111111111111111111111111111",
+    "identityStatus": "complete",
+    "name": "Fixture Metadata Token",
+    "symbol": "FMT",
+    "decimals": 18,
+    "totalSupplyRaw": null,
+    "supplyStatus": "unavailable",
+    "supplyAsOfBlock": null,
+    "metadata": {
+      "description": "Synthetic complete-metadata fixture for a future Custom launch.",
+      "imageUrl": "https://assets.example/fixture-token.png",
+      "links": {
+        "website": "https://fixture-token.example/",
+        "x": "https://x.com/fixture_token"
+      },
+      "trustStatus": "creator-declared"
+    }
+  },
+  "assets": [
+    {
+      "assetId": "project:root",
+      "role": "root",
+      "identity": {
+        "namespace": "fixture:project",
+        "value": "fixture-complete-metadata"
+      },
+      "provenance": {
+        "kind": "protocol-external",
+        "relationship": "synthetic-prelaunch-fixture"
+      },
+      "identityEvidenceHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "onchainMetadata": null,
+      "onchainMetadataHash": null
+    },
+    {
+      "assetId": "token:primary",
+      "role": "primary-token",
+      "identity": {
+        "namespace": "eip155:1",
+        "value": "0x1111111111111111111111111111111111111111"
+      },
+      "provenance": {
+        "kind": "launch-produced"
+      },
+      "identityEvidenceHash": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "onchainMetadata": null,
+      "onchainMetadataHash": null
+    }
+  ],
+  "launch": {
+    "status": "prelaunch",
+    "origin": "first-party",
+    "modelId": "unknown-future-model",
+    "modelVersion": null,
+    "publicSubmission": true,
+    "creatorAddress": null,
+    "transactionHash": null,
+    "blockNumber": null,
+    "blockHash": null,
+    "transactionIndex": null,
+    "logIndex": null,
+    "timestamp": null,
+    "finality": null,
+    "launchWallet": null,
+    "observedAt": null,
+    "confirmedAt": null,
+    "finalizedAt": null,
+    "orphanedAt": null,
+    "revokedAt": null
+  },
+  "verification": {
+    "sourceId": "synthetic-prelaunch-fixture",
+    "launcherAddress": null,
+    "registryAddress": null,
+    "provenanceStatus": "prelaunch",
+    "sourceUrl": null,
+    "registryGeneration": null,
+    "registryEventTopic": null,
+    "registryLogIndex": null,
+    "approvalMatch": "unavailable",
+    "runtimeMatch": "unavailable",
+    "metadataTrust": "creator-declared"
+  },
+  "approvalBinding": null,
+  "deploymentBinding": null,
+  "verifiedReview": null,
+  "feePolicy": {
+    "schemaVersion": "programmable.custom-launch-fee-policy.v3",
+    "mode": "no-qualifying-market",
+    "programmableRecipient": {
+      "namespace": "eip155-address",
+      "value": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+    },
+    "totalFeeBps": 0,
+    "programmableShareBps": 0,
+    "partnerShareBps": 0,
+    "partnerRecipient": null,
+    "chargeMode": "none-no-qualifying-market",
+    "basis": null,
+    "currency": null,
+    "accrual": null,
+    "claim": null,
+    "rounding": null,
+    "claimRights": {
+      "programmable": null,
+      "partner": null,
+      "independentlyClaimable": false,
+      "crossPartyClaimingProhibited": true,
+      "evidenceHash": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    "verifiedMarketIds": [],
+    "normalProgrammableTenBpsApplied": false,
+    "verificationStatus": "not_applicable",
+    "verificationAuthorityHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "verificationEvidenceHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "recipientControlEvidenceHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "claimIsolationEvidenceHash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "verifiedAt": "2026-08-06T00:00:00.000Z",
+    "publicPolicyBindingHash": "sha256:68ae09ddc1fab007a04f09c8a3508bda3c870f9cc32598e099182459f77c0947"
+  },
+  "finalityEvidence": null,
+  "presentation": {
+    "description": "Synthetic complete-metadata fixture for a future Custom launch.",
+    "image": "https://assets.example/fixture-token.png",
+    "website": "https://fixture-token.example/",
+    "x": "https://x.com/fixture_token",
+    "telegram": null,
+    "discord": null,
+    "github": null,
+    "docs": null,
+    "trustStatus": "creator-declared"
+  },
+  "capabilities": [
+    {
+      "id": "project-token",
+      "version": null,
+      "status": "conditional",
+      "parameters": {}
+    }
+  ],
+  "mechanisms": [
+    {
+      "id": "unknown-future-mechanism",
+      "version": null,
+      "status": "unknown",
+      "parameters": {
+        "fixture/synthetic": true
+      }
+    }
+  ],
+  "markets": [],
+  "fees": [],
+  "extensions": {
+    "fixture/synthetic": true
+  }
+}

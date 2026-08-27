@@ -161,6 +161,13 @@ declared metadata, token readback state, and finality evidence; it excludes
 pending and legacy requests, controller addresses, credentials, and request
 bytes. Complete every page and keep Router evidence authoritative. A declared
 presentation is not a safety, tradeability, or onchain token-identity claim.
+Current submissions require name, symbol, description, an image with immutable
+byte facts, one website, and one canonical X profile; historical finalized
+records with older missing presentation fields remain visible. Partner calls
+may add immutable server-derived `partnerAttribution`, projected by the
+Developer launch schema as `launchedVia`. Neither callers nor creator metadata
+can choose that attribution, and it is not an economic partner, provider,
+safety, liquidity, or external-indexing claim.
 
 Fee data is market-path evidence, not a category default. Current verified Classic paths and the public fee-enforced Custom profiles have different charge modes. The Custom V2 profile specifies an additive 10 basis points, or 0.1%, on the gross unspecified pool-currency amount for each successful swap through the exact bound pool, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Its sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Direct Native Hook Graph V2 supports an exact per-launch additive or inclusive 10-bps platform share and requires a conformance receipt before authorization. The retained V1 preview reserves 10 bps inside the selected total hook fee but remains gated and is not fee-accrual evidence. Generic fee claiming and buybacks are not live. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
 

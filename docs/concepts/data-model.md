@@ -53,6 +53,7 @@ Registry-backed records can add these v2 fields without changing the API major v
 | `finalityEvidence` | Observed, confirmed, finalized, or orphaned chain evidence |
 | `presentation` | Creator-facing description, image, website, and social links with explicit trust boundary |
 | `provider` | Optional provider attribution with explicit registry-bound, display-only, or revoked status; never a category, fee, review, or execution authority |
+| `launchedVia` | Optional immutable display snapshot derived from the authenticated partner API principal on a finalized Custom launch |
 | `registryOrigin` | Registry record generation, source, and origin evidence |
 | `launchingWallet` | Namespaced wallet identity bound to the launch |
 | `postLaunchAuthorityInventory` | Effective post-launch roles and authority evidence |
@@ -71,10 +72,28 @@ Use:
 - `launchId` for one launch event;
 - `model.id` and `model.version` for the launch model;
 - `template` for the exact reviewed template when one exists;
-- `partner` for verified partner attribution; and
+- `partner` for verified partner attribution;
+- `launchedVia` for the server-owned API-principal display attribution, when present; and
 - `builder` for builder attribution.
 
 A Basebit, Aion, or future partner launch remains `category: "custom"` and `publicLabel: "Programmable Custom"`. Partner, template, and model never become new public categories. At present, no Basebit or Aion partner record is verified by the public v2 manifest.
+
+Do not conflate three separate concepts:
+
+- `partner` is the Registry/economic partnership object and can carry fee and
+  lifecycle bindings;
+- `provider` is Registry-bound or display-only provider provenance; and
+- `launchedVia` is the immutable read projection of the Custom Launch API's
+  `partnerAttribution`, derived from the authenticated partner API principal.
+
+`launchedVia` uses schema
+`programmable.launch-partner-attribution.v1` with partner ID, name, optional
+canonical HTTPS website, attribution source/version, and a domain-framed
+snapshot digest. The create request cannot set it. It supports a label such as
+`Launched via Example Partner`; it does not prove a fee, review, audit, safety,
+liquidity, tradability, provider index status, or external verification.
+The digest commits the snapshot fields inside the official response; it is not
+a standalone signature over an object copied from an untrusted source.
 
 ## Assets and mechanisms
 
@@ -103,6 +122,14 @@ When present, `token` contains:
 Key the asset by chain and address. Treat name and symbol as untrusted display values. Preserve raw integer values and apply decimals only for presentation.
 
 A recognized launch event stays discoverable when an ERC-20 metadata or supply call fails. In that case, identity can be `partial`, individual fields remain null, supply can be `unavailable`, and metadata trust can be `unavailable`. Do not fill those values with guesses or remove the launch.
+
+Current Custom profiles declare name, symbol, non-empty description, an image
+with immutable byte digest and media facts, one website, and one canonical X
+profile before launch. This is a presentation-envelope requirement, not a
+restriction on project mechanics. Historical records remain valid and
+discoverable when older presentation fields are absent. Declared name and
+symbol are not onchain evidence until the finalized metadata readback reports
+an exact match.
 
 `token: null` is valid for a project-only launch. Preserve its `projectId`, `launchId`, `assets`, mechanisms, provenance, review, fee policy, lifecycle, and markets. Do not fabricate an ERC-20 or include the project in a token-list projection.
 

@@ -44,6 +44,10 @@
       "url": "https://developers.programmable.family/schemas/v2/launch-feed.schema.json"
     },
     {
+      "name": "launch-partner-attribution-v1",
+      "url": "https://developers.programmable.family/schemas/v2/launch-partner-attribution-v1.schema.json"
+    },
+    {
       "name": "launch",
       "url": "https://developers.programmable.family/schemas/v2/launch.schema.json"
     },

@@ -99,8 +99,25 @@ paths:
         requests, controller addresses, credentials, and request bytes.
         `resourceId` is not Router identity; bind `routerLaunchId` to the
         matching canonical Router event token, hook, PoolManager, and pool ID.
-        Creator presentation remains untrusted display data and is not onchain
-        token identity, safety, liquidity, or tradeability evidence.
+        Read canonical display fields from `projectMetadata`: declared token
+        name and symbol, presentation description, image, website, and X link.
+        Treat name and symbol as matching onchain token metadata only when
+        `tokenMetadataReadback.status` reports the exact matching state; retain
+        mismatch and unavailable states. New current-profile submissions must
+        provide complete description, image, website, and X metadata, while
+        historical finalized records remain visible when an older snapshot is
+        incomplete.
+
+        An optional `items[].partnerAttribution` is the immutable server-owned
+        `programmable.launch-partner-attribution.v1` snapshot derived from the
+        authenticated partner API principal. A Developer launch projection may
+        expose the same object as `launchedVia`; clients cannot set either field
+        in a create request. This is display attribution, not the economic
+        `partner` object or Registry `provider` evidence. Creator presentation
+        remains untrusted display data and is not onchain token identity,
+        safety, liquidity, tradeability, provider indexing, or external
+        verification evidence. Publication cannot guarantee GMGN, Dexscreener,
+        or another third party will ingest the item or assign a safe label.
       parameters:
         - name: limit
           in: query
@@ -292,7 +309,11 @@ paths:
         authoritative until Router coverage is current. A Router record's
         absent Registry fee policy is semantically valid only when its exact
         entry and source-boundary digests are members of the accepted source
-        snapshot; source-shaped JSON alone is never sufficient.
+        snapshot; source-shaped JSON alone is never sufficient. Finalized
+        partner-launched Custom records may add `launchedVia`, an exact
+        read-only projection of the Custom Launch API's server-owned
+        `partnerAttribution` snapshot. It never changes `category`, economic
+        fee policy, provider evidence, review, safety, or index status.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"
@@ -443,6 +464,8 @@ components:
       $ref: ../schemas/v2/launch-feed.schema.json
     Launch:
       $ref: ../schemas/v2/launch.schema.json
+    LaunchPartnerAttributionV1:
+      $ref: ../schemas/v2/launch-partner-attribution-v1.schema.json
     CanonicalCustomRegistryRecordV3:
       $ref: ../schemas/v2/custom-launch-registry-record-v3.schema.json
     CanonicalCustomRegistryRecordV4:

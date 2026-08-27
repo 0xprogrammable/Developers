@@ -34,6 +34,16 @@ export interface ProviderAttribution {
   extensions: Record<string, unknown>
 }
 
+export interface LaunchPartnerAttributionV1 {
+  schemaVersion: "programmable.launch-partner-attribution.v1"
+  partnerId: string
+  name: string
+  website: string | null
+  attributionSource: "authenticated-partner-api-key"
+  attributionVersion: 1
+  snapshotDigest: `sha256:${string}`
+}
+
 export interface LaunchRecord {
   schemaVersion: string
   launchId: string
@@ -52,6 +62,7 @@ export interface LaunchRecord {
   projectId?: string | null
   assets?: LaunchAsset[]
   provider?: ProviderAttribution | null
+  launchedVia?: LaunchPartnerAttributionV1
   finalityEvidence?: { status: FinalityState; [field: string]: unknown }
   [field: string]: unknown
 }

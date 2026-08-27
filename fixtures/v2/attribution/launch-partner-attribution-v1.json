@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "programmable.launch-partner-attribution.v1",
+  "partnerId": "fixture-partner",
+  "name": "Fixture Partner",
+  "website": "https://partner.example/",
+  "attributionSource": "authenticated-partner-api-key",
+  "attributionVersion": 1,
+  "snapshotDigest": "sha256:ff056464cf384408004b689b45d3e70033018f4b9089c9a515d1f706dde528bc"
+}

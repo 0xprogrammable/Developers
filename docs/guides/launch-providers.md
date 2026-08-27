@@ -6,6 +6,69 @@ This document defines how an external launch system can make its accepted launch
 
 Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; this does not close the separate authenticated Custom Launch API V2. V1 reads/status remain compatible and V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. V2 clients retry only retryable `429` or `503` responses, honor `Retry-After`, and replay the exact idempotency-bound request bytes.
 
+## Partner API principal and downstream agents
+
+An administrator can issue a credential for one approved partner principal. The
+credential authenticates the caller; it is not public metadata and must remain
+in the partner's backend. A partner such as a framework or agent builder may
+place its own chat, builder, or downstream-key layer in front of that backend.
+Every call reaching Programmable still resolves to the same authenticated
+partner principal, so the partner can provide a launchpad experience without
+creating a new public launch category.
+
+Programmable-managed partner credentials use only
+`custom-launch:create`, `custom-launch:read`, and the root-only
+`partner-subkeys:manage` scope. A child key can prepare or read launches only
+within its granted create/read scopes; it cannot manage another child key or
+change the root partner identity. Do not substitute similarly named scopes or
+let a partner's own downstream credential bypass the upstream Programmable
+principal.
+
+The launch request cannot set `partnerAttribution`, `launchedVia`, a partner ID,
+or a partner display name. On a successful finalized launch, the server takes
+an immutable snapshot of the authenticated principal:
+
+```json
+{
+  "schemaVersion": "programmable.launch-partner-attribution.v1",
+  "partnerId": "example-partner",
+  "name": "Example Partner",
+  "website": "https://partner.example/",
+  "attributionSource": "authenticated-partner-api-key",
+  "attributionVersion": 1,
+  "snapshotDigest": "sha256:<64 lowercase hex>"
+}
+```
+
+The Custom Launch API publishes that optional object as
+`partnerAttribution`; the Developer launch model can project the identical
+object as `launchedVia`. The UI may render `Launched via Example Partner`.
+Credential rotation, revocation, or a later partner-profile edit must not
+rewrite an already finalized snapshot. A partner's internal subkey cannot
+choose a different public attribution or escalate its Programmable authority.
+The digest detects mutation of a snapshot received from the official read
+surface; it is not a signature that authenticates a copied object in isolation.
+
+This display attribution is separate from the existing economic `partner`
+record and Registry `provider` evidence. It establishes neither a fee split nor
+template approval, security review, liquidity, tradability, third-party
+indexing, or a `safe` label.
+
+## Required public metadata, independent mechanics
+
+Current partner and direct Custom submissions provide a canonical public
+envelope before launch: token name, symbol, non-empty description, image bytes
+with their digest and media facts, one website, and one canonical X profile
+URL. The exact write contract remains the Custom Launch V3 OpenAPI; this
+Developer API only documents and projects finalized read data.
+
+These requirements describe the project card, not the hook's behavior. They do
+not restrict valid v4 permission masks, custom accounting, settlement design,
+token mechanics, market count, or whether a conventional liquidity position
+exists. Older recognized launches with incomplete presentation remain
+discoverable with null or unavailable fields; consumers must not invent the
+missing image or social links.
+
 ## Public classification
 
 Every accepted partner launch uses:
@@ -206,6 +269,7 @@ feePolicy.partnerShareBps: 15
 feePolicy.programmableShareBps: 5
 feePolicy.normalProgrammableTenBpsApplied: false
 finalityEvidence: <observed, confirmed, finalized or orphaned evidence>
+launchedVia: <optional immutable authenticated-partner snapshot>
 ```
 
 This is a semantic excerpt, not a fixture or an active record. Every value remains prelaunch until the Registry is deployed. Never replace nulls with guessed addresses or partner data; use the normative JSON Schema for the complete field contract.
@@ -220,6 +284,7 @@ The minimum display is:
 - chain plus project ID and authenticated token or contract addresses;
 - launch time and finality;
 - provider attribution when present;
+- `Launched via <partner name>` when `launchedVia` is present and its snapshot digest is valid;
 - supported market actions only.
 
 Do not convert provider registration into a universal `safe`, `audited`, `sellable` or `unruggable` flag. Pool state, liquidity, quotes, simulation and template-specific evidence remain separate checks.

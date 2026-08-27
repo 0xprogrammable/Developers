@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
+import { canonicalizeJson } from "./canonical.js";
 import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
 import {
@@ -18,6 +19,9 @@ import {
   isTrustedRouterStampedCustomRecord,
   readRouterCustomRecords,
 } from "./router-custom.js";
+import {
+  assertExactLaunchPartnerAttribution,
+} from "./partner-attribution.js";
 
 let manifestPromise = null;
 
@@ -196,8 +200,46 @@ function classification(record) {
 
 export function projectV2Record(record) {
   const isClassic = record.category === "classic";
+  const {
+    partnerAttribution: sourcePartnerAttribution,
+    launchedVia: existingLaunchedVia,
+    ...recordWithoutSourceAttribution
+  } = record;
+  if (
+    sourcePartnerAttribution !== undefined &&
+    sourcePartnerAttribution !== null &&
+    existingLaunchedVia !== undefined &&
+    existingLaunchedVia !== null
+  ) {
+    assertExactLaunchPartnerAttribution(sourcePartnerAttribution);
+    assertExactLaunchPartnerAttribution(existingLaunchedVia);
+    if (
+      canonicalizeJson(sourcePartnerAttribution) !==
+        canonicalizeJson(existingLaunchedVia)
+    ) {
+      throw new TypeError("launch partner attribution projections conflict");
+    }
+  }
+  const partnerAttribution = sourcePartnerAttribution ?? existingLaunchedVia;
+  if (
+    partnerAttribution !== undefined && partnerAttribution !== null &&
+    (record.category !== "custom" || record.launch?.finality !== "finalized")
+  ) {
+    throw new TypeError(
+      "launch partner attribution requires finalized Custom provenance",
+    );
+  }
+  const launchedVia = partnerAttribution === undefined ||
+      partnerAttribution === null
+    ? {}
+    : {
+        launchedVia: structuredClone(
+          assertExactLaunchPartnerAttribution(partnerAttribution),
+        ),
+      };
   return carryRouterCustomTrust(record, {
-    ...record,
+    ...recordWithoutSourceAttribution,
+    ...launchedVia,
     schemaVersion: API_V2_SCHEMA_VERSION,
     platformId: "programmable",
     publicLabel: isClassic ? "Programmable Classic" : "Programmable Custom",
@@ -218,6 +260,7 @@ export function publicLaunchV2(record) {
   const {
     sortKey: _sortKey,
     registryV4Envelope: _registryV4Envelope,
+    partnerAttribution: _sourcePartnerAttribution,
     ...publicRecord
   } = record;
   return carryRouterCustomTrust(record, publicRecord);

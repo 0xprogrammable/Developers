@@ -15,6 +15,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Add the immutable authenticated-partner attribution schema and optional v2 `launchedVia` projection, document complete current-profile metadata and finalized metadata ingestion, and keep external indexing and `safe` labels explicitly outside the guarantee.
 - Publish the immutable checksum-bound CLI `3.3.5` locator and bind it to tarball SHA-256 `d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca`, pack-config schema SHA-256 `a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60`, and Custom Launch V3 OpenAPI `3.3.5` SHA-256 `07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51`; retain the prior CLI `3.3.3` entry below as release history.
 - Bind required profile `3.2.0` project name, symbol, presentation, image digest, and sorted links through `projectMetadataHash`, metadata-bound `graphBundleHash`, prepared resources, launch IDs, and wallet review while retaining metadata-absent `3.1.0`, `3.0.0`, and `2.0.0` resources and keeping finalized token readback and untrusted presentation data as separate evidence boundaries.
 - Publish profile `3.2.0` with seven objective hard blocks, exact `3.1.0` and `3.0.0` read/retry compatibility, evidence-only treatment for complex governance/accounting/liquidity surfaces, platform-authored behavior evidence, six independent product truth axes, and bounded authenticated lifecycle-queue polling metadata without changing Developer feed records.
