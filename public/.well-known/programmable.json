@@ -84,7 +84,7 @@
         "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
         "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
         "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-        "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4",
+        "packConfigSchemaSha256": "sha256:0f52f9eb929860e03bb269b8cb561742c6be12bfa2be5a4759da2502dedb1531",
         "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
       },
       "publicRelease": {
@@ -360,6 +360,8 @@
         "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
         "fundingAuthorizationMethod": "POST",
         "openApiPath": "/openapi/custom-launch-v3.json",
+        "openApiVersion": "3.3.4",
+        "openApiSha256": "sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190",
         "openApiStatus": "live",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "resourceSchema": "programmable.custom-launch.v3",
@@ -454,18 +456,18 @@
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
           "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
           "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-          "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4",
+          "packConfigSchemaSha256": "sha256:0f52f9eb929860e03bb269b8cb561742c6be12bfa2be5a4759da2502dedb1531",
           "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
         }
       },
       "cli": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.3.3",
+        "releaseVersion": "3.3.4",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.3",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz.sha256",
-        "tarballSha256": "sha256:14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.4",
+        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.4/programmable-launch-3.3.4.tgz",
+        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.4/programmable-launch-3.3.4.tgz.sha256",
+        "tarballSha256": "sha256:c376157a2812d640e041367a562580189d184cd425df1b27b10c235799f8720d",
         "supportStatus": "live",
         "minimumSupportingVersion": "3.2.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",

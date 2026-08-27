@@ -17,7 +17,8 @@ Resolve `directNativeHookGraphProfileV3` from `GET /api/v2/manifest` or
 requests use the separately hosted authenticated API at
 `https://api.programmable.market` and its versioned
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
-contract.
+contract. The published OpenAPI is version `3.3.4` and its exact byte digest is
+`sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190`.
 
 Revision 3 is additive. New metadata-bound packs use `3.2.0`; exact `3.1.0` and
 `3.0.0` request bytes stay readable and retryable under their original
@@ -404,7 +405,7 @@ catalog:
   "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
   "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
   "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-  "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4"
+  "packConfigSchemaSha256": "sha256:0f52f9eb929860e03bb269b8cb561742c6be12bfa2be5a4759da2502dedb1531"
 }
 ```
 
@@ -437,7 +438,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.3`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.4`, with exactly four commands:
 
 ```text
 pack
@@ -446,11 +447,11 @@ submit
 status
 ```
 
-The immutable `3.3.3` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.3`.
+The immutable `3.3.4` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.4`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209`.
+`tarballSha256: sha256:c376157a2812d640e041367a562580189d184cd425df1b27b10c235799f8720d`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -459,17 +460,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209
+  PROGRAMMABLE_LAUNCH_SHA256=c376157a2812d640e041367a562580189d184cd425df1b27b10c235799f8720d
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.3.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.3.tgz.sha256)" = \
+    --output programmable-launch-3.3.4.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.4/programmable-launch-3.3.4.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.4.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.3.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz
-  shasum -a 256 --check programmable-launch-3.3.3.tgz.sha256
-  npm install --global ./programmable-launch-3.3.3.tgz
+    --output programmable-launch-3.3.4.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.4/programmable-launch-3.3.4.tgz
+  shasum -a 256 --check programmable-launch-3.3.4.tgz.sha256
+  npm install --global ./programmable-launch-3.3.4.tgz
   programmable-launch --version
 )
 ```
