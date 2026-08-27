@@ -125,10 +125,12 @@ the launch resource status.
 
 The canonical Custom Launch V3 resource always includes immutable
 `launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`.
-Required `projectMetadata` and `projectMetadataHash` keys are non-null exactly
-for `3.3.0` and null for the four retained legacy versions. The prepared
-artifact has no separate `launchProfileVersion`; current artifacts carry
-metadata, metadata hash, and `unboundGraphBundleHash`, while legacy artifacts
+Required `projectMetadata` and `projectMetadataHash` keys are non-null for
+metadata-bound `3.2.0` and `3.3.0`, and null for retained `2.0.0`, `3.0.0`, and
+`3.1.0`. Profile `3.2.0` retains its legacy nullable-image metadata contract;
+fresh `3.3.0` packs use the stricter complete policy. The prepared artifact has
+no separate `launchProfileVersion`; metadata-bound artifacts carry metadata,
+metadata hash, and `unboundGraphBundleHash`, while pre-`3.2.0` legacy artifacts
 omit those three fields. The canonical conditional schema stays in the public
 Custom Launch V3 OpenAPI and is not redefined here.
 

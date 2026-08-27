@@ -130,8 +130,10 @@ name or symbol; `programmable.project-token-metadata-binding.v1` requires a
 separate post-deployment readback. Images, descriptions, and links remain
 creator-supplied display data and cannot authorize wallet or API actions.
 Every V3 resource carries immutable `launchProfileVersion`. Its always-present
-`projectMetadata` and `projectMetadataHash` keys are non-null exactly for
-`3.3.0`; both are null for retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
+`projectMetadata` and `projectMetadataHash` keys are non-null for metadata-bound
+`3.2.0` and `3.3.0`; both are null for retained `2.0.0`, `3.0.0`, and `3.1.0`
+resources. Profile `3.2.0` keeps its legacy nullable-image metadata contract;
+fresh `3.3.0` packs use the stricter complete policy.
 The unauthenticated `/v3/finalized-custom-launches` snapshot exposes only
 finalized profile `3.3.0` metadata ledgers and their declared-versus-observed
 token readback state. It excludes pending and legacy resources, controllers,
