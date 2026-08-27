@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseDocument } from "yaml";
 
 export const REPOSITORY_ROOT = fileURLToPath(
   new URL("../../", import.meta.url),
@@ -23,15 +24,32 @@ export async function listFiles(directory, predicate = () => true) {
 
 export async function readJson(file) {
   const source = await readFile(file, "utf8");
-  return JSON.parse(source);
+  return parseJsonStrict(source, path.relative(REPOSITORY_ROOT, file));
 }
 
 export async function assertCanonicalJson(file) {
   const source = await readFile(file, "utf8");
-  const canonical = `${JSON.stringify(JSON.parse(source), null, 2)}\n`;
+  const value = parseJsonStrict(source, path.relative(REPOSITORY_ROOT, file));
+  const canonical = `${JSON.stringify(value, null, 2)}\n`;
   if (source !== canonical) {
     throw new Error(`${path.relative(REPOSITORY_ROOT, file)} is not canonical JSON`);
   }
+}
+
+export function parseJsonStrict(source, label = "JSON document") {
+  const document = parseDocument(source, {
+    json: true,
+    maxAliasCount: 0,
+    prettyErrors: true,
+    strict: true,
+    uniqueKeys: true,
+  });
+  if (document.errors.length > 0) {
+    throw new Error(
+      `${label} is not strict JSON:\n${document.errors.map(String).join("\n")}`,
+    );
+  }
+  return document.toJS({ maxAliasCount: 0 });
 }
 
 export function cloneJson(value) {

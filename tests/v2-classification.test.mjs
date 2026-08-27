@@ -193,6 +193,31 @@ describe("version 2 classification", () => {
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
     });
+    assert.deepEqual(publicStatus.currentCustomLaunchCreate, {
+      apiVersion: "3",
+      status: "live",
+      profileId: "programmable.direct-native-hook-graph.v1",
+      profileRevision: 3,
+      profileVersion: "3.2.0",
+      baseUrl: "https://api.programmable.market",
+      method: "POST",
+      path: "/v3/custom-launches",
+      capabilitiesUrl: "https://api.programmable.market/v3/capabilities",
+      preflightUrl:
+        "https://api.programmable.market/v3/custom-launches/preflight",
+      readyzUrl: "https://api.programmable.market/readyz",
+      openApiUrl: "https://programmable.market/openapi/custom-launch-v3.json",
+      authentication: "wallet-bound-api-key",
+      walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
+    });
+    assert.equal(
+      publicStatus.currentCustomLaunchCreate.path,
+      manifest.directNativeHookGraphProfileV3.api.collectionPath,
+    );
+    assert.equal(
+      publicStatus.currentCustomLaunchCreate.profileVersion,
+      manifest.directNativeHookGraphProfileV3.profileVersion,
+    );
     assert.deepEqual(
       publicStatus.customFeeEnforcedLaunchProfileV2,
       manifest.customFeeEnforcedLaunchProfileV2,

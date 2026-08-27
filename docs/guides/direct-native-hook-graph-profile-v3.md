@@ -17,7 +17,11 @@ Resolve `directNativeHookGraphProfileV3` from `GET /api/v2/manifest` or
 requests use the separately hosted authenticated API at
 `https://api.programmable.market` and its versioned
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
-contract.
+contract. The published OpenAPI is version `3.3.5` and its exact byte digest is
+`sha256:07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51`.
+Use `api.openApiUrl` as the canonical absolute contract locator. The retained
+`api.openApiPath` is compatibility data and must not be resolved against the
+separate API `baseUrl`.
 
 Revision 3 is additive. New metadata-bound packs use `3.2.0`; exact `3.1.0` and
 `3.0.0` request bytes stay readable and retryable under their original
@@ -87,6 +91,41 @@ accrual and routing evidence; source verification requires an exact
 source/build/runtime match; indexing requires finalized canonical-Router
 ingestion; featured placement remains a separate product decision. A positive
 field on one axis establishes none of the others.
+
+## Policy authority and resource lifecycle
+
+Do not treat a local CLI result, copied policy prose, or an API key as the
+launch decision. The authority boundary is:
+
+1. the active `directNativeHookGraphProfileV3.platformAdmissionPolicy`
+   descriptor publishes the machine-readable static admission contract;
+2. an exact versioned Programmable Launch Policy commit or release may publish
+   its reviewable authored source, but an unversioned repository branch does
+   not select the live API or decide a request;
+3. live `GET /v3/capabilities` and the V3 OpenAPI publish the current route and
+   transport contract;
+4. the CLI prepares and validates exact bytes locally but cannot authorize a
+   request;
+5. server-side preflight, exact-request admission, and the required pinned
+   Router simulation produce the operational decision;
+6. only the controller wallet may review, sign, and broadcast; and
+7. finalized canonical-Router evidence, not an API status alone, permits feed
+   indexing.
+
+The V3 resource status vocabulary is `received`, `validating`,
+`pending_review`, `action_required`, `prepared`, `simulating`,
+`awaiting_funding_authorization`, `funding_authorization_verified`,
+`authorized`, `submitted`, `finalized`, `failed`, and `cancelled`. This list is
+the canonical vocabulary, not permission to invent transitions; follow the
+returned resource and its V3 OpenAPI contract. `action_required` means repair
+the exact request, repack, and submit new exact bytes. It is not manual
+approval. `authorized` means an exact wallet handoff is available; it does not
+mean signed, broadcast, or deployed. `submitted` is not finality. `finalized`,
+`failed`, and `cancelled` are terminal.
+
+The optional `lifecycleQueue.state` is worker progress, not the launch
+resource `status`. Queue completion never upgrades a request to `authorized`,
+`submitted`, or `finalized`.
 
 ## General graph lane
 
@@ -369,7 +408,7 @@ catalog:
   "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
   "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
   "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-  "packConfigSchemaSha256": "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c"
+  "packConfigSchemaSha256": "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60"
 }
 ```
 
@@ -402,7 +441,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.3`, with exactly four commands:
+Revision 3 uses CLI contract version `3.3.5`, with exactly four commands:
 
 ```text
 pack
@@ -411,11 +450,11 @@ submit
 status
 ```
 
-The immutable `3.3.3` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.3`.
+The immutable `3.3.5` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.5`.
 The discovery descriptor reports `releaseLocatorStatus: published`,
 `supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209`.
+`tarballSha256: sha256:d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca`.
 Do not install a similarly named package from a registry.
 
 Download and compare the published checksum first. Only then download, verify,
@@ -424,17 +463,17 @@ and install the exact release asset:
 ```sh
 (
   set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=14968f99a05bedc4424cee143006a3ae5d27db4fafdb06ae93faec3611116209
+  PROGRAMMABLE_LAUNCH_SHA256=d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.3.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.3.tgz.sha256)" = \
+    --output programmable-launch-3.3.5.tgz.sha256 \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz.sha256
+  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.5.tgz.sha256)" = \
     "$PROGRAMMABLE_LAUNCH_SHA256"
   curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.3.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.3/programmable-launch-3.3.3.tgz
-  shasum -a 256 --check programmable-launch-3.3.3.tgz.sha256
-  npm install --global ./programmable-launch-3.3.3.tgz
+    --output programmable-launch-3.3.5.tgz \
+    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz
+  shasum -a 256 --check programmable-launch-3.3.5.tgz.sha256
+  npm install --global ./programmable-launch-3.3.5.tgz
   programmable-launch --version
 )
 ```

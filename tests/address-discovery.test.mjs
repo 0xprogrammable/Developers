@@ -175,7 +175,13 @@ describe("documentation contract", () => {
         "Custom Launch API V2 and V3 are public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed.",
     });
     const customLaunchApi = wellKnown.extensions["programmable.custom-launch-api"];
-    const { publicRelease, versions, legacyIntake, ...v1Surface } = customLaunchApi;
+    const {
+      currentCreate,
+      publicRelease,
+      versions,
+      legacyIntake,
+      ...v1Surface
+    } = customLaunchApi;
     assert.deepEqual(v1Surface, {
       status: "live",
       scope: "provenance-only",
@@ -202,7 +208,7 @@ describe("documentation contract", () => {
         packConfigSchemaUrl:
           "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
         packConfigSchemaSha256:
-          "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+          "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60",
         finalizedMetadataUrl:
           "https://api.programmable.market/v3/finalized-custom-launches",
       },
@@ -212,6 +218,25 @@ describe("documentation contract", () => {
     assert.equal(customLaunchApi.publicRelease.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v2.json");
     assert.equal(customLaunchApi.publicRelease.cli.releaseVersion, "2.0.1");
+    assert.deepEqual(currentCreate, {
+      apiVersion: "3",
+      status: "live",
+      profileId: manifest.directNativeHookGraphProfileV3.profileId,
+      profileRevision: manifest.directNativeHookGraphProfileV3.profileRevision,
+      profileVersion: manifest.directNativeHookGraphProfileV3.profileVersion,
+      baseUrl: manifest.directNativeHookGraphProfileV3.api.baseUrl,
+      method: "POST",
+      path: manifest.directNativeHookGraphProfileV3.api.collectionPath,
+      capabilitiesUrl: "https://api.programmable.market/v3/capabilities",
+      preflightUrl:
+        "https://api.programmable.market/v3/custom-launches/preflight",
+      readyzUrl: "https://api.programmable.market/readyz",
+      openApiUrl: "https://programmable.market/openapi/custom-launch-v3.json",
+      authentication:
+        manifest.directNativeHookGraphProfileV3.api.authentication,
+      walletBoundary:
+        manifest.directNativeHookGraphProfileV3.api.walletBoundary,
+    });
     assert.deepEqual(versions, {
       v1: {
         reads: "live",
@@ -233,6 +258,8 @@ describe("documentation contract", () => {
           "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
         fundingAuthorizationMethod: "POST",
         openApiPath: "/openapi/custom-launch-v3.json",
+        openApiUrl:
+          "https://programmable.market/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
         profileRevision: 3,
         profileVersion: "3.2.0",

@@ -17,6 +17,11 @@ and its canonical contracts are the versioned
 V1 reads and status remain compatible; V1 POST remains read-only and returns nonretryable
 `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 
+In the v2 status response, `customLaunchApi` is the retained V1 compatibility
+object. `currentCustomLaunchCreate` is the additive current V3 write pointer;
+it identifies the live create, capabilities, preflight, readiness, and OpenAPI
+URLs without granting admission or wallet authority.
+
 ## Current availability
 
 | Surface | Category | Network | State | Meaning |
@@ -97,6 +102,19 @@ an unexecuted vector verified. Its deployable, routable, and featured flags do
 not establish deployment, trading, fee behavior, verification, indexing, or
 featured placement; each later state requires its own evidence. A wallet
 handoff appears only later with an explicit URL and expiry.
+
+Policy publication and enforcement are separate. The active
+`directNativeHookGraphProfileV3.platformAdmissionPolicy` is the public machine
+contract for static admission. An exact versioned Launch Policy commit or
+release may provide its authored source; an unversioned repository branch does
+not select the live API or decide a request. Live V3 capabilities and OpenAPI
+publish the current transport contract. The CLI is a
+preparation tool. Server-side preflight, request-specific admission, and exact
+Router simulation decide whether the request reaches `authorized`. The
+controller wallet alone signs and broadcasts, and canonical Router finality
+alone permits feed indexing. `authorized` is not signed or deployed,
+`submitted` is not finalized, and `lifecycleQueue.state` is not the launch
+resource status.
 
 Revision 3 accepts project-supplied token, hook, initializer, and support
 artifacts in exact 3–16-target direct graphs and represents every valid v4 hook

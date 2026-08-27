@@ -4,7 +4,11 @@ import { describe, test } from "node:test";
 import path from "node:path";
 import { parseDocument } from "yaml";
 
-import { REPOSITORY_ROOT } from "../scripts/lib/files.mjs";
+import {
+  parseJsonStrict,
+  readJson,
+  REPOSITORY_ROOT,
+} from "../scripts/lib/files.mjs";
 
 const file = path.join(REPOSITORY_ROOT, "openapi/programmable-v2.yaml");
 const source = await readFile(file, "utf8");
@@ -36,6 +40,13 @@ function visit(value, callback) {
 }
 
 describe("OpenAPI v2 contract", () => {
+  test("rejects duplicate JSON keys before resolving external contracts", () => {
+    assert.throws(
+      () => parseJsonStrict('{"schema":{"type":"string"},"schema":{}}'),
+      /is not strict JSON/u,
+    );
+  });
+
   test("parses OpenAPI 3.1 with the complete stable route surface", () => {
     assert.equal(spec.openapi, "3.1.1");
     assert.equal(spec.info.version, "2.0.0");
@@ -59,6 +70,7 @@ describe("OpenAPI v2 contract", () => {
       spec.info.description,
       /public authenticated Ethereum\s+Mainnet preparation route/u,
     );
+    assert.match(spec.info.description, /currentCustomLaunchCreate/u);
     assert.equal(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.const,
@@ -155,6 +167,25 @@ describe("OpenAPI v2 contract", () => {
     assert.deepEqual(external, [
       "https://programmable.market/openapi/custom-launch-v3.json#/components/schemas/FinalizedCustomLaunchMetadataListV1",
     ]);
+    const statusSchema = await readJson(
+      path.join(REPOSITORY_ROOT, "schemas/v2/status.schema.json"),
+    );
+    assert.equal(
+      statusSchema.properties.currentCustomLaunchCreate.$ref,
+      "#/$defs/currentCustomLaunchCreate",
+    );
+    assert.equal(
+      statusSchema.required.includes("currentCustomLaunchCreate"),
+      false,
+    );
+    assert.equal(
+      statusSchema.$defs.currentCustomLaunchCreate.properties.path.const,
+      "/v3/custom-launches",
+    );
+    assert.equal(
+      statusSchema.$defs.customLaunchApi.properties.openApiUrl.const,
+      "https://programmable.market/openapi/custom-launch-v1.json",
+    );
   });
 
   test("documents problem JSON and filter parity on every v2 feed route", () => {

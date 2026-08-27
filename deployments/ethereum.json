@@ -16,8 +16,8 @@
     },
     "custom": {
       "discoveryStatus": "live",
-      "publicSubmissionStatus": "prelaunch",
-      "note": "Finalized approved Custom Registry launches and existing first-party Custom records are discoverable. General public submissions remain prelaunch."
+      "publicSubmissionStatus": "closed",
+      "note": "Custom Launch API V2 and V3 are live on Ethereum Mainnet. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "deployments": [
@@ -179,7 +179,7 @@
     "publicSubmissionsEnabled": false,
     "address": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
     "startBlock": "25701139",
-    "note": "Registry discovery is live for finalized approved launches. General public submissions remain prelaunch."
+    "note": "Registry discovery remains live for finalized approved launches. Legacy Registry and GitHub submission intake are closed; use the separate authenticated Custom Launch API V2 or V3."
   },
   "platformFee": {
     "ratePpm": "1000",

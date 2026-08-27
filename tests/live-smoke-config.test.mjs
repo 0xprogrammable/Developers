@@ -18,5 +18,7 @@ test("live smoke allows a bounded serverless cold start", async () => {
   assert.match(source, /const TIMEOUT_MS = 30_000;/u);
   assert.match(source, /signal: AbortSignal\.timeout\(TIMEOUT_MS\)/u);
   assert.match(source, /createSchemaRegistry\("v2"\)/u);
+  assert.match(source, /lintOpenApiGraph/u);
+  assert.match(source, /openapi\/programmable-v2\.yaml/u);
   assert.match(source, /api\/v2/u);
 });
