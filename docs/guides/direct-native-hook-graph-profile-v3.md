@@ -19,6 +19,9 @@ requests use the separately hosted authenticated API at
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
 contract. The published OpenAPI is version `3.3.4` and its exact byte digest is
 `sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190`.
+Use `api.openApiUrl` as the canonical absolute contract locator. The retained
+`api.openApiPath` is compatibility data and must not be resolved against the
+separate API `baseUrl`.
 
 Revision 3 is additive. New metadata-bound packs use `3.2.0`; exact `3.1.0` and
 `3.0.0` request bytes stay readable and retryable under their original

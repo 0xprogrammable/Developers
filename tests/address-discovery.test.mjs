@@ -258,6 +258,8 @@ describe("documentation contract", () => {
           "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
         fundingAuthorizationMethod: "POST",
         openApiPath: "/openapi/custom-launch-v3.json",
+        openApiUrl:
+          "https://programmable.market/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
         profileRevision: 3,
         profileVersion: "3.2.0",

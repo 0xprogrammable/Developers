@@ -818,6 +818,18 @@ describe("server projections", () => {
     assert.deepEqual(await developerManifest(), canonical);
     assert.deepEqual(await developerManifest(), canonical);
     assert.equal(canonical.platformId, undefined);
+    assert.equal(
+      canonical.publicCategories.custom.publicSubmissionStatus,
+      "closed",
+    );
+    assert.match(
+      canonical.publicCategories.custom.note,
+      /Custom Launch API V2 and V3 are live/u,
+    );
+    assert.match(
+      canonical.customRegistry.note,
+      /Legacy Registry and GitHub submission intake are closed/u,
+    );
   });
 
   test("matches normalized source IDs to the canonical deployment manifest", async () => {

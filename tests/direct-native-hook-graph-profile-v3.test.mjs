@@ -399,6 +399,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
 
     assert.equal(profile.api.apiVersion, "3");
     assert.equal(profile.api.publiclyRoutable, true);
+    assert.equal(
+      profile.api.openApiUrl,
+      "https://programmable.market/openapi/custom-launch-v3.json",
+    );
     assert.equal(profile.api.openApiVersion, "3.3.4");
     assert.equal(
       profile.api.openApiSha256,

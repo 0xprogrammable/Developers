@@ -77,6 +77,7 @@
         "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
         "fundingAuthorizationMethod": "POST",
         "openApiPath": "/openapi/custom-launch-v3.json",
+        "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
         "openApiVersion": "3.3.4",
         "openApiSha256": "sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190",
         "openApiStatus": "live",
