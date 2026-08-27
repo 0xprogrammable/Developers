@@ -17,9 +17,12 @@ Resolve `directNativeHookGraphProfileV3` from `GET /api/v2/manifest` or
 requests use the separately hosted authenticated API at
 `https://api.programmable.market` and its versioned
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
-contract. Use `api.openApiUrl` as the canonical absolute contract locator. The retained
-`api.openApiPath` is compatibility data and must not be resolved against the
-separate API `baseUrl`.
+contract. Use `api.openApiUrl` as the canonical absolute contract locator and
+verify its frozen bytes with `api.openApiVersion` and `api.openApiSha256`.
+Install the CLI from `cli.tarballUrl`, verify it with `cli.checksumUrl`,
+`cli.tarballSha256`, and `cli.tarballByteLength`, then use the four published
+commands. The retained `api.openApiPath` is compatibility data and must not be
+resolved against the separate API `baseUrl`.
 
 Revision 3 is additive. Only metadata-bound `3.3.0` accepts fresh admission.
 Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` request bytes stay readable and
