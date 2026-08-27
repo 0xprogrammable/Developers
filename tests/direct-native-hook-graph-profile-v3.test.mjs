@@ -406,7 +406,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.equal(profile.api.openApiVersion, "3.3.4");
     assert.equal(
       profile.api.openApiSha256,
-      "sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190",
+      "sha256:40b465122b3bd5cb672f981d2fcc505c203d6450f69788c7007898c1314582fb",
     );
     assert.deepEqual(profile.api.selfServe, {
       capabilities: {
@@ -770,7 +770,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.match(
       guide,
-      /OpenAPI is version `3\.3\.4`[\s\S]+sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190/u,
+      /OpenAPI is version `3\.3\.4`[\s\S]+sha256:40b465122b3bd5cb672f981d2fcc505c203d6450f69788c7007898c1314582fb/u,
     );
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(guide, /nonceArgumentPath/u);

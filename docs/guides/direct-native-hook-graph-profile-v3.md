@@ -18,7 +18,7 @@ requests use the separately hosted authenticated API at
 `https://api.programmable.market` and its versioned
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
 contract. The published OpenAPI is version `3.3.4` and its exact byte digest is
-`sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190`.
+`sha256:40b465122b3bd5cb672f981d2fcc505c203d6450f69788c7007898c1314582fb`.
 Use `api.openApiUrl` as the canonical absolute contract locator. The retained
 `api.openApiPath` is compatibility data and must not be resolved against the
 separate API `baseUrl`.

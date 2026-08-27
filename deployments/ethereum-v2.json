@@ -1493,7 +1493,7 @@
       "openApiPath": "/openapi/custom-launch-v3.json",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
       "openApiVersion": "3.3.4",
-      "openApiSha256": "sha256:08c134cb807d032cb9c7797c67d4ef7c7ec8021fdbc2387a2347eb6c2e6d8190",
+      "openApiSha256": "sha256:40b465122b3bd5cb672f981d2fcc505c203d6450f69788c7007898c1314582fb",
       "openApiStatus": "live",
       "createRequestSchema": "programmable.custom-launch-create-request.v3",
       "resourceSchema": "programmable.custom-launch.v3",
