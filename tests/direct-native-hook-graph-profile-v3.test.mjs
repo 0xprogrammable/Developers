@@ -404,6 +404,11 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       profile.api.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v3.json",
     );
+    assert.equal(profile.api.openApiVersion, "3.3.6");
+    assert.equal(
+      profile.api.openApiSha256,
+      "sha256:ec0b068a0569a11da335bddfdd54bd5655f56a8128318d8443ff79e6257880f6",
+    );
     assert.deepEqual(profile.api.selfServe, {
       capabilities: {
         method: "GET",
@@ -562,6 +567,19 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       profile.cli.releaseUrl,
       "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6",
     );
+    assert.equal(
+      profile.cli.tarballUrl,
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz",
+    );
+    assert.equal(
+      profile.cli.checksumUrl,
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz.sha256",
+    );
+    assert.equal(
+      profile.cli.tarballSha256,
+      "sha256:3c76730d7748db8ceca6ee06ae02e0aebf5ff6d98d526ea2ed7fa69ed21cff25",
+    );
+    assert.equal(profile.cli.tarballByteLength, 270_386);
     assert.deepEqual(profile.cli.commands, [
       "pack",
       "validate",
@@ -727,6 +745,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.deepEqual(
       extension.cli,
       (await developerManifestV2())[PROFILE_KEY].cli,
+    );
+    assert.equal(
+      extension.api.openApiSha256,
+      (await developerManifestV2())[PROFILE_KEY].api.openApiSha256,
     );
     assert.deepEqual(
       extension.platformAdmissionPolicy,
