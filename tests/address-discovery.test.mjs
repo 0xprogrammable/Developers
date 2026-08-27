@@ -277,8 +277,8 @@ describe("documentation contract", () => {
                 "2.0.0",
                 "3.0.0",
                 "3.1.0",
-                "3.2.0",
               ],
+              legacyMetadataProfileVersions: ["3.2.0"],
               requiredFields: [
                 "token.name",
                 "token.symbol",

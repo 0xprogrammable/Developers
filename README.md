@@ -149,8 +149,11 @@ untrusted display data and never authorize calldata, a transaction, or an
 external account action.
 
 Every V3 resource also carries immutable `launchProfileVersion`. Its required
-`projectMetadata` and `projectMetadataHash` keys are non-null exactly for
-`3.3.0`; both are null on retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
+`projectMetadata` and `projectMetadataHash` keys are non-null for metadata-bound
+`3.2.0` and `3.3.0`; both are null on retained `2.0.0`, `3.0.0`, and `3.1.0`
+resources. Profile `3.2.0` retains its legacy metadata contract, including a
+nullable image, while fresh `3.3.0` packs require the stricter complete metadata
+policy above.
 The canonical resource condition remains in the public V3 OpenAPI rather than
 being redefined by this read/discovery repository.
 

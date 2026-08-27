@@ -255,8 +255,10 @@ paths:
         still requires post-deployment readback. Descriptions, images, and links
         remain untrusted display data and never authorize execution. The
         canonical V3 resource always carries immutable `launchProfileVersion`;
-        `projectMetadata` and `projectMetadataHash` are non-null exactly for
-        `3.3.0` and null for retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
+        `projectMetadata` and `projectMetadataHash` are non-null for metadata-bound
+        `3.2.0` and `3.3.0`, and null for retained `2.0.0`, `3.0.0`, and `3.1.0`
+        resources. Profile `3.2.0` retains its legacy nullable-image metadata
+        contract; fresh `3.3.0` packs use the stricter complete policy.
         The canonical conditional schema remains in the linked Custom Launch V3
         OpenAPI rather than being redefined here. Admission is
         not an audit or a safety, honeypot, liquidity,

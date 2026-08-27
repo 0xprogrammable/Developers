@@ -413,7 +413,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
           schemaVersion: "programmable.project-metadata.v1",
           inputSchemaVersion: "programmable.project-metadata-input.v1",
           requiredForProfileVersion: "3.3.0",
-          legacyWithoutMetadataProfileVersions: ["2.0.0", "3.0.0", "3.1.0", "3.2.0"],
+          legacyWithoutMetadataProfileVersions: ["2.0.0", "3.0.0", "3.1.0"],
+          legacyMetadataProfileVersions: ["3.2.0"],
           requiredFields: [
             "token.name",
             "token.symbol",

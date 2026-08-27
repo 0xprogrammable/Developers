@@ -218,11 +218,14 @@ succeeds.
 
 Every V3 resource carries required immutable `launchProfileVersion` with exact
 value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`. Its `projectMetadata` and
-`projectMetadataHash` keys are always present: both are non-null exactly for
-`3.3.0`, and both are null for legacy `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
-The `3.3.0` prepared artifact carries `projectMetadata`,
-`projectMetadataHash`, and `unboundGraphBundleHash`; legacy prepared artifacts
-omit those three exact fields. A prepared artifact does not carry a separate
+`projectMetadataHash` keys are always present: both are non-null for
+metadata-bound `3.2.0` and `3.3.0`, and both are null for legacy `2.0.0`,
+`3.0.0`, and `3.1.0` resources. Profile `3.2.0` keeps its legacy nullable-image
+metadata contract; fresh `3.3.0` packs use the stricter complete policy.
+The metadata-bound `3.2.0` and `3.3.0` prepared artifacts carry
+`projectMetadata`, `projectMetadataHash`, and `unboundGraphBundleHash`;
+pre-`3.2.0` legacy prepared artifacts omit those three exact fields. A prepared
+artifact does not carry a separate
 `launchProfileVersion`; read it from the immutable resource.
 
 Exact legacy request bytes remain readable and retryable only when resubmitted
