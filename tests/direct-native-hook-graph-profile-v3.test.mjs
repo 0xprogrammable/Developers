@@ -524,7 +524,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       packConfigSchemaUrl:
         "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
       packConfigSchemaSha256:
-        "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60",
+        "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074",
       finalizedMetadataUrl:
         "https://api.programmable.market/v3/finalized-custom-launches",
     });
@@ -778,7 +778,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /schemas\/custom-launch\/v3\/pack-config\.json/u);
     assert.match(
       guide,
-      /packConfigSchemaSha256[^\n]+sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60/u,
+      /packConfigSchemaSha256[^\n]+sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074/u,
     );
     assert.match(guide, /api\.openApiUrl.*canonical absolute contract locator/iu);
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
