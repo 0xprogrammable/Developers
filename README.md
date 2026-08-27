@@ -20,10 +20,14 @@ Create or revoke a wallet-bound key on the [API key management page](https://pro
 Store the key in an encrypted secret or `PROGRAMMABLE_API_KEY`, never in a prompt or chat. An API key cannot sign or
 broadcast a transaction. V2 and V3 return a transaction for the connected controller wallet to review and sign separately.
 Launch create, resource, and status schemas remain owned by their respective OpenAPI contracts. This read/discovery
-repository publishes only the standalone V3 preflight response contract needed for capability discovery. Read the
-current versioned requirements in
-[Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy); this repository does not copy those policy
-bytes.
+repository publishes only the standalone V3 preflight response contract needed for capability discovery. Resolve the
+active write entry from `extensions["programmable.custom-launch-api"].currentCreate` in discovery or
+`currentCustomLaunchCreate` in status, then read live V3 capabilities, OpenAPI,
+and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned
+[Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) commit or release can provide the reviewable
+authored source, but its unversioned default branch does not select the live API or decide a request. The CLI only prepares
+bytes. Server-side preflight, request-specific admission, and exact Router simulation make the operational decision. The
+API key authenticates the request and never overrides policy or wallet authority.
 
 ## Start here
 
@@ -123,6 +127,14 @@ No SDK or API key is required for this Developer read API. The Developer v2 API 
 For an existing Custom project, resolve `directNativeHookGraphProfileV3.api.agentIntegration` from the manifest. It links the canonical [agent remediation catalog](https://programmable.market/policies/custom-launch-agent-remediation-v1.json), pack-config schema, and existing-project guide. A returned `action_required` status means the exact source or configuration must be repaired, repacked, validated, and resubmitted through the API; it is not a manual allowlist or legacy GitHub submission path. New EIP-3009 integrations use `programmable.eip3009-authorization-patch.v2`, whose static ABI paths identify the nonce, `r`, `s`, and `v` leaves without applicant-supplied byte offsets. Exact v1 retries remain compatible.
 
 Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. New packs use metadata-bound profile `3.2.0`; exact `3.1.0` and `3.0.0` requests remain readable and retryable. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; exposes platform-authored behavior evidence and all six product truth axes; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. A later authorized resource supplies an expiring wallet-handoff URL for separate controller-wallet review and signature. Authenticated resources can expose a bounded [`lifecycleQueue`](schemas/v2/custom-launch-lifecycle-queue-v3.schema.json) projection for single-resource polling; queue state is not launch finality and is not a Developer feed field.
+
+The durable resource vocabulary is `received`, `validating`, `pending_review`,
+`action_required`, `prepared`, `simulating`,
+`awaiting_funding_authorization`, `funding_authorization_verified`,
+`authorized`, `submitted`, `finalized`, `failed`, and `cancelled`.
+`action_required` means repair, repack, and submit new exact bytes;
+`authorized` still requires separate wallet review and signature; `submitted`
+is not finality. Only `finalized`, `failed`, and `cancelled` are terminal.
 
 Every new `3.2.0` pack declares `projectMetadata` with token `name` and
 `symbol`, a presentation description, an exact image object or `null`, and a

@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the Custom Launch API V1 compatibility state, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the `customLaunchApi` V1 compatibility state, the additive `currentCustomLaunchCreate` V3 write pointer, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 
@@ -40,6 +40,12 @@ The service separates Classic event coverage from the authenticated finalized Cu
 The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes. `publicationReady` is the complete route gate. `baselineReady` describes only the immutable Gen1 canary, while `sourceConfigured`, `sourceCurrent`, and `sourceReady` separately describe the authenticated applicant source. `expectedSourceId` and `observedSourceId` make the active producer generation explicit. `baselineLaunches` and `applicantLaunches` are separate, so the canary never inflates the applicant count. `activeGeneration`, `requiresLiveSource`, and `publishedRegistries` describe the manifest-selected Registry boundary. A `null` object means the status was produced before dataset projection and must not be treated as source readiness.
 
 The optional `routerCustom` object reports the independent canonical-Router identity lane. It exposes the exact source boundary, source identity commitment, validated snapshot digest, and verified versus published identity counts. `last-known-good` keeps recognized identities readable but makes the Custom and combined feeds `degraded`; a missing identity is not authoritative until this lane returns to `current` with matching counts.
+
+`customLaunchApi.writeStatus: read-only` describes V1 compatibility only. New
+clients use `currentCustomLaunchCreate`, then follow its V3 capabilities,
+preflight, readiness, OpenAPI, and single-resource status contracts. The
+pointer is discovery data; it does not waive server admission or authorize a
+wallet action.
 
 ## Manifest
 
@@ -105,6 +111,17 @@ name and symbol still require `postDeploymentReadback: required`. These fields
 describe reviewed launch input. They do not make descriptions, images, links,
 or token reads platform-verified and cannot be used as calldata or wallet
 authority.
+
+The active `directNativeHookGraphProfileV3.platformAdmissionPolicy` is the
+machine-readable static admission contract. An exact versioned Launch Policy
+commit or release may provide its authored source; an unversioned repository
+branch neither selects the live API nor decides a request. Live capabilities
+and V3 OpenAPI define the current transport. Local CLI checks are preparatory.
+Server-side preflight, exact-request admission, and pinned Router simulation
+decide authorization;
+the controller wallet alone signs and broadcasts. `authorized` is not signed,
+`submitted` is not finalized, and worker `lifecycleQueue.state` never replaces
+the launch resource status.
 
 The canonical Custom Launch V3 resource always includes immutable
 `launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, or `3.2.0`.

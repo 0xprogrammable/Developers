@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node scripts/check.mjs && node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs && node scripts/strict-openapi-check.mjs && node --test tests/*.test.mjs",
     "test": "node --test tests/*.test.mjs",
     "smoke:live": "node scripts/live-smoke.mjs"
   },

@@ -88,6 +88,41 @@ source/build/runtime match; indexing requires finalized canonical-Router
 ingestion; featured placement remains a separate product decision. A positive
 field on one axis establishes none of the others.
 
+## Policy authority and resource lifecycle
+
+Do not treat a local CLI result, copied policy prose, or an API key as the
+launch decision. The authority boundary is:
+
+1. the active `directNativeHookGraphProfileV3.platformAdmissionPolicy`
+   descriptor publishes the machine-readable static admission contract;
+2. an exact versioned Programmable Launch Policy commit or release may publish
+   its reviewable authored source, but an unversioned repository branch does
+   not select the live API or decide a request;
+3. live `GET /v3/capabilities` and the V3 OpenAPI publish the current route and
+   transport contract;
+4. the CLI prepares and validates exact bytes locally but cannot authorize a
+   request;
+5. server-side preflight, exact-request admission, and the required pinned
+   Router simulation produce the operational decision;
+6. only the controller wallet may review, sign, and broadcast; and
+7. finalized canonical-Router evidence, not an API status alone, permits feed
+   indexing.
+
+The V3 resource status vocabulary is `received`, `validating`,
+`pending_review`, `action_required`, `prepared`, `simulating`,
+`awaiting_funding_authorization`, `funding_authorization_verified`,
+`authorized`, `submitted`, `finalized`, `failed`, and `cancelled`. This list is
+the canonical vocabulary, not permission to invent transitions; follow the
+returned resource and its V3 OpenAPI contract. `action_required` means repair
+the exact request, repack, and submit new exact bytes. It is not manual
+approval. `authorized` means an exact wallet handoff is available; it does not
+mean signed, broadcast, or deployed. `submitted` is not finality. `finalized`,
+`failed`, and `cancelled` are terminal.
+
+The optional `lifecycleQueue.state` is worker progress, not the launch
+resource `status`. Queue completion never upgrades a request to `authorized`,
+`submitted`, or `finalized`.
+
 ## General graph lane
 
 The project supplies its exact token, hook, initializer, and support-contract
@@ -369,7 +404,7 @@ catalog:
   "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
   "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
   "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-  "packConfigSchemaSha256": "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c"
+  "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4"
 }
 ```
 

@@ -76,6 +76,9 @@
     "customLaunchApi": {
       "$ref": "#/$defs/customLaunchApi"
     },
+    "currentCustomLaunchCreate": {
+      "$ref": "#/$defs/currentCustomLaunchCreate"
+    },
     "customFeeEnforcedLaunchProfileV2": {
       "$ref": "custom-fee-enforced-launch-profile-v2.schema.json"
     },
@@ -207,6 +210,7 @@
       "additionalProperties": false
     },
     "customLaunchApi": {
+      "description": "Custom Launch API V1 compatibility state. Use currentCustomLaunchCreate for the active create route.",
       "type": "object",
       "required": [
         "status",
@@ -267,6 +271,71 @@
         },
         "walletBoundary": {
           "const": "separate-wallet-signature"
+        }
+      },
+      "additionalProperties": false
+    },
+    "currentCustomLaunchCreate": {
+      "description": "Additive pointer to the active Custom Launch API create route. This is API discovery, not wallet or admission authority.",
+      "type": "object",
+      "required": [
+        "apiVersion",
+        "status",
+        "profileId",
+        "profileRevision",
+        "profileVersion",
+        "baseUrl",
+        "method",
+        "path",
+        "capabilitiesUrl",
+        "preflightUrl",
+        "readyzUrl",
+        "openApiUrl",
+        "authentication",
+        "walletBoundary"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "3"
+        },
+        "status": {
+          "const": "live"
+        },
+        "profileId": {
+          "const": "programmable.direct-native-hook-graph.v1"
+        },
+        "profileRevision": {
+          "const": 3
+        },
+        "profileVersion": {
+          "const": "3.2.0"
+        },
+        "baseUrl": {
+          "const": "https://api.programmable.market"
+        },
+        "method": {
+          "const": "POST"
+        },
+        "path": {
+          "const": "/v3/custom-launches"
+        },
+        "capabilitiesUrl": {
+          "const": "https://api.programmable.market/v3/capabilities"
+        },
+        "preflightUrl": {
+          "const": "https://api.programmable.market/v3/custom-launches/preflight"
+        },
+        "readyzUrl": {
+          "const": "https://api.programmable.market/readyz"
+        },
+        "openApiUrl": {
+          "const": "https://programmable.market/openapi/custom-launch-v3.json"
+        },
+        "authentication": {
+          "const": "wallet-bound-api-key"
+        },
+        "walletBoundary": {
+          "const": "wallet-reviews-signs-and-broadcasts-separately"
         }
       },
       "additionalProperties": false

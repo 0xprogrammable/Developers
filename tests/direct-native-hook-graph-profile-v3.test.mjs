@@ -491,7 +491,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       packConfigSchemaUrl:
         "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
       packConfigSchemaSha256:
-        "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+        "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4",
       finalizedMetadataUrl:
         "https://api.programmable.market/v3/finalized-custom-launches",
     });
@@ -745,11 +745,18 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /generic fee claiming/iu);
     assert.match(guide, /generic buyback/iu);
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
+    assert.match(guide, /Policy authority and resource lifecycle/u);
+    assert.match(guide, /exact versioned Programmable Launch Policy commit or release/iu);
+    assert.match(guide, /server-side preflight, exact-request admission/iu);
+    assert.match(guide, /`authorized` means an exact wallet handoff is available/iu);
+    assert.match(guide, /`submitted` is not finality/iu);
+    assert.match(guide, /`finalized`,\s+`failed`, and `cancelled` are terminal/iu);
+    assert.match(guide, /`lifecycleQueue\.state` is worker progress/iu);
     assert.match(guide, /custom-launch-agent-remediation-v1\.json/u);
     assert.match(guide, /schemas\/custom-launch\/v3\/pack-config\.json/u);
     assert.match(
       guide,
-      /packConfigSchemaSha256[^\n]+sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c/u,
+      /packConfigSchemaSha256[^\n]+sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4/u,
     );
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(guide, /nonceArgumentPath/u);

@@ -500,6 +500,22 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       : "unavailable";
   const customLive = customRegistryStatus === "live";
   const router = status.routerCustom;
+  const currentV3Profile = manifest?.directNativeHookGraphProfileV3;
+  const currentV3Api = currentV3Profile?.api;
+  const currentV3CreateAvailable = Boolean(
+    currentV3Profile?.profileId &&
+      Number.isSafeInteger(currentV3Profile.profileRevision) &&
+      currentV3Profile.profileVersion &&
+      currentV3Api?.apiVersion === "3" &&
+      currentV3Api.supportStatus === "live" &&
+      currentV3Api.baseUrl &&
+      currentV3Api.collectionPath &&
+      currentV3Api.openApiPath &&
+      currentV3Api.authentication &&
+      currentV3Api.walletBoundary &&
+      currentV3Api.selfServe?.capabilities?.path &&
+      currentV3Api.selfServe?.preflight?.path,
+  );
   const routerReady = Boolean(
     router?.status === "current" &&
       Number.isSafeInteger(router.verifiedIdentityCount) &&
@@ -563,6 +579,29 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       apiKeyManagementUrl: "https://programmable.market/developers/api-keys",
       walletBoundary: "separate-wallet-signature",
     },
+    ...(currentV3CreateAvailable
+      ? {
+          currentCustomLaunchCreate: {
+            apiVersion: currentV3Api.apiVersion,
+            status: currentV3Api.supportStatus,
+            profileId: currentV3Profile.profileId,
+            profileRevision: currentV3Profile.profileRevision,
+            profileVersion: currentV3Profile.profileVersion,
+            baseUrl: currentV3Api.baseUrl,
+            method: "POST",
+            path: currentV3Api.collectionPath,
+            capabilitiesUrl:
+              `${currentV3Api.baseUrl}${currentV3Api.selfServe.capabilities.path}`,
+            preflightUrl:
+              `${currentV3Api.baseUrl}${currentV3Api.selfServe.preflight.path}`,
+            readyzUrl: "https://api.programmable.market/readyz",
+            openApiUrl:
+              `https://programmable.market${currentV3Api.openApiPath}`,
+            authentication: currentV3Api.authentication,
+            walletBoundary: currentV3Api.walletBoundary,
+          },
+        }
+      : {}),
     customFeeEnforcedLaunchProfileV2:
       manifest?.customFeeEnforcedLaunchProfileV2 ?? {
         schemaVersion: "programmable.custom-fee-enforced-launch-profile.v2",

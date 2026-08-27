@@ -18,7 +18,10 @@ info:
     route for exact project-owned token and hook artifacts. Both keep signing
     and broadcasting at the controller wallet boundary.
     Its existing `publicSubmissionStatus` field continues to describe the
-    closed legacy intake; `customLaunchApiStatus` describes the public V2 API.
+    closed legacy intake; `customLaunchApiStatus` describes the public V2 and
+    V3 launch APIs. Status keeps `customLaunchApi` as the V1 compatibility
+    object and publishes `currentCustomLaunchCreate` as the unambiguous active
+    V3 create pointer.
     Historical Stock-Paired
     launches are not part of the version 2 Programmable Custom classification.
     `category: custom` is the stable product taxonomy, not a claim of Registry
@@ -139,7 +142,8 @@ paths:
       summary: Read API and data-pipeline status
       description: |
         Reports service availability separately from Classic discovery,
-        feed freshness, the Custom Launch API V1 compatibility state, and the
+        feed freshness, the Custom Launch API V1 compatibility state, the
+        additive `currentCustomLaunchCreate` V3 write pointer, and the
         exact public Fee-Enforced V2 production profile, the retained gated
         Direct Native Hook Graph V1 preview, the retained compatible V2 descriptor,
         and the active additive V3 general-lane descriptor for the public Custom
@@ -566,10 +570,10 @@ components:
                   const: live
                 publicSubmissionStatus:
                   const: closed
-                  description: Backward-compatible legacy Registry and GitHub submission intake status. It remains closed independently of the public authenticated Custom Launch API V2. V1 reads/status remain compatible, but V1 POST returns nonretryable 409 CUSTOM_LAUNCH_V1_READ_ONLY.
+                  description: Backward-compatible legacy Registry and GitHub submission intake status. It remains closed independently of the public authenticated Custom Launch API V2 and V3. V1 reads/status remain compatible, but V1 POST returns nonretryable 409 CUSTOM_LAUNCH_V1_READ_ONLY.
                 customLaunchApiStatus:
                   const: live
-                  description: Public authenticated Custom Launch API V2 submission status.
+                  description: Public authenticated Custom Launch API V2 and V3 submission status. Resolve the current V3 create pointer from the custom-launch-api extension or v2 status.
                 legacyRegistrySubmissionStatus:
                   const: closed
                   description: Legacy Custom Registry submission intake status.

@@ -63,12 +63,28 @@
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v1.json",
       "apiKeyManagementUrl": "https://programmable.market/developers/api-keys",
       "walletBoundary": "separate-wallet-signature",
+      "currentCreate": {
+        "apiVersion": "3",
+        "status": "live",
+        "profileId": "programmable.direct-native-hook-graph.v1",
+        "profileRevision": 3,
+        "profileVersion": "3.2.0",
+        "baseUrl": "https://api.programmable.market",
+        "method": "POST",
+        "path": "/v3/custom-launches",
+        "capabilitiesUrl": "https://api.programmable.market/v3/capabilities",
+        "preflightUrl": "https://api.programmable.market/v3/custom-launches/preflight",
+        "readyzUrl": "https://api.programmable.market/readyz",
+        "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
+        "authentication": "wallet-bound-api-key",
+        "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+      },
       "agentIntegration": {
         "remediationCatalogSchemaVersion": "programmable.custom-launch-agent-remediation-catalog.v1",
         "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
         "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
         "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-        "packConfigSchemaSha256": "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+        "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4",
         "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
       },
       "publicRelease": {
@@ -438,7 +454,7 @@
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
           "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
           "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-          "packConfigSchemaSha256": "sha256:34d8351338c1b65660ed65181042e600a44adf5190b8193a8d7a9284826d4f8c",
+          "packConfigSchemaSha256": "sha256:bcd7f6c3daa04b196a15c410095843ea5370a9c21ec3b51284f15cd723e969b4",
           "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
         }
       },

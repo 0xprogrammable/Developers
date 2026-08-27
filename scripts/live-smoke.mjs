@@ -10,6 +10,7 @@ import {
   createRouterCustomAcceptedMembership,
   readRouterCustomRecords,
 } from "../server/router-custom.js";
+import { lintOpenApiGraph } from "./lib/openapi.mjs";
 
 const configuredBase = process.env.PROGRAMMABLE_API_BASE;
 if (!configuredBase) {
@@ -48,10 +49,15 @@ function apiRoot(value) {
 }
 
 const apiBase = apiRoot(configuredBase);
+const developerOrigin = new URL(apiBase).origin;
 const MAX_BYTES = 5 * 1024 * 1024;
 const TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 2;
 const registry = await createSchemaRegistry("v2");
+
+const openApiResult = await lintOpenApiGraph(
+  new URL("/openapi/programmable-v2.yaml", developerOrigin),
+);
 
 async function boundedJson(path, schemaName) {
   let lastError;
@@ -180,5 +186,7 @@ for (const [name, result] of [
 }
 
 process.stdout.write(
-  `Live smoke OK: ${apiBase}, ${feedResult.value.items.length} launch records, resume cursor ${feedResult.value.page.resumeCursor}\n`,
+  `Live smoke OK: ${apiBase}, ${feedResult.value.items.length} launch records, ` +
+    `${openApiResult.documentCount} strict OpenAPI documents, resume cursor ` +
+    `${feedResult.value.page.resumeCursor}\n`,
 );
