@@ -208,7 +208,7 @@ describe("documentation contract", () => {
         packConfigSchemaUrl:
           "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
         packConfigSchemaSha256:
-          "sha256:0f52f9eb929860e03bb269b8cb561742c6be12bfa2be5a4759da2502dedb1531",
+          "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60",
         finalizedMetadataUrl:
           "https://api.programmable.market/v3/finalized-custom-launches",
       },
