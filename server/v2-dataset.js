@@ -555,6 +555,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       currentV3Api.collectionPath &&
       currentV3Api.openApiPath &&
       currentV3Api.authentication &&
+      currentV3Api.partnerCredentials?.status === "live" &&
       currentV3Api.walletBoundary &&
       currentV3Api.selfServe?.capabilities?.path &&
       currentV3Api.selfServe?.preflight?.path,
@@ -641,6 +642,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
             openApiUrl:
               `https://programmable.market${currentV3Api.openApiPath}`,
             authentication: currentV3Api.authentication,
+            partnerCredentials: currentV3Api.partnerCredentials,
             walletBoundary: currentV3Api.walletBoundary,
           },
         }

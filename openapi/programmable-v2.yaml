@@ -1,5 +1,32 @@
 openapi: 3.1.1
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+x-programmable-partner-credentials:
+  schemaVersion: programmable.partner-public-contract.v1
+  status: live
+  environmentVariable: PROGRAMMABLE_API_KEY
+  credentialKinds:
+    - root
+    - subkey
+  canonicalV3LaunchRoutes: true
+  launchScopes:
+    - custom-launch:create
+    - custom-launch:read
+  rootOnlyScope: partner-subkeys:manage
+  subkeyAdminRoutes:
+    - GET /v1/partner/subkeys
+    - POST /v1/partner/subkeys
+    - POST /v1/partner/subkeys/{subkeyId}/rotate
+    - DELETE /v1/partner/subkeys/{subkeyId}
+  maximumSubkeyDepth: 1
+  subkeyScopesAndBudgetsCannotExceedRoot: true
+  subkeyExpiryCannotExceedRoot: true
+  secretDelivery: issue-and-rotation-response-only
+  callerSuppliedAttributionAccepted: false
+  attributionSource: authenticated-partner-api-key
+  attributionIsVerificationOrSafetyClaim: false
+  walletSigningAuthority: false
+  walletBroadcastAuthority: false
+  gateBypassAuthority: false
 info:
   title: Programmable Developer API
   version: 2.0.0
@@ -15,8 +42,12 @@ info:
     only. The separate Custom Launch API V2 is a public authenticated Ethereum
     Mainnet preparation route with an exact fee-enforced production profile.
     Custom Launch API V3 is the public authenticated general direct-hook graph
-    route for exact project-owned token and hook artifacts. Both keep signing
-    and broadcasting at the controller wallet boundary.
+    route for exact project-owned token and hook artifacts. It accepts existing
+    wallet keys plus approved partner roots and bounded one-level subkeys on the
+    same V3 routes and under the same server-side policy. A root alone manages
+    subkeys; a child cannot manage credentials, exceed root scopes, budgets, or
+    expiry, supply its own attribution, or bypass admission. Both V2 and V3 keep
+    signing and broadcasting at the controller wallet boundary.
     Its existing `publicSubmissionStatus` field continues to describe the
     closed legacy intake; `customLaunchApiStatus` describes the public V2 and
     V3 launch APIs. Status keeps `customLaunchApi` as the V1 compatibility

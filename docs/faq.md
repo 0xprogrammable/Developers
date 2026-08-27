@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-Yes, through the separate authenticated [Custom Launch API V2](https://programmable.market/docs/developers/custom-launch) on Ethereum Mainnet. A wallet-bound API key may prepare and track a launch, but the controller wallet must review and sign the exact transaction separately. V1 reads/status remain compatible and V1 POST remains read-only. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed.
+Yes, through the separate authenticated [Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch) on Ethereum Mainnet. Existing wallet keys remain compatible; approved partner roots and bounded one-level subkeys use the same V3 routes and server-side policy. No credential signs, broadcasts, bypasses admission, or supplies attribution. The controller wallet must review and sign the exact transaction separately. V1 reads/status remain compatible and V1 POST remains read-only. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 

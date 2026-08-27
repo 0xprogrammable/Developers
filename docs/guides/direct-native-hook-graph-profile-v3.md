@@ -378,14 +378,25 @@ certify that production trades accrue, route, or pay that fee. Fee accrual and
 claimability require their own onchain evidence. Generic fee claiming for
 arbitrary hooks and generic buyback management are not live.
 
-## API key and wallet boundary
+## API credential and wallet boundary
 
-A wallet-bound API key authenticates `pack`, validation submission, and status
-requests. Store it only in `PROGRAMMABLE_API_KEY` or an encrypted secret store.
-Never paste a key into a prompt, chat, source file, config file, screenshot, or
-command argument.
+Existing wallet-bound keys remain compatible. Approved partner roots and their
+bounded one-level subkeys authenticate the same V3 capabilities, preflight,
+create, list, and single-resource routes and receive the same admission policy,
+requirements, and Router simulation. Store any credential only in
+`PROGRAMMABLE_API_KEY` or an encrypted secret store. Never paste it into a
+prompt, chat, source file, config file, screenshot, or command argument.
 
-The API key, CLI, and agent never sign or broadcast. At `authorized`, the
+A partner root holding `partner-subkeys:manage` may list, issue, rotate, and
+revoke only its own children. A child cannot manage credentials or delegate a
+second level. Child scopes and budgets cannot exceed the root, and child expiry
+cannot exceed root expiry. A new or rotated secret is delivered only in that
+issue or rotation response. Partner attribution is derived by the server from
+the authenticated principal, fixed for the finalized launch, and cannot be
+caller-supplied. It is not a verification, safety, approval, or fee claim.
+
+No API credential, CLI, or agent can waive security or approval checks, sign,
+or broadcast. At `authorized`, the
 controller wallet separately verifies the chain ID, sender, exact production
 Router, value, selector, and calldata before it signs and broadcasts. Only
 finalized, consistent canonical-Router evidence may create a Custom feed

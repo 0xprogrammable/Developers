@@ -71,6 +71,32 @@ describe("OpenAPI v2 contract", () => {
       /public authenticated Ethereum\s+Mainnet preparation route/u,
     );
     assert.match(spec.info.description, /currentCustomLaunchCreate/u);
+    assert.match(spec.info.description, /bounded one-level subkeys/u);
+    assert.deepEqual(spec["x-programmable-partner-credentials"], {
+      schemaVersion: "programmable.partner-public-contract.v1",
+      status: "live",
+      environmentVariable: "PROGRAMMABLE_API_KEY",
+      credentialKinds: ["root", "subkey"],
+      canonicalV3LaunchRoutes: true,
+      launchScopes: ["custom-launch:create", "custom-launch:read"],
+      rootOnlyScope: "partner-subkeys:manage",
+      subkeyAdminRoutes: [
+        "GET /v1/partner/subkeys",
+        "POST /v1/partner/subkeys",
+        "POST /v1/partner/subkeys/{subkeyId}/rotate",
+        "DELETE /v1/partner/subkeys/{subkeyId}",
+      ],
+      maximumSubkeyDepth: 1,
+      subkeyScopesAndBudgetsCannotExceedRoot: true,
+      subkeyExpiryCannotExceedRoot: true,
+      secretDelivery: "issue-and-rotation-response-only",
+      callerSuppliedAttributionAccepted: false,
+      attributionSource: "authenticated-partner-api-key",
+      attributionIsVerificationOrSafetyClaim: false,
+      walletSigningAuthority: false,
+      walletBroadcastAuthority: false,
+      gateBypassAuthority: false,
+    });
     assert.equal(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
         .properties.custom.properties.publicSubmissionStatus.const,

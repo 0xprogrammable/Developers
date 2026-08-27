@@ -9,7 +9,8 @@ GET https://developers.programmable.family/api/v2/manifest
 
 This status page covers the unauthenticated read/discovery API. The separately hosted
 [Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch)
-accepts wallet-bound public launch requests on Ethereum Mainnet. Its machine readiness
+accepts wallet keys and approved partner root or one-level subkey credentials for public
+launch requests on Ethereum Mainnet. Its machine readiness
 endpoint is [`https://api.programmable.market/readyz`](https://api.programmable.market/readyz),
 and its canonical contracts are the versioned
 [`V2`](https://programmable.market/openapi/custom-launch-v2.json) and
@@ -20,7 +21,16 @@ V1 reads and status remain compatible; V1 POST remains read-only and returns non
 In the v2 status response, `customLaunchApi` is the retained V1 compatibility
 object. `currentCustomLaunchCreate` is the additive current V3 write pointer;
 it identifies the live create, capabilities, preflight, readiness, and OpenAPI
-URLs without granting admission or wallet authority.
+URLs plus the exact `partnerCredentials` contract without granting admission or
+wallet authority. Existing wallet keys remain compatible.
+
+Partner roots and subkeys use the same V3 routes, scopes, admission policy, and
+Router simulation as wallet callers. Only a root holding `partner-subkeys:manage`
+can manage its own bounded one-level children. A child cannot manage credentials;
+its scopes, budgets, and expiry cannot exceed the root. Attribution comes from the
+authenticated partner principal and is immutable per finalized launch. Credentials
+cannot sign, broadcast, bypass security or approval, or turn attribution into a
+verification or safety claim.
 
 ## Current availability
 
@@ -29,7 +39,7 @@ URLs without granting admission or wallet authority.
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
 | Custom Launch API V2 | `custom` | Ethereum | Public | Wallet-bound API keys may prepare and track deterministic launches; the controller wallet reviews and signs separately |
-| Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Active general lane with exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
+| Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Wallet and approved partner bearer credentials use the same active general lane, exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
 | V3 capabilities and preflight | `custom` | Ethereum | Public / authenticated | Public capability discovery plus authenticated quota-free classification; no launch quota, nonce, persistence, wallet signature, broadcast, deployment, or feed record is created |
 | Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Retained compatible | Revision 2 remains published for compatible exact-graph clients |
 | Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the active V3 or compatible V2 descriptor |

@@ -12,18 +12,21 @@ for exact project token and hook artifacts on Ethereum Mainnet. V1 reads and sta
 | Surface | Authentication | Purpose | Canonical contract |
 | --- | --- | --- | --- |
 | Developer read API at `developers.programmable.family` | None | Discover launches, resolve deployments and verify provenance | [Read API OpenAPI](openapi/programmable-v2.yaml) |
-| Custom Launch API V3 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
+| Custom Launch API V3 at `api.programmable.market` | Wallet key or approved partner root/subkey bearer credential | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
 | Custom Launch API V2 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a deterministic Mainnet launch; the wallet reviews and signs separately | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) and [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Custom Launch API V1 compatibility | Wallet-bound bearer API key | Inspect existing V1 provenance reads and request status; V1 POST is read-only | [V1 compatibility guide](https://programmable.market/developers/custom-launch-api-v1.md) and [V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
 
 Create or revoke a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys).
-Store the key in an encrypted secret or `PROGRAMMABLE_API_KEY`, never in a prompt or chat. An API key cannot sign or
-broadcast a transaction. V2 and V3 return a transaction for the connected controller wallet to review and sign separately.
+Approved partners use a root credential or one bounded child level on the same V3 routes and under the same admission
+policy. A root with `partner-subkeys:manage` may issue, list, rotate, or revoke its own subkeys; children cannot manage
+credentials, exceed root scopes, budgets, or expiry, or create another level. Store every credential in an encrypted
+secret or `PROGRAMMABLE_API_KEY`, never in a prompt or chat. No API credential can sign, broadcast, bypass policy or
+supply its own attribution. V2 and V3 return a transaction for the connected controller wallet to review and sign separately.
 Launch create, resource, and status schemas remain owned by their respective OpenAPI contracts. This read/discovery
 repository publishes only the standalone V3 preflight response contract needed for capability discovery. Resolve the
 active write entry from `extensions["programmable.custom-launch-api"].currentCreate` in discovery or
 `currentCustomLaunchCreate` in status, then read live V3 capabilities, OpenAPI,
-and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned
+the exact `partnerCredentials` contract, and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned
 [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) commit or release can provide the reviewable
 authored source, but its unversioned default branch does not select the live API or decide a request. The CLI only prepares
 bytes. Server-side preflight, request-specific admission, and exact Router simulation make the operational decision. The

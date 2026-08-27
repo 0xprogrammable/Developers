@@ -207,7 +207,9 @@ describe("version 2 classification", () => {
         "https://api.programmable.market/v3/custom-launches/preflight",
       readyzUrl: "https://api.programmable.market/readyz",
       openApiUrl: "https://programmable.market/openapi/custom-launch-v3.json",
-      authentication: "wallet-bound-api-key",
+      authentication: "bearer-api-key",
+      partnerCredentials:
+        manifest.directNativeHookGraphProfileV3.api.partnerCredentials,
       walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
     });
     assert.equal(
