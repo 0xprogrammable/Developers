@@ -4,7 +4,7 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; this does not close the separate authenticated Custom Launch API V2. V1 reads/status remain compatible and V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. V2 clients retry only retryable `429` or `503` responses, honor `Retry-After`, and replay the exact idempotency-bound request bytes.
+Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; this does not close the separate authenticated Custom Launch API V3. V1 and V2 resources remain readable under their compatibility contracts, while fresh requests use V3; V1 POST remains read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Clients retry only statuses marked retryable by the current V3 OpenAPI, honor `Retry-After`, and replay the exact idempotency-bound request bytes.
 
 ## Partner API principal and downstream agents
 
