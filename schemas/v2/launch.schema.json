@@ -131,6 +131,10 @@
       ],
       "description": "Optional launch-provider attribution. It never establishes Programmable origin, category, partner fee state, template approval, review status, or executable support. Only verificationStatus=registry-bound with a non-null evidenceHash is authenticated provider provenance."
     },
+    "launchedVia": {
+      "$ref": "launch-partner-attribution-v1.schema.json",
+      "description": "Optional immutable display projection of the finalized Custom Launch API partnerAttribution snapshot. It is server-derived from the authenticated partner API principal and cannot be supplied by the launch request. It does not establish economic partner, provider, review, safety, liquidity, tradeability, or external index status."
+    },
     "builder": {
       "oneOf": [
         {

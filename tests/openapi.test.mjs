@@ -134,6 +134,18 @@ describe("OpenAPI v2 contract", () => {
       finalizedMetadata.responses["200"].content["application/json"].schema.$ref,
       "https://programmable.market/openapi/custom-launch-v3.json#/components/schemas/FinalizedCustomLaunchMetadataListV1",
     );
+    assert.match(finalizedMetadata.description, /partnerAttribution/u);
+    assert.match(finalizedMetadata.description, /launchedVia/u);
+    assert.match(finalizedMetadata.description, /tokenMetadataReadback\.status/u);
+    assert.match(finalizedMetadata.description, /cannot guarantee GMGN, Dexscreener/u);
+    assert.equal(
+      spec.components.schemas.LaunchPartnerAttributionV1.$ref,
+      "../schemas/v2/launch-partner-attribution-v1.schema.json",
+    );
+    assert.match(
+      spec.paths["/api/v2/launches"].get.description,
+      /server-owned\s+`partnerAttribution`/u,
+    );
     assert.match(finalizedMetadata.responses["400"].description, /INVALID_PAGINATION/u);
     assert.match(
       finalizedMetadata.responses["503"].description,

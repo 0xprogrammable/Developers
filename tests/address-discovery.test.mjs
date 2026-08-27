@@ -9,9 +9,9 @@ import { hardcodedDeploymentFindings } from "../scripts/lib/source-scan.mjs";
 const FEE_RECIPIENT = "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
 
 describe("documentation contract", () => {
-  test("keeps the frozen v2 launch and compatibility contracts byte-identical", async () => {
+  test("pins the additive v2 launch and compatibility contracts byte-identically", async () => {
     for (const [file, expected] of [
-      ["schemas/v2/launch.schema.json", "1cc15f9b63d26a6b2422862f02e601207da7495237354137a1f2fd88bb2bf05f"],
+      ["schemas/v2/launch.schema.json", "b73431d0f124082ebb3f9a0170b2656a7eeb29ad75f986c269e967808e9b9df0"],
       ["compatibility/core-v2.json", "e863d39d25ff040f2d7a5c100d354019a11aaca8b102686e67ea0fe4e0be60b0"],
     ]) {
       const bytes = await readFile(path.join(REPOSITORY_ROOT, file));
@@ -431,6 +431,7 @@ describe("documentation contract", () => {
         "direct-native-hook-graph-profile-discovery-v2",
         "direct-native-hook-graph-profile-discovery-v3",
         "launch-feed",
+        "launch-partner-attribution-v1",
         "launch",
         "manifest",
         "problem",

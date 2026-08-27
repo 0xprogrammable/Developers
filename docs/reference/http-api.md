@@ -143,6 +143,22 @@ all pages, then join by `routerLaunchId` and matching canonical Router event
 identities. `resourceId` is not Router provenance and presentation data does
 not establish onchain token identity, safety, liquidity, or tradeability.
 
+Read the canonical display declaration from `projectMetadata`: name, symbol,
+description, image facts, website, and X. Only a `matching`
+`tokenMetadataReadback.status` establishes that the observed onchain name and
+symbol match the declaration. Current submissions require the complete public
+metadata envelope, but historical finalized entries remain present when older
+image or link fields are null.
+
+An item may add server-owned `partnerAttribution` using
+`programmable.launch-partner-attribution.v1`. It is derived from the
+authenticated partner API principal and is never accepted from the create
+request. Validate its `snapshotDigest` before projecting the same object as
+`launchedVia`. It is distinct from economic `partner` and Registry `provider`
+fields, and makes no claim about fees, safety, liquidity, tradeability, or
+external provider indexing. GMGN-, Dexscreener-, or FOMO-style ingestion and
+provider-specific `safe` labels are not guaranteed.
+
 `directNativeHookGraphProfileV2` remains the compatible Revision 2 descriptor.
 It binds project-owned token and hook artifacts in exact acyclic graphs of
 3–16 direct targets, covers every valid v4 permission mask, and supports
@@ -214,6 +230,12 @@ Router-backed records report their fee policy as unavailable unless separate exa
 Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kind `uniswap-v4`, preserving the verifier and PoolManager authority bindings. Unknown authenticated market kinds remain visible with their pending verifier state as unsupported discovery data; they are never silently relabeled as a pair or executable market.
 
 For authenticated Custom launches, `extensions["programmable/registry-v2"]` preserves the exact `sourceKind`, source/finality binding hashes, and the optional presentation snapshot. The presentation version, binding hash, and display-only draft are always all null or all present. Consumers must not use presentation content as launch, token, market, fee, or execution authority.
+
+Finalized partner-launched Custom records may add `launchedVia`. Its exact
+object is the immutable read projection of the Custom Launch API
+`partnerAttribution` snapshot. It is allowed only with complete canonical token
+display metadata and finalized Custom provenance; existing records without it
+remain valid v2 records.
 
 When event coverage, metadata, supply, receipt, or block-timestamp enrichment is incomplete, the response is `degraded` or `unavailable`. Recognized items remain present and carry partial, unavailable, or null values. Consumers must not discard them, synthesize missing data, or interpret absence as an authoritative deletion.
 
@@ -325,6 +347,7 @@ Public response schemas live in `schemas/v2/`:
 - `manifest.schema.json`
 - `launch-feed.schema.json`
 - `launch.schema.json`
+- `launch-partner-attribution-v1.schema.json`
 - `custom-launch-registry-record-v3.schema.json`, advertised by the v2 schema index as `canonical-custom-registry-record-v3`
 - `custom-launch-registry-record-v4.schema.json`, the Generation 2 37-word producer record; it does not redefine v3
 - `token-list.schema.json`

@@ -61,6 +61,13 @@ Only consistent records from the exact canonical Router qualify through Router V
 
 GMGN's generic `uniswap_v4` and `poolId` discovery can identify the PCAN token or pool as an ordinary market. It does not verify the canonical Router stamp or show that GMGN integrated the Programmable label. Do not treat third-party market metrics as canonical onchain evidence. Verify the stamp through the Router, and read current pool state separately through PoolManager or StateView.
 
+Dexscreener-style token or pair discovery has the same boundary: a discovered
+market is not proof of the Programmable Router launch, complete project
+metadata, partner attribution, or a provider risk label. FOMO, GMGN,
+Dexscreener, Axiom, and other providers control their own ingestion and
+labelling. Programmable cannot guarantee indexing, refresh timing, or a
+provider-specific `safe` result.
+
 ## New-launch card
 
 A robust minimum card shows:
@@ -72,6 +79,21 @@ A robust minimum card shows:
 - finality state;
 - market state such as active, inactive, paused, or no registered market;
 - a link to the launch transaction or provenance details.
+
+For finalized profile-metadata cards, read name, symbol, description, image,
+website, and X from the finalized metadata ledger and join it to the exact
+Router launch ID and onchain identities. Current profiles are complete before
+launch; an older finalized record can legitimately have null presentation
+fields. Show a placeholder for those missing fields rather than scraping or
+inventing them.
+
+When the record carries an exact
+`programmable.launch-partner-attribution.v1` snapshot, render its partner name
+and optional website as `Launched via …`. The Custom Launch API source field is
+`partnerAttribution`; the additive Developer launch projection is
+`launchedVia`. Do not accept either from creator metadata, and do not translate
+it into the economic `partner` field, Registry `provider` status, audit, safety,
+liquidity, or terminal-index status.
 
 Name, symbol, decimals, supply, and timestamp can be null or unavailable when enrichment fails. `token` can be null for a project-only launch. Keep the recognized launch visible using its project ID, chain, authenticated assets, launch ID, and the evidence that is present. Label incomplete fields rather than inventing values.
 

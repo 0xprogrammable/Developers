@@ -24,6 +24,48 @@ Router Custom discovery is an independent lane. Require `routerCustom.status ===
 
 A `degraded` feed still contains recognized events when canonical event coverage or enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. Launch-list and token-list return the bounded recognized subset with HTTP `200` and explicit quality; never interpret an absent record in a degraded or unavailable response as deletion.
 
+## Finalized metadata and partner-attribution join
+
+GMGN-, Dexscreener-, FOMO-, and explorer-style consumers that need the public
+project card can read the separate unauthenticated
+`GET https://api.programmable.market/v3/finalized-custom-launches` route.
+Follow every opaque `nextCursor` until it is null; a single page is not a
+complete snapshot. Store the canonical declaration fields separately:
+
+- `projectMetadata.token.name` and `.symbol`;
+- `projectMetadata.presentation.description`;
+- the image URI, content SHA-256, media type, byte length, width, and height;
+- exactly one `website` link and one `x` link for current complete profiles;
+- `projectMetadataHash`; and
+- optional `partnerAttribution`.
+
+Historical finalized records may predate the complete-metadata requirement.
+Keep them visible and preserve a missing image, website, or X link as null; do
+not repair history with scraped or guessed values.
+
+The declared name and symbol become onchain-readback evidence only when
+`tokenMetadataReadback.status` is `matching`. Persist `mismatch` or
+`unavailable` without overwriting either declared or observed values. Validate
+`partnerAttribution` against
+`programmable.launch-partner-attribution.v1`, recompute its domain-framed
+snapshot digest, and render the same object as `launchedVia` if desired. The
+attribution comes from the authenticated partner principal, not the create
+body; it is not safety or economic-partner evidence. Accept it only from the
+official response joined to that launch. The digest detects a changed snapshot
+but does not authenticate an arbitrary copied object by itself.
+
+Join the metadata ledger by `routerLaunchId`, then require the same chain,
+token, hook, PoolManager, and pool ID from the canonical Router record. Retain
+the Router transaction hash, block number, block hash, log index, and finalized
+checkpoint as onchain evidence. `resourceId`, presentation content, and
+`projectMetadataHash` do not replace this join.
+
+This route makes clean ingestion possible; it cannot force GMGN, Dexscreener,
+FOMO, or any other provider to index a launch, refresh its card, or assign a
+`safe` label. Provider indexing state and provider-specific risk labels must
+come from that provider's own API or verified observation and remain separate
+from Programmable provenance.
+
 ## Direct onchain path
 
 Use the manifest's deployment arrays and start blocks. Do not assume one launcher or registry represents all versions.

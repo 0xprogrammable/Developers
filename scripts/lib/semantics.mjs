@@ -2,6 +2,10 @@ import { isExactCustomRegistryGenesisCanary } from
   "../../server/genesis-canary.js";
 import { isAcceptedRouterStampedCustomRecord } from
   "../../server/router-custom.js";
+import {
+  isCanonicalHttpsUrl,
+  isExactLaunchPartnerAttribution,
+} from "../../server/partner-attribution.js";
 
 export const PLATFORM_FEE_RECIPIENT =
   "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
@@ -166,6 +170,83 @@ function isRouterStampedCustomLaunch(launch, acceptedRouterCustomMembership) {
     launch,
     acceptedRouterCustomMembership,
   );
+}
+
+function isNonEmptyTrimmedText(value) {
+  return typeof value === "string" && value.length > 0 &&
+    value.trim() === value;
+}
+
+function isCanonicalXProfileUrl(value) {
+  if (!isCanonicalHttpsUrl(value)) return false;
+  const parsed = new URL(value);
+  return parsed.origin === "https://x.com" && parsed.search === "" &&
+    parsed.hash === "" && /^\/[A-Za-z0-9_]+$/.test(parsed.pathname);
+}
+
+function validateV2LaunchPartnerAttribution(launch) {
+  const findings = [];
+  if (launch.launchedVia === undefined) return findings;
+  if (!isExactLaunchPartnerAttribution(launch.launchedVia)) {
+    findings.push(finding(
+      "LAUNCH_PARTNER_ATTRIBUTION_INVALID",
+      "/launchedVia",
+      "Partner attribution must be the exact server-owned v1 snapshot with its matching canonical digest",
+    ));
+    return findings;
+  }
+  if (launch.category !== "custom") {
+    findings.push(finding(
+      "LAUNCH_PARTNER_ATTRIBUTION_CUSTOM_ONLY",
+      "/launchedVia",
+      "Launch partner attribution is only defined for Custom launches",
+    ));
+  }
+  if (launch.launch?.finality !== "finalized") {
+    findings.push(finding(
+      "LAUNCH_PARTNER_ATTRIBUTION_FINALIZED_REQUIRED",
+      "/launchedVia",
+      "Partner attribution is published only on finalized Custom launch projections",
+    ));
+  }
+
+  const token = launch.token;
+  const metadata = token?.metadata;
+  const links = metadata?.links;
+  if (
+    token?.identityStatus !== "complete" ||
+    !isNonEmptyTrimmedText(token?.name) ||
+    !isNonEmptyTrimmedText(token?.symbol) ||
+    !isNonEmptyTrimmedText(metadata?.description) ||
+    !isCanonicalHttpsUrl(metadata?.imageUrl) ||
+    !isCanonicalHttpsUrl(links?.website) ||
+    !isCanonicalXProfileUrl(links?.x) ||
+    metadata?.trustStatus === "unavailable"
+  ) {
+    findings.push(finding(
+      "LAUNCH_PARTNER_METADATA_INCOMPLETE",
+      "/token",
+      "A partner-attributed finalized launch must expose name, symbol, description, image, website, and one canonical X profile URL without inventing unavailable metadata",
+    ));
+  }
+
+  const presentation = launch.presentation;
+  if (presentation !== undefined && presentation !== null) {
+    const disagreements = [
+      [presentation.description, metadata?.description],
+      [presentation.image, metadata?.imageUrl],
+      [presentation.website, links?.website],
+      [presentation.x, links?.x],
+    ].some(([left, right]) => left !== null && right !== null && left !== right);
+    if (disagreements) {
+      findings.push(finding(
+        "LAUNCH_PARTNER_METADATA_CONFLICT",
+        "/presentation",
+        "Partner-attributed launch presentation must not conflict with the canonical token metadata projection",
+      ));
+    }
+  }
+  return findings;
 }
 
 function validateV2FeePolicy(launch, acceptedRouterCustomMembership) {
@@ -559,6 +640,7 @@ export function validateLaunchSemantics(
       launch,
       acceptedRouterCustomMembership,
     ));
+    findings.push(...validateV2LaunchPartnerAttribution(launch));
   }
 
   const lifecycle = launch.launch?.status;
