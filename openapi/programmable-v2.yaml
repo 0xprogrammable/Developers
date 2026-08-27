@@ -93,7 +93,7 @@ paths:
       summary: List finalized V3 project metadata
       description: |
         Returns a bounded, unauthenticated metadata snapshot for finalized
-        profile `3.2.0` launches. This route belongs to the separate Custom
+        profile `3.3.0` launches. This route belongs to the separate Custom
         Launch API host, not the Developer read API host. Follow every opaque
         cursor to complete one snapshot. Items exclude pending and legacy
         requests, controller addresses, credentials, and request bytes.
@@ -247,7 +247,7 @@ paths:
         `programmable.eip3009-authorization-patch.v2` with static
         `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and
         `vArgumentPath`; v1 remains compatible for exact retries. New profile
-        `3.2.0` requests require
+        `3.3.0` requests require
         `programmable.project-metadata.v1`; the declaration hash is bound into
         the graph hash, prepared resource, launch ID, and wallet-reviewed Router
         transaction. `programmable.project-token-metadata-binding.v1` records
@@ -256,7 +256,7 @@ paths:
         remain untrusted display data and never authorize execution. The
         canonical V3 resource always carries immutable `launchProfileVersion`;
         `projectMetadata` and `projectMetadataHash` are non-null exactly for
-        `3.2.0` and null for compatible `2.0.0`, `3.0.0`, and `3.1.0` resources.
+        `3.3.0` and null for retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
         The canonical conditional schema remains in the linked Custom Launch V3
         OpenAPI rather than being redefined here. Admission is
         not an audit or a safety, honeypot, liquidity,

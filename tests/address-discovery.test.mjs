@@ -254,17 +254,14 @@ describe("documentation contract", () => {
       v3: {
         status: "live",
         collectionPath: "/v3/custom-launches",
-        fundingAuthorizationPath:
-          "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
-        fundingAuthorizationMethod: "POST",
         openApiPath: "/openapi/custom-launch-v3.json",
         openApiUrl:
           "https://programmable.market/openapi/custom-launch-v3.json",
         profileId: "programmable.direct-native-hook-graph.v1",
         profileRevision: 3,
-        profileVersion: "3.2.0",
+        profileVersion: "3.3.0",
         compatibleProfileRevisions: [2, 3],
-        compatibleProfileVersions: ["3.1.0", "3.0.0"],
+        compatibleProfileVersions: ["3.2.0", "3.1.0", "3.0.0", "2.0.0"],
         authentication: "wallet-bound-api-key",
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
         selfServe: {
@@ -275,11 +272,12 @@ describe("documentation contract", () => {
             projectMetadata: {
               schemaVersion: "programmable.project-metadata.v1",
               inputSchemaVersion: "programmable.project-metadata-input.v1",
-              requiredForProfileVersion: "3.2.0",
+              requiredForProfileVersion: "3.3.0",
               legacyWithoutMetadataProfileVersions: [
                 "2.0.0",
                 "3.0.0",
                 "3.1.0",
+                "3.2.0",
               ],
               requiredFields: [
                 "token.name",
@@ -288,7 +286,9 @@ describe("documentation contract", () => {
                 "presentation.image",
                 "presentation.links",
               ],
-              imageMayBeNull: true,
+              imageMayBeNull: false,
+              descriptionMustBeMeaningful: true,
+              requiredLinkKinds: ["website", "x"],
               maximumLinks: 32,
               linkKinds: [
                 "website",
@@ -334,7 +334,7 @@ describe("documentation contract", () => {
             minimumLimit: 1,
             maximumLimit: 25,
             defaultLimit: 10,
-            finalityScope: "finalized-profile-3.2.0-only",
+            finalityScope: "finalized-profile-3.3.0-only",
             cacheControl: "public, max-age=15, stale-while-revalidate=300",
             sourceLkg: "none",
           },

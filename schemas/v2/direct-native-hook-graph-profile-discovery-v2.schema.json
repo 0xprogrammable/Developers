@@ -77,8 +77,6 @@
         "availability": "public-authenticated",
         "publiclyRoutable": true,
         "collectionPath": "/v3/custom-launches",
-        "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
-        "fundingAuthorizationMethod": "POST",
         "openApiPath": "/openapi/custom-launch-v3.json",
         "openApiStatus": "live",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -385,7 +383,6 @@
             "graphCommitment",
             "permitDigest"
           ],
-          "signatureSubmissionPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
           "signatureSubmissionMethod": "POST",
           "apiKeyOrAgentMaySign": false,
           "apiKeyOrAgentMayBroadcast": false

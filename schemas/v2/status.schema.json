@@ -308,7 +308,7 @@
           "const": 3
         },
         "profileVersion": {
-          "const": "3.2.0"
+          "const": "3.3.0"
         },
         "baseUrl": {
           "const": "https://api.programmable.market"

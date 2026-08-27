@@ -4,25 +4,21 @@ This document defines how an external launch system can make its accepted launch
 
 ## Status
 
-Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; this does not close the separate authenticated Custom Launch API V2. V1 reads/status remain compatible and V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. V2 clients retry only retryable `429` or `503` responses, honor `Retry-After`, and replay the exact idempotency-bound request bytes.
+Custom Registry generation 1 is live for finalized approved launch discovery. The exact address, start block, ABI, event set, and finality requirement are published by `GET /api/v2/manifest`. Legacy Registry and GitHub submission intake are closed and `publicSubmissionsEnabled` remains `false`; this does not close the separate authenticated Custom Launch API V3. V1 and V2 resources remain readable under their compatibility contracts, while fresh requests use V3; V1 POST remains read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. Clients retry only statuses marked retryable by the current V3 OpenAPI, honor `Retry-After`, and replay the exact idempotency-bound request bytes.
 
 ## Partner API principal and downstream agents
 
-An administrator can issue a credential for one approved partner principal. The
-credential authenticates the caller; it is not public metadata and must remain
-in the partner's backend. A partner such as a framework or agent builder may
-place its own chat, builder, or downstream-key layer in front of that backend.
-Every call reaching Programmable still resolves to the same authenticated
-partner principal, so the partner can provide a launchpad experience without
-creating a new public launch category.
+An approved partner root and, at most, one delegated subkey level authenticate
+to the same canonical V3 endpoints and are evaluated by the same server-side
+policy. Neither identity receives a partner-specific route, admission
+exception, or public category. A subkey cannot delegate again, manage another
+subkey, change the root identity, or bypass the root's policy boundary.
 
-Programmable-managed partner credentials use only
-`custom-launch:create`, `custom-launch:read`, and the root-only
-`partner-subkeys:manage` scope. A child key can prepare or read launches only
-within its granted create/read scopes; it cannot manage another child key or
-change the root partner identity. Do not substitute similarly named scopes or
-let a partner's own downstream credential bypass the upstream Programmable
-principal.
+Keep partner credentials in the partner backend. They are authentication
+material, not public metadata. A framework or agent builder may place its own
+layer in front of that backend, but every call reaching Programmable resolves
+to the authenticated root principal and the server applies the canonical V3
+policy to the exact request.
 
 The launch request cannot set `partnerAttribution`, `launchedVia`, a partner ID,
 or a partner display name. On a successful finalized launch, the server takes

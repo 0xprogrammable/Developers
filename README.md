@@ -126,7 +126,7 @@ No SDK or API key is required for this Developer read API. The Developer v2 API 
 
 For an existing Custom project, resolve `directNativeHookGraphProfileV3.api.agentIntegration` from the manifest. It links the canonical [agent remediation catalog](https://programmable.market/policies/custom-launch-agent-remediation-v1.json), pack-config schema, and existing-project guide. A returned `action_required` status means the exact source or configuration must be repaired, repacked, validated, and resubmitted through the API; it is not a manual allowlist or legacy GitHub submission path. New EIP-3009 integrations use `programmable.eip3009-authorization-patch.v2`, whose static ABI paths identify the nonce, `r`, `s`, and `v` leaves without applicant-supplied byte offsets. Exact v1 retries remain compatible.
 
-Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. New packs use metadata-bound profile `3.2.0`; exact `3.1.0` and `3.0.0` requests remain readable and retryable. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; exposes platform-authored behavior evidence and all six product truth axes; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. A later authorized resource supplies an expiring wallet-handoff URL for separate controller-wallet review and signature. Authenticated resources can expose a bounded [`lifecycleQueue`](schemas/v2/custom-launch-lifecycle-queue-v3.schema.json) projection for single-resource polling; queue state is not launch finality and is not a Developer feed field.
+Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. Only metadata-bound profile `3.3.0` accepts fresh submissions. Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` bytes remain readable and may be retried byte-for-byte only; they cannot be repacked or admitted as fresh submissions. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; exposes platform-authored behavior evidence and all six product truth axes; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. A later authorized resource supplies an expiring wallet-handoff URL for separate controller-wallet review and signature. Authenticated resources can expose a bounded [`lifecycleQueue`](schemas/v2/custom-launch-lifecycle-queue-v3.schema.json) projection for single-resource polling; queue state is not launch finality and is not a Developer feed field.
 
 The durable resource vocabulary is `received`, `validating`, `pending_review`,
 `action_required`, `prepared`, `simulating`,
@@ -136,9 +136,10 @@ The durable resource vocabulary is `received`, `validating`, `pending_review`,
 `authorized` still requires separate wallet review and signature; `submitted`
 is not finality. Only `finalized`, `failed`, and `cancelled` are terminal.
 
-Every new `3.2.0` pack declares `projectMetadata` with token `name` and
-`symbol`, a presentation description, an exact image object or `null`, and a
-sorted links list or `[]`. The CLI derives `projectMetadataHash`, preserves the
+Every new `3.3.0` pack declares `projectMetadata` with token `name` and
+`symbol`, a meaningful presentation description, an exact non-null image object
+with its byte digest and media facts, and canonical HTTPS website and X links.
+The CLI derives `projectMetadataHash`, preserves the
 raw graph digest as `unboundGraphBundleHash`, and returns a metadata-bound
 `graphBundleHash`; the prepared resource, `launchId`, and wallet-reviewed
 Router transaction keep that declaration bound. This is reviewed creator
@@ -149,13 +150,13 @@ external account action.
 
 Every V3 resource also carries immutable `launchProfileVersion`. Its required
 `projectMetadata` and `projectMetadataHash` keys are non-null exactly for
-`3.2.0`; both are null on retained `2.0.0`, `3.0.0`, and `3.1.0` resources.
+`3.3.0`; both are null on retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
 The canonical resource condition remains in the public V3 OpenAPI rather than
 being redefined by this read/discovery repository.
 
 Unauthenticated
 `GET https://api.programmable.market/v3/finalized-custom-launches` exposes a
-cursor-paginated, finalized-only profile `3.2.0` metadata snapshot for indexers
+cursor-paginated, finalized-only profile `3.3.0` metadata snapshot for indexers
 and presentation clients. It includes exact Router identity, bound hashes,
 declared metadata, token readback state, and finality evidence; it excludes
 pending and legacy requests, controller addresses, credentials, and request

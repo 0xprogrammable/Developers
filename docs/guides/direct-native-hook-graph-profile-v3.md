@@ -7,7 +7,7 @@ public Custom Launch API V3 on Ethereum Mainnet. Its identity is:
 | --- | --- |
 | Profile ID | `programmable.direct-native-hook-graph.v1` |
 | Profile revision | `3` |
-| Profile version | `3.2.0` |
+| Profile version | `3.3.0` |
 | Profile schema | `programmable.direct-native-hook-graph-profile.v3` |
 | Selection binding | `programmable.direct-native-hook-graph-profile-selection-binding.v3` |
 | Public category | `custom` |
@@ -17,16 +17,15 @@ Resolve `directNativeHookGraphProfileV3` from `GET /api/v2/manifest` or
 requests use the separately hosted authenticated API at
 `https://api.programmable.market` and its versioned
 [`custom-launch-v3.json`](https://programmable.market/openapi/custom-launch-v3.json)
-contract. The published OpenAPI is version `3.3.5` and its exact byte digest is
-`sha256:07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51`.
-Use `api.openApiUrl` as the canonical absolute contract locator. The retained
+contract. Use `api.openApiUrl` as the canonical absolute contract locator. The retained
 `api.openApiPath` is compatibility data and must not be resolved against the
 separate API `baseUrl`.
 
-Revision 3 is additive. New metadata-bound packs use `3.2.0`; exact `3.1.0` and
-`3.0.0` request bytes stay readable and retryable under their original
-admission policies. Revision 2 profile `2.0.0` also remains published and
-compatible. The only public categories remain `classic` and `custom`. Legacy Registry and
+Revision 3 is additive. Only metadata-bound `3.3.0` accepts fresh admission.
+Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` request bytes stay readable and
+may be retried byte-for-byte under their original compatibility contracts; they
+cannot be repacked or used for fresh admission. The only public categories
+remain `classic` and `custom`. Legacy Registry and
 GitHub submission intake are closed; neither is a fallback launch route.
 
 ## Self-serve capabilities and preflight
@@ -153,9 +152,9 @@ The request must bind the complete deterministic artifact closure, including:
 - target manifest, graph links, values, and CREATE2 address locators; and
 - creation and runtime identities for every target.
 
-Profile `3.2.0` also requires a closed `projectMetadata` declaration. A cold
-agent supplies every key, using `null` for an absent image and `[]` for no
-links:
+Profile `3.3.0` also requires a closed `projectMetadata` declaration. A fresh
+pack supplies token name and symbol, a meaningful description, a non-null image
+with its digest and media facts, plus canonical HTTPS website and X links:
 
 ```json
 {
@@ -167,9 +166,19 @@ links:
     },
     "presentation": {
       "schemaVersion": "programmable.launch-presentation-draft.v1",
-      "description": "Example project description",
-      "image": null,
-      "links": []
+      "description": "A specific description of the project and what it does.",
+      "image": {
+        "uri": "https://example.com/image.png",
+        "contentSha256": "sha256:<64 lowercase hex>",
+        "mediaType": "image/png",
+        "byteLength": 12345,
+        "width": 1200,
+        "height": 1200
+      },
+      "links": [
+        { "kind": "website", "uri": "https://example.com/" },
+        { "kind": "x", "uri": "https://x.com/example" }
+      ]
     }
   }
 }
@@ -208,16 +217,16 @@ deployed token returns those values until the finalized onchain readback
 succeeds.
 
 Every V3 resource carries required immutable `launchProfileVersion` with exact
-value `2.0.0`, `3.0.0`, `3.1.0`, or `3.2.0`. Its `projectMetadata` and
+value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`. Its `projectMetadata` and
 `projectMetadataHash` keys are always present: both are non-null exactly for
-`3.2.0`, and both are null for legacy `2.0.0`, `3.0.0`, and `3.1.0` resources.
-The `3.2.0` prepared artifact carries `projectMetadata`,
+`3.3.0`, and both are null for legacy `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
+The `3.3.0` prepared artifact carries `projectMetadata`,
 `projectMetadataHash`, and `unboundGraphBundleHash`; legacy prepared artifacts
 omit those three exact fields. A prepared artifact does not carry a separate
 `launchProfileVersion`; read it from the immutable resource.
 
-Exact legacy request bytes without `projectMetadata` remain readable and
-retryable under their original compatibility contracts. New `3.2.0` packs must
+Exact legacy request bytes remain readable and retryable only when resubmitted
+byte-for-byte under their original compatibility contracts. New `3.3.0` packs must
 not omit metadata or rely on a later editable metadata submission.
 
 ### Finalized metadata snapshot
@@ -249,7 +258,7 @@ Each `programmable.finalized-custom-launch-metadata.v1` item includes:
 - finalized transaction, block, log, confirmation-depth, and persisted
   finalized-checkpoint evidence.
 
-The endpoint emits only finalized profile `3.2.0` rows with a complete metadata
+The endpoint emits only finalized profile `3.3.0` rows with a complete metadata
 ledger. It never emits pending or legacy requests, controller addresses, API
 keys, or request bytes. `resourceId` is a pagination/resource coordinate, not
 Router identity. Join and key records by the finalized `routerLaunchId` and
@@ -292,7 +301,7 @@ the complete role-aware blocking rules from the machine descriptor:
 }
 ```
 
-Profile `3.2.0` retains exactly seven objective static hard blocks:
+Profile `3.3.0` retains exactly seven objective static hard blocks:
 
 - runtime `CALLCODE`, runtime `SELFDESTRUCT`, or an exact source
   self-destruct surface on any target;
@@ -303,7 +312,7 @@ Profile `3.2.0` retains exactly seven objective static hard blocks:
 Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, blocklist,
 transfer-control, external-dependency, liquidity-custody, transfer-fee,
 runtime-child-contract, incomplete-analysis, and review-required callback
-findings are not categorical `3.2.0` deployment blocks. They remain visible in
+findings are not categorical `3.3.0` deployment blocks. They remain visible in
 `needsEvidenceFindingCodes` and select the applicable evidence tier. Return
 delta permissions and `hook-inventory-custom-accounting` require the advanced
 behavior vector set covering delta solvency, backing, refunds, and withdrawal.
@@ -441,7 +450,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 
 ## CLI contract
 
-Revision 3 uses CLI contract version `3.3.5`, with exactly four commands:
+Revision 3 uses public CLI contract version `3.3.6`, with exactly four commands:
 
 ```text
 pack
@@ -450,33 +459,12 @@ submit
 status
 ```
 
-The immutable `3.3.5` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.5`.
-The discovery descriptor reports `releaseLocatorStatus: published`,
-`supportStatus: live`, the exact tarball and checksum URLs, and
-`tarballSha256: sha256:d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca`.
-Do not install a similarly named package from a registry.
-
-Download and compare the published checksum first. Only then download, verify,
-and install the exact release asset:
-
-```sh
-(
-  set -eu
-  PROGRAMMABLE_LAUNCH_SHA256=d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca
-  curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.5.tgz.sha256 \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz.sha256
-  test "$(awk 'NR == 1 { print $1 }' programmable-launch-3.3.5.tgz.sha256)" = \
-    "$PROGRAMMABLE_LAUNCH_SHA256"
-  curl --fail --location --proto '=https' --tlsv1.2 \
-    --output programmable-launch-3.3.5.tgz \
-    https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz
-  shasum -a 256 --check programmable-launch-3.3.5.tgz.sha256
-  npm install --global ./programmable-launch-3.3.5.tgz
-  programmable-launch --version
-)
-```
+The immutable `3.3.6` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6`.
+The discovery descriptor reports `releaseLocatorStatus: published` and
+`supportStatus: live`. Resolve release assets and their verification material
+from that immutable locator at installation time; do not reuse an older
+release's checksum or install a similarly named package from a registry.
 
 The normal flow remains:
 

@@ -50,8 +50,7 @@ Profile V1 is planned for Custom Launch API V3. The candidate identifiers are:
 | Resource | `programmable.custom-launch.v3` |
 | Route ID | `custom-launch:create:v3` |
 | Collection | `/v3/custom-launches` |
-| Funding-signature handoff | `POST /v3/wallet-admin/custom-launches/{launchId}/funding-authorization` |
-| Funding OpenAPI operation | `custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post` |
+| Wallet review | Explicit resource-provided handoff; no public administrative route |
 | Pack config | `programmable.launch-pack-config.v3` |
 
 They are not public through this V1 descriptor. Its frozen discovery data still

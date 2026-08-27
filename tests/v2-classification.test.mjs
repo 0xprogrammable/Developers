@@ -198,7 +198,7 @@ describe("version 2 classification", () => {
       status: "live",
       profileId: "programmable.direct-native-hook-graph.v1",
       profileRevision: 3,
-      profileVersion: "3.2.0",
+      profileVersion: "3.3.0",
       baseUrl: "https://api.programmable.market",
       method: "POST",
       path: "/v3/custom-launches",
