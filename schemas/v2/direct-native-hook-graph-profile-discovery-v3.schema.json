@@ -45,7 +45,7 @@
       "const": 3
     },
     "profileVersion": {
-      "const": "3.2.0"
+      "const": "3.3.0"
     },
     "publicCategory": {
       "const": "custom"
@@ -74,12 +74,8 @@
         "availability": "public-authenticated",
         "publiclyRoutable": true,
         "collectionPath": "/v3/custom-launches",
-        "fundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
-        "fundingAuthorizationMethod": "POST",
         "openApiPath": "/openapi/custom-launch-v3.json",
         "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
-        "openApiVersion": "3.3.5",
-        "openApiSha256": "sha256:07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51",
         "openApiStatus": "live",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "resourceSchema": "programmable.custom-launch.v3",
@@ -95,11 +91,12 @@
             "projectMetadata": {
               "schemaVersion": "programmable.project-metadata.v1",
               "inputSchemaVersion": "programmable.project-metadata-input.v1",
-              "requiredForProfileVersion": "3.2.0",
+              "requiredForProfileVersion": "3.3.0",
               "legacyWithoutMetadataProfileVersions": [
                 "2.0.0",
                 "3.0.0",
-                "3.1.0"
+                "3.1.0",
+                "3.2.0"
               ],
               "requiredFields": [
                 "token.name",
@@ -108,7 +105,12 @@
                 "presentation.image",
                 "presentation.links"
               ],
-              "imageMayBeNull": true,
+              "imageMayBeNull": false,
+              "descriptionMustBeMeaningful": true,
+              "requiredLinkKinds": [
+                "website",
+                "x"
+              ],
               "maximumLinks": 32,
               "linkKinds": [
                 "website",
@@ -151,7 +153,7 @@
             "minimumLimit": 1,
             "maximumLimit": 25,
             "defaultLimit": 10,
-            "finalityScope": "finalized-profile-3.2.0-only",
+            "finalityScope": "finalized-profile-3.3.0-only",
             "cacheControl": "public, max-age=15, stale-while-revalidate=300",
             "sourceLkg": "none"
           },
@@ -182,14 +184,11 @@
     "cli": {
       "const": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.3.5",
+        "releaseVersion": "3.3.6",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.5",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz.sha256",
-        "tarballSha256": "sha256:d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca",
+        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6",
         "supportStatus": "live",
-        "minimumSupportingVersion": "3.2.0",
+        "minimumSupportingVersion": "3.3.6",
         "packConfigSchema": "programmable.launch-pack-config.v3",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "fundingAuthorizationPatch": {
@@ -243,7 +242,8 @@
         "profileRevision3": "active-general-lane",
         "profileVersion3_0_0": "retained-exact-read-and-retry",
         "profileVersion3_1_0": "retained-exact-read-and-retry",
-        "profileVersion3_2_0": "active-for-new-packs"
+        "profileVersion3_2_0": "retained-exact-read-and-retry",
+        "profileVersion3_3_0": "active-for-new-packs"
       }
     },
     "generalLane": {

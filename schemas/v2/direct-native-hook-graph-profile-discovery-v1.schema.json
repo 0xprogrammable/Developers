@@ -69,9 +69,6 @@
         "availability": "gated",
         "publiclyRoutable": false,
         "plannedCollectionPath": "/v3/custom-launches",
-        "plannedFundingAuthorizationPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
-        "plannedFundingAuthorizationMethod": "POST",
-        "plannedFundingAuthorizationOperationRef": "https://programmable.market/openapi/custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "resourceSchema": "programmable.custom-launch.v3",
         "requestSchemaStatus": "candidate-not-published",
@@ -268,7 +265,6 @@
         ],
         "awaitingSignatureStatus": "awaiting_funding_authorization",
         "signatureSubmission": {
-          "plannedPath": "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
           "format": "strict-65-byte-signature",
           "serverChecks": [
             "stored-digest",

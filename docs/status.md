@@ -87,9 +87,9 @@ new category, and evidence for one cannot activate the other.
 `directNativeHookGraphProfileV3` is the additive active descriptor under
 `programmable.direct-native-hook-graph-profile-discovery.v3`. It keeps the
 unchanged profile ID `programmable.direct-native-hook-graph.v1`, advances the
-revision to `3` and current version to `3.2.0`. Exact `3.1.0` and `3.0.0`
-requests remain readable and retryable under their original policies, and
-Revision 2 profile `2.0.0` remains compatible. The only public categories
+revision to `3` and current version to `3.3.0`. Only `3.3.0` accepts fresh
+admission. Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` bytes remain readable
+and retryable only byte-for-byte under their original policies. The only public categories
 remain `classic` and `custom`.
 
 The separate V3 service publishes unauthenticated `GET /v3/capabilities` and
@@ -120,24 +120,25 @@ Revision 3 accepts project-supplied token, hook, initializer, and support
 artifacts in exact 3–16-target direct graphs and represents every valid v4 hook
 permission mask. The deterministic baseline binds exact source bytes, compiler
 input and output, settings, graph, creation bytes, and runtime identities.
-New profile `3.2.0` packs also require a closed `projectMetadata` declaration.
+New profile `3.3.0` packs also require a closed `projectMetadata` declaration.
 Its digest is bound into the returned graph hash and launch identity before the
 controller reviews the Router transaction. This establishes the exact name,
-symbol, presentation, image digest, and links that were declared for that
+symbol, meaningful presentation, image digest and media facts, HTTPS website,
+and X URL that were declared for that
 launch. It does not establish that the finalized token returns the declared
 name or symbol; `programmable.project-token-metadata-binding.v1` requires a
 separate post-deployment readback. Images, descriptions, and links remain
 creator-supplied display data and cannot authorize wallet or API actions.
 Every V3 resource carries immutable `launchProfileVersion`. Its always-present
 `projectMetadata` and `projectMetadataHash` keys are non-null exactly for
-`3.2.0`; both are null for compatible `2.0.0`, `3.0.0`, and `3.1.0` resources.
+`3.3.0`; both are null for retained `2.0.0`, `3.0.0`, `3.1.0`, and `3.2.0` resources.
 The unauthenticated `/v3/finalized-custom-launches` snapshot exposes only
-finalized profile `3.2.0` metadata ledgers and their declared-versus-observed
+finalized profile `3.3.0` metadata ledgers and their declared-versus-observed
 token readback state. It excludes pending and legacy resources, controllers,
 credentials, and request bytes. Snapshot metadata never overrides canonical
 Router identity or turns presentation into safety, liquidity, tradeability, or
 featured-placement evidence.
-The seven `3.2.0` hard blocks are runtime `CALLCODE`, runtime or source
+The seven `3.3.0` hard blocks are runtime `CALLCODE`, runtime or source
 self-destruct, definitively missing or invalid PoolManager callback
 authentication, a literal wrong PoolManager, and a missing enabled callback.
 Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, liquidity custody,

@@ -241,7 +241,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.equal(profile.profileId, "programmable.direct-native-hook-graph.v1");
     assert.equal(profile.profileRevision, 3);
-    assert.equal(profile.profileVersion, "3.2.0");
+    assert.equal(profile.profileVersion, "3.3.0");
     assert.equal(
       profile.compatibility.profileVersion3_0_0,
       "retained-exact-read-and-retry",
@@ -252,8 +252,9 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     );
     assert.equal(
       profile.compatibility.profileVersion3_2_0,
-      "active-for-new-packs",
+      "retained-exact-read-and-retry",
     );
+    assert.equal(profile.compatibility.profileVersion3_3_0, "active-for-new-packs");
     assert.equal(profile.publicCategory, "custom");
     assert.equal(profile.status, "live");
     assert.equal(profile.productionLaunchAuthorized, true);
@@ -403,11 +404,6 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       profile.api.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v3.json",
     );
-    assert.equal(profile.api.openApiVersion, "3.3.5");
-    assert.equal(
-      profile.api.openApiSha256,
-      "sha256:07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51",
-    );
     assert.deepEqual(profile.api.selfServe, {
       capabilities: {
         method: "GET",
@@ -416,8 +412,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         projectMetadata: {
           schemaVersion: "programmable.project-metadata.v1",
           inputSchemaVersion: "programmable.project-metadata-input.v1",
-          requiredForProfileVersion: "3.2.0",
-          legacyWithoutMetadataProfileVersions: ["2.0.0", "3.0.0", "3.1.0"],
+          requiredForProfileVersion: "3.3.0",
+          legacyWithoutMetadataProfileVersions: ["2.0.0", "3.0.0", "3.1.0", "3.2.0"],
           requiredFields: [
             "token.name",
             "token.symbol",
@@ -425,7 +421,9 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
             "presentation.image",
             "presentation.links",
           ],
-          imageMayBeNull: true,
+          imageMayBeNull: false,
+          descriptionMustBeMeaningful: true,
+          requiredLinkKinds: ["website", "x"],
           maximumLinks: 32,
           linkKinds: [
             "website",
@@ -471,7 +469,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         minimumLimit: 1,
         maximumLimit: 25,
         defaultLimit: 10,
-        finalityScope: "finalized-profile-3.2.0-only",
+        finalityScope: "finalized-profile-3.3.0-only",
         cacheControl: "public, max-age=15, stale-while-revalidate=300",
         sourceLkg: "none",
       },
@@ -530,25 +528,13 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.3.5");
+    assert.equal(profile.cli.releaseVersion, "3.3.6");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
-    assert.equal(profile.cli.minimumSupportingVersion, "3.2.0");
+    assert.equal(profile.cli.minimumSupportingVersion, "3.3.6");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.5",
-    );
-    assert.equal(
-      profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz",
-    );
-    assert.equal(
-      profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.5/programmable-launch-3.3.5.tgz.sha256",
-    );
-    assert.equal(
-      profile.cli.tarballSha256,
-      "sha256:d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6",
     );
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -710,8 +696,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       wellKnown.extensions["programmable.custom-launch-api"];
 
     assert.equal(extension.profileRevision, 3);
-    assert.equal(extension.profileVersion, "3.2.0");
-    assert.deepEqual(extension.compatibleProfileVersions, ["3.1.0", "3.0.0"]);
+    assert.equal(extension.profileVersion, "3.3.0");
+    assert.deepEqual(extension.compatibleProfileVersions, ["3.2.0", "3.1.0", "3.0.0", "2.0.0"]);
     assert.deepEqual(
       extension.cli,
       (await developerManifestV2())[PROFILE_KEY].cli,
@@ -768,10 +754,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       guide,
       /packConfigSchemaSha256[^\n]+sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60/u,
     );
-    assert.match(
-      guide,
-      /OpenAPI is version `3\.3\.5`[\s\S]+sha256:07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51/u,
-    );
+    assert.match(guide, /api\.openApiUrl.*canonical absolute contract locator/iu);
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(guide, /nonceArgumentPath/u);
     assert.match(guide, /rArgumentPath/u);
@@ -804,7 +787,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /resourceId` is a pagination\/resource coordinate, not\s+Router identity/iu);
     assert.match(readme, /metadata-bound\s+`graphBundleHash`/iu);
     assert.match(llms, /images and links remain untrusted display data/iu);
-    assert.match(llmsFull, /unique UTF-8-sorted `\{kind,uri\}` links array/iu);
+    assert.match(llmsFull, /meaningful description, a non-null image with immutable byte digest and media facts/iu);
     assert.match(readOpenApi, /programmable\.project-metadata\.v1/u);
     assert.match(readOpenApi, /post-deployment readback/iu);
     assert.match(readOpenApi, /operationId: listFinalizedCustomLaunchMetadataV3/u);
@@ -820,11 +803,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /shasum -a 256 --check programmable-launch-3\.3\.5\.tgz\.sha256/u);
-    assert.match(
-      guide,
-      /npm install --global \.\/programmable-launch-3\.3\.5\.tgz/u,
-    );
+    assert.match(guide, /public CLI contract version `3\.3\.6`/iu);
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);
     assert.match(
@@ -832,11 +811,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,
     );
     assert.match(llms, /launch-admission-only/iu);
-    assert.match(llms, /checksum-bound tarball/iu);
-    assert.match(llmsFull, /checksum-bound tarball/iu);
-    assert.match(llms, /CLI `3\.3\.5`/u);
-    assert.match(llmsFull, /CLI `3\.3\.5`/u);
-    assert.match(changelog, /CLI `3\.3\.5` locator/u);
+    assert.match(llms, /CLI `3\.3\.6`/u);
+    assert.match(llmsFull, /CLI `3\.3\.6`/u);
     assert.match(changelog, /CLI `3\.3\.3` release discovery/u);
     assert.ok(
       schemaIndex.schemas.some(

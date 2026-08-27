@@ -93,7 +93,7 @@ warning, with no project-specific exception. Blocking findings produce
 for mandatory pinned Router launch simulation. Authorization requires that
 exact simulation. Admission is not an audit or a safety, honeypot, liquidity,
 tradeability, or fee-behavior guarantee. The descriptor names authenticated
-write routes, but this Developer API returns no executable calldata and
+V3 surface, but this Developer API returns no executable calldata and
 authorizes no transaction. Its `api.agentIntegration` object links the
 canonical machine-readable remediation catalog and existing-project guide.
 Agents resolve `action_required` finding codes there, rebuild and resubmit a new
@@ -102,7 +102,7 @@ linked pack-config schema defines the additive
 `programmable.eip3009-authorization-patch.v2` contract: static
 `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`
 values identify the four authorization leaves while v1 remains readable for
-exact retries. New profile `3.2.0` requests also carry required
+exact retries. Only fresh profile `3.3.0` requests carry required
 `programmable.project-metadata.v1` and its `projectMetadataHash`. The CLI keeps
 the raw graph digest in `unboundGraphBundleHash` and publishes a metadata-bound
 `graphBundleHash`. The prepared resource repeats both hashes, the exact
@@ -124,9 +124,9 @@ the controller wallet alone signs and broadcasts. `authorized` is not signed,
 the launch resource status.
 
 The canonical Custom Launch V3 resource always includes immutable
-`launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, or `3.2.0`.
+`launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`.
 Required `projectMetadata` and `projectMetadataHash` keys are non-null exactly
-for `3.2.0` and null for the three compatible legacy versions. The prepared
+for `3.3.0` and null for the four retained legacy versions. The prepared
 artifact has no separate `launchProfileVersion`; current artifacts carry
 metadata, metadata hash, and `unboundGraphBundleHash`, while legacy artifacts
 omit those three fields. The canonical conditional schema stays in the public
@@ -137,7 +137,7 @@ The same descriptor publishes `api.selfServe.finalizedMetadata` and
 `GET https://api.programmable.market/v3/finalized-custom-launches`, whose
 canonical operation is `listFinalizedCustomLaunchMetadataV3` in the Custom
 Launch V3 OpenAPI contract. The opaque-cursor response contains only finalized
-profile `3.2.0` metadata ledgers, with a maximum page size of 25. It contains no
+profile `3.3.0` metadata ledgers, with a maximum page size of 25. It contains no
 pending or legacy request, controller, credential, or request bytes. Complete
 all pages, then join by `routerLaunchId` and matching canonical Router event
 identities. `resourceId` is not Router provenance and presentation data does
@@ -175,11 +175,9 @@ future Custom Launch API V3 direct-hook graph path. The descriptor schema is
 V3 request profile schema `programmable.direct-native-hook-graph-profile.v1`.
 Its transport request is
 `programmable.custom-launch-create-request.v3`. The planned collection is
-`/v3/custom-launches`; the candidate funding-signature handoff is
-`POST /v3/wallet-admin/custom-launches/{launchId}/funding-authorization`, with
-the corresponding operation under that path in the planned
-`https://programmable.market/openapi/custom-launch-v3.json` document. Neither is
-publicly routable through V1. The V1 descriptor's planned OpenAPI and CLI state
+`/v3/custom-launches`. Wallet review is an explicit resource-provided handoff,
+not a public administrative route. V1 remains
+not publicly routable. The V1 descriptor's planned OpenAPI and CLI state
 remain unpublished even though production V3 is now published under the
 additive V2 and V3 descriptors. V1 `productionLaunchAuthorized` is false, admission under the existing immutable
 permit authority and the fixed signature-patch evidence are pending, and a

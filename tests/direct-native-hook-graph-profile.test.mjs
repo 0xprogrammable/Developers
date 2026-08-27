@@ -165,15 +165,9 @@ describe("Direct Native Hook Graph Profile V1 preview", () => {
     });
     assert.equal(profile.api.apiVersion, "3");
     assert.equal(profile.api.plannedCollectionPath, "/v3/custom-launches");
-    assert.equal(
-      profile.api.plannedFundingAuthorizationPath,
-      "/v3/wallet-admin/custom-launches/{launchId}/funding-authorization",
-    );
-    assert.equal(profile.api.plannedFundingAuthorizationMethod, "POST");
-    assert.equal(
-      profile.api.plannedFundingAuthorizationOperationRef,
-      "https://programmable.market/openapi/custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post",
-    );
+    assert.equal(profile.api.plannedFundingAuthorizationPath, undefined);
+    assert.equal(profile.api.plannedFundingAuthorizationMethod, undefined);
+    assert.equal(profile.api.plannedFundingAuthorizationOperationRef, undefined);
     assert.equal(
       profile.fundingAuthorizations.flow,
       "two-stage-funding-authorization-then-router-transaction",
@@ -338,10 +332,6 @@ describe("Direct Native Hook Graph Profile V1 preview", () => {
         apiSupportStatus: extension.apiSupportStatus,
         cliCandidateVersion: extension.cliCandidateVersion,
         cliSupportStatus: extension.cliSupportStatus,
-        plannedFundingAuthorizationMethod:
-          extension.plannedFundingAuthorizationMethod,
-        plannedFundingAuthorizationOperationRef:
-          extension.plannedFundingAuthorizationOperationRef,
         fundingFlow: extension.fundingFlow,
         platformFeeAccountingMode: extension.platformFeeAccountingMode,
         feedPublicationStatus: extension.feedPublicationStatus,
@@ -364,9 +354,6 @@ describe("Direct Native Hook Graph Profile V1 preview", () => {
         apiSupportStatus: "integration-pending",
         cliCandidateVersion: "3.0.0-rc.1",
         cliSupportStatus: "candidate-not-published",
-        plannedFundingAuthorizationMethod: "POST",
-        plannedFundingAuthorizationOperationRef:
-          "https://programmable.market/openapi/custom-launch-v3.json#/paths/~1v3~1wallet-admin~1custom-launches~1%7BlaunchId%7D~1funding-authorization/post",
         fundingFlow: "two-stage-funding-authorization-then-router-transaction",
         platformFeeAccountingMode: "inclusive-selected-total",
         feedPublicationStatus: "gated",
@@ -396,7 +383,7 @@ describe("Direct Native Hook Graph Profile V1 preview", () => {
     assert.match(guide, /initializer role uses `other`/iu);
     assert.match(guide, /`1000000` is invalid/iu);
     assert.match(guide, /permitDigest/iu);
-    assert.match(guide, /real operation|Funding OpenAPI operation/iu);
+    assert.match(guide, /no public administrative route/iu);
     assert.match(guide, /not `31000`/iu);
     assert.match(guide, /existing immutable Router permit authority/i);
     assert.match(guide, /Generic fee claiming.*not live/is);
