@@ -444,7 +444,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       preflight: {
         method: "POST",
         path: "/v3/custom-launches/preflight",
-        authentication: "wallet-bound-api-key",
+        authentication: "bearer-api-key",
         launchQuota: "not-consumed",
         responseSchemaVersion: "programmable.custom-launch-preflight.v1",
         responseSchemaUrl:
@@ -489,6 +489,31 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         walletBroadcastByService: false,
       },
     });
+    assert.deepEqual(profile.api.partnerCredentials, {
+      schemaVersion: "programmable.partner-public-contract.v1",
+      status: "live",
+      environmentVariable: "PROGRAMMABLE_API_KEY",
+      credentialKinds: ["root", "subkey"],
+      canonicalV3LaunchRoutes: true,
+      launchScopes: ["custom-launch:create", "custom-launch:read"],
+      rootOnlyScope: "partner-subkeys:manage",
+      subkeyAdminRoutes: [
+        "GET /v1/partner/subkeys",
+        "POST /v1/partner/subkeys",
+        "POST /v1/partner/subkeys/{subkeyId}/rotate",
+        "DELETE /v1/partner/subkeys/{subkeyId}",
+      ],
+      maximumSubkeyDepth: 1,
+      subkeyScopesAndBudgetsCannotExceedRoot: true,
+      subkeyExpiryCannotExceedRoot: true,
+      secretDelivery: "issue-and-rotation-response-only",
+      callerSuppliedAttributionAccepted: false,
+      attributionSource: "authenticated-partner-api-key",
+      attributionIsVerificationOrSafetyClaim: false,
+      walletSigningAuthority: false,
+      walletBroadcastAuthority: false,
+      gateBypassAuthority: false,
+    });
     assert.deepEqual(profile.api.agentIntegration, {
       remediationCatalogSchemaVersion:
         "programmable.custom-launch-agent-remediation-catalog.v1",
@@ -499,7 +524,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       packConfigSchemaUrl:
         "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
       packConfigSchemaSha256:
-        "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60",
+        "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074",
       finalizedMetadataUrl:
         "https://api.programmable.market/v3/finalized-custom-launches",
     });
@@ -753,7 +778,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /schemas\/custom-launch\/v3\/pack-config\.json/u);
     assert.match(
       guide,
-      /packConfigSchemaSha256[^\n]+sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60/u,
+      /packConfigSchemaSha256[^\n]+sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074/u,
     );
     assert.match(guide, /api\.openApiUrl.*canonical absolute contract locator/iu);
     assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);

@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the `customLaunchApi` V1 compatibility state, the additive `currentCustomLaunchCreate` V3 write pointer, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the `customLaunchApi` V1 compatibility state, the additive `currentCustomLaunchCreate` V3 write pointer and its exact `partnerCredentials` contract, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 
@@ -45,7 +45,10 @@ The optional `routerCustom` object reports the independent canonical-Router iden
 clients use `currentCustomLaunchCreate`, then follow its V3 capabilities,
 preflight, readiness, OpenAPI, and single-resource status contracts. The
 pointer is discovery data; it does not waive server admission or authorize a
-wallet action.
+wallet action. Wallet keys remain compatible. Approved partner roots and their
+bounded one-level subkeys use those same contracts and policies; only the root
+can manage credentials, and neither root nor child can sign, broadcast, bypass
+admission, or provide caller-selected attribution.
 
 ## Manifest
 

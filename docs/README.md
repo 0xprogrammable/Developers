@@ -8,8 +8,8 @@ Use these docs to verify origin and decide which market features your product ca
 | Goal | Surface |
 | --- | --- |
 | Discover launches and verify provenance | [Developer read API](../README.md), no API key required |
-| Prepare and track a public Custom launch | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch), using a wallet-bound API key from [API key management](https://programmable.market/developers/api-keys); wallet signing stays separate |
-| Build a partner or agent launch frontend | [Launch providers](guides/launch-providers.md), keeping the partner credential server-side and using immutable server-derived attribution |
+| Prepare and track a public Custom launch | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch), using a wallet key from [API key management](https://programmable.market/developers/api-keys) or an approved partner root/subkey credential; wallet signing stays separate |
+| Build a partner or agent launch frontend | [Launch providers](guides/launch-providers.md), keeping the bounded one-level partner credential server-side, using the same V3 policy, and accepting only immutable server-derived attribution |
 | Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
 | Integrate the public fee-enforced profile | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Integrate the active V3 general direct-hook lane | [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md), with exact graph binding, deterministic static admission and mandatory Router simulation |

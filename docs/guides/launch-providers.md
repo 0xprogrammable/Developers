@@ -14,6 +14,12 @@ policy. Neither identity receives a partner-specific route, admission
 exception, or public category. A subkey cannot delegate again, manage another
 subkey, change the root identity, or bypass the root's policy boundary.
 
+Only a root holding `partner-subkeys:manage` can list, issue, rotate, or revoke
+its own children. Child scopes and budgets cannot exceed the root, and child
+expiry cannot exceed root expiry. A secret is returned only by the initial
+issue or rotation response. Neither root nor child can sign or broadcast a
+wallet transaction, bypass security or approval, or choose public attribution.
+
 Keep partner credentials in the partner backend. They are authentication
 material, not public metadata. A framework or agent builder may place its own
 layer in front of that backend, but every call reaching Programmable resolves

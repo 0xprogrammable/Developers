@@ -208,7 +208,7 @@ describe("documentation contract", () => {
         packConfigSchemaUrl:
           "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
         packConfigSchemaSha256:
-          "sha256:a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60",
+          "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074",
         finalizedMetadataUrl:
           "https://api.programmable.market/v3/finalized-custom-launches",
       },
@@ -234,6 +234,8 @@ describe("documentation contract", () => {
       openApiUrl: "https://programmable.market/openapi/custom-launch-v3.json",
       authentication:
         manifest.directNativeHookGraphProfileV3.api.authentication,
+      partnerCredentials:
+        manifest.directNativeHookGraphProfileV3.api.partnerCredentials,
       walletBoundary:
         manifest.directNativeHookGraphProfileV3.api.walletBoundary,
     });
@@ -262,7 +264,9 @@ describe("documentation contract", () => {
         profileVersion: "3.3.0",
         compatibleProfileRevisions: [2, 3],
         compatibleProfileVersions: ["3.2.0", "3.1.0", "3.0.0", "2.0.0"],
-        authentication: "wallet-bound-api-key",
+        authentication: "bearer-api-key",
+        partnerCredentials:
+          manifest.directNativeHookGraphProfileV3.api.partnerCredentials,
         walletBoundary: "wallet-reviews-signs-and-broadcasts-separately",
         selfServe: {
           capabilities: {
@@ -308,7 +312,7 @@ describe("documentation contract", () => {
           preflight: {
             method: "POST",
             path: "/v3/custom-launches/preflight",
-            authentication: "wallet-bound-api-key",
+            authentication: "bearer-api-key",
             launchQuota: "not-consumed",
             responseSchemaVersion: "programmable.custom-launch-preflight.v1",
             responseSchemaUrl:
