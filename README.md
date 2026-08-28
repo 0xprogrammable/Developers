@@ -181,7 +181,11 @@ their original contracts, including retained `3.2.0` and current `3.3.0` rows,
 plus exact Router identity, bound hashes,
 declared metadata, token readback state, and finality evidence; it excludes
 pending requests, metadata-absent historical resources, controller addresses,
-credentials, and request bytes. Complete every page and keep Router evidence
+credentials, and request bytes. Every page has required `schemaVersion`,
+`generatedAt`, `launches`, `nextCursor`, and `quality` fields. `quality.status`
+is `complete` when every source row was published and `partial` when invalid
+finalized rows were quarantined; its counts and row-indexed diagnostics make
+that boundary explicit. Complete every page and keep Router evidence
 authoritative. A declared
 presentation is not a safety, tradeability, or onchain token-identity claim.
 Current submissions require name, symbol, description, an image with immutable
