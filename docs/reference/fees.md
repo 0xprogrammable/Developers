@@ -165,11 +165,16 @@ The additive v2 Registry record uses `feePolicy.mode`:
 
 | Mode | Required values |
 | --- | --- |
-| `native` | `totalFeeBps: 10`, `programmableShareBps: 10`, `partnerShareBps: 0`, `normalProgrammableTenBpsApplied: true` |
+| `native` | Conditional: `totalFeeBps: 10`, `programmableShareBps: 10`, `partnerShareBps: 0`, `normalProgrammableTenBpsApplied: true`, only when the exact launch carries verified official-market fee evidence |
 | `partner-template` | Active fee-bearing partnership path: `totalFeeBps: 20`, `partnerShareBps: 15`, `programmableShareBps: 5`, `normalProgrammableTenBpsApplied: false` |
 | `no-qualifying-market` | No qualifying fee path, including a partner-attributed project without one: all shares zero and no invented basis, currency, accrual, or claim path |
 
 Both fee-bearing modes use `chargeMode: "verified-official-market-path-only"`. The no-market mode uses `chargeMode: "none-no-qualifying-market"`.
+
+The manifest does not claim that every Custom launch charges 10 bps. Native
+Custom fee behavior is conditional and must be established from the exact
+launch's fee-certified official market path. When that evidence is absent,
+keep the fee unavailable instead of inferring it from the launch category.
 
 The policy also carries the Programmable and optional partner recipients, basis, currency, accrual, claim, rounding, verified market IDs, verification status and time, plus authority, evidence, recipient-control, and claim-isolation hashes. Validate those fields together; a correct rate with the wrong recipient or claim authority does not pass.
 

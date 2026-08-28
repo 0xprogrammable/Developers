@@ -78,7 +78,14 @@ describe("JSON Schema registry", () => {
       manifest.customFeeEnforcedLaunchProfileV2,
       "Custom Fee-Enforced V2 historical descriptor",
     );
-    assert.equal(manifest.platformFee.nativeCustom.status, "active");
+    assert.deepEqual(manifest.platformFee.nativeCustom, {
+      status: "conditional",
+      activationStatus: "per-launch-exact-fee-evidence-required",
+      totalFeeBps: 10,
+      programmableShareBps: 10,
+      scope: "exact-fee-certified-official-market-path-only",
+      universalFeeBehaviorClaim: false,
+    });
     assert.equal(manifest.platformFee.partnerTemplate.status, "unavailable");
     assert.equal(
       manifest.customFeeEnforcedLaunchProfileV2.evidenceStatus.securityReview,
