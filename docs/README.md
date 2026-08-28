@@ -11,15 +11,16 @@ Use these docs to verify origin and decide which market features your product ca
 | Prepare and track a public Custom launch | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch), using a wallet key from [API key management](https://programmable.market/developers/api-keys) or an approved partner root/subkey credential; wallet signing stays separate |
 | Build a partner or agent launch frontend | [Launch providers](guides/launch-providers.md), keeping the bounded one-level partner credential server-side, using the same V3 policy, and accepting only immutable server-derived attribution |
 | Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
-| Integrate the public fee-enforced profile | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
+| Verify a historical fee-enforced V2 resource | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Integrate the active V3 general direct-hook lane | [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md), with exact graph binding, deterministic static admission and mandatory Router simulation |
 | Keep a Revision 2 integration compatible | [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md), retained for exact 3–16-target graphs, all valid v4 masks and three funding modes |
 | Inspect the retained V3 preview | [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md), preserved unchanged for discovery compatibility |
 | Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) |
 
-The Custom Launch API is separately hosted at `https://api.programmable.market`. V2 retains its exact fee-enforced
-route and V3 prepares general project-owned token and hook graphs while the controller wallet reviews and signs separately. V1 reads/status remain compatible, but V1 POST
-returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. The V1 and V2 schemas remain in their canonical OpenAPI
+The Custom Launch API is separately hosted at `https://api.programmable.market`. V1 and V2 retain historical reads,
+but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions while the controller wallet
+reviews and signs an authorized exact transaction separately. The V1 and V2 schemas remain in their canonical OpenAPI
 contracts instead of being copied into this read/discovery repository.
 
 The versioned launch requirements likewise remain owned by Programmable Launch Policy instead of being duplicated here.
@@ -68,7 +69,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 ## Product status in one paragraph
 
-Classic launch discovery, Custom Registry generation 1, and authenticated Custom Launch API V2 and V3 are live on Ethereum. V1 reads/status remain compatible while V1 POST stays read-only; legacy Registry and GitHub submission intake are closed. The active Direct Native Hook Graph Revision 3 accepts exact 3–16-target project token and hook graphs and all valid v4 permission masks. It requires exact source/compiler/graph binding, a deterministic static baseline, and an exact Router launch simulation before authorization. A blocking finding returns `action_required`; zero blocking findings only make the request simulation-eligible. Admission is not an audit or a safety, honeypot, liquidity, tradeability, or fee-behavior guarantee. Revision 2 remains compatible and the Revision 1 descriptor remains a gated preview. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+Classic launch discovery and Custom Registry generation 1 are live on Ethereum. Custom Launch API V1 and V2 retain historical reads, but authenticated POST is read-only and returns nonretryable HTTP 409; only V3 profile `3.3.0` accepts fresh submissions. The active Direct Native Hook Graph Revision 3 accepts exact 3–16-target project token and hook graphs and all valid v4 permission masks. The API server, not a CLI, LLM, or client, decides authorization and may expose a wallet handoff only after server-verified exact-request behavior, applicable platform-fee, declared-liquidity-model, admission, and Router-simulation evidence passes. That does not make an arbitrary hook safe or prove universal fee enforcement. Legacy Registry and GitHub submission intake are closed. The separate `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches from block `25717612`; historical coins are not backfilled. Historical Stock-Paired records are not part of the v2 Custom classification. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

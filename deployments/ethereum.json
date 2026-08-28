@@ -17,7 +17,7 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "closed",
-      "note": "Custom Launch API V2 and V3 are live on Ethereum Mainnet. Legacy Registry and GitHub submission intake are closed."
+      "note": "Custom Launch API V1 and V2 historical reads remain available, but authenticated POST is read-only and returns nonretryable HTTP 409. Only metadata-bound V3 profile 3.3.0 accepts fresh submissions. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "deployments": [
@@ -179,7 +179,7 @@
     "publicSubmissionsEnabled": false,
     "address": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
     "startBlock": "25701139",
-    "note": "Registry discovery remains live for finalized approved launches. Legacy Registry and GitHub submission intake are closed; use the separate authenticated Custom Launch API V2 or V3."
+    "note": "Registry discovery remains live for finalized approved launches. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 retain historical reads but no fresh writes; use metadata-bound V3 profile 3.3.0 for fresh submissions."
   },
   "platformFee": {
     "ratePpm": "1000",

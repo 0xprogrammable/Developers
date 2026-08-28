@@ -1,8 +1,9 @@
 # Custom Fee-Enforced Launch Profile V2
 
-This guide describes the exact public Custom Launch API V2 production profile
-on Ethereum Mainnet. Read its current revision and hash from the machine
-descriptor before packaging a request.
+This guide describes the retained Custom Launch API V2 profile and historical
+resources on Ethereum Mainnet. It is not a fresh-write route. Authenticated
+`POST /v2/custom-launches` returns nonretryable
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions.
 
 Read the current machine state from
 `customFeeEnforcedLaunchProfileV2` in both:
@@ -12,31 +13,33 @@ GET https://developers.programmable.family/api/v2/status
 GET https://developers.programmable.family/api/v2/manifest
 ```
 
-Submit only while `status` is `live`, `api.publiclyRoutable` is `true`, and
-`productionLaunchAuthorized` is `true`. A stale profile revision or hash must
-fail closed. Never infer this fee profile from the `custom` category alone.
+The descriptor is fail closed with `status: "read-only"`,
+`api.publiclyRoutable: false`, and `productionLaunchAuthorized: false`.
+Historical reads remain available. Never infer this exact fee profile from the
+`custom` category alone or apply it to an arbitrary hook or market.
 
 ## Keep the four version names separate
 
 | Name | Current state | Meaning |
 | --- | --- | --- |
 | Developer API v2 | Live and read-only | Discovers Classic and Custom launches |
-| Custom Launch API V1 | Reads/status live; POST read-only | POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; it does not enforce the V2 fee profile |
+| Custom Launch API V1 | Historical reads live; POST read-only | Authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`; it does not enforce the V2 fee profile |
 | Custom Registry Generation 2 | Unavailable release candidate | A separate four-contract future discovery trust root |
-| Custom Launch API V2 / production profile revision 3 | Public on Ethereum Mainnet | One exact fee-enforced Router path with separate controller-wallet review and signature |
+| Custom Launch API V2 / profile revision 3 | Historical read-only | Existing resources remain readable; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V2_READ_ONLY` |
+| Custom Launch API V3 profile `3.3.0` | Fresh submissions | The only currently admitted fresh-submission profile, subject to API-server authorization and separate controller-wallet review |
 
 None of these names creates another public category. The only public launch
 categories remain `classic` and `custom`.
 
-## Production contract
+## Retained historical contract
 
-The production launch-profile identifier is
+The retained launch-profile identifier is
 `programmable.fee-enforced-isolated-after-swap.zero-delta.v1`, revision `3`,
 profile version `2.0.0`.
 
-The CLI contract uses package name `@programmable/launch`
-and keeps the four commands `pack`, `validate`, `submit`, and `status`. Its V2
-contracts are:
+The historical CLI contract used package name `@programmable/launch` and exposed
+the four commands `pack`, `validate`, `submit`, and `status`. Command presence is
+not current write authority. Its V2 contracts are:
 
 ```text
 config schema:       programmable.launch-pack-config.v2
@@ -51,14 +54,14 @@ V2 requires an exact server-published `launchProfile`, per-target `runtimeImmuta
 bindings do not by themselves prove a successful compilation, a deployed
 runtime, a provider exact-source match, or fee enforcement.
 
-The production graph has five roles: `token`, `customModule`, `feeVault`,
+The retained graph has five roles: `token`, `customModule`, `feeVault`,
 `feeHook`, and `poolInitializer`. The custom module is isolated behind the
 fee hook's bounded `afterSwap` callback. Arbitrary callbacks are not allowed,
 the maximum custom return delta is exactly `0`, and `customDeltaAccount` is the
 explicit zero address `0x0000000000000000000000000000000000000000`.
 There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
 
-The production CLI is version `2.0.1`, distributed as an immutable GitHub release at
+The retained CLI artifact is version `2.0.1`, distributed as an immutable GitHub release at
 `https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1`.
 Install the immutable release asset directly:
 
@@ -67,16 +70,17 @@ npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/dow
 ```
 
 The CLI distribution state is `github-release`; it is not an npm registry
-publication. The public machine contract is
+publication. The retained machine contract is
 `https://programmable.market/openapi/custom-launch-v2.json`. `pack` and
-`validate` work offline; `submit` and `status` use the authenticated V2 API.
-A cached package or guessed endpoint cannot override the live profile
-revision/hash or authorization state.
+`validate` can reproduce historical bytes; `status` can read an existing
+resource. `submit` cannot create or replay a V2 request because authenticated
+POST is read-only. A cached package, CLI result, LLM, or guessed endpoint cannot
+override the server boundary.
 
-Custom Launch API V1 is read-only for writes: a V1 POST returns HTTP `409` with
-code `CUSTOM_LAUNCH_V1_READ_ONLY` and is not retryable. V2 clients must honor
-`Retry-After` on `429` or `503` and retry the exact idempotency-bound request
-bytes, never a rebuilt request.
+Custom Launch API V1 and V2 are read-only for writes. Their authenticated POST
+routes return HTTP `409` with `CUSTOM_LAUNCH_V1_READ_ONLY` or
+`CUSTOM_LAUNCH_V2_READ_ONLY`; neither response is retryable. Historical GET
+resources remain available under their compatibility contracts.
 
 ## Exact fee semantics
 
@@ -120,7 +124,7 @@ contractPolicyId:  0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899
 They identify one exact production profile. A client must reject any other
 profile revision or hash.
 
-## Exact production artifacts
+## Exact retained artifacts
 
 The canonical compiler is solc `0.8.26+commit.8a97fa7a`, Cancun EVM,
 optimizer enabled with `1,000` runs, `viaIR: false`, and metadata settings
@@ -154,10 +158,10 @@ Every V2 request and readback must bind:
 None of those per-launch bindings may be satisfied by self-reporting getters
 alone.
 
-## Public authorization is fail closed
+## Historical evidence and authorization boundary
 
-Public V2 authorization is valid only while the manifest publishes all of the
-following as one consistent release:
+The historical V2 profile required the following evidence as one consistent
+release:
 
 1. the CLI package and the public authenticated API/OpenAPI contract;
 2. exact pinned profile artifacts and request-hash domains;
@@ -176,13 +180,12 @@ following as one consistent release:
 10. a durable post-finality source-verification worker whose provider outcome
     cannot block or reverse launch finality.
 
-The current release publishes a public descriptor and
-`productionLaunchAuthorized: true`. API readiness alone still does not prove
-fee accrual or payment, continuing liquidity, claim support, market support or
-an independent audit. No public Rev3 canary has been executed: Rev3 canary
-finality and a provider exact match for such a canary remain not yet proven,
-and no swap-accrual or treasury-claim receipt is published. Those evidence
-states do not weaken the fail-closed controls applied to each submitted launch.
+The current descriptor is historical and read-only:
+`productionLaunchAuthorized: false` and `api.publiclyRoutable: false`. No CLI,
+LLM, client, request hash, profile match, or local test can authorize a V2
+write or wallet handoff. API readiness and historical profile conformance do
+not prove fee accrual or payment, continuing liquidity, claim support, market
+support, safety, or an independent audit.
 
 ## Status polling
 
@@ -196,7 +199,7 @@ The list route may perform a bounded opportunistic reconciliation of pending
 records before returning. It is useful for history, but it is not guaranteed to
 advance every pending item and does not replace single-resource polling.
 
-An `authorized` response is still only a wallet handoff. The controller wallet
+An existing historical `authorized` response is still only a wallet handoff. The controller wallet
 must independently verify the exact chain, sender, Router, value, selector and
 calldata, then separately approve any broadcast. An API key is not signing
 authority.

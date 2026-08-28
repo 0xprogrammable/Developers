@@ -68,7 +68,7 @@ describe("OpenAPI v2 contract", () => {
     assert.match(spec.info.description, /409 CUSTOM_LAUNCH_V1_READ_ONLY/u);
     assert.match(
       spec.info.description,
-      /public authenticated Ethereum\s+Mainnet preparation route/u,
+      /Custom Launch API V3 profile `3\.3\.0` is the sole fresh-submission route/u,
     );
     assert.match(spec.info.description, /currentCustomLaunchCreate/u);
     assert.match(spec.info.description, /bounded one-level subkeys/u);
@@ -124,7 +124,7 @@ describe("OpenAPI v2 contract", () => {
     );
     assert.match(
       spec.paths["/api/v2/status"].get.description,
-      /exact public Fee-Enforced V2 production profile/u,
+      /exact retained Fee-Enforced V2 historical profile/u,
     );
     assert.equal(
       spec.components.schemas.CustomFeeEnforcedLaunchProfileV2.$ref,

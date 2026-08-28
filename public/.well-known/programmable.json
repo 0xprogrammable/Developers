@@ -35,7 +35,7 @@
       "registryAddress": "0x17e18c88bda9bfb73924cdc989c07b0707e72671",
       "registryStartBlock": "25701139",
       "registryGeneration": "1",
-      "note": "Custom Launch API V2 and V3 are public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed."
+      "note": "Custom Launch API V1 and V2 historical reads remain available, but authenticated POST is read-only and returns nonretryable HTTP 409. Only metadata-bound V3 profile 3.3.0 accepts fresh submissions. Legacy Registry and GitHub submission intake remain closed."
     }
   },
   "compatibility": {
@@ -119,12 +119,18 @@
         "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
       },
       "publicRelease": {
-        "status": "live",
+        "status": "historical-read-only",
         "apiVersion": "2",
         "guideUrl": "https://programmable.market/docs/developers/custom-launch",
         "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
         "authentication": "wallet-bound-api-key",
         "walletBoundary": "separate-wallet-signature",
+        "writeStatus": "read-only",
+        "postResponse": {
+          "httpStatus": 409,
+          "code": "CUSTOM_LAUNCH_V2_READ_ONLY",
+          "retryable": false
+        },
         "cli": {
           "packageName": "@programmable/launch",
           "binary": "programmable-launch",
@@ -142,10 +148,12 @@
           "retryable": false
         },
         "v2": {
-          "status": "live",
-          "createHttpStatus": 202,
-          "replayHttpStatus": 200,
-          "retryAfter": "honor-on-429-or-503"
+          "reads": "live",
+          "create": "read-only",
+          "createAuthentication": "wallet-bound-api-key",
+          "createHttpStatus": 409,
+          "createErrorCode": "CUSTOM_LAUNCH_V2_READ_ONLY",
+          "retryable": false
         },
         "v3": {
           "status": "live",
@@ -241,7 +249,22 @@
                 "projectMetadataHashDomain": "programmable.project-metadata.v1",
                 "graphBundleHashBindingDomain": "programmable.custom-graph-project-metadata.v1",
                 "postDeploymentTokenReadbackRequired": true
-              }
+              },
+              "behaviorEvidence": {
+                "configurationIsExecutionEvidence": false,
+                "walletHandoffRequiresVerifiedEvidence": true,
+                "minimumWalletHandoffEvidenceStatus": "verified",
+                "walletHandoffFailureCode": "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+                "notConfiguredDisposition": "blocks_wallet_handoff",
+                "unavailableDisposition": "blocks_wallet_handoff",
+                "feeBehaviorClaim": false
+              },
+              "feePolicy": {
+                "tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence": true
+              },
+              "safetyClaim": false,
+              "auditClaim": false,
+              "universalCompatibilityClaim": false
             },
             "preflight": {
               "method": "POST",
@@ -301,23 +324,21 @@
       "profileVersion": "2.0.0",
       "launchProfileHash": "sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee",
       "contractPolicyId": "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
-      "status": "live",
-      "releaseStage": "production",
-      "activationStatus": "production",
-      "productionLaunchAuthorized": true,
+      "status": "read-only",
+      "releaseStage": "compatibility",
+      "activationStatus": "historical-read-only",
+      "productionLaunchAuthorized": false,
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
       "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
-      "retryPolicy": {
-        "httpStatuses": [
-          429,
-          503
-        ],
-        "retryAfter": "honor",
-        "requestBytes": "exact-idempotency-bound-replay"
+      "writeStatus": "read-only",
+      "postResponse": {
+        "httpStatus": 409,
+        "code": "CUSTOM_LAUNCH_V2_READ_ONLY",
+        "retryable": false
       },
-      "note": "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live."
+      "note": "Historical V2 resources remain readable. Authenticated POST is read-only and returns nonretryable 409 CUSTOM_LAUNCH_V2_READ_ONLY. Only V3 profile 3.3.0 accepts fresh submissions. Generic fee claiming and buybacks are not live."
     },
     "programmable.direct-native-hook-graph-profile-v1": {
       "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v1",
@@ -345,7 +366,7 @@
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
       "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
-      "note": "Retained preview contract only. This revision remains gated and publishes no launch; production clients use the additive V2 or V3 descriptor."
+      "note": "Retained preview contract only. This revision remains gated and publishes no launch; fresh submissions use the active V3 descriptor, while V2 is retained for historical reads and exact-byte retries."
     },
     "programmable.direct-native-hook-graph-profile-v2": {
       "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v2",
@@ -355,17 +376,17 @@
       "profileRevision": 2,
       "profileVersion": "2.0.0",
       "publicCategory": "custom",
-      "status": "live",
-      "releaseStage": "production",
-      "activationStatus": "live",
-      "productionLaunchAuthorized": true,
+      "status": "read-only",
+      "releaseStage": "compatibility",
+      "activationStatus": "historical-read-only",
+      "productionLaunchAuthorized": false,
       "api": {
         "apiVersion": "3",
         "baseUrl": "https://api.programmable.market",
         "routeId": "custom-launch:create:v3",
-        "supportStatus": "live",
-        "availability": "public-authenticated",
-        "publiclyRoutable": true,
+        "supportStatus": "historical-read-only",
+        "availability": "authenticated-historical-reads",
+        "publiclyRoutable": false,
         "collectionPath": "/v3/custom-launches",
         "openApiPath": "/openapi/custom-launch-v3.json",
         "openApiStatus": "live",
@@ -375,13 +396,16 @@
         "profileSelectionSchema": "programmable.direct-native-hook-graph-profile-selection.v2",
         "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
         "authentication": "wallet-bound-api-key",
-        "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+        "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
+        "singleResourcePath": "/v3/custom-launches/{launchId}",
+        "freshSubmissions": false,
+        "exactByteRetriesOnly": true
       },
       "cli": {
         "packageName": "@programmable/launch",
         "releaseVersion": "3.0.0",
         "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
-        "supportStatus": "live",
+        "supportStatus": "historical-read-only",
         "minimumSupportingVersion": "3.0.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -510,7 +534,22 @@
               "projectMetadataHashDomain": "programmable.project-metadata.v1",
               "graphBundleHashBindingDomain": "programmable.custom-graph-project-metadata.v1",
               "postDeploymentTokenReadbackRequired": true
-            }
+            },
+            "behaviorEvidence": {
+              "configurationIsExecutionEvidence": false,
+              "walletHandoffRequiresVerifiedEvidence": true,
+              "minimumWalletHandoffEvidenceStatus": "verified",
+              "walletHandoffFailureCode": "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+              "notConfiguredDisposition": "blocks_wallet_handoff",
+              "unavailableDisposition": "blocks_wallet_handoff",
+              "feeBehaviorClaim": false
+            },
+            "feePolicy": {
+              "tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence": true
+            },
+            "safetyClaim": false,
+            "auditClaim": false,
+            "universalCompatibilityClaim": false
           },
           "preflight": {
             "method": "POST",
@@ -674,7 +713,7 @@
           "additive-platform-share": {
             "applicantSelectedRangeHundredthsOfBip": {
               "minimum": "0",
-              "maximum": "998999"
+              "maximum": "100000"
             },
             "projectFormula": "applicant-selected",
             "programmableFormula": "1000",
@@ -683,7 +722,7 @@
           "inclusive-selected-total": {
             "applicantSelectedRangeHundredthsOfBip": {
               "minimum": "0",
-              "maximum": "999999"
+              "maximum": "100000"
             },
             "projectFormula": "max-applicant-selected-and-1000-minus-1000",
             "programmableFormula": "1000",

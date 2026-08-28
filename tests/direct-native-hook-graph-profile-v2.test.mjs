@@ -9,8 +9,8 @@ import { assertValid, createSchemaRegistry } from "../scripts/lib/schema.mjs";
 
 const PROFILE_KEY = "directNativeHookGraphProfileV2";
 
-describe("Direct Native Hook Graph Profile V2 production discovery", () => {
-  test("publishes the exact live V3 profile while preserving v1", async () => {
+describe("Direct Native Hook Graph Profile V2 historical discovery", () => {
+  test("publishes the exact read-only V2 profile while preserving v1", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments/ethereum-v2.json"),
     );
@@ -29,10 +29,12 @@ describe("Direct Native Hook Graph Profile V2 production discovery", () => {
     assert.equal(profile.profileRevision, 2);
     assert.equal(profile.profileVersion, "2.0.0");
     assert.equal(profile.publicCategory, "custom");
-    assert.equal(profile.status, "live");
-    assert.equal(profile.productionLaunchAuthorized, true);
+    assert.equal(profile.status, "read-only");
+    assert.equal(profile.productionLaunchAuthorized, false);
     assert.equal(profile.api.apiVersion, "3");
-    assert.equal(profile.api.publiclyRoutable, true);
+    assert.equal(profile.api.publiclyRoutable, false);
+    assert.equal(profile.api.freshSubmissions, false);
+    assert.equal(profile.api.exactByteRetriesOnly, true);
     assert.equal(profile.cli.releaseVersion, "3.0.0");
     assert.deepEqual(profile.cli.commands, [
       "pack",
@@ -57,9 +59,10 @@ describe("Direct Native Hook Graph Profile V2 production discovery", () => {
     ]);
 
     for (const mutate of [
-      (candidate) => { candidate.status = "gated"; },
-      (candidate) => { candidate.productionLaunchAuthorized = false; },
-      (candidate) => { candidate.api.publiclyRoutable = false; },
+      (candidate) => { candidate.status = "live"; },
+      (candidate) => { candidate.productionLaunchAuthorized = true; },
+      (candidate) => { candidate.api.publiclyRoutable = true; },
+      (candidate) => { candidate.api.freshSubmissions = true; },
       (candidate) => { candidate.cli.commands.push("sign"); },
       (candidate) => { candidate.graphContract.minimumTargets = 2; },
       (candidate) => { candidate.hookPermissions.maximumMask = 8191; },

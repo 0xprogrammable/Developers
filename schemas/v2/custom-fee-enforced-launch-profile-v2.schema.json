@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://developers.programmable.family/schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json",
-  "title": "Programmable Custom Fee-Enforced Launch Profile V2 production status",
+  "title": "Programmable Custom Fee-Enforced Launch Profile V2 historical read-only status",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -46,16 +46,16 @@
       "const": "independent-from-custom-registry-generation-2"
     },
     "releaseStage": {
-      "const": "production"
+      "const": "compatibility"
     },
     "status": {
-      "const": "live"
+      "const": "read-only"
     },
     "activationStatus": {
-      "const": "production"
+      "const": "historical-read-only"
     },
     "productionLaunchAuthorized": {
-      "const": true
+      "const": false
     },
     "guideUrl": {
       "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md"
@@ -70,19 +70,21 @@
         "singleResourcePath",
         "openApiUrl",
         "walletBoundary",
+        "writeStatus",
+        "postAuthentication",
+        "postResponse",
         "listReconciliation",
-        "recommendedPollingPath",
-        "retryPolicy"
+        "recommendedPollingPath"
       ],
       "properties": {
         "apiVersion": {
           "const": "2"
         },
         "availability": {
-          "const": "public"
+          "const": "authenticated-historical-reads"
         },
         "publiclyRoutable": {
-          "const": true
+          "const": false
         },
         "collectionPath": {
           "const": "/v2/custom-launches"
@@ -96,34 +98,24 @@
         "walletBoundary": {
           "const": "separate-wallet-signature"
         },
+        "writeStatus": {
+          "const": "read-only"
+        },
+        "postAuthentication": {
+          "const": "wallet-bound-api-key"
+        },
+        "postResponse": {
+          "const": {
+            "httpStatus": 409,
+            "code": "CUSTOM_LAUNCH_V2_READ_ONLY",
+            "retryable": false
+          }
+        },
         "listReconciliation": {
           "const": "bounded-opportunistic-for-pending-records"
         },
         "recommendedPollingPath": {
           "const": "single-resource"
-        },
-        "retryPolicy": {
-          "type": "object",
-          "required": [
-            "httpStatuses",
-            "retryAfter",
-            "requestBytes"
-          ],
-          "properties": {
-            "httpStatuses": {
-              "const": [
-                429,
-                503
-              ]
-            },
-            "retryAfter": {
-              "const": "honor"
-            },
-            "requestBytes": {
-              "const": "exact-idempotency-bound-replay"
-            }
-          },
-          "additionalProperties": false
         }
       },
       "additionalProperties": false

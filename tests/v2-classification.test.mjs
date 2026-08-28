@@ -230,11 +230,11 @@ describe("version 2 classification", () => {
     );
     assert.equal(
       publicStatus.customFeeEnforcedLaunchProfileV2.productionLaunchAuthorized,
-      true,
+      false,
     );
     assert.equal(
       publicStatus.customFeeEnforcedLaunchProfileV2.api.publiclyRoutable,
-      true,
+      false,
     );
     assert.deepEqual(
       publicStatus.directNativeHookGraphProfileV1,
@@ -271,11 +271,11 @@ describe("version 2 classification", () => {
     );
     assert.equal(
       publicStatus.directNativeHookGraphProfileV2.productionLaunchAuthorized,
-      true,
+      false,
     );
     assert.equal(
       publicStatus.directNativeHookGraphProfileV2.api.publiclyRoutable,
-      true,
+      false,
     );
     assert.deepEqual(
       publicStatus.directNativeHookGraphProfileV2.fundingPolicy.supportedModes,

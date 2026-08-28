@@ -31,7 +31,7 @@ replace the missing production activation evidence.
 
 This profile remains `category: "custom"`. It does not add a third public
 category and does not change the Developer v2 discovery contract, Custom Launch
-API V1 compatibility, or the public Custom Launch API V2 production profile. After
+API V1 compatibility, or the retained read-only Custom Launch API V2 profile. After
 activation, a recognized finalized launch would still be labeled
 `Programmable Custom`; the profile would appear as secondary mechanism and
 namespaced-extension data.

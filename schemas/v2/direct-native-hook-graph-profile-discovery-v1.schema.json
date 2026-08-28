@@ -103,7 +103,7 @@
         ],
         "developerDiscoveryApi": "v2-optional-profile-descriptor",
         "customLaunchApiV1": "unchanged-read-status-post-read-only",
-        "customLaunchApiV2": "unchanged-public-production-profile",
+        "customLaunchApiV2": "historical-reads-post-read-only",
         "customLaunchApiV3": "gated-not-publicly-routable"
       }
     },

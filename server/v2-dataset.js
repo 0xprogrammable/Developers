@@ -604,7 +604,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
       status: customLive ? "live" : "prelaunch",
       note:
         customLive
-          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V2 and V3 are public on Ethereum Mainnet; V1 POST remains read-only, and legacy Registry and GitHub submission intake are closed."
+          ? "Approved Custom Registry launches and finalized canonical-Router Custom identities are discoverable. Custom Launch API V1 and V2 historical reads remain available, but authenticated POST is read-only and returns nonretryable HTTP 409. Only metadata-bound V3 profile 3.3.0 accepts fresh submissions; legacy Registry and GitHub submission intake are closed."
           : "Programmable Custom begins with approved Custom Registry launches. No registry deployment is published yet.",
     },
     customLaunchApi: {
@@ -656,27 +656,29 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         profileVersion: "2.0.0",
         publicCategory: "custom",
         registryRelationship: "independent-from-custom-registry-generation-2",
-        releaseStage: "production",
-        status: "live",
-        activationStatus: "production",
-        productionLaunchAuthorized: true,
+        releaseStage: "compatibility",
+        status: "read-only",
+        activationStatus: "historical-read-only",
+        productionLaunchAuthorized: false,
         guideUrl:
           "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
         api: {
           apiVersion: "2",
-          availability: "public",
-          publiclyRoutable: true,
+          availability: "authenticated-historical-reads",
+          publiclyRoutable: false,
           collectionPath: "/v2/custom-launches",
           singleResourcePath: "/v2/custom-launches/{requestId}",
           openApiUrl: "https://programmable.market/openapi/custom-launch-v2.json",
           walletBoundary: "separate-wallet-signature",
+          writeStatus: "read-only",
+          postAuthentication: "wallet-bound-api-key",
+          postResponse: {
+            httpStatus: 409,
+            code: "CUSTOM_LAUNCH_V2_READ_ONLY",
+            retryable: false,
+          },
           listReconciliation: "bounded-opportunistic-for-pending-records",
           recommendedPollingPath: "single-resource",
-          retryPolicy: {
-            httpStatuses: [429, 503],
-            retryAfter: "honor",
-            requestBytes: "exact-idempotency-bound-replay",
-          },
         },
         cli: {
           packageName: "@programmable/launch",

@@ -66,7 +66,7 @@ describe("JSON Schema registry", () => {
     assert.match(validationSummary(validate), /operationAuthorities/);
   });
 
-  test("keeps the Custom Fee-Enforced V2 production profile exact and fail closed", async () => {
+  test("keeps the Custom Fee-Enforced V2 historical profile exact and fail closed", async () => {
     const manifest = await readJson(
       path.join(REPOSITORY_ROOT, "deployments", "ethereum-v2.json"),
     );
@@ -76,7 +76,7 @@ describe("JSON Schema registry", () => {
     assertValid(
       validate,
       manifest.customFeeEnforcedLaunchProfileV2,
-      "Custom Fee-Enforced V2 production descriptor",
+      "Custom Fee-Enforced V2 historical descriptor",
     );
     assert.equal(manifest.platformFee.nativeCustom.status, "active");
     assert.equal(manifest.platformFee.partnerTemplate.status, "unavailable");
@@ -175,14 +175,19 @@ describe("JSON Schema registry", () => {
         customDeltaAccount: "0x0000000000000000000000000000000000000000",
       },
     );
-    assert.deepEqual(
-      manifest.customFeeEnforcedLaunchProfileV2.api.retryPolicy,
-      {
-        httpStatuses: [429, 503],
-        retryAfter: "honor",
-        requestBytes: "exact-idempotency-bound-replay",
-      },
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.productionLaunchAuthorized,
+      false,
     );
+    assert.equal(
+      manifest.customFeeEnforcedLaunchProfileV2.api.publiclyRoutable,
+      false,
+    );
+    assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.api.postResponse, {
+      httpStatus: 409,
+      code: "CUSTOM_LAUNCH_V2_READ_ONLY",
+      retryable: false,
+    });
     assert.deepEqual(manifest.customFeeEnforcedLaunchProfileV2.cli, {
       packageName: "@programmable/launch",
       version: "2.0.1",
@@ -195,16 +200,16 @@ describe("JSON Schema registry", () => {
     });
 
     for (const mutate of [
-      (profile) => { profile.productionLaunchAuthorized = false; },
-      (profile) => { profile.status = "unavailable"; },
-      (profile) => { profile.api.publiclyRoutable = false; },
+      (profile) => { profile.productionLaunchAuthorized = true; },
+      (profile) => { profile.status = "live"; },
+      (profile) => { profile.api.publiclyRoutable = true; },
       (profile) => { profile.cli.distributionStatus = "github-release-candidate"; },
       (profile) => { profile.cli.packageAssetUrl = "https://example.com/package.tgz"; },
       (profile) => { profile.feeSemantics.ratePpm = 999; },
       (profile) => { profile.moduleSemantics.maximumCustomReturnDelta = 1; },
       (profile) => { profile.moduleSemantics.customDeltaAccount = "launchWallet"; },
-      (profile) => { profile.api.retryPolicy.httpStatuses = [503]; },
-      (profile) => { profile.api.retryPolicy.retryAfter = "ignore"; },
+      (profile) => { profile.api.postResponse.httpStatus = 202; },
+      (profile) => { profile.api.postResponse.retryable = true; },
       (profile) => { profile.api.openApiUrl = null; },
       (profile) => { profile.finalArtifactLiterals.contractPolicyId = `0x${"1".repeat(64)}`; },
       (profile) => { profile.artifactCommitments.compiler.optimizer.runs = 999; },

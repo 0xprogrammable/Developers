@@ -8,7 +8,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 ## Is Custom live?
 
-Yes, through the separate authenticated [Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch) on Ethereum Mainnet. Existing wallet keys remain compatible; approved partner roots and bounded one-level subkeys use the same V3 routes and server-side policy. No credential signs, broadcasts, bypasses admission, or supplies attribution. The controller wallet must review and sign the exact transaction separately. V1 reads/status remain compatible and V1 POST remains read-only. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed.
+Yes, through metadata-bound profile `3.3.0` on the separate authenticated [Custom Launch API V3](https://programmable.market/docs/developers/custom-launch) on Ethereum Mainnet. Existing wallet keys remain compatible; approved partner roots and bounded one-level subkeys use the same V3 routes and server-side policy. No credential signs, broadcasts, bypasses admission, or supplies attribution. The API server, not a CLI, LLM, or client, decides authorization and may expose a wallet handoff only after the exact request's required behavior, applicable platform-fee, declared-liquidity-model, admission, and Router-simulation evidence passes. This does not make arbitrary hooks safe or universally fee-enforced. Custom Launch API V1 and V2 retain historical reads, but authenticated POST returns nonretryable HTTP 409. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed.
 
 Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
 
@@ -75,7 +75,7 @@ Launch-list and token-list routes do not turn incomplete source coverage into a 
 
 ## How does the 0.1% fee work?
 
-Current Classic official paths include the 10 bps Programmable share within the configured trading fee. The public Custom Fee-Enforced V2 profile instead specifies an additive 1,000 ppm on the gross amount of the unspecified pool currency for each successful swap through the exact bound pool. Exact input accounts the output currency; exact output accounts the input currency. The sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Read each verified fee disclosure rather than deriving economics from the category.
+Current Classic official paths include the 10 bps Programmable share within the configured trading fee. The retained historical Custom Fee-Enforced V2 profile specifies an additive 1,000 ppm on the gross amount of the unspecified pool currency for each successful swap through its exact bound pool. That profile does not make unrelated hooks or markets fee-enforced. Exact input accounts the output currency; exact output accounts the input currency. The sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Read each verified fee disclosure rather than deriving economics from the category.
 
 The recipient is `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
 
@@ -89,9 +89,11 @@ finality, tradability, claim support, buybacks, or an audit.
 ## Is Custom Registry Generation 2 the fee-enforced API?
 
 No. Custom Registry Generation 2 is an unavailable four-contract discovery
-trust root. Custom Fee-Enforced Launch Profile V2 is the separate public launch
-profile. Developer API v2 is the live read-only API major. Custom Launch API V2
-is the authenticated preparation API; V1 reads/status remain compatible and V1 POST is read-only.
+trust root. Custom Fee-Enforced Launch Profile V2 is the separate retained
+historical profile. Developer API v2 is the live read-only discovery API major.
+Custom Launch API V1 and V2 historical reads remain available, while authenticated
+POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions.
 All use only the existing `classic` and `custom` categories.
 
 ## Does the fee apply to transfers or a third-party pool?
@@ -120,11 +122,11 @@ No. The integration is public for any provider to adopt. Generic GMGN `uniswap_v
 
 ## Do Custom launches still use GitHub approval pull requests?
 
-No. Legacy Registry and GitHub submission intake are closed. Use the authenticated
-[Custom Launch API V2](https://programmable.market/docs/developers/custom-launch).
-V1 reads/status remain compatible and V1 POST returns nonretryable
-`409 CUSTOM_LAUNCH_V1_READ_ONLY`. An API key is never wallet signing or broadcast
-authority.
+No. Legacy Registry and GitHub submission intake are closed. Use metadata-bound
+profile `3.3.0` on the authenticated [Custom Launch API V3](https://programmable.market/docs/developers/custom-launch).
+V1 and V2 historical reads remain compatible, but authenticated POST returns
+nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`.
+An API key is never wallet signing, broadcast, or authorization authority.
 
 ## What should an unknown future market look like?
 

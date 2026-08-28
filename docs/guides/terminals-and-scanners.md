@@ -21,7 +21,7 @@ The manifest records the historical Classic V2 hook and the current Classic V3 h
 
 ## Current Custom boundary
 
-Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. Custom Launch API V2 is the separate authenticated public preparation path on Ethereum Mainnet; V1 reads/status remain compatible and V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions.
 
 Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 
@@ -57,7 +57,7 @@ For a direct onchain Router index, backfill `eth_getLogs` from the manifest `sta
 
 The stamp is point-in-time provenance. For proxy or beacon components, a matching recorded shell code hash does not establish the current implementation, admin, beacon, initialization state, or upgrade authority. Resolve and revalidate those independently under the terminal's current security policy. A stamp does not establish safety, audit status, liquidity, sellability, or execution support.
 
-Only consistent records from the exact canonical Router qualify through Router V1. Publishing this interface does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. The separately documented [Custom Launch API V2](https://programmable.market/docs/developers/custom-launch) prepares public launches; this terminal integration surface remains read-only and the closed GitHub approval flow must not be revived.
+Only consistent records from the exact canonical Router qualify through Router V1. Publishing this interface does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. The separately documented Custom Launch API V3 profile `3.3.0` accepts fresh submissions; V1 and V2 retain historical reads only. This terminal integration surface remains read-only and the closed GitHub approval flow must not be revived.
 
 GMGN's generic `uniswap_v4` and `poolId` discovery can identify the PCAN token or pool as an ordinary market. It does not verify the canonical Router stamp or show that GMGN integrated the Programmable label. Do not treat third-party market metrics as canonical onchain evidence. Verify the stamp through the Router, and read current pool state separately through PoolManager or StateView.
 

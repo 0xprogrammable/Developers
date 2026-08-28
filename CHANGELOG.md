@@ -15,6 +15,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Reconcile the public Custom Launch contract: retain V1 and V2 historical reads while making authenticated POST nonretryable HTTP 409, accept fresh submissions only through V3 profile `3.3.0`, publish server-authoritative behavior, fee-path, and liquidity evidence gates for wallet handoff, and cap applicant-selected V3 fee rates at `100000` hundredths of a bip per direction and accounting mode while keeping the exact Programmable share at `1000`.
 - Publish wallet-compatible V3 bearer authentication and the exact bounded partner-root/subkey contract through manifest, discovery, status, OpenAPI, human docs, and LLM surfaces without granting signing, broadcast, attribution-selection, security-bypass, or approval-bypass authority.
 - Add the immutable authenticated-partner attribution schema and optional v2 `launchedVia` projection, document complete current-profile metadata and finalized metadata ingestion, and keep external indexing and `safe` labels explicitly outside the guarantee.
 - Publish the immutable checksum-bound CLI `3.3.5` locator and bind it to tarball SHA-256 `d9df0c0bb4d492d0303bc849ea74b2a337dc5aef217c954192ad5c14576039ca`, pack-config schema SHA-256 `a81d6745a520766d8f1dc4bb04e5180c2b97e1157994d4987bdce53778313c60`, and Custom Launch V3 OpenAPI `3.3.5` SHA-256 `07d55af9cd34bf30e89655f7ffc676eb4245678ac80b1217c8ad0e2cb23eed51`; retain the prior CLI `3.3.3` entry below as release history.

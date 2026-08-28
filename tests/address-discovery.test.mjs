@@ -172,7 +172,7 @@ describe("documentation contract", () => {
       registryStartBlock: manifest.customRegistry.startBlock,
       registryGeneration: manifest.customRegistry.generation,
       note:
-        "Custom Launch API V2 and V3 are public on Ethereum Mainnet. Legacy Registry and GitHub submission intake remain closed.",
+        "Custom Launch API V1 and V2 historical reads remain available, but authenticated POST is read-only and returns nonretryable HTTP 409. Only metadata-bound V3 profile 3.3.0 accepts fresh submissions. Legacy Registry and GitHub submission intake remain closed.",
     });
     const customLaunchApi = wellKnown.extensions["programmable.custom-launch-api"];
     const {
@@ -213,11 +213,16 @@ describe("documentation contract", () => {
           "https://api.programmable.market/v3/finalized-custom-launches",
       },
     });
-    assert.equal(customLaunchApi.publicRelease.status, "live");
+    assert.equal(customLaunchApi.publicRelease.status, "historical-read-only");
     assert.equal(customLaunchApi.publicRelease.apiVersion, "2");
     assert.equal(customLaunchApi.publicRelease.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v2.json");
     assert.equal(customLaunchApi.publicRelease.cli.releaseVersion, "2.0.1");
+    assert.deepEqual(customLaunchApi.publicRelease.postResponse, {
+      httpStatus: 409,
+      code: "CUSTOM_LAUNCH_V2_READ_ONLY",
+      retryable: false,
+    });
     assert.deepEqual(currentCreate, {
       apiVersion: "3",
       status: "live",
@@ -248,10 +253,12 @@ describe("documentation contract", () => {
         retryable: false,
       },
       v2: {
-        status: "live",
-        createHttpStatus: 202,
-        replayHttpStatus: 200,
-        retryAfter: "honor-on-429-or-503",
+        reads: "live",
+        create: "read-only",
+        createAuthentication: "wallet-bound-api-key",
+        createHttpStatus: 409,
+        createErrorCode: "CUSTOM_LAUNCH_V2_READ_ONLY",
+        retryable: false,
       },
       v3: {
         status: "live",
@@ -308,6 +315,21 @@ describe("documentation contract", () => {
                 "programmable.custom-graph-project-metadata.v1",
               postDeploymentTokenReadbackRequired: true,
             },
+            behaviorEvidence: {
+              configurationIsExecutionEvidence: false,
+              walletHandoffRequiresVerifiedEvidence: true,
+              minimumWalletHandoffEvidenceStatus: "verified",
+              walletHandoffFailureCode: "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+              notConfiguredDisposition: "blocks_wallet_handoff",
+              unavailableDisposition: "blocks_wallet_handoff",
+              feeBehaviorClaim: false,
+            },
+            feePolicy: {
+              tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence: true,
+            },
+            safetyClaim: false,
+            auditClaim: false,
+            universalCompatibilityClaim: false,
           },
           preflight: {
             method: "POST",
@@ -374,29 +396,30 @@ describe("documentation contract", () => {
           "sha256:fd2d738117c4c69304efb49c75d402d2e8b8968832fd2e27548c3d9814c5c9ee",
         contractPolicyId:
           "0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517",
-        status: "live",
-        releaseStage: "production",
-        activationStatus: "production",
-        productionLaunchAuthorized: true,
+        status: "read-only",
+        releaseStage: "compatibility",
+        activationStatus: "historical-read-only",
+        productionLaunchAuthorized: false,
         statusUrl: "https://developers.programmable.family/api/v2/status",
         manifestUrl: "https://developers.programmable.family/api/v2/manifest",
         guideUrl:
           "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
         openApiUrl:
           "https://programmable.market/openapi/custom-launch-v2.json",
-        retryPolicy: {
-          httpStatuses: [429, 503],
-          retryAfter: "honor",
-          requestBytes: "exact-idempotency-bound-replay",
+        writeStatus: "read-only",
+        postResponse: {
+          httpStatus: 409,
+          code: "CUSTOM_LAUNCH_V2_READ_ONLY",
+          retryable: false,
         },
         note:
-          "Public authenticated Ethereum Mainnet preparation with separate controller-wallet review and signature. Generic fee claiming and buybacks are not live.",
+          "Historical V2 resources remain readable. Authenticated POST is read-only and returns nonretryable 409 CUSTOM_LAUNCH_V2_READ_ONLY. Only V3 profile 3.3.0 accepts fresh submissions. Generic fee claiming and buybacks are not live.",
       },
     );
     assert.equal(
       wellKnown.extensions["programmable.direct-native-hook-graph-profile-v1"]
         .note,
-      "Retained preview contract only. This revision remains gated and publishes no launch; production clients use the additive V2 or V3 descriptor.",
+      "Retained preview contract only. This revision remains gated and publishes no launch; fresh submissions use the active V3 descriptor, while V2 is retained for historical reads and exact-byte retries.",
     );
     const directNativeV2 = manifest.directNativeHookGraphProfileV2;
     assert.deepEqual(
@@ -452,7 +475,7 @@ describe("documentation contract", () => {
     );
   });
 
-  test("documents the public V2 profile without broad product claims", async () => {
+  test("documents the historical V2 profile without broad product claims", async () => {
     const guide = await readFile(
       path.join(
         REPOSITORY_ROOT,
@@ -460,7 +483,7 @@ describe("documentation contract", () => {
       ),
       "utf8",
     );
-    assert.match(guide, /production profile/i);
+    assert.match(guide, /historical.*read-only/i);
     assert.match(
       guide,
       /programmable\.fee-enforced-isolated-after-swap\.zero-delta\.v1/,
@@ -488,9 +511,8 @@ describe("documentation contract", () => {
     );
     assert.match(guide, /PoolManager\s+ERC-6909 claims/i);
     assert.match(guide, /actual hook and vault\s+runtime code hashes/i);
-    assert.match(guide, /409.*CUSTOM_LAUNCH_V1_READ_ONLY/is);
-    assert.match(guide, /not retryable/i);
-    assert.match(guide, /Retry-After.*503/is);
+    assert.match(guide, /409.*CUSTOM_LAUNCH_V2_READ_ONLY/is);
+    assert.match(guide, /nonretryable|not retryable/i);
     assert.match(
       guide,
       /https:\/\/programmable\.market\/openapi\/custom-launch-v2\.json/,
@@ -500,7 +522,7 @@ describe("documentation contract", () => {
       /releases\/tag\/programmable-launch-v2\.0\.1/,
     );
     assert.match(guide, /npm install --global .*programmable-launch-2\.0\.1\.tgz/);
-    assert.match(guide, /`submit` and `status` use the authenticated V2 API/i);
+    assert.match(guide, /`submit` cannot create or replay a V2 request/i);
     assert.match(guide, /generic fee claiming for arbitrary hooks/i);
     assert.match(guide, /buybacks/i);
     assert.doesNotMatch(guide, /npm (?:install|i) @programmable\/launch/);
