@@ -1485,8 +1485,8 @@
       "collectionPath": "/v3/custom-launches",
       "openApiPath": "/openapi/custom-launch-v3.json",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
-      "openApiVersion": "3.3.6",
-      "openApiSha256": "sha256:ec0b068a0569a11da335bddfdd54bd5655f56a8128318d8443ff79e6257880f6",
+      "openApiVersion": "3.3.7",
+      "openApiSha256": "sha256:06add50990f9966dd77de3e7700ce8087acca7b8a5c74f70c97f48ebc7c2b3b7",
       "openApiStatus": "live",
       "createRequestSchema": "programmable.custom-launch-create-request.v3",
       "resourceSchema": "programmable.custom-launch.v3",
@@ -1516,13 +1516,33 @@
         "maximumSubkeyDepth": 1,
         "subkeyScopesAndBudgetsCannotExceedRoot": true,
         "subkeyExpiryCannotExceedRoot": true,
+        "permitReissueDispositionCredentialKind": "wallet-only",
+        "metadataPolicySameAsWalletKeys": true,
+        "controllerWallet": {
+          "walletKey": "must-equal-key-wallet-binding",
+          "partnerCredential": "selected-by-exact-request",
+          "mustReviewSignAndBroadcast": true
+        },
+        "launchHistoryVisibility": {
+          "root": "all-partner-attributed-root-and-subkey-launches",
+          "subkey": "stable-subkey-lineage-only",
+          "rootAggregatesSubkeys": true,
+          "rotationPreservesLineageHistory": true,
+          "newDistinctSubkeyStartsIsolatedLineage": true,
+          "revokedCredentialCanAuthenticate": false
+        },
         "secretDelivery": "issue-and-rotation-response-only",
         "callerSuppliedAttributionAccepted": false,
         "attributionSource": "authenticated-partner-api-key",
         "attributionIsVerificationOrSafetyClaim": false,
         "walletSigningAuthority": false,
         "walletBroadcastAuthority": false,
-        "gateBypassAuthority": false
+        "gateBypassAuthority": false,
+        "adminProvisioning": {
+          "authentication": "website-bff-assertion-v2",
+          "authorization": "server-configured-privy-user-wallet-pair-allowlist",
+          "clientMaySelfAuthorize": false
+        }
       },
       "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
       "selfServe": {
@@ -1571,11 +1591,10 @@
           },
           "behaviorEvidence": {
             "configurationIsExecutionEvidence": false,
-            "walletHandoffRequiresVerifiedEvidence": true,
-            "minimumWalletHandoffEvidenceStatus": "verified",
-            "walletHandoffFailureCode": "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
-            "notConfiguredDisposition": "blocks_wallet_handoff",
-            "unavailableDisposition": "blocks_wallet_handoff",
+            "walletHandoffRequiresVerifiedEvidence": false,
+            "notConfiguredDisposition": "claims_remain_unverified",
+            "unavailableDisposition": "claims_remain_unverified",
+            "executedFailureDisposition": "blocks_wallet_handoff",
             "feeBehaviorClaim": false
           },
           "feePolicy": {
@@ -1612,7 +1631,7 @@
           "minimumLimit": 1,
           "maximumLimit": 25,
           "defaultLimit": 10,
-          "finalityScope": "finalized-profile-3.3.0-only",
+          "finalityScope": "finalized-v3-project-metadata-ledger",
           "cacheControl": "public, max-age=15, stale-while-revalidate=300",
           "sourceLkg": "none"
         },
@@ -1641,15 +1660,15 @@
     },
     "cli": {
       "packageName": "@programmable/launch",
-      "releaseVersion": "3.3.6",
+      "releaseVersion": "3.3.7",
       "releaseLocatorStatus": "published",
-      "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6",
-      "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz",
-      "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz.sha256",
-      "tarballSha256": "sha256:3c76730d7748db8ceca6ee06ae02e0aebf5ff6d98d526ea2ed7fa69ed21cff25",
-      "tarballByteLength": 270386,
+      "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.7",
+      "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.7/programmable-launch-3.3.7.tgz",
+      "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.7/programmable-launch-3.3.7.tgz.sha256",
+      "tarballSha256": "sha256:905fff9464586cd1bf1873a0b8edb292603ffc4e07a4f7eef6e0fa2b6cb32fe8",
+      "tarballByteLength": 271430,
       "supportStatus": "live",
-      "minimumSupportingVersion": "3.3.6",
+      "minimumSupportingVersion": "3.3.7",
       "packConfigSchema": "programmable.launch-pack-config.v3",
       "createRequestSchema": "programmable.custom-launch-create-request.v3",
       "fundingAuthorizationPatch": {

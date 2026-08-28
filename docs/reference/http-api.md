@@ -49,7 +49,14 @@ wallet action. V2 authenticated POST is also read-only and returns nonretryable
 `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Wallet keys remain compatible. Approved partner roots and their
 bounded one-level subkeys use those same contracts and policies; only the root
 can manage credentials, and neither root nor child can sign, broadcast, bypass
-admission, or provide caller-selected attribution.
+admission, or provide caller-selected attribution. Root history aggregates
+attributed root and child launches; each child sees only its stable lineage,
+rotation preserves that lineage, and a distinct child starts an isolated one.
+Partner metadata policy matches wallet-key policy. Wallet keys bind the
+controller to the key wallet; partner requests select the controller in the
+exact request, and that wallet still reviews, signs, and broadcasts. Partner
+roots are provisioned only through the authenticated Website BFF and the
+server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 
 ## Manifest
 
@@ -95,9 +102,11 @@ published target roles; every unmatched finding stays bound and visible as a
 warning, with no project-specific exception. Blocking findings produce
 `action_required`; zero blocking findings only make the exact request eligible
 for mandatory pinned Router launch simulation. The API server, not a CLI, LLM,
-or client, decides authorization and may expose a wallet handoff only after
-server-verified exact-request behavior, applicable platform-fee, declared-
-liquidity-model, admission, and Router-simulation evidence passes. This is not
+or client, decides authorization after the exact static admission baseline and
+pinned Router simulation. Missing or unavailable runtime behavior evidence
+leaves the related behavior, trading, liquidity, and fee claims unverified; an
+authenticated executed negative blocks wallet handoff with
+`BEHAVIOR_EVIDENCE_NOT_VERIFIED`. This is not
 an audit or an arbitrary-hook safety, honeypot, liquidity,
 tradeability, or fee-behavior guarantee. The descriptor names authenticated
 V3 surface, but this Developer API returns no executable calldata and
@@ -145,10 +154,12 @@ The same descriptor publishes `api.selfServe.finalizedMetadata` and
 `api.agentIntegration.finalizedMetadataUrl`. They identify unauthenticated
 `GET https://api.programmable.market/v3/finalized-custom-launches`, whose
 canonical operation is `listFinalizedCustomLaunchMetadataV3` in the Custom
-Launch V3 OpenAPI contract. The opaque-cursor response contains only finalized
-profile `3.3.0` metadata ledgers, with a maximum page size of 25. It contains no
-pending or legacy request, controller, credential, or request bytes. Complete
-all pages, then join by `routerLaunchId` and matching canonical Router event
+Launch V3 OpenAPI contract. The opaque-cursor response is backed by the
+`finalized-v3-project-metadata-ledger`, with a maximum page size of 25. It
+contains finalized metadata-bearing V3 rows under their original contracts,
+including retained `3.2.0` and current `3.3.0` rows. It contains no pending
+request, metadata-absent historical resource, controller, credential, or request bytes. Complete
+all pages of its `launches` array, then join by `routerLaunchId` and matching canonical Router event
 identities. `resourceId` is not Router provenance and presentation data does
 not establish onchain token identity, safety, liquidity, or tradeability.
 

@@ -89,6 +89,21 @@ describe("OpenAPI v2 contract", () => {
       maximumSubkeyDepth: 1,
       subkeyScopesAndBudgetsCannotExceedRoot: true,
       subkeyExpiryCannotExceedRoot: true,
+      permitReissueDispositionCredentialKind: "wallet-only",
+      metadataPolicySameAsWalletKeys: true,
+      controllerWallet: {
+        walletKey: "must-equal-key-wallet-binding",
+        partnerCredential: "selected-by-exact-request",
+        mustReviewSignAndBroadcast: true,
+      },
+      launchHistoryVisibility: {
+        root: "all-partner-attributed-root-and-subkey-launches",
+        subkey: "stable-subkey-lineage-only",
+        rootAggregatesSubkeys: true,
+        rotationPreservesLineageHistory: true,
+        newDistinctSubkeyStartsIsolatedLineage: true,
+        revokedCredentialCanAuthenticate: false,
+      },
       secretDelivery: "issue-and-rotation-response-only",
       callerSuppliedAttributionAccepted: false,
       attributionSource: "authenticated-partner-api-key",
@@ -96,6 +111,11 @@ describe("OpenAPI v2 contract", () => {
       walletSigningAuthority: false,
       walletBroadcastAuthority: false,
       gateBypassAuthority: false,
+      adminProvisioning: {
+        authentication: "website-bff-assertion-v2",
+        authorization: "server-configured-privy-user-wallet-pair-allowlist",
+        clientMaySelfAuthorize: false,
+      },
     });
     assert.equal(
       spec.components.schemas.WellKnownDocument.properties.publicCategories
@@ -162,6 +182,12 @@ describe("OpenAPI v2 contract", () => {
     );
     assert.match(finalizedMetadata.description, /partnerAttribution/u);
     assert.match(finalizedMetadata.description, /launchedVia/u);
+    assert.match(finalizedMetadata.description, /launches\[\]\.partnerAttribution/u);
+    assert.match(
+      finalizedMetadata.description,
+      /finalized-v3-project-metadata-ledger/u,
+    );
+    assert.match(finalizedMetadata.description, /retained `3\.2\.0`/u);
     assert.match(finalizedMetadata.description, /tokenMetadataReadback\.status/u);
     assert.match(finalizedMetadata.description, /cannot guarantee GMGN, Dexscreener/u);
     assert.equal(
@@ -180,6 +206,10 @@ describe("OpenAPI v2 contract", () => {
     assert.match(
       spec.paths["/api/v2/manifest"].get.description,
       /(all|every) valid Uniswap v4\s+permission mask/u,
+    );
+    assert.match(
+      spec.paths["/api/v2/manifest"].get.description,
+      /authenticated executed negative returns\s+`BEHAVIOR_EVIDENCE_NOT_VERIFIED`/u,
     );
     assert.doesNotMatch(source, /GitHub approval to permit/u);
   });

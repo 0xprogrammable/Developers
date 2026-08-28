@@ -136,8 +136,9 @@ and prelaunch profile records are never feed identities.
 This repository publishes read-only discovery data. Its descriptor names the
 historical API and CLI contract but supplies no executable calldata and
 authorizes no transaction. For a fresh V3.3 request, the API server, not a CLI,
-LLM, or client, decides authorization and may expose a wallet handoff only after
-server-verified exact-request behavior, applicable platform-fee, declared-
-liquidity-model, admission, and Router-simulation evidence passes. That is not a
+LLM, or client, decides authorization after the exact static admission baseline
+and pinned Router simulation. Under current profile `3.3.0`, missing or
+unavailable runtime behavior evidence keeps the related claims unverified;
+an authenticated executed negative blocks wallet handoff. That is not a
 universal safety or fee-enforcement claim. Resolve live launch provenance
 independently from canonical Router evidence in the Developer manifest.

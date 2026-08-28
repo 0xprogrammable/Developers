@@ -31,7 +31,13 @@ can manage its own bounded one-level children. A child cannot manage credentials
 its scopes, budgets, and expiry cannot exceed the root. Attribution comes from the
 authenticated partner principal and is immutable per finalized launch. Credentials
 cannot sign, broadcast, bypass security or approval, or turn attribution into a
-verification or safety claim.
+verification or safety claim. Root history aggregates attributed root and child
+launches. Each child sees only its stable lineage; rotation preserves that lineage,
+a distinct child starts an isolated one, and revocation removes authentication.
+Partner metadata policy matches wallet-key policy. Wallet keys bind the controller
+to the key wallet; partner requests select the controller in the exact request.
+Partner roots are provisioned only through the authenticated Website BFF and the
+server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 
 ## Current availability
 
@@ -113,9 +119,7 @@ warnings remain separately typed. The response exposes all six independent
 product truth axes plus platform-owned behavior evidence; no client can declare
 an unexecuted vector verified. Its deployable, routable, and featured flags do
 not establish deployment, trading, fee behavior, verification, indexing, or
-featured placement; each later state requires its own evidence. A wallet
-handoff appears only after the API server verifies the exact request's required
-behavior, applicable platform-fee, and declared-liquidity-model evidence.
+featured placement; each later state requires its own evidence.
 
 Policy publication and enforcement are separate. The active
 `directNativeHookGraphProfileV3.platformAdmissionPolicy` is the public machine
@@ -124,12 +128,12 @@ release may provide its authored source; an unversioned repository branch does
 not select the live API or decide a request. Live V3 capabilities and OpenAPI
 publish the current transport contract. The CLI and any LLM or client-side
 report are preparation tools, never authorization authorities. Server-side
-preflight, request-specific behavior, applicable platform-fee and declared-
-liquidity-model evidence, admission, and exact Router simulation decide whether
-the request reaches `authorized` and may expose a wallet handoff. The
-stable unsatisfied-gate code is `BEHAVIOR_EVIDENCE_NOT_VERIFIED`; not-configured
-or unavailable evidence blocks public permit, wallet-transaction, and handoff
-exposure, while a worker-private permit may exist only for the pinned simulation.
+preflight, static admission, and exact Router simulation decide whether the
+request reaches `authorized` and may expose a wallet handoff. Missing,
+not-configured, or unavailable runtime behavior evidence leaves related claims
+unverified and does not itself block handoff. An authenticated executed negative
+blocks handoff with `BEHAVIOR_EVIDENCE_NOT_VERIFIED`; a worker-private permit may
+exist only for the pinned simulation.
 Public `simulating` and `failed` output keeps permit and wallet-transaction fields null.
 The controller wallet alone signs and broadcasts, and canonical Router finality
 alone permits feed indexing. `authorized` is not signed or deployed,
@@ -158,9 +162,11 @@ Every V3 resource carries immutable `launchProfileVersion`. Its always-present
 `3.2.0` and `3.3.0`; both are null for retained `2.0.0`, `3.0.0`, and `3.1.0`
 resources. Profile `3.2.0` keeps its legacy nullable-image metadata contract;
 fresh `3.3.0` packs use the stricter complete policy.
-The unauthenticated `/v3/finalized-custom-launches` snapshot exposes only
-finalized profile `3.3.0` metadata ledgers and their declared-versus-observed
-token readback state. It excludes pending and legacy resources, controllers,
+The unauthenticated `/v3/finalized-custom-launches` snapshot is backed by the
+`finalized-v3-project-metadata-ledger` and exposes finalized metadata-bearing V3
+rows under their original contracts, including retained `3.2.0` and current
+`3.3.0` rows, plus their declared-versus-observed token readback state. It
+excludes pending and metadata-absent historical resources, controllers,
 credentials, and request bytes. Snapshot metadata never overrides canonical
 Router identity or turns presentation into safety, liquidity, tradeability, or
 featured-placement evidence.
@@ -172,9 +178,9 @@ and return-delta/custom-accounting designs require exact evidence instead of a
 categorical rejection. Zero hard blocks only make the exact request eligible
 for later Router simulation; they do not verify runtime behavior.
 
-Authorization requires server-verified evidence for the exact prepared request,
-including its required behavior, applicable platform-fee path, declared
-liquidity model, and pinned Ethereum Router simulation. Neither that evidence nor simulation is a
+Authorization requires the exact prepared request to pass server-side static
+admission and pinned Ethereum Router simulation. Missing execution evidence
+remains unverified; executed negative evidence blocks. Neither that evidence nor simulation is a
 security audit, honeypot-free guarantee, liquidity or tradeability proof, or
 fee-behavior certification. Generic claiming for arbitrary hooks and generic
 buybacks are not live. See the [Revision 3 contract](guides/direct-native-hook-graph-profile-v3.md).
@@ -254,7 +260,7 @@ Every registered launch is discoverable. Feature availability is separate:
 
 If a requirement is not met, keep the launch visible and mark that feature unavailable. Do not infer support from contract names, metadata text, category, or an unfamiliar market type.
 
-The Developer v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. Custom Launch API V1 and V2 POST routes are read-only. For fresh V3.3 submissions, only the API server may authorize a wallet handoff after exact evidence checks; only the controller wallet may review, sign, and broadcast it.
+The Developer v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. Custom Launch API V1 and V2 POST routes are read-only. For fresh V3.3 submissions, only the API server may authorize a wallet handoff after static admission and pinned Router simulation; only the controller wallet may review, sign, and broadcast it.
 
 The status of an API does not establish fee enforcement, an exact-source match,
 a successful simulation, finality, tradability, claim support, or an audit. Read
