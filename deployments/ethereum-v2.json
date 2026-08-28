@@ -2055,7 +2055,7 @@
     "ratePpm": "1000",
     "rateBps": "10",
     "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
-    "scope": "official-programmable-market-path",
+    "scope": "exact-fee-certified-official-market-path-only",
     "classic": {
       "status": "verified",
       "chargeMode": "included"
@@ -2068,11 +2068,12 @@
       "profileRevision": 3
     },
     "nativeCustom": {
-      "status": "active",
-      "activationStatus": "fee-enforced-v2-public",
+      "status": "conditional",
+      "activationStatus": "per-launch-exact-fee-evidence-required",
       "totalFeeBps": 10,
       "programmableShareBps": 10,
-      "scope": "verified-official-market-path-only"
+      "scope": "exact-fee-certified-official-market-path-only",
+      "universalFeeBehaviorClaim": false
     },
     "partnerTemplate": {
       "status": "unavailable",

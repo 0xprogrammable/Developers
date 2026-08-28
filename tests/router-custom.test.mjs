@@ -284,6 +284,13 @@ function finalizedMetadataPayload(entry, chainPayload) {
       finalizedAt: chainPayload.generatedAt,
     }],
     nextCursor: null,
+    quality: {
+      status: "complete",
+      sourceRowCount: 1,
+      publishedRowCount: 1,
+      quarantinedRowCount: 0,
+      diagnostics: [],
+    },
   };
 }
 
@@ -629,6 +636,27 @@ describe("Router Custom v2 projection", () => {
     assert.ok(validateLaunchSemantics(transported, {
       acceptedRouterCustomMembership: membership,
     }).some((finding) => finding.code === "FEE_POLICY_REQUIRED"));
+  });
+
+  test("keeps Router identity while rejecting invalid metadata quality", async () => {
+    const payload = currentSourcePayload();
+    const next = payload.entries.find((entry) => entry.symbol === "NEXT");
+    assert.ok(next);
+    const finalizedMetadata = finalizedMetadataPayload(next, payload);
+    finalizedMetadata.quality.publishedRowCount = 0;
+    serveSource(payload, { finalizedMetadata });
+
+    const snapshot = await readRouterCustomRecords(manifest);
+    const record = publicLaunchV2(snapshot.records.find((candidate) =>
+      candidate.token.symbol === "NEXT"));
+    assert.ok(record);
+    assert.deepEqual(record.token.metadata, {
+      description: null,
+      imageUrl: null,
+      links: null,
+      trustStatus: "unavailable",
+    });
+    assert.equal(isRouterStampedCustom(record, manifest), true);
   });
 
   test("accepts a cached Router record bound to its feed snapshot", async () => {

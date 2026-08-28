@@ -1684,14 +1684,15 @@
             "activationStatus",
             "totalFeeBps",
             "programmableShareBps",
-            "scope"
+            "scope",
+            "universalFeeBehaviorClaim"
           ],
           "properties": {
             "status": {
-              "const": "active"
+              "const": "conditional"
             },
             "activationStatus": {
-              "const": "fee-enforced-v2-public"
+              "const": "per-launch-exact-fee-evidence-required"
             },
             "totalFeeBps": {
               "const": 10
@@ -1700,7 +1701,10 @@
               "const": 10
             },
             "scope": {
-              "const": "verified-official-market-path-only"
+              "const": "exact-fee-certified-official-market-path-only"
+            },
+            "universalFeeBehaviorClaim": {
+              "const": false
             }
           },
           "additionalProperties": false

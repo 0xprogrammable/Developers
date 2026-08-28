@@ -196,6 +196,11 @@ Developer launch schema as `launchedVia`. Neither callers nor creator metadata
 can choose that attribution, and it is not an economic partner, provider,
 safety, liquidity, or external-indexing claim.
 
+An exact-identity platform-curated legacy presentation may fill historical
+image or link gaps without rewriting the signed project metadata. Its
+namespaced extension keeps the overlay, identity, runtime evidence, and image
+digest separate from creator-declared metadata.
+
 Fee data is market-path evidence, not a category default. Current verified Classic paths and the public fee-enforced Custom profiles have different charge modes. The Custom V2 profile specifies an additive 10 basis points, or 0.1%, on the gross unspecified pool-currency amount for each successful swap through the exact bound pool, with recipient `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`. Its sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Direct Native Hook Graph V2 supports an exact per-launch additive or inclusive 10-bps platform share and requires a conformance receipt before authorization. The retained V1 preview reserves 10 bps inside the selected total hook fee but remains gated and is not fee-accrual evidence. Generic fee claiming and buybacks are not live. Read the [fee reference](docs/reference/fees.md) before displaying a rate or claimable amount.
 
 The separate [operator claim console](https://claimhazard.vercel.app) rescans the exact reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 sources before requesting one atomic wallet batch. Its [claim discovery reference](docs/reference/protocol-fee-claims.md) documents what is automatically included and what remains fail-closed. It does not expand the read-only Developer API into a transaction API.

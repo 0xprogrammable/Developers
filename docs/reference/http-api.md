@@ -175,6 +175,14 @@ symbol match the declaration. Current submissions require the complete public
 metadata envelope, but historical finalized entries remain present when older
 image or link fields are null.
 
+For a legacy record, the Developer projection may fill missing image or link
+fields from a separately labeled
+`programmable/platform-curated-legacy-presentation-v1` extension. That overlay
+is accepted only for its exact chain, token, Router launch ID, stamp, hook,
+pool, and runtime evidence. It never changes the signed `projectMetadata`, its
+hash, or the creator-declared description; clients that need provenance per
+field must inspect both extensions.
+
 An item may add server-owned `partnerAttribution` using
 `programmable.launch-partner-attribution.v1`. It is derived from the
 authenticated partner API principal and is never accepted from the create
