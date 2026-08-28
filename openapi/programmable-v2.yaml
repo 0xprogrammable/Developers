@@ -20,6 +20,19 @@ x-programmable-partner-credentials:
   maximumSubkeyDepth: 1
   subkeyScopesAndBudgetsCannotExceedRoot: true
   subkeyExpiryCannotExceedRoot: true
+  permitReissueDispositionCredentialKind: wallet-only
+  metadataPolicySameAsWalletKeys: true
+  controllerWallet:
+    walletKey: must-equal-key-wallet-binding
+    partnerCredential: selected-by-exact-request
+    mustReviewSignAndBroadcast: true
+  launchHistoryVisibility:
+    root: all-partner-attributed-root-and-subkey-launches
+    subkey: stable-subkey-lineage-only
+    rootAggregatesSubkeys: true
+    rotationPreservesLineageHistory: true
+    newDistinctSubkeyStartsIsolatedLineage: true
+    revokedCredentialCanAuthenticate: false
   secretDelivery: issue-and-rotation-response-only
   callerSuppliedAttributionAccepted: false
   attributionSource: authenticated-partner-api-key
@@ -27,6 +40,10 @@ x-programmable-partner-credentials:
   walletSigningAuthority: false
   walletBroadcastAuthority: false
   gateBypassAuthority: false
+  adminProvisioning:
+    authentication: website-bff-assertion-v2
+    authorization: server-configured-privy-user-wallet-pair-allowlist
+    clientMaySelfAuthorize: false
 info:
   title: Programmable Developer API
   version: 2.0.0
@@ -46,10 +63,13 @@ info:
     wallet keys plus approved partner roots and bounded one-level subkeys on the
     same V3 routes and under the same server-side policy. A root alone manages
     subkeys; a child cannot manage credentials, exceed root scopes, budgets, or
-    expiry, supply its own attribution, or bypass admission. The API server,
-    not a CLI, LLM, or client, decides authorization and must not expose a
-    wallet handoff until exact-request behavior, applicable platform-fee,
-    declared-liquidity-model, admission, and Router-simulation evidence passes.
+    expiry, supply its own attribution, or bypass admission. Root history
+    aggregates its attributed child launches; child history is lineage-bound,
+    rotation preserves lineage, and a distinct child starts a separate lineage.
+    The API server, not a CLI, LLM, or client, decides authorization after the
+    exact static admission baseline and pinned Router simulation. Missing or
+    unavailable runtime behavior evidence leaves related claims unverified;
+    an authenticated executed negative blocks wallet handoff.
     This is not an arbitrary-hook safety or universal fee-enforcement claim.
     Its existing `publicSubmissionStatus` field continues to describe the
     closed legacy intake; `customLaunchApiStatus` describes the retained
@@ -126,11 +146,14 @@ paths:
       operationId: listFinalizedCustomLaunchMetadataV3
       summary: List finalized V3 project metadata
       description: |
-        Returns a bounded, unauthenticated metadata snapshot for finalized
-        profile `3.3.0` launches. This route belongs to the separate Custom
+        Returns the bounded, unauthenticated
+        `finalized-v3-project-metadata-ledger` snapshot. It contains finalized
+        metadata-bearing V3 rows under their original contracts, including
+        retained `3.2.0` and current `3.3.0` rows. This route belongs to the separate Custom
         Launch API host, not the Developer read API host. Follow every opaque
-        cursor to complete one snapshot. Items exclude pending and legacy
-        requests, controller addresses, credentials, and request bytes.
+        cursor to complete one snapshot. Items exclude pending requests,
+        metadata-absent historical resources, controller addresses, credentials,
+        and request bytes.
         `resourceId` is not Router identity; bind `routerLaunchId` to the
         matching canonical Router event token, hook, PoolManager, and pool ID.
         Read canonical display fields from `projectMetadata`: declared token
@@ -142,7 +165,7 @@ paths:
         historical finalized records remain visible when an older snapshot is
         incomplete.
 
-        An optional `items[].partnerAttribution` is the immutable server-owned
+        An optional `launches[].partnerAttribution` is the immutable server-owned
         `programmable.launch-partner-attribution.v1` snapshot derived from the
         authenticated partner API principal. A Developer launch projection may
         expose the same object as `launchedVia`; clients cannot set either field
@@ -274,13 +297,12 @@ paths:
         No blocking finding makes the exact request eligible for mandatory Router
         simulation; it does not authorize a launch. A blocking finding returns
         `action_required`. The API server, never a CLI, LLM, or client, decides
-        authorization and may expose a wallet handoff only after the exact
-        request's behavior, applicable platform-fee, declared-liquidity-model,
-        admission, and Router-simulation evidence passes. Not-configured,
-        unavailable, or below-verified behavior evidence returns
-        `BEHAVIOR_EVIDENCE_NOT_VERIFIED` and keeps public permit,
-        wallet-transaction, and handoff fields absent or null; a worker-private
-        exact permit may exist only for pinned simulation. Public `simulating`
+        authorization after the exact static admission baseline and pinned
+        Router simulation. Not-configured or unavailable runtime behavior
+        evidence leaves related claims unverified and does not itself block
+        handoff. An authenticated executed negative returns
+        `BEHAVIOR_EVIDENCE_NOT_VERIFIED` and blocks wallet handoff. A
+        worker-private exact permit may exist only for pinned simulation. Public `simulating`
         and `failed` output keeps permit and wallet-transaction fields null. Its
         `api.agentIntegration` object links the canonical
         machine-readable remediation catalog and existing-project guide. Agents

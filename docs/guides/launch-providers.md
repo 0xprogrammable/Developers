@@ -20,6 +20,20 @@ expiry cannot exceed root expiry. A secret is returned only by the initial
 issue or rotation response. Neither root nor child can sign or broadcast a
 wallet transaction, bypass security or approval, or choose public attribution.
 
+The root can read every partner-attributed launch made by the root or its
+children. A child can read only its own stable lineage. Rotating a child secret
+preserves that lineage; issuing a distinct child starts an isolated lineage.
+Revoked credentials cannot authenticate. Permit reissue disposition is available
+only to wallet credentials. Partner launch metadata follows the same complete
+policy as wallet-key launches.
+
+Wallet-key launches require the controller to equal the key's wallet binding.
+Partner calls select the controller wallet in the exact request; that wallet
+must still review, sign, and broadcast the prepared transaction. Partner roots
+are created only through the authenticated Website BFF and the server-configured
+Privy-user/wallet allowlist. A client, partner frontend, or subkey cannot
+self-authorize a root.
+
 Keep partner credentials in the partner backend. They are authentication
 material, not public metadata. A framework or agent builder may place its own
 layer in front of that backend, but every call reaching Programmable resolves

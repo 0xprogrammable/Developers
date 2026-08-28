@@ -74,17 +74,17 @@ false. Behavior evidence lists the exact swap, liquidity, callback, fee, and,
 when applicable, custom-accounting vectors. A missing runtime executor remains
 `not_executed`; a client or agent cannot turn it into `verified`.
 
-Live capabilities make the wallet boundary exact. Under `behaviorEvidence`,
-`configurationIsExecutionEvidence` is false,
-`walletHandoffRequiresVerifiedEvidence` is true, and
-`minimumWalletHandoffEvidenceStatus` is `verified`. `not_configured` and
-`unavailable` both block the wallet handoff; the stable failure code is
-`BEHAVIOR_EVIDENCE_NOT_VERIFIED`, and `feeBehaviorClaim` remains false. The
+Live capabilities make the current wallet boundary exact. Under
+`behaviorEvidence`, `configurationIsExecutionEvidence` and
+`walletHandoffRequiresVerifiedEvidence` are false. `not_configured` and
+`unavailable` leave the related behavior, trading, liquidity, and fee claims
+unverified; they do not themselves block wallet handoff. An authenticated
+executed negative result blocks handoff with the stable failure code
+`BEHAVIOR_EVIDENCE_NOT_VERIFIED`. `feeBehaviorClaim` remains false. The
 capability `feePolicy.tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence`
 is true. A worker may create a private exact permit only to run the required
-pinned Router simulation, but no public permit, wallet transaction, or handoff
-is exposed while the evidence gate is unsatisfied. Public `simulating` and
-`failed` resources therefore keep permit and wallet-transaction output null.
+pinned Router simulation. Public `simulating` and `failed` resources keep permit
+and wallet-transaction output null.
 `safetyClaim`, `auditClaim`,
 and `universalCompatibilityClaim` all remain false.
 
@@ -122,15 +122,15 @@ launch decision. The authority boundary is:
    transport contract;
 4. the CLI, an LLM, and client-side reports may prepare or describe exact bytes
    but cannot authorize a request;
-5. the API server alone decides authorization from server-verified exact-request
-   behavior, applicable platform-fee, declared-liquidity-model, admission, and
-   required pinned Router-simulation evidence;
+5. the API server alone decides authorization from the exact static admission
+   baseline and required pinned Router-simulation evidence; missing runtime
+   evidence stays unverified, while an authenticated executed negative blocks;
 6. only the controller wallet may review, sign, and broadcast; and
 7. finalized canonical-Router evidence, not an API status alone, permits feed
    indexing.
 
-The API server must not expose a wallet handoff before those exact evidence
-checks pass. That boundary is per request and is not a claim that arbitrary
+The API server must not expose a wallet handoff before those active checks pass.
+That boundary is per request and is not a claim that arbitrary
 hooks are safe or that every hook or market universally enforces or pays a fee.
 
 The V3 resource status vocabulary is `received`, `validating`,
@@ -270,9 +270,10 @@ curl --fail --get \
 returned by the previous page. Each parameter may appear at most once. Invalid
 pagination returns `400 INVALID_PAGINATION`; temporary source unavailability
 returns `503 CUSTOM_LAUNCH_V3_UNAVAILABLE`. A successful response uses
-`programmable.finalized-custom-launch-metadata-list.v1`, orders items by
+`programmable.finalized-custom-launch-metadata-list.v1`, orders launches by
 `createdAt` descending and then `resourceId` descending, and returns
-`nextCursor` or `null`. Follow every cursor to complete that bounded snapshot.
+the page as `launches` plus `nextCursor` or `null`. Follow every cursor to
+complete that bounded snapshot.
 
 Each `programmable.finalized-custom-launch-metadata.v1` item includes:
 
@@ -284,9 +285,11 @@ Each `programmable.finalized-custom-launch-metadata.v1` item includes:
 - finalized transaction, block, log, confirmation-depth, and persisted
   finalized-checkpoint evidence.
 
-The endpoint emits only finalized profile `3.3.0` rows with a complete metadata
-ledger. It never emits pending or legacy requests, controller addresses, API
-keys, or request bytes. `resourceId` is a pagination/resource coordinate, not
+The endpoint is backed by the `finalized-v3-project-metadata-ledger`. It emits
+finalized metadata-bearing V3 rows under their original contracts, including
+retained `3.2.0` and current `3.3.0` rows. It never emits pending requests,
+metadata-absent historical resources, controller addresses, API keys, or
+request bytes. `resourceId` is a pagination/resource coordinate, not
 Router identity. Join and key records by the finalized `routerLaunchId` and
 matching Router event token, hook, and pool evidence. Router evidence remains
 authoritative if creator presentation is absent, unavailable, or unsuitable
@@ -423,6 +426,16 @@ issue or rotation response. Partner attribution is derived by the server from
 the authenticated principal, fixed for the finalized launch, and cannot be
 caller-supplied. It is not a verification, safety, approval, or fee claim.
 
+Root launch history aggregates attributed root and child launches. A child sees
+only its stable lineage. Rotating the child preserves that lineage; issuing a
+distinct child creates an isolated lineage, and a revoked credential cannot
+authenticate. Partner metadata policy is identical to wallet-key metadata
+policy. A wallet key requires the controller to match its wallet binding; a
+partner request selects the controller wallet in the exact request. That wallet
+must still review, sign, and broadcast. Partner roots are provisioned only by
+the authenticated Website BFF against the server-configured Privy-user/wallet
+allowlist; clients cannot self-authorize.
+
 No API credential, CLI, or agent can waive security or approval checks, sign,
 or broadcast. At `authorized`, the
 controller wallet separately verifies the chain ID, sender, exact production
@@ -490,9 +503,46 @@ The platform fills the final nonce and wallet signature only after the unsigned
 launch intent is fixed. Legacy `programmable.eip3009-signature-patch.v1`
 descriptors remain compatible for exact retries; new requests use v2.
 
+## Pending additive profile 3.4.0 (not active)
+
+Profile `3.4.0` is a release-readiness target, not a currently accepted profile.
+Live capabilities, OpenAPI, and CLI `3.3.7` continue to select `3.3.0` for fresh
+writes. Do not submit, pack, or describe a `3.4.0` request as live until the
+server-side runner and observation ABI are deployed and production readback
+selects the new profile. Existing `3.3.0` bytes retain their original read and
+exact-retry semantics; activation must be additive rather than a reinterpretation.
+If the metadata ledger later accepts `3.4.0`, the finalized feed adds those rows
+without hiding retained `3.2.0` or `3.3.0` rows.
+
+The pending gate requires complete server-executed vectors, including exact
+10-bps assertions where applicable, before wallet handoff. Caller-supplied
+scenario inputs are executable inputs only: the caller cannot declare expected
+success, revert, fee accrual, or fee routing as evidence. The pending CLI must
+also auto-inject and validate the canonical fee vault instead of accepting only
+a caller-selected `platformFeeBindingTargetId`. Its release binding is
+`sha256:39ccdfdf8cd61620bf5c62bf07fb8428adbd66d2608b1cf3ad583343116d7ed9`;
+activation additionally requires the exact creation and runtime hashes whose
+known prefixes are `0xdbc32e` and `0x92620`, constructor binding to the exact
+GraphFactory, and reciprocal route binding through `bindRoute`.
+
+A future optional `tradeAdapterDescriptor` may be emitted only as server-authored,
+finalized, read-only output from `GET /v3/finalized-custom-launches`; it is never
+accepted by prepare, submit, preflight, or CLI input. Absence or invalidity leaves
+the finalized launch indexed as launch data only and does not imply on-site
+trading. The proposed descriptor uses
+`programmable.finalized-trade-adapter-descriptor.v1`, status `verified`, adapter
+`uniswap-v4-universal-router-exact-input:v1`, exact base and quote assets, exact
+exclusive runtime targets, server verification, and a descriptor digest bound
+to the outer finalized launch, artifact, graph, and finality evidence. Its market ID is
+`router-v1-<64 lowercase routerLaunchId hex>`. Its `projectId` must be
+`canonicalSha256("programmable.finalized-trade-adapter-project.v1", outerBinding)`,
+where `outerBinding` is the exact finalized Router, artifact, graph, and finality
+object also bound by the descriptor digest. No active contract currently promises
+that every hook or PoolKey is tradeable on site.
+
 ## CLI contract
 
-Revision 3 uses public CLI contract version `3.3.6`, with exactly four commands:
+Revision 3 uses public CLI contract version `3.3.7`, with exactly four commands:
 
 ```text
 pack
@@ -501,8 +551,8 @@ submit
 status
 ```
 
-The immutable `3.3.6` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6`.
+The immutable `3.3.7` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.7`.
 The discovery descriptor reports `releaseLocatorStatus: published` and
 `supportStatus: live`. Resolve release assets and their verification material
 from that immutable locator at installation time; do not reuse an older

@@ -412,10 +412,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       profile.api.openApiUrl,
       "https://programmable.market/openapi/custom-launch-v3.json",
     );
-    assert.equal(profile.api.openApiVersion, "3.3.6");
+    assert.equal(profile.api.openApiVersion, "3.3.7");
     assert.equal(
       profile.api.openApiSha256,
-      "sha256:ec0b068a0569a11da335bddfdd54bd5655f56a8128318d8443ff79e6257880f6",
+      "sha256:06add50990f9966dd77de3e7700ce8087acca7b8a5c74f70c97f48ebc7c2b3b7",
     );
     assert.deepEqual(profile.api.selfServe, {
       capabilities: {
@@ -455,11 +455,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         },
         behaviorEvidence: {
           configurationIsExecutionEvidence: false,
-          walletHandoffRequiresVerifiedEvidence: true,
-          minimumWalletHandoffEvidenceStatus: "verified",
-          walletHandoffFailureCode: "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
-          notConfiguredDisposition: "blocks_wallet_handoff",
-          unavailableDisposition: "blocks_wallet_handoff",
+          walletHandoffRequiresVerifiedEvidence: false,
+          notConfiguredDisposition: "claims_remain_unverified",
+          unavailableDisposition: "claims_remain_unverified",
+          executedFailureDisposition: "blocks_wallet_handoff",
           feeBehaviorClaim: false,
         },
         feePolicy: {
@@ -498,7 +497,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
         minimumLimit: 1,
         maximumLimit: 25,
         defaultLimit: 10,
-        finalityScope: "finalized-profile-3.3.0-only",
+        finalityScope: "finalized-v3-project-metadata-ledger",
         cacheControl: "public, max-age=15, stale-while-revalidate=300",
         sourceLkg: "none",
       },
@@ -534,6 +533,21 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       maximumSubkeyDepth: 1,
       subkeyScopesAndBudgetsCannotExceedRoot: true,
       subkeyExpiryCannotExceedRoot: true,
+      permitReissueDispositionCredentialKind: "wallet-only",
+      metadataPolicySameAsWalletKeys: true,
+      controllerWallet: {
+        walletKey: "must-equal-key-wallet-binding",
+        partnerCredential: "selected-by-exact-request",
+        mustReviewSignAndBroadcast: true,
+      },
+      launchHistoryVisibility: {
+        root: "all-partner-attributed-root-and-subkey-launches",
+        subkey: "stable-subkey-lineage-only",
+        rootAggregatesSubkeys: true,
+        rotationPreservesLineageHistory: true,
+        newDistinctSubkeyStartsIsolatedLineage: true,
+        revokedCredentialCanAuthenticate: false,
+      },
       secretDelivery: "issue-and-rotation-response-only",
       callerSuppliedAttributionAccepted: false,
       attributionSource: "authenticated-partner-api-key",
@@ -541,6 +555,11 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       walletSigningAuthority: false,
       walletBroadcastAuthority: false,
       gateBypassAuthority: false,
+      adminProvisioning: {
+        authentication: "website-bff-assertion-v2",
+        authorization: "server-configured-privy-user-wallet-pair-allowlist",
+        clientMaySelfAuthorize: false,
+      },
     });
     assert.deepEqual(profile.api.agentIntegration, {
       remediationCatalogSchemaVersion:
@@ -582,27 +601,27 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       argumentPathIndexMaximum: 255,
       legacyReplaySchemaVersion: "programmable.eip3009-signature-patch.v1",
     });
-    assert.equal(profile.cli.releaseVersion, "3.3.6");
+    assert.equal(profile.cli.releaseVersion, "3.3.7");
     assert.equal(profile.cli.releaseLocatorStatus, "published");
     assert.equal(profile.cli.supportStatus, "live");
-    assert.equal(profile.cli.minimumSupportingVersion, "3.3.6");
+    assert.equal(profile.cli.minimumSupportingVersion, "3.3.7");
     assert.equal(
       profile.cli.releaseUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.6",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.7",
     );
     assert.equal(
       profile.cli.tarballUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.7/programmable-launch-3.3.7.tgz",
     );
     assert.equal(
       profile.cli.checksumUrl,
-      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.6/programmable-launch-3.3.6.tgz.sha256",
+      "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.7/programmable-launch-3.3.7.tgz.sha256",
     );
     assert.equal(
       profile.cli.tarballSha256,
-      "sha256:3c76730d7748db8ceca6ee06ae02e0aebf5ff6d98d526ea2ed7fa69ed21cff25",
+      "sha256:905fff9464586cd1bf1873a0b8edb292603ffc4e07a4f7eef6e0fa2b6cb32fe8",
     );
-    assert.equal(profile.cli.tarballByteLength, 270_386);
+    assert.equal(profile.cli.tarballByteLength, 271_430);
     assert.deepEqual(profile.cli.commands, [
       "pack",
       "validate",
@@ -814,7 +833,10 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
     assert.match(guide, /Policy authority and resource lifecycle/u);
     assert.match(guide, /exact versioned Programmable Launch Policy commit or release/iu);
-    assert.match(guide, /API server alone decides authorization from server-verified exact-request/iu);
+    assert.match(
+      guide,
+      /API server alone decides authorization from the exact static admission/iu,
+    );
     assert.match(guide, /`authorized` means the API server completed the required evidence\s+decision and an exact wallet handoff is available/iu);
     assert.match(guide, /`submitted` is not finality/iu);
     assert.match(guide, /`finalized`,\s+`failed`, and `cancelled` are terminal/iu);
@@ -874,7 +896,7 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
-    assert.match(guide, /public CLI contract version `3\.3\.6`/iu);
+    assert.match(guide, /public CLI contract version `3\.3\.7`/iu);
     assert.match(guide, /additive-platform-share/iu);
     assert.match(guide, /inclusive-selected-total/iu);
     assert.match(
@@ -882,8 +904,12 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,
     );
     assert.match(llms, /launch-admission-only/iu);
-    assert.match(llms, /CLI `3\.3\.6`/u);
-    assert.match(llmsFull, /CLI `3\.3\.6`/u);
+    assert.match(llms, /CLI `3\.3\.7`/u);
+    assert.match(llmsFull, /CLI `3\.3\.7`/u);
+    assert.match(guide, /Pending additive profile 3\.4\.0 \(not active\)/u);
+    assert.match(guide, /finalized-v3-project-metadata-ledger/u);
+    assert.match(guide, /executed negative result blocks handoff/u);
+    assert.match(guide, /Root launch history aggregates/u);
     assert.match(changelog, /CLI `3\.3\.3` release discovery/u);
     assert.ok(
       schemaIndex.schemas.some(
