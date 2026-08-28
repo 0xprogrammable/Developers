@@ -140,7 +140,8 @@ the controller wallet alone signs and broadcasts. `authorized` is not signed,
 the launch resource status.
 
 The canonical Custom Launch V3 resource always includes immutable
-`launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`.
+`launchProfileVersion` with value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, `3.3.0`,
+or prepared `3.4.0`.
 Required `projectMetadata` and `projectMetadataHash` keys are non-null for
 metadata-bound `3.2.0` and `3.3.0`, and null for retained `2.0.0`, `3.0.0`, and
 `3.1.0`. Profile `3.2.0` retains its legacy nullable-image metadata contract;
@@ -167,6 +168,10 @@ one row-indexed `FINALIZED_ROW_QUARANTINED` diagnostic per quarantined row.
 Then join by `routerLaunchId` and matching canonical Router event identities.
 `resourceId` is not Router provenance and presentation data does not establish
 onchain token identity, safety, liquidity, or tradeability.
+
+Every item carries its originating immutable `launchProfileVersion`. Read that
+field before applying profile-specific metadata requirements; presence or
+absence of an image or link is not a profile-version signal.
 
 Read the canonical display declaration from `projectMetadata`: name, symbol,
 description, image facts, website, and X. Only a `matching`

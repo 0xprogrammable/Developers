@@ -166,10 +166,10 @@ external account action.
 
 Every V3 resource also carries immutable `launchProfileVersion`. Its required
 `projectMetadata` and `projectMetadataHash` keys are non-null for metadata-bound
-`3.2.0` and `3.3.0`; both are null on retained `2.0.0`, `3.0.0`, and `3.1.0`
-resources. Profile `3.2.0` retains its legacy metadata contract, including a
-nullable image, while fresh `3.3.0` packs require the stricter complete metadata
-policy above.
+`3.2.0`, `3.3.0`, and prepared `3.4.0`; both are null on retained `2.0.0`,
+`3.0.0`, and `3.1.0` resources. Profile `3.2.0` retains its legacy metadata
+contract, including a nullable image, while `3.3.0` and `3.4.0` use the stricter
+complete metadata policy above. Profile `3.4.0` is not a fresh-write profile.
 The canonical resource condition remains in the public V3 OpenAPI rather than
 being redefined by this read/discovery repository.
 
@@ -178,7 +178,7 @@ Unauthenticated
 cursor-paginated `finalized-v3-project-metadata-ledger` snapshot for indexers
 and presentation clients. It includes finalized metadata-bearing V3 rows under
 their original contracts, including retained `3.2.0` and current `3.3.0` rows,
-plus exact Router identity, bound hashes,
+plus immutable `launchProfileVersion`, exact Router identity, bound hashes,
 declared metadata, token readback state, and finality evidence; it excludes
 pending requests, metadata-absent historical resources, controller addresses,
 credentials, and request bytes. Every page has required `schemaVersion`,

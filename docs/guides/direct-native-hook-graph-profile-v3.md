@@ -240,7 +240,7 @@ deployed token returns those values until the finalized onchain readback
 succeeds.
 
 Every V3 resource carries required immutable `launchProfileVersion` with exact
-value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, or `3.3.0`. Its `projectMetadata` and
+value `2.0.0`, `3.0.0`, `3.1.0`, `3.2.0`, `3.3.0`, or prepared `3.4.0`. Its `projectMetadata` and
 `projectMetadataHash` keys are always present: both are non-null for
 metadata-bound `3.2.0` and `3.3.0`, and both are null for legacy `2.0.0`,
 `3.0.0`, and `3.1.0` resources. Profile `3.2.0` keeps its legacy nullable-image
@@ -281,6 +281,7 @@ every cursor to complete that bounded snapshot.
 
 Each `programmable.finalized-custom-launch-metadata.v1` item includes:
 
+- immutable `launchProfileVersion`, which selects the originating metadata contract;
 - `routerLaunchId`, chain, Router, token, hook, PoolManager, and pool ID;
 - exact `projectMetadata` and `projectMetadataHash`;
 - request, launch-intent, bound graph, raw graph, and artifact hashes;

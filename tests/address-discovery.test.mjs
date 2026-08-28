@@ -284,6 +284,8 @@ describe("documentation contract", () => {
               schemaVersion: "programmable.project-metadata.v1",
               inputSchemaVersion: "programmable.project-metadata-input.v1",
               requiredForProfileVersion: "3.3.0",
+              requiredForProfileVersions: ["3.2.0", "3.3.0", "3.4.0"],
+              strictMetadataProfileVersions: ["3.3.0", "3.4.0"],
               legacyWithoutMetadataProfileVersions: [
                 "2.0.0",
                 "3.0.0",
@@ -316,10 +318,13 @@ describe("documentation contract", () => {
               postDeploymentTokenReadbackRequired: true,
             },
             behaviorEvidence: {
+              requiredForProfileVersion: "3.4.0",
               configurationIsExecutionEvidence: false,
               walletHandoffRequiresVerifiedEvidence: false,
               notConfiguredDisposition: "claims_remain_unverified",
               unavailableDisposition: "claims_remain_unverified",
+              requiredProfileNotConfiguredDisposition: "blocks_wallet_handoff",
+              requiredProfileUnavailableDisposition: "blocks_wallet_handoff",
               executedFailureDisposition: "blocks_wallet_handoff",
               feeBehaviorClaim: false,
             },
@@ -360,6 +365,8 @@ describe("documentation contract", () => {
             maximumLimit: 25,
             defaultLimit: 10,
             finalityScope: "finalized-v3-project-metadata-ledger",
+            launchProfileVersionField: "launchProfileVersion",
+            launchProfileVersionSemantics: "immutable-origin-profile",
             responseEnvelope: {
               requiredFields: [
                 "schemaVersion",

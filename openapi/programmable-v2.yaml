@@ -161,6 +161,9 @@ paths:
         `FINALIZED_ROW_QUARANTINED` diagnostic per quarantined row.
         `resourceId` is not Router identity; bind `routerLaunchId` to the
         matching canonical Router event token, hook, PoolManager, and pool ID.
+        Read each item's immutable `launchProfileVersion` before interpreting
+        its metadata contract; never infer the originating profile from null or
+        present presentation fields.
         Read canonical display fields from `projectMetadata`: declared token
         name and symbol, presentation description, image, website, and X link.
         Treat name and symbol as matching onchain token metadata only when

@@ -32,6 +32,7 @@ project card can read the separate unauthenticated
 Follow every opaque `nextCursor` until it is null; a single page is not a
 complete snapshot. Store the canonical declaration fields separately:
 
+- immutable `launchProfileVersion`;
 - `projectMetadata.token.name` and `.symbol`;
 - `projectMetadata.presentation.description`;
 - the image URI, content SHA-256, media type, byte length, width, and height;
@@ -39,7 +40,8 @@ complete snapshot. Store the canonical declaration fields separately:
 - `projectMetadataHash`; and
 - optional `partnerAttribution`.
 
-Historical finalized records may predate the complete-metadata requirement.
+Interpret the metadata contract from `launchProfileVersion`, never from field
+presence. Historical finalized records may predate the complete-metadata requirement.
 Keep them visible and preserve a missing image, website, or X link as null; do
 not repair history with scraped or guessed values.
 
