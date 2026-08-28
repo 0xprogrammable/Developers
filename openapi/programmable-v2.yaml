@@ -355,6 +355,14 @@ paths:
         absent Registry fee policy is semantically valid only when its exact
         entry and source-boundary digests are members of the accepted source
         snapshot; source-shaped JSON alone is never sufficient. Finalized
+        Router identities are joined to the Custom Launch API finalized
+        metadata ledger only when launch ID, Router, token, hook, PoolManager,
+        pool ID, transaction, block and log index all match and the declared
+        metadata hash recomputes exactly. The resulting `token.metadata` stays
+        `creator-declared`; its immutable source binding is retained in
+        `extensions["programmable/finalized-project-metadata-v1"]`. A metadata
+        source outage or mismatch leaves those display fields unavailable and
+        never removes the recognized Router identity. Finalized
         partner-launched Custom records may add `launchedVia`, an exact
         read-only projection of the Custom Launch API's server-owned
         `partnerAttribution` snapshot. It never changes `category`, economic
