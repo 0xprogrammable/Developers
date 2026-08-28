@@ -232,6 +232,16 @@ creates a public launch record.
 
 Router-backed records report their fee policy as unavailable unless separate exact evidence exists. The semantic exception for an absent Registry fee policy is granted only when the record's complete entry digest and source-boundary digest are members of the accepted Router snapshot. A copied Router-shaped JSON object or a self-declared source commitment does not qualify.
 
+For a finalized Router identity, the Developer feed may join creator-declared
+display metadata from the Custom Launch API finalized ledger. The join requires
+the exact launch ID, Router, token, hook, PoolManager, pool ID, transaction,
+block, and log index, plus a recomputed `projectMetadataHash`. The feed keeps
+the immutable source binding in
+`extensions["programmable/finalized-project-metadata-v1"]` and labels projected
+description, image, and links `creator-declared`. Missing, malformed, or
+mismatched metadata remains null without hiding or weakening the raw Router
+provenance.
+
 `token` is an ERC-20 convenience view. It is `null` for a truthful project-only Custom launch. `assets` preserves the authenticated identity-first asset graph and its immutable launch-produced, protocol-external, or adopted-external provenance. Only a launch-produced primary token may populate `token`. `markets` is empty when no market is registered. Consumers must not manufacture a token, pair, or pool from the project launch identity. The token-list and token-address detail surfaces remain token-only projections and skip `token: null` records.
 
 Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kind `uniswap-v4`, preserving the verifier and PoolManager authority bindings. Unknown authenticated market kinds remain visible with their pending verifier state as unsupported discovery data; they are never silently relabeled as a pair or executable market.

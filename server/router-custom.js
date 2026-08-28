@@ -25,12 +25,18 @@ const PROHIBITED_TEXT =
 export const ROUTER_CUSTOM_SOURCE = "canonical-launch-stamp-router";
 export const ROUTER_CUSTOM_SOURCE_URL =
   "https://programmable.market/api/indexers/v1/router-custom-identities";
+export const FINALIZED_CUSTOM_METADATA_SOURCE_URL =
+  "https://api.programmable.market/v3/finalized-custom-launches";
 const ROUTER_CUSTOM_SNAPSHOT_CAPTURE_URL =
   "https://programmable.market/api/explore?limit=100&page=1&sort=newest";
 const ROUTER_CUSTOM_SNAPSHOT_SCHEMA =
   "programmable.router-custom-identity-snapshot.v1";
 const ROUTER_CUSTOM_PROVENANCE_SCHEMA =
   "programmable.launch-stamp-provenance.v1";
+const FINALIZED_CUSTOM_METADATA_PROJECTION_SCHEMA =
+  "programmable.finalized-project-metadata-projection.v1";
+const FINALIZED_CUSTOM_METADATA_EXTENSION =
+  "programmable/finalized-project-metadata-v1";
 const ROUTER_CUSTOM_MODEL = "custom-graph";
 const ROUTER_CUSTOM_MODEL_VERSION = "programmable-launch-stamp-router-v1";
 const ROUTER_CUSTOM_VERIFICATION_URL =
@@ -57,6 +63,9 @@ const EXPECTED_ENTRY_SHA256_BY_LAUNCH_ID = new Map([
 ]);
 const ROUTER_CUSTOM_SOURCE_RESPONSE_BYTES = 16 * 1_024 * 1_024;
 const ROUTER_CUSTOM_SOURCE_TIMEOUT_MS = 6_000;
+const FINALIZED_CUSTOM_METADATA_RESPONSE_BYTES = 4 * 1_024 * 1_024;
+const FINALIZED_CUSTOM_METADATA_TIMEOUT_MS = 6_000;
+const FINALIZED_CUSTOM_METADATA_MAXIMUM_PAGES = 400;
 const ROUTER_CUSTOM_CACHE_MS = 15_000;
 const ROUTER_CUSTOM_FINALIZED_HEAD_MAXIMUM_LAG_BLOCKS = 256;
 const ROUTER_CUSTOM_FINALIZED_SCAN_MAXIMUM_BLOCKS = 250_000;
@@ -64,6 +73,9 @@ const ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS = 10_000;
 // Only records produced after validating the complete source commitment receive
 // this non-serializable capability. A source-shaped object cannot self-assign it.
 const TRUSTED_CURRENT_ROUTER_RECORD = Symbol("trusted-current-router-record");
+const TRUSTED_FINALIZED_CUSTOM_METADATA = Symbol(
+  "trusted-finalized-custom-metadata",
+);
 const ACCEPTED_ROUTER_MEMBERSHIP = Symbol("accepted-router-membership");
 
 let bundledSnapshotPromise = null;
@@ -109,6 +121,186 @@ function exactKeys(value, expected) {
   const sortedExpected = [...expected].sort();
   return actual.length === sortedExpected.length &&
     actual.every((key, index) => key === sortedExpected[index]);
+}
+
+function canonicalHttpsUrl(value) {
+  if (typeof value !== "string" || value.length > 2_048) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.hostname.length > 0 &&
+      parsed.username === "" && parsed.password === "" &&
+      parsed.href === value;
+  } catch {
+    return false;
+  }
+}
+
+function canonicalPublicImageUri(value) {
+  if (typeof value !== "string" || value.length > 2_048) return false;
+  try {
+    const parsed = new URL(value);
+    return ["https:", "ipfs:", "ar:"].includes(parsed.protocol) &&
+      parsed.username === "" && parsed.password === "" &&
+      parsed.href === value;
+  } catch {
+    return false;
+  }
+}
+
+function canonicalProjectTokenStaticBinding(value) {
+  if (!exactKeys(value, ["argumentIndex", "argumentName", "staticSource"])) {
+    return false;
+  }
+  if (value.staticSource === "not-deterministically-extractable") {
+    return value.argumentIndex === null && value.argumentName === null;
+  }
+  return ["constructor-argument", "initializer-argument"].includes(
+    value.staticSource,
+  ) && Number.isSafeInteger(value.argumentIndex) && value.argumentIndex >= 0 &&
+    safeText(value.argumentName, 256) !== null;
+}
+
+function canonicalProjectTokenMetadataBinding(value) {
+  return Boolean(
+    exactKeys(value, [
+      "declarationBinding", "name", "postDeploymentReadback",
+      "schemaVersion", "standardReadModel", "symbol", "tokenTargetId",
+    ]) &&
+      value.schemaVersion === "programmable.project-token-metadata-binding.v1" &&
+      safeText(value.tokenTargetId, 128) !== null &&
+      value.declarationBinding === "request-and-launch-id" &&
+      exactKeys(value.standardReadModel, ["name", "symbol"]) &&
+      typeof value.standardReadModel.name === "boolean" &&
+      typeof value.standardReadModel.symbol === "boolean" &&
+      canonicalProjectTokenStaticBinding(value.name) &&
+      canonicalProjectTokenStaticBinding(value.symbol) &&
+      value.postDeploymentReadback === "required"
+  );
+}
+
+function canonicalPresentationImage(value) {
+  return value === null || Boolean(
+    exactKeys(value, [
+      "byteLength", "contentSha256", "height", "mediaType", "uri", "width",
+    ]) &&
+      canonicalPublicImageUri(value.uri) &&
+      SHA256.test(value.contentSha256 ?? "") &&
+      ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(
+        value.mediaType,
+      ) &&
+      Number.isSafeInteger(value.byteLength) && value.byteLength >= 1 &&
+      value.byteLength <= 20 * 1024 * 1024 &&
+      Number.isSafeInteger(value.width) && value.width >= 1 &&
+      value.width <= 8_192 && Number.isSafeInteger(value.height) &&
+      value.height >= 1 && value.height <= 8_192
+  );
+}
+
+function canonicalPresentation(value) {
+  if (!exactKeys(value, ["description", "image", "links", "schemaVersion"]) ||
+    value.schemaVersion !== "programmable.launch-presentation-draft.v1" ||
+    typeof value.description !== "string" || value.description.length > 4_096 ||
+    value.description.normalize("NFC") !== value.description ||
+    value.description.trim() !== value.description ||
+    PROHIBITED_TEXT.test(value.description) ||
+    !canonicalPresentationImage(value.image) || !Array.isArray(value.links) ||
+    value.links.length > 32) {
+    return false;
+  }
+  const seen = new Set();
+  for (const link of value.links) {
+    if (!exactKeys(link, ["kind", "uri"]) ||
+      !["website", "documentation", "x", "telegram", "discord", "github", "other"]
+        .includes(link.kind) || !canonicalHttpsUrl(link.uri)) {
+      return false;
+    }
+    const key = `${link.kind}\u0000${link.uri}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+  }
+  return true;
+}
+
+function canonicalProjectMetadata(value, expectedHash) {
+  if (!exactKeys(value, [
+    "presentation", "schemaVersion", "token", "tokenMetadataBinding",
+  ]) || value.schemaVersion !== "programmable.project-metadata.v1" ||
+    !exactKeys(value.token, ["name", "symbol"]) ||
+    safeText(value.token.name, 64) === null ||
+    safeText(value.token.symbol, 16) === null ||
+    !canonicalPresentation(value.presentation) ||
+    !canonicalProjectTokenMetadataBinding(value.tokenMetadataBinding)) {
+    return false;
+  }
+  try {
+    return canonicalSha256("programmable.project-metadata.v1", value) ===
+      expectedHash;
+  } catch {
+    return false;
+  }
+}
+
+function canonicalTokenMetadataReadback(value, projectMetadata) {
+  const observedText = (text, maximum) => text === null || (
+    typeof text === "string" && text.length <= maximum &&
+    text.normalize("NFC") === text && !PROHIBITED_TEXT.test(text)
+  );
+  if (!exactKeys(value, [
+    "declared", "observed", "observedAt", "observedAtBlockNumber", "status",
+  ]) || !["matching", "mismatch", "unavailable"].includes(value.status) ||
+    !exactKeys(value.declared, ["name", "symbol"]) ||
+    value.declared.name !== projectMetadata.token.name ||
+    value.declared.symbol !== projectMetadata.token.symbol ||
+    !exactKeys(value.observed, ["name", "symbol"]) ||
+    !observedText(value.observed.name, 1_024) ||
+    !observedText(value.observed.symbol, 256) ||
+    !(value.observedAtBlockNumber === null ||
+      safeDecimal(value.observedAtBlockNumber) !== null) ||
+    !(value.observedAt === null || safeInstant(value.observedAt) !== null)) {
+    return false;
+  }
+  return value.status !== "matching" || (
+    value.observed.name === value.declared.name &&
+    value.observed.symbol === value.declared.symbol &&
+    value.observedAtBlockNumber !== null && value.observedAt !== null
+  );
+}
+
+function projectedTokenMetadata(projectMetadata) {
+  const presentation = projectMetadata.presentation;
+  const description = presentation.description.length > 0 &&
+      presentation.description.length <= 2_000
+    ? presentation.description
+    : null;
+  const imageUrl = presentation.image &&
+      canonicalHttpsUrl(presentation.image.uri)
+    ? presentation.image.uri
+    : null;
+  const links = {};
+  const ambiguousKinds = new Set();
+  const mappedKinds = new Map([
+    ["website", "website"], ["x", "x"], ["telegram", "telegram"],
+    ["documentation", "documentation"], ["github", "github"],
+  ]);
+  for (const link of presentation.links) {
+    const key = mappedKinds.get(link.kind);
+    if (!key) continue;
+    if (Object.hasOwn(links, key)) {
+      delete links[key];
+      ambiguousKinds.add(key);
+    } else if (!ambiguousKinds.has(key)) {
+      links[key] = link.uri;
+    }
+  }
+  const projectedLinks = Object.keys(links).length > 0 ? links : null;
+  return {
+    description,
+    imageUrl,
+    links: projectedLinks,
+    trustStatus: description !== null || imageUrl !== null || projectedLinks !== null
+      ? "creator-declared"
+      : "unavailable",
+  };
 }
 
 function exactRouterBinding(manifest) {
@@ -929,6 +1121,348 @@ function selectSnapshot(fallback, current) {
   return current;
 }
 
+function canonicalFinalizedCheckpoint(value) {
+  if (!exactKeys(value, [
+    "blockHash", "blockNumber", "observations", "quorumSize", "schemaVersion",
+  ]) ||
+    value.schemaVersion !==
+      "programmable.ethereum-finalized-checkpoint-quorum.v1" ||
+    safeDecimal(value.blockNumber) === null ||
+    !HASH32.test(value.blockHash ?? "") || value.quorumSize !== 2 ||
+    !Array.isArray(value.observations) || value.observations.length !== 2) {
+    return false;
+  }
+  return value.observations.every((observation, index) =>
+    exactKeys(observation, [
+      "commonBlockHash", "finalizedBlockHash", "finalizedBlockNumber", "provider",
+    ]) && observation.provider === (index === 0 ? "primary" : "secondary") &&
+      safeDecimal(observation.finalizedBlockNumber) !== null &&
+      HASH32.test(observation.finalizedBlockHash ?? "") &&
+      HASH32.test(observation.commonBlockHash ?? "") &&
+      sameHex(observation.commonBlockHash, value.blockHash)
+  );
+}
+
+function canonicalFinalizedMetadataFinality(value, entry) {
+  return Boolean(
+    exactKeys(value, [
+      "blockHash", "blockNumber", "confirmationDepth", "finalizedCheckpoint",
+      "logIndex", "requiredConfirmationDepth", "state", "transactionHash",
+    ]) && value.state === "finalized" &&
+      sameHex(value.transactionHash, entry.transactionHash) &&
+      value.blockNumber === entry.blockNumber &&
+      sameHex(value.blockHash, entry.blockHash) &&
+      value.logIndex === entry.logIndex &&
+      safeDecimal(value.confirmationDepth) !== null &&
+      value.requiredConfirmationDepth === String(entry.finalityConfirmations) &&
+      BigInt(value.confirmationDepth) >=
+        BigInt(value.requiredConfirmationDepth) &&
+      canonicalFinalizedCheckpoint(value.finalizedCheckpoint)
+  );
+}
+
+function projectedFinalizedMetadataFinality(value, entry) {
+  return Boolean(
+    exactKeys(value, [
+      "blockHash", "blockNumber", "logIndex", "requiredConfirmationDepth",
+      "state", "transactionHash",
+    ]) && value.state === "finalized" &&
+      sameHex(value.transactionHash, entry.transactionHash) &&
+      value.blockNumber === entry.blockNumber &&
+      sameHex(value.blockHash, entry.blockHash) &&
+      value.logIndex === entry.logIndex &&
+      value.requiredConfirmationDepth === String(entry.finalityConfirmations)
+  );
+}
+
+function canonicalFinalizedMetadataBindings(value) {
+  return Boolean(
+    exactKeys(value, [
+      "artifactHash", "graphBundleHash", "launchIntentHash", "requestHash",
+      "unboundGraphBundleHash",
+    ]) && Object.values(value).every((digest) => SHA256.test(digest ?? ""))
+  );
+}
+
+function finalizedMetadataEvidenceFromItem(item, entry) {
+  const required = [
+    "bindings", "chainId", "createdAt", "finality", "finalizedAt", "hook",
+    "poolId", "poolManager", "projectMetadata", "projectMetadataHash",
+    "resourceId", "router", "routerLaunchId", "schemaVersion", "token",
+    "tokenMetadataReadback",
+  ];
+  const keys = Object.keys(item ?? {}).sort();
+  const acceptedKeys = [
+    [...required].sort(),
+    [...required, "partnerAttribution"].sort(),
+  ];
+  if (!item || typeof item !== "object" || Array.isArray(item) ||
+    !acceptedKeys.some((expected) =>
+      keys.length === expected.length &&
+      keys.every((key, index) => key === expected[index])) ||
+    item.schemaVersion !== "programmable.finalized-custom-launch-metadata.v1" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(item.resourceId ?? "") ||
+    item.chainId !== String(entry.chainId) ||
+    !sameHex(item.routerLaunchId, entry.launchId) ||
+    !sameHex(item.router, entry.routerAddress) ||
+    !sameHex(item.token, entry.tokenAddress) ||
+    !sameHex(item.hook, entry.hookAddress) ||
+    !sameHex(item.poolManager, entry.poolManagerAddress) ||
+    !sameHex(item.poolId, entry.poolId) ||
+    !SHA256.test(item.projectMetadataHash ?? "") ||
+    !canonicalProjectMetadata(item.projectMetadata, item.projectMetadataHash) ||
+    !canonicalFinalizedMetadataBindings(item.bindings) ||
+    !canonicalTokenMetadataReadback(
+      item.tokenMetadataReadback,
+      item.projectMetadata,
+    ) ||
+    !canonicalFinalizedMetadataFinality(item.finality, entry) ||
+    safeInstant(item.createdAt) === null || safeInstant(item.finalizedAt) === null ||
+    Date.parse(item.finalizedAt) < Date.parse(item.createdAt)) {
+    return null;
+  }
+  if (item.tokenMetadataReadback.status === "matching" && (
+    (entry.tokenName !== null &&
+      item.tokenMetadataReadback.observed.name !== entry.tokenName) ||
+    (entry.tokenSymbol !== null &&
+      item.tokenMetadataReadback.observed.symbol !== entry.tokenSymbol)
+  )) {
+    return null;
+  }
+  return {
+    schemaVersion: FINALIZED_CUSTOM_METADATA_PROJECTION_SCHEMA,
+    sourceUrl: FINALIZED_CUSTOM_METADATA_SOURCE_URL,
+    resourceId: item.resourceId,
+    identity: {
+      chainId: item.chainId,
+      routerLaunchId: item.routerLaunchId.toLowerCase(),
+      router: item.router,
+      token: item.token,
+      hook: item.hook,
+      poolManager: item.poolManager,
+      poolId: item.poolId.toLowerCase(),
+    },
+    projectMetadata: structuredClone(item.projectMetadata),
+    projectMetadataHash: item.projectMetadataHash,
+    bindings: structuredClone(item.bindings),
+    tokenMetadataReadback: structuredClone(item.tokenMetadataReadback),
+    finality: {
+      state: item.finality.state,
+      transactionHash: item.finality.transactionHash,
+      blockNumber: item.finality.blockNumber,
+      blockHash: item.finality.blockHash,
+      logIndex: item.finality.logIndex,
+      requiredConfirmationDepth: item.finality.requiredConfirmationDepth,
+    },
+    createdAt: item.createdAt,
+    finalizedAt: item.finalizedAt,
+  };
+}
+
+function metadataEntryFromRecord(record) {
+  const extension = record?.extensions?.["programmable/router-stamp-v1"];
+  const market = record?.markets?.[0];
+  if (!extension || !market) return null;
+  return {
+    chainId: record.chainId,
+    routerAddress: extension.routerAddress,
+    launchId: record.launchId,
+    transactionHash: record.launch.transactionHash,
+    blockNumber: record.launch.blockNumber,
+    blockHash: record.launch.blockHash,
+    logIndex: record.launch.logIndex,
+    tokenAddress: record.token.address,
+    tokenName: record.token.name,
+    tokenSymbol: record.token.symbol,
+    hookAddress: market.hookAddress,
+    poolManagerAddress: market.poolManagerAddress,
+    poolId: market.poolId,
+    finalityConfirmations: extension.finalityConfirmations,
+  };
+}
+
+function exactFinalizedMetadataEvidence(record, evidence) {
+  if (!exactKeys(evidence, [
+    "bindings", "createdAt", "finality", "finalizedAt", "identity",
+    "projectMetadata", "projectMetadataHash", "resourceId", "schemaVersion",
+    "sourceUrl", "tokenMetadataReadback",
+  ]) || evidence.schemaVersion !== FINALIZED_CUSTOM_METADATA_PROJECTION_SCHEMA ||
+    evidence.sourceUrl !== FINALIZED_CUSTOM_METADATA_SOURCE_URL ||
+    !exactKeys(evidence.identity, [
+      "chainId", "hook", "poolId", "poolManager", "router", "routerLaunchId",
+      "token",
+    ])) {
+    return false;
+  }
+  const entry = metadataEntryFromRecord(record);
+  if (!entry || evidence.identity.chainId !== String(entry.chainId) ||
+    !sameHex(evidence.identity.routerLaunchId, entry.launchId) ||
+    !sameHex(evidence.identity.router, entry.routerAddress) ||
+    !sameHex(evidence.identity.token, entry.tokenAddress) ||
+    !sameHex(evidence.identity.hook, entry.hookAddress) ||
+    !sameHex(evidence.identity.poolManager, entry.poolManagerAddress) ||
+    !sameHex(evidence.identity.poolId, entry.poolId) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(evidence.resourceId ?? "") ||
+    !SHA256.test(evidence.projectMetadataHash ?? "") ||
+    !canonicalProjectMetadata(
+      evidence.projectMetadata,
+      evidence.projectMetadataHash,
+    ) || !canonicalFinalizedMetadataBindings(evidence.bindings) ||
+    !canonicalTokenMetadataReadback(
+      evidence.tokenMetadataReadback,
+      evidence.projectMetadata,
+    ) || !projectedFinalizedMetadataFinality(evidence.finality, entry) ||
+    safeInstant(evidence.createdAt) === null ||
+    safeInstant(evidence.finalizedAt) === null ||
+    Date.parse(evidence.finalizedAt) < Date.parse(evidence.createdAt)) {
+    return false;
+  }
+  return evidence.tokenMetadataReadback.status !== "matching" || (
+    (entry.tokenName === null ||
+      evidence.tokenMetadataReadback.observed.name === entry.tokenName) &&
+    (entry.tokenSymbol === null ||
+      evidence.tokenMetadataReadback.observed.symbol === entry.tokenSymbol)
+  );
+}
+
+function canonicalMetadataDigest(evidence) {
+  return canonicalSha256(FINALIZED_CUSTOM_METADATA_PROJECTION_SCHEMA, evidence);
+}
+
+function metadataBinding(record) {
+  const attached = record?.[TRUSTED_FINALIZED_CUSTOM_METADATA] ?? null;
+  const projected = record?.extensions?.[FINALIZED_CUSTOM_METADATA_EXTENSION] ?? null;
+  if (attached === null && projected === null) return { valid: true, digest: null };
+  if (attached !== null && !exactFinalizedMetadataEvidence(record, attached)) {
+    return { valid: false, digest: null };
+  }
+  if (projected !== null && !exactFinalizedMetadataEvidence(record, projected)) {
+    return { valid: false, digest: null };
+  }
+  const attachedDigest = attached === null ? null : canonicalMetadataDigest(attached);
+  const projectedDigest = projected === null
+    ? null
+    : canonicalMetadataDigest(projected);
+  if (attachedDigest !== null && projectedDigest !== null &&
+    attachedDigest !== projectedDigest) {
+    return { valid: false, digest: null };
+  }
+  return { valid: true, digest: attachedDigest ?? projectedDigest };
+}
+
+function routerIdentityShapeRecord(record) {
+  const evidence = record?.extensions?.[FINALIZED_CUSTOM_METADATA_EXTENSION];
+  if (evidence === undefined) {
+    return record?.token?.metadata?.description === null &&
+        record.token.metadata.imageUrl === null &&
+        record.token.metadata.links === null &&
+        record.token.metadata.trustStatus === "unavailable"
+      ? record
+      : null;
+  }
+  if (!exactFinalizedMetadataEvidence(record, evidence)) return null;
+  const projected = projectedTokenMetadata(evidence.projectMetadata);
+  try {
+    if (canonicalSha256("programmable.router-custom-display-metadata.v1", projected) !==
+      canonicalSha256(
+        "programmable.router-custom-display-metadata.v1",
+        record.token.metadata,
+      )) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return {
+    ...record,
+    token: {
+      ...record.token,
+      metadata: {
+        description: null,
+        imageUrl: null,
+        links: null,
+        trustStatus: "unavailable",
+      },
+    },
+  };
+}
+
+async function finalizedMetadataByLaunch(entries) {
+  const wanted = new Map(
+    entries.map((entry) => [entry.launchId.toLowerCase(), entry]),
+  );
+  const found = new Map();
+  const seenCursors = new Set();
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    FINALIZED_CUSTOM_METADATA_TIMEOUT_MS,
+  );
+  let cursor = null;
+  try {
+    for (let page = 0; page < FINALIZED_CUSTOM_METADATA_MAXIMUM_PAGES; page += 1) {
+      const url = new URL(FINALIZED_CUSTOM_METADATA_SOURCE_URL);
+      url.searchParams.set("limit", "25");
+      if (cursor !== null) url.searchParams.set("cursor", cursor);
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "programmable-developer-api/2",
+        },
+        redirect: "error",
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(
+          `Finalized Custom metadata source returned HTTP ${response.status}`,
+        );
+      }
+      const payload = await readBoundedJson(
+        response,
+        FINALIZED_CUSTOM_METADATA_RESPONSE_BYTES,
+        "Finalized Custom metadata response",
+      );
+      if (!exactKeys(payload, [
+        "generatedAt", "launches", "nextCursor", "schemaVersion",
+      ]) ||
+        payload.schemaVersion !==
+          "programmable.finalized-custom-launch-metadata-list.v1" ||
+        safeInstant(payload.generatedAt) === null ||
+        !Array.isArray(payload.launches) || payload.launches.length > 25 ||
+        !(payload.nextCursor === null || (
+          typeof payload.nextCursor === "string" &&
+          payload.nextCursor.length >= 1 && payload.nextCursor.length <= 512 &&
+          !PROHIBITED_TEXT.test(payload.nextCursor)
+        ))) {
+        throw new Error("Finalized Custom metadata envelope is invalid");
+      }
+      for (const item of payload.launches) {
+        const launchId = typeof item?.routerLaunchId === "string"
+          ? item.routerLaunchId.toLowerCase()
+          : null;
+        const entry = wanted.get(launchId);
+        if (!entry) continue;
+        const evidence = finalizedMetadataEvidenceFromItem(item, entry);
+        if (!evidence || found.has(launchId)) {
+          throw new Error("Finalized Custom metadata identity is invalid");
+        }
+        found.set(launchId, evidence);
+      }
+      if (payload.nextCursor === null) return found;
+      if (seenCursors.has(payload.nextCursor)) {
+        throw new Error("Finalized Custom metadata cursor repeated");
+      }
+      seenCursors.add(payload.nextCursor);
+      cursor = payload.nextCursor;
+    }
+    throw new Error("Finalized Custom metadata pagination exceeded its bound");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function recordFromEntry(entry, snapshot) {
   const unavailableMetric = { status: "unavailable", value: null };
   const tokenIdentityComplete = entry.tokenName !== null &&
@@ -1101,6 +1635,8 @@ function pinnedEntryFromRecord(record) {
 }
 
 export function hasExactRouterStampedCustomRecordShape(record) {
+  record = routerIdentityShapeRecord(record);
+  if (record === null) return false;
   const extension = record?.extensions?.["programmable/router-stamp-v1"];
   const market = record?.markets?.[0];
   const pinnedEntrySha256 = typeof record?.launchId === "string"
@@ -1250,6 +1786,8 @@ function isPinnedFallbackRecord(record) {
     : null;
   return Boolean(
     expectedEntrySha256 &&
+      (record?.extensions?.[FINALIZED_CUSTOM_METADATA_EXTENSION] === undefined ||
+        record?.[TRUSTED_FINALIZED_CUSTOM_METADATA] !== undefined) &&
       extension?.snapshotSha256 === EXPECTED_BUNDLED_SNAPSHOT_SHA256 &&
       extension.entrySha256 === expectedEntrySha256 &&
       extension.sourceIdentityCommitment ===
@@ -1271,6 +1809,8 @@ export function isTrustedRouterStampedCustomRecord(record) {
 
 function routerMembershipDigest(record) {
   if (!hasExactRouterStampedCustomRecordShape(record)) return null;
+  const metadata = metadataBinding(record);
+  if (!metadata.valid) return null;
   const extension = record.extensions["programmable/router-stamp-v1"];
   return canonicalSha256(
     "programmable.router-custom-accepted-membership.v1",
@@ -1282,18 +1822,22 @@ function routerMembershipDigest(record) {
       snapshotGeneratedAt: extension.snapshotGeneratedAt,
       snapshotAsOfBlock: extension.snapshotAsOfBlock,
       snapshotAsOfBlockHash: extension.snapshotAsOfBlockHash.toLowerCase(),
+      finalizedProjectMetadata: metadata.digest,
     },
   );
 }
 
 function routerEntryMembershipDigest(record) {
   if (!hasExactRouterStampedCustomRecordShape(record)) return null;
+  const metadata = metadataBinding(record);
+  if (!metadata.valid) return null;
   const extension = record.extensions["programmable/router-stamp-v1"];
   return canonicalSha256(
     "programmable.router-custom-accepted-entry.v1",
     {
       launchId: record.launchId.toLowerCase(),
       entrySha256: extension.entrySha256,
+      finalizedProjectMetadata: metadata.digest,
     },
   );
 }
@@ -1358,6 +1902,23 @@ export function carryRouterCustomTrust(source, target) {
       writable: false,
     });
   }
+  const evidence = source?.[TRUSTED_FINALIZED_CUSTOM_METADATA] ?? null;
+  if (evidence !== null && exactFinalizedMetadataEvidence(source, evidence)) {
+    const copy = structuredClone(evidence);
+    target.token = {
+      ...target.token,
+      metadata: projectedTokenMetadata(copy.projectMetadata),
+    };
+    target.extensions = {
+      ...target.extensions,
+      [FINALIZED_CUSTOM_METADATA_EXTENSION]: copy,
+    };
+    Object.defineProperty(target, TRUSTED_FINALIZED_CUSTOM_METADATA, {
+      value: copy,
+      enumerable: false,
+      writable: false,
+    });
+  }
   return target;
 }
 
@@ -1400,6 +1961,24 @@ export async function readRouterCustomRecords(manifest) {
     } catch {
       snapshot = lastKnownGoodSnapshot(baseline);
     }
+    const records = snapshot.entries
+      .map((entry) => recordFromEntry(entry, snapshot))
+      .sort(compareLaunchesDescending);
+    try {
+      const metadata = await finalizedMetadataByLaunch(snapshot.entries);
+      for (const record of records) {
+        const evidence = metadata.get(record.launchId.toLowerCase());
+        if (!evidence || !exactFinalizedMetadataEvidence(record, evidence)) continue;
+        Object.defineProperty(record, TRUSTED_FINALIZED_CUSTOM_METADATA, {
+          value: evidence,
+          enumerable: false,
+          writable: false,
+        });
+      }
+    } catch {
+      // Display metadata is optional enrichment. Exact Router identities stay
+      // visible and retain explicit unavailable fields when this source fails.
+    }
     const value = {
       status: snapshot.status,
       generatedAt: snapshot.generatedAt,
@@ -1408,9 +1987,7 @@ export async function readRouterCustomRecords(manifest) {
       sourceIdentityCommitment: snapshot.sourceIdentityCommitment,
       snapshotSha256: snapshot.snapshotSha256,
       verifiedIdentityCount: snapshot.verifiedIdentityCount,
-      records: snapshot.entries
-        .map((entry) => recordFromEntry(entry, snapshot))
-        .sort(compareLaunchesDescending),
+      records,
     };
     cache = { value, expiresAt: Date.now() + ROUTER_CUSTOM_CACHE_MS };
     return value;

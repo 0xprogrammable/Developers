@@ -131,6 +131,13 @@ discoverable when older presentation fields are absent. Declared name and
 symbol are not onchain evidence until the finalized metadata readback reports
 an exact match.
 
+Finalized canonical-Router records can project those creator-declared fields
+only after an exact identity join to the Custom Launch API finalized metadata
+ledger and recomputation of its metadata hash. The raw binding remains in
+`extensions["programmable/finalized-project-metadata-v1"]`. If that optional
+enrichment is unavailable or does not match, the Router launch remains visible
+with null metadata.
+
 `token: null` is valid for a project-only launch. Preserve its `projectId`, `launchId`, `assets`, mechanisms, provenance, review, fee policy, lifecycle, and markets. Do not fabricate an ERC-20 or include the project in a token-list projection.
 
 ## Launch provenance

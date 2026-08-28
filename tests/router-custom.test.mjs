@@ -16,6 +16,7 @@ import {
 } from "../server/v2-dataset.js";
 import {
   createRouterCustomAcceptedMembership,
+  FINALIZED_CUSTOM_METADATA_SOURCE_URL,
   hasExactRouterStampedCustomRecordShape,
   isRouterStampedCustom,
   readRouterCustomRecords,
@@ -184,6 +185,108 @@ function recommitSourcePayload(payload) {
   return payload;
 }
 
+function finalizedMetadataPayload(entry, chainPayload) {
+  const provenance = entry.launchStampProvenance;
+  const projectMetadata = {
+    schemaVersion: "programmable.project-metadata.v1",
+    token: { name: entry.name, symbol: entry.symbol },
+    presentation: {
+      schemaVersion: "programmable.launch-presentation-draft.v1",
+      description: "A canonical Router launch with exact creator-declared metadata.",
+      image: {
+        uri: "https://example.com/next.png",
+        contentSha256: `sha256:${"1".repeat(64)}`,
+        mediaType: "image/png",
+        byteLength: 1_024,
+        width: 512,
+        height: 512,
+      },
+      links: [
+        { kind: "website", uri: "https://example.com/" },
+        { kind: "x", uri: "https://x.com/example" },
+      ],
+    },
+    tokenMetadataBinding: {
+      schemaVersion: "programmable.project-token-metadata-binding.v1",
+      tokenTargetId: "token",
+      declarationBinding: "request-and-launch-id",
+      standardReadModel: { name: true, symbol: true },
+      name: {
+        staticSource: "constructor-argument",
+        argumentIndex: 0,
+        argumentName: "name_",
+      },
+      symbol: {
+        staticSource: "constructor-argument",
+        argumentIndex: 1,
+        argumentName: "symbol_",
+      },
+      postDeploymentReadback: "required",
+    },
+  };
+  const checkpoint = {
+    schemaVersion: "programmable.ethereum-finalized-checkpoint-quorum.v1",
+    blockNumber: chainPayload.asOfBlock,
+    blockHash: chainPayload.asOfBlockHash,
+    quorumSize: 2,
+    observations: ["primary", "secondary"].map((provider) => ({
+      provider,
+      finalizedBlockNumber: chainPayload.asOfBlock,
+      finalizedBlockHash: chainPayload.asOfBlockHash,
+      commonBlockHash: chainPayload.asOfBlockHash,
+    })),
+  };
+  return {
+    schemaVersion: "programmable.finalized-custom-launch-metadata-list.v1",
+    generatedAt: chainPayload.generatedAt,
+    launches: [{
+      schemaVersion: "programmable.finalized-custom-launch-metadata.v1",
+      resourceId: "123e4567-e89b-42d3-a456-426614174000",
+      routerLaunchId: provenance.launchId,
+      chainId: "1",
+      router: provenance.routerAddress,
+      token: entry.tokenAddress,
+      hook: entry.hookAddress,
+      poolManager: provenance.poolManagerAddress,
+      poolId: entry.poolId,
+      projectMetadata,
+      projectMetadataHash: canonicalSha256(
+        "programmable.project-metadata.v1",
+        projectMetadata,
+      ),
+      bindings: {
+        requestHash: `sha256:${"2".repeat(64)}`,
+        launchIntentHash: `sha256:${"3".repeat(64)}`,
+        graphBundleHash: `sha256:${"4".repeat(64)}`,
+        unboundGraphBundleHash: `sha256:${"5".repeat(64)}`,
+        artifactHash: `sha256:${"6".repeat(64)}`,
+      },
+      tokenMetadataReadback: {
+        status: "matching",
+        declared: { name: entry.name, symbol: entry.symbol },
+        observed: { name: entry.name, symbol: entry.symbol },
+        observedAtBlockNumber: chainPayload.asOfBlock,
+        observedAt: chainPayload.generatedAt,
+      },
+      finality: {
+        state: "finalized",
+        transactionHash: provenance.transactionHash,
+        blockNumber: provenance.blockNumber,
+        blockHash: provenance.blockHash,
+        logIndex: provenance.launchLogIndex,
+        confirmationDepth: String(
+          BigInt(chainPayload.asOfBlock) - BigInt(provenance.blockNumber),
+        ),
+        requiredConfirmationDepth: String(provenance.finalityConfirmations),
+        finalizedCheckpoint: checkpoint,
+      },
+      createdAt: "2026-08-25T16:29:00.000Z",
+      finalizedAt: chainPayload.generatedAt,
+    }],
+    nextCursor: null,
+  };
+}
+
 function quantity(value) {
   return `0x${BigInt(value).toString(16)}`;
 }
@@ -274,6 +377,14 @@ function serveSource(payload, options = {}) {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
+    }
+    if (String(url).startsWith(FINALIZED_CUSTOM_METADATA_SOURCE_URL)) {
+      return options.finalizedMetadata
+        ? new Response(JSON.stringify(options.finalizedMetadata), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+        : new Response("unavailable", { status: 503 });
     }
     const request = JSON.parse(String(init.body));
     const [first, second] = request.params ?? [];
@@ -451,6 +562,73 @@ describe("Router Custom v2 projection", () => {
       "0x3333333333333333333333333333333333333333";
     assert.ok(validateLaunchSemantics(transportedRecord).some((finding) =>
       finding.code === "FEE_POLICY_REQUIRED"));
+  });
+
+  test("joins creator metadata only through an exact finalized Router identity", async () => {
+    const payload = currentSourcePayload();
+    const next = payload.entries.find((entry) => entry.symbol === "NEXT");
+    assert.ok(next);
+    const finalizedMetadata = finalizedMetadataPayload(next, payload);
+    serveSource(payload, { finalizedMetadata });
+
+    const snapshot = await readRouterCustomRecords(manifest);
+    const raw = snapshot.records.find((record) => record.token.symbol === "NEXT");
+    assert.ok(raw);
+    assert.equal(raw.token.metadata.description, null);
+
+    const projected = projectV2Dataset({
+      records: snapshot.records,
+      status: {
+        status: "ready",
+        generatedAt: payload.generatedAt,
+        chainId: 1,
+        coverage: {
+          status: "complete",
+          checkpoint: {
+            blockNumber: Number(payload.asOfBlock),
+            blockHash: payload.asOfBlockHash,
+            finality: "finalized",
+          },
+        },
+      },
+    }, manifest);
+    const record = publicLaunchV2(projected.records.find((candidate) =>
+      candidate.token.symbol === "NEXT"));
+    assert.deepEqual(record.token.metadata, {
+      description: "A canonical Router launch with exact creator-declared metadata.",
+      imageUrl: "https://example.com/next.png",
+      links: {
+        website: "https://example.com/",
+        x: "https://x.com/example",
+      },
+      trustStatus: "creator-declared",
+    });
+    assert.equal(
+      record.extensions["programmable/finalized-project-metadata-v1"]
+        .projectMetadataHash,
+      finalizedMetadata.launches[0].projectMetadataHash,
+    );
+    assert.equal(isRouterStampedCustom(record, manifest), true);
+    assertValid(
+      registry.validator("launch.schema.json"),
+      record,
+      "metadata-enriched Router launch",
+    );
+    assert.deepEqual(validateLaunchSemantics(record), []);
+
+    const membership = createRouterCustomAcceptedMembership(
+      snapshot.records,
+      manifest,
+    );
+    const transported = JSON.parse(JSON.stringify(record));
+    assert.deepEqual(validateLaunchSemantics(transported, {
+      acceptedRouterCustomMembership: membership,
+    }), []);
+    transported.token.metadata.description = "forged display metadata";
+    assert.equal(hasExactRouterStampedCustomRecordShape(transported), false);
+    assert.ok(validateLaunchSemantics(transported, {
+      acceptedRouterCustomMembership: membership,
+    }).some((finding) => finding.code === "FEE_POLICY_REQUIRED"));
   });
 
   test("accepts a cached Router record bound to its feed snapshot", async () => {
