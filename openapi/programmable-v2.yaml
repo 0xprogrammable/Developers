@@ -153,7 +153,12 @@ paths:
         Launch API host, not the Developer read API host. Follow every opaque
         cursor to complete one snapshot. Items exclude pending requests,
         metadata-absent historical resources, controller addresses, credentials,
-        and request bytes.
+        and request bytes. Every successful page requires `schemaVersion`,
+        `generatedAt`, `launches`, `nextCursor`, and `quality`. A `complete`
+        quality status means every source row was published; `partial` means
+        one or more invalid finalized rows were quarantined. Published plus
+        quarantined rows equals the source row count, with one row-indexed
+        `FINALIZED_ROW_QUARANTINED` diagnostic per quarantined row.
         `resourceId` is not Router identity; bind `routerLaunchId` to the
         matching canonical Router event token, hook, PoolManager, and pool ID.
         Read canonical display fields from `projectMetadata`: declared token

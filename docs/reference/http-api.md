@@ -159,9 +159,14 @@ Launch V3 OpenAPI contract. The opaque-cursor response is backed by the
 contains finalized metadata-bearing V3 rows under their original contracts,
 including retained `3.2.0` and current `3.3.0` rows. It contains no pending
 request, metadata-absent historical resource, controller, credential, or request bytes. Complete
-all pages of its `launches` array, then join by `routerLaunchId` and matching canonical Router event
-identities. `resourceId` is not Router provenance and presentation data does
-not establish onchain token identity, safety, liquidity, or tradeability.
+all pages of its `launches` array. Every page also requires `schemaVersion`,
+`generatedAt`, `nextCursor`, and `quality`. `quality.status` is `complete` when
+every source row was published and `partial` when invalid finalized rows were
+quarantined; `publishedRowCount + quarantinedRowCount = sourceRowCount`, with
+one row-indexed `FINALIZED_ROW_QUARANTINED` diagnostic per quarantined row.
+Then join by `routerLaunchId` and matching canonical Router event identities.
+`resourceId` is not Router provenance and presentation data does not establish
+onchain token identity, safety, liquidity, or tradeability.
 
 Read the canonical display declaration from `projectMetadata`: name, symbol,
 description, image facts, website, and X. Only a `matching`

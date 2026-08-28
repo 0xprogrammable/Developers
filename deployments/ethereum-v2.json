@@ -1632,6 +1632,25 @@
           "maximumLimit": 25,
           "defaultLimit": 10,
           "finalityScope": "finalized-v3-project-metadata-ledger",
+          "responseEnvelope": {
+            "requiredFields": [
+              "schemaVersion",
+              "generatedAt",
+              "launches",
+              "nextCursor",
+              "quality"
+            ],
+            "launchesField": "launches",
+            "quality": {
+              "required": true,
+              "statuses": [
+                "complete",
+                "partial"
+              ],
+              "sourceRowAccounting": "published-plus-quarantined-equals-source",
+              "quarantineDiagnosticCode": "FINALIZED_ROW_QUARANTINED"
+            }
+          },
           "cacheControl": "public, max-age=15, stale-while-revalidate=300",
           "sourceLkg": "none"
         },

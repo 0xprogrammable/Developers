@@ -166,10 +166,13 @@ The unauthenticated `/v3/finalized-custom-launches` snapshot is backed by the
 `finalized-v3-project-metadata-ledger` and exposes finalized metadata-bearing V3
 rows under their original contracts, including retained `3.2.0` and current
 `3.3.0` rows, plus their declared-versus-observed token readback state. It
-excludes pending and metadata-absent historical resources, controllers,
-credentials, and request bytes. Snapshot metadata never overrides canonical
-Router identity or turns presentation into safety, liquidity, tradeability, or
-featured-placement evidence.
+requires `schemaVersion`, `generatedAt`, `launches`, `nextCursor`, and `quality`
+on every page. `quality.status` is `complete` or `partial`; published plus
+quarantined rows equals the source count. The snapshot excludes pending and
+metadata-absent historical resources, controllers, credentials, and request
+bytes. Snapshot metadata never overrides canonical Router identity or turns
+presentation into safety, liquidity, tradeability, or featured-placement
+evidence.
 The seven `3.3.0` hard blocks are runtime `CALLCODE`, runtime or source
 self-destruct, definitively missing or invalid PoolManager callback
 authentication, a literal wrong PoolManager, and a missing enabled callback.

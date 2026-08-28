@@ -272,8 +272,12 @@ pagination returns `400 INVALID_PAGINATION`; temporary source unavailability
 returns `503 CUSTOM_LAUNCH_V3_UNAVAILABLE`. A successful response uses
 `programmable.finalized-custom-launch-metadata-list.v1`, orders launches by
 `createdAt` descending and then `resourceId` descending, and returns
-the page as `launches` plus `nextCursor` or `null`. Follow every cursor to
-complete that bounded snapshot.
+the page with required `schemaVersion`, `generatedAt`, `launches`, `nextCursor`,
+and `quality`. `quality.status` is `complete` when every source row was
+published and `partial` when invalid finalized rows were quarantined. Its
+published and quarantined counts must add up to the source count, with one
+row-indexed `FINALIZED_ROW_QUARANTINED` diagnostic per quarantined row. Follow
+every cursor to complete that bounded snapshot.
 
 Each `programmable.finalized-custom-launch-metadata.v1` item includes:
 
@@ -508,16 +512,22 @@ descriptors remain compatible for exact retries; new requests use v2.
 Profile `3.4.0` is a release-readiness target, not a currently accepted profile.
 Live capabilities, OpenAPI, and CLI `3.3.7` continue to select `3.3.0` for fresh
 writes. Do not submit, pack, or describe a `3.4.0` request as live until the
-server-side runner and observation ABI are deployed and production readback
-selects the new profile. Existing `3.3.0` bytes retain their original read and
+same-app runner and observation ABI are deployed, a separately signed exact
+settlement-dataflow closure validates against its pinned authority trust root,
+and production readback selects the new profile. Missing, unavailable, invalid,
+or mismatched runner or closure evidence keeps `3.4.0` unselectable and prevents
+a `3.4.0` wallet handoff. Existing `3.3.0` bytes retain their original read and
 exact-retry semantics; activation must be additive rather than a reinterpretation.
 If the metadata ledger later accepts `3.4.0`, the finalized feed adds those rows
 without hiding retained `3.2.0` or `3.3.0` rows.
 
-The pending gate requires complete server-executed vectors, including exact
-10-bps assertions where applicable, before wallet handoff. Caller-supplied
-scenario inputs are executable inputs only: the caller cannot declare expected
-success, revert, fee accrual, or fee routing as evidence. The pending CLI must
+The pending gate requires complete server-executed vectors and a valid
+authority-signed settlement-dataflow closure for the exact request before wallet
+handoff. Together they must establish the exact profile-specific 10-bps path,
+including its bound route and runtime identities; neither a request declaration
+nor a client-side result is fee-behavior evidence. Caller-supplied scenario
+inputs are executable inputs only: the caller cannot declare expected success,
+revert, fee accrual, fee routing, or closure as evidence. The pending CLI must
 also auto-inject and validate the canonical fee vault instead of accepting only
 a caller-selected `platformFeeBindingTargetId`. Its release binding is
 `sha256:39ccdfdf8cd61620bf5c62bf07fb8428adbd66d2608b1cf3ad583343116d7ed9`;
