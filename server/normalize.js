@@ -1,7 +1,7 @@
 import {
   CHAIN_ID,
   LAUNCH_SCHEMA_VERSION,
-  LEGACY_SOURCE_URL,
+  CLASSIC_CATALOG_SOURCE_URL,
   PLATFORM_ID,
   PLATFORM_FEE,
   RELEASE_BY_ID,
@@ -64,23 +64,13 @@ function safeRawAmount(value) {
     : null;
 }
 
-function releaseForLegacy(token) {
+function releaseForCatalog(token) {
   const hook = safeAddress(token?.canonicalPool?.hookAddress)?.toLowerCase();
-  if (hook === RELEASE_BY_ID.get("classic-v2").hook.toLowerCase()) {
-    return RELEASE_BY_ID.get("classic-v2");
-  }
   if (hook === RELEASE_BY_ID.get("classic-v3").hook.toLowerCase()) {
     return RELEASE_BY_ID.get("classic-v3");
   }
-  if (hook === RELEASE_BY_ID.get("stock-paired-v1").hook.toLowerCase()) {
-    return RELEASE_BY_ID.get("stock-paired-v1");
-  }
-  if (hook === RELEASE_BY_ID.get("stock-paired-v3").hook.toLowerCase()) {
-    const launchBlock = safeInteger(token?.launch?.blockNumber) ?? 0;
-    if (launchBlock >= RELEASE_BY_ID.get("stock-paired-v3").startBlock) {
-      return RELEASE_BY_ID.get("stock-paired-v3");
-    }
-    return RELEASE_BY_ID.get("stock-paired-v2");
+  if (hook === RELEASE_BY_ID.get("classic-v4").hook.toLowerCase()) {
+    return RELEASE_BY_ID.get("classic-v4");
   }
   return null;
 }
@@ -203,18 +193,18 @@ function finalizeRecord(record) {
   return { ...record, sortKey: makeSortKey(record) };
 }
 
-export function normalizeLegacyToken(token) {
+export function normalizeCatalogToken(token) {
   if (token?.chainId !== CHAIN_ID) return null;
   const tokenAddress = safeAddress(token.address);
   if (!tokenAddress) return null;
   const tokenName = safeText(token.name, 128);
   const tokenSymbol = safeText(token.symbol, 32);
   const tokenDecimals = safeInteger(token.decimals);
-  if (!tokenName || !tokenSymbol || tokenDecimals === null || tokenDecimals > 255) {
-    return null;
-  }
-  const release = releaseForLegacy(token);
+  const release = releaseForCatalog(token);
   if (!release) return null;
+  const identityComplete = Boolean(
+    tokenName && tokenSymbol && tokenDecimals !== null && tokenDecimals <= 255,
+  );
   const declaredModel = safeText(token?.launch?.modelId ?? token?.launch?.model, 64);
   const modelId = release.modelId ?? declaredModel ?? "unknown";
   const category = release.category;
@@ -233,10 +223,12 @@ export function normalizeLegacyToken(token) {
     chainId: CHAIN_ID,
     token: {
       address: tokenAddress,
-      identityStatus: "complete",
+      identityStatus: identityComplete ? "complete" : "partial",
       name: tokenName,
       symbol: tokenSymbol,
-      decimals: tokenDecimals,
+      decimals: tokenDecimals !== null && tokenDecimals <= 255
+        ? tokenDecimals
+        : null,
       totalSupplyRaw: safeRawAmount(token.totalSupplyRaw),
       supplyStatus: safeRawAmount(token.totalSupplyRaw)
         ? "observed"
@@ -262,17 +254,17 @@ export function normalizeLegacyToken(token) {
       transactionHash: safeHash(token?.launch?.transactionHash),
       blockNumber: safeRawAmount(String(token?.launch?.blockNumber ?? "")),
       blockHash: null,
-      transactionIndex: null,
-      logIndex: null,
+      transactionIndex: safeInteger(token?.launch?.transactionIndex),
+      logIndex: safeInteger(token?.launch?.logIndex),
       timestamp: safeText(token?.launch?.launchedAt, 64),
       finality: null,
     },
     verification: {
-      sourceId: release?.deploymentId ?? `unmatched-legacy:${modelId}`,
+      sourceId: release?.deploymentId ?? `unmatched-catalog:${modelId}`,
       launcherAddress: release?.launcher ?? null,
       registryAddress: null,
       provenanceStatus: "partial",
-      sourceUrl: LEGACY_SOURCE_URL,
+      sourceUrl: CLASSIC_CATALOG_SOURCE_URL,
     },
     capabilities: market
       ? [
@@ -359,20 +351,7 @@ export function decodeLaunchLog(log) {
   let launchHash = null;
   let fallbackFees = null;
 
-  if (release.decoder === "classic-v2" && data.length >= 5) {
-    poolId = safeHash(log.topics[3]);
-    hookAddress = wordAddress(data[0]);
-    positionRecipient = wordAddress(data[1]);
-    positionTokenId = wordAmount(data[2]);
-    const total = wordInteger(data[3]);
-    fallbackFees = {
-      currency: "ETH",
-      currencyAddress: null,
-      buyTotalFeeBps: total,
-      sellTotalFeeBps: total,
-    };
-    launchHash = wordHash(data[4]);
-  } else if (release.decoder === "classic-v3" && data.length >= 8) {
+  if (release.decoder === "classic-v3" && data.length >= 8) {
     poolId = safeHash(log.topics[3]);
     hookAddress = wordAddress(data[0]);
     rewardVault = wordAddress(data[1]);
@@ -385,19 +364,6 @@ export function decodeLaunchLog(log) {
       sellTotalFeeBps: wordInteger(data[5]),
     };
     launchHash = wordHash(data[7]);
-  } else if (release.decoder === "stock-paired" && data.length >= 5) {
-    quoteAssetAddress = topicAddress(log.topics[3]);
-    poolId = wordHash(data[0]);
-    rewardVault = wordAddress(data[1]);
-    positionRecipient = wordAddress(data[2]);
-    positionTokenId = wordAmount(data[3]);
-    fallbackFees = {
-      currency: null,
-      currencyAddress: quoteAssetAddress,
-      buyTotalFeeBps: 100,
-      sellTotalFeeBps: 100,
-    };
-    launchHash = wordHash(data[4]);
   } else {
     return null;
   }

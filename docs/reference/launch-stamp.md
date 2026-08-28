@@ -6,7 +6,7 @@ It does not universally prove that each Classic component was newly created. It 
 
 ## Deployment state
 
-The frozen Router V1 interface and one Ethereum deployment are published. The contract at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` was mined in block `25717612` and observed finalized at block `25717634`. The manifest's `deploymentEvidence` object pins the transaction, both block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
+The frozen Router V1 interface and one Ethereum deployment are published. Read the exact Router address and block range from the manifest. Its `deploymentEvidence` object pins the transaction, block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
 
 Router V1 is live on Ethereum for stamps written at or after block `25717612`. The manifest requires `64` confirmations for an explicit block-number read. Historical launches are not backfilled.
 
@@ -51,13 +51,13 @@ The getter bundle records `CHAIN_ID = 1`, permit authority `0x755509eA6e3F5Ec1aA
 
 ### Finalized PCAN test vector
 
-Activation is bound to the finalized deployment evidence above and one approved finalized Router canary. This is the finalized PCAN test vector. `PCAN` is its human-readable token symbol, not an additional launch or trust identifier. The machine-readable vector is `launchStampRouter.canaryEvidence` in `GET https://developers.programmable.family/api/v2/manifest` (JSON Pointer `/launchStampRouter/canaryEvidence`). The published onchain route coverage is exact: `CustomGraph` is covered; no separate Classic onchain canary is published.
+Activation is bound to the finalized deployment evidence above and two approved finalized Router canaries. This section begins with the finalized PCAN `CustomGraph` vector. `PCAN` is its human-readable token symbol, not an additional launch or trust identifier. The machine-readable vector is `launchStampRouter.canaryEvidence` in `GET https://developers.programmable.family/api/v2/manifest` (JSON Pointer `/launchStampRouter/canaryEvidence`). Its aggregate route coverage also points to the separate Classic V4 evidence described below.
 
 | Field | Value |
 | --- | --- |
 | `finality` | `finalized` |
 | `routeCoverage.customGraphOnchainCanary` | `true` |
-| `routeCoverage.classicOnchainCanary` | `false` |
+| `routeCoverage.classicOnchainCanary` | `true` |
 | `source.sourceRepository` | `https://github.com/0xprogrammable/programmable` |
 | `source.sourceCommit` | `b3cfed41bb841ae8d6188dbb815eddb5e1440218` |
 | `source.commitSubject` | `Add graph launch stamp canary` |
@@ -92,11 +92,17 @@ Each published component proof returns the same launch ID and stamp hash:
 
 The canary source commit is separate from the deployed Router artifact source commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`; it does not replace the Router artifact binding. The two evidence SHA-256 values are supplied handoff digests, not files downloaded and recomputed in this repository.
 
-The liquidity, LP position, fee, and supply fields are observations at canary block `25717953`. They do not establish current liquidity, safety, audit status, sellability, tradability, route support, or third-party integration. The frozen Router source and tests cover both launch kinds through the same live ABI, but only `CustomGraph` has the published onchain canary. A future Classic launch qualifies only when the live Router writes a consistent `LaunchKindV1.Classic` stamp.
+The liquidity, LP position, fee, and supply fields are observations at canary block `25717953`. They do not establish current liquidity, safety, audit status, sellability, tradability, route support, or third-party integration.
+
+### Finalized Classic V4 test vector
+
+The separate machine-readable vector is `launchStampRouter.classicCanaryEvidence` (JSON Pointer `/launchStampRouter/classicCanaryEvidence`). It binds the current Classic V4 release to one finalized `LaunchKindV1.Classic` stamp, including the exact source release, launcher deployment/runtime, transaction and canonical block, launch and stamp commitments, component/runtime proofs, pool and position state, token supply, platform fee observation, and evidence digests. `classicCanaryEvidence.source.manifestPublication` separately binds the canonical published release manifest; its exact commit, tree, file location, and file digest remain manifest-only values rather than copied documentation constants.
+
+Consumers must refresh the manifest, resolve the single enabled current Classic V4 deployment dynamically, and cross-check `classicCanaryEvidence` against that release and the same canonical Router. Never copy its address, start block, or evidence values into client code. This establishes `classicOnchainCanary: true` for the current route. It does not retroactively stamp Classic V3, reactivate Classic V1/V2, include Stock, or replace verification of another Classic launch.
 
 ### Guarantee and product boundary
 
-Only a launch with a consistent record written by the exact canonical Router on chain `1` at or after `startBlock` is Programmable through Router V1. The record proves that the Router atomically executed and stamped that launch, with the recorded pool uninitialized before route execution and initialized before the stamp. It does not universally prove that every Classic component was newly created. The same ABI, bytecode, event topics, metadata, logo, signer, or factory result from any other emitter does not qualify. Direct Classic V3 Factory, Graph Factory, and Single Factory calls outside the Router do not qualify.
+Only a launch with a consistent record written by the exact canonical Router on chain `1` at or after `startBlock` is Programmable through Router V1. The record proves that the Router atomically executed and stamped that launch, with the recorded pool uninitialized before route execution and initialized before the stamp. It does not universally prove that every Classic component was newly created. The same ABI, bytecode, event topics, metadata, logo, signer, or factory result from any other emitter does not qualify. Direct Classic launcher, Graph Factory, and Single Factory calls outside the Router do not qualify.
 
 Publication makes this verification contract available to terminals; it does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. Custom Launch API V1 and V2 retain historical reads, but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions, and the closed GitHub approval flow must not be revived. These docs define read-only detection and verification; an API key is never wallet signing or broadcast authority.
 
@@ -110,7 +116,7 @@ Router V1 covers only launches executed through the live Router at or after its 
 - Programmable Custom launches with a valid Router stamp; and
 - one v4 market identified by `PoolManager + PoolId` per stamped launch.
 
-Historical Classic or Custom coins are not backfilled. Single Factory launches and direct Classic V3 or Graph Factory calls do not create Router provenance.
+Historical Classic or Custom coins are not backfilled. Single Factory launches and direct Classic launcher or Graph Factory calls do not create Router provenance.
 
 Both labels derive from the same canonical Router record:
 
@@ -300,7 +306,7 @@ Type hash:
 0x5147473bd302ad67f9ef14ef9262d1b0f8d4f7155081bc8c508195b647413761
 ```
 
-Direct calls to the Classic V3 Factory or Graph Factory outside the Router do not write canonical provenance. Single Factory is outside Router V1.
+Direct calls to a Classic launcher or Graph Factory outside the Router do not write canonical provenance. Single Factory is outside Router V1.
 
 ## Revert interface
 
@@ -340,7 +346,7 @@ Component and route runtime-code hashes record code observed when the stamp was 
 Do not assign a Router V1 label to:
 
 - a launch before `startBlock` or a historical launch not executed through Router V1;
-- Single Factory or direct Classic V3/Graph Factory launches;
+- Single Factory or direct Classic-launcher/Graph-Factory launches;
 - a Classic launch inferred from the shared Classic hook;
 - a post-hoc self-attestation;
 - a copied Router, event, ABI, website, signature, or metadata field;

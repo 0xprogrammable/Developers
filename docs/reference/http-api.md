@@ -37,6 +37,8 @@ Do not treat HTTP 200 alone as proof that every launch source or execution adapt
 
 The service separates Classic event coverage from the authenticated finalized Custom Registry. A feed can be `degraded` or `unavailable` while still returning recognized bounded records. These quality values make incomplete Classic coverage or an unconfigured, incomplete, or non-current Custom Registry explicit without hiding known identities.
 
+The hosted Classic baseline is the validated paginated `https://programmable.market/api/explore` catalog. Acceptance requires consistent schema, scope, evidence and identity commitments; the current evidence reports Envio deployment `production-6157d22` without pinning availability to that release id. The retired legacy token source returns HTTP `410` and is not used. Active v2 Classic coverage is historical V3 plus current V4 only; V1/V2 remain inactive history and Stock is excluded. Custom remains a separate lane.
+
 The response's optional `customRegistryPublication` object exposes the publication gate used by the launch and token-list routes. `publicationReady` is the complete route gate. `baselineReady` describes only the immutable Gen1 canary, while `sourceConfigured`, `sourceCurrent`, and `sourceReady` separately describe the authenticated applicant source. `expectedSourceId` and `observedSourceId` make the active producer generation explicit. `baselineLaunches` and `applicantLaunches` are separate, so the canary never inflates the applicant count. `activeGeneration`, `requiresLiveSource`, and `publishedRegistries` describe the manifest-selected Registry boundary. A `null` object means the status was produced before dataset projection and must not be treated as source readiness.
 
 The optional `routerCustom` object reports the independent canonical-Router identity lane. It exposes the exact source boundary, source identity commitment, validated snapshot digest, and verified versus published identity counts. `last-known-good` keeps recognized identities readable but makes the Custom and combined feeds `degraded`; a missing identity is not authoritative until this lane returns to `current` with matching counts.
@@ -85,6 +87,10 @@ compatibility
 ```
 
 The manifest is the canonical integration inventory for active and prelaunch deployments. Read deployment arrays and lifecycle state. Never hard-code a single registry or launcher address as the entire Programmable source.
+
+For Classic, process only manifest deployments whose discovery state is enabled. The current enabled set is historical V3 and current V4; inactive V1/V2 entries are retained as history, not scan instructions, and no Stock release belongs to active v2 discovery. Refreshing this manifest lets a generic Router-first consumer discover V4 without changing its code or copying a deployment address.
+
+`launchStampRouter.canaryEvidence.routeCoverage.classicOnchainCanary` is `true` for the live release. Treat it as a summary only: verify the separate exact Classic canary evidence, its Router binding, source deployment, canonical block, transaction, launch kind, and component commitments before accepting the coverage claim. Router remains provenance and transport infrastructure, not a third public category.
 
 `generatedAt` is the publication time of that exact static manifest revision. It is not the current chain head, an indexer freshness signal, or a replacement for the status and finality fields.
 
@@ -244,7 +250,7 @@ page.resumeCursor
 page.hasMore
 ```
 
-`items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. Classic derives those fields from a recognized deployment. Custom derives them from either an authenticated finalized Registry record or a consistent finalized `CustomGraph` stamp from the exact canonical Router. `extensions["programmable/classification"].basis` distinguishes those source-provenance paths; `category: "custom"` alone must never be interpreted as Registry acceptance. `launchRouteId` is retained separately and is never substituted for `modelId`. An item becomes public launch data only after the recognized finalized launch evidence exists; a submission or approval alone is not a launch.
+`items` contains launch records. Official records carry `platformId: "programmable"`; `category` is exactly `classic | custom`, and `launch.modelId` carries the open-ended model. Classic derives those fields from an enabled V3 or V4 deployment. Custom derives them from either an authenticated finalized Registry record or a consistent finalized `CustomGraph` stamp from the exact canonical Router. Stock and inactive Classic V1/V2 sources do not enter active v2 discovery. `extensions["programmable/classification"].basis` distinguishes those source-provenance paths; `category: "custom"` alone must never be interpreted as Registry acceptance. `launchRouteId` is retained separately and is never substituted for `modelId`. An item becomes public launch data only after the recognized finalized launch evidence exists; a submission or approval alone is not a launch.
 
 The gated Direct Native Hook Graph profile creates no prelaunch item in this
 feed or the token list. Its planned mechanism and extension identifiers are

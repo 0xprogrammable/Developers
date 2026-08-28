@@ -5,12 +5,12 @@ import {
   CHAIN_ID,
   FINALITY_CONFIRMATIONS,
   LAUNCH_DISCOVERY_FILTER,
-  LEGACY_SOURCE_URL,
+  CLASSIC_CATALOG_SOURCE_URL,
   RELEASE_BY_LAUNCHER,
   RELEASES,
   REQUEST_LIMITS,
 } from "./constants.js";
-import { readLegacyFeed } from "./legacy.js";
+import { readClassicCatalogFeed } from "./classic-catalog.js";
 import {
   EXPECTED_REGISTRY_CUSTOM_FEED_SOURCE_ID,
   normalizeRegistryCustomItem,
@@ -21,7 +21,7 @@ import {
   compareLaunchesDescending,
   decodeLaunchLog,
   normalizeGapLaunch,
-  normalizeLegacyToken,
+  normalizeCatalogToken,
   publicLaunch,
   readErc20Metadata,
 } from "./normalize.js";
@@ -233,9 +233,9 @@ async function enrichGapLogs(logs, preferredProvider) {
   return { records, errors, decodeErrors, truncated };
 }
 
-function mergeRecords(legacyRecords, gapRecords, registryRecords = []) {
+function mergeRecords(catalogRecords, gapRecords, registryRecords = []) {
   const records = new Map();
-  for (const record of legacyRecords) {
+  for (const record of catalogRecords) {
     records.set(`${record.chainId}:${record.token.address.toLowerCase()}`, record);
   }
   for (const gapRecord of gapRecords) {
@@ -272,22 +272,22 @@ async function buildDataset() {
   } catch (error) {
     registryConfigurationError = error;
   }
-  const [legacyResult, headResult, finalizedResult, registryResult] = await Promise.allSettled([
-    readLegacyFeed(),
+  const [catalogResult, headResult, finalizedResult, registryResult] = await Promise.allSettled([
+    readClassicCatalogFeed(),
     readHeadBlock(),
     readFinalizedBlock(),
     registryConfigurationError === null
       ? readRegistryCustomFeed()
       : Promise.reject(registryConfigurationError),
   ]);
-  const legacy = legacyResult.status === "fulfilled" ? legacyResult.value : null;
+  const catalog = catalogResult.status === "fulfilled" ? catalogResult.value : null;
   const head = headResult.status === "fulfilled" ? headResult.value : null;
   const finalized =
     finalizedResult.status === "fulfilled" ? finalizedResult.value : null;
   const registry =
     registryResult.status === "fulfilled" ? registryResult.value : null;
   const errors = [];
-  if (!legacy) errors.push({ source: "legacy", reason: shortError(legacyResult.reason) });
+  if (!catalog) errors.push({ source: "catalog", reason: shortError(catalogResult.reason) });
   if (!head) errors.push({ source: "chain-head", reason: shortError(headResult.reason) });
   if (!finalized) {
     errors.push({
@@ -303,25 +303,25 @@ async function buildDataset() {
   }
 
   let snapshotMatchesChain = null;
-  if (legacy?.snapshot && head) {
+  if (catalog?.snapshot && head) {
     try {
       const snapshotBlock = await readBlock(
-        legacy.snapshot.blockNumber,
+        catalog.snapshot.blockNumber,
         head.provider,
       );
       snapshotMatchesChain =
-        !legacy.snapshot.blockHash ||
+        !catalog.snapshot.blockHash ||
         snapshotBlock.blockHash?.toLowerCase() ===
-          legacy.snapshot.blockHash.toLowerCase();
+          catalog.snapshot.blockHash.toLowerCase();
       if (!snapshotMatchesChain) {
         errors.push({
-          source: "legacy",
+          source: "catalog",
           reason: "source snapshot hash does not match Ethereum",
         });
       }
     } catch (error) {
       errors.push({
-        source: "legacy-snapshot-verification",
+        source: "catalog-snapshot-verification",
         reason: shortError(error),
       });
     }
@@ -331,7 +331,7 @@ async function buildDataset() {
   const scanBlock =
     headBlock === null ? null : Math.max(0, headBlock - FINALITY_CONFIRMATIONS);
   const finalizedBlock = finalized?.blockNumber ?? null;
-  const snapshotBlock = legacy?.snapshot?.blockNumber ?? null;
+  const snapshotBlock = catalog?.snapshot?.blockNumber ?? null;
   const desiredGapFrom =
     snapshotBlock === null
       ? Math.min(...RELEASES.map((release) => release.startBlock))
@@ -386,8 +386,8 @@ async function buildDataset() {
     }
   }
 
-  const legacyRecords = (legacy?.tokens ?? [])
-    .map(normalizeLegacyToken)
+  const catalogRecords = (catalog?.tokens ?? [])
+    .map(normalizeCatalogToken)
     .filter(Boolean);
   let registryRecords = [];
   if (registry?.configured) {
@@ -398,7 +398,7 @@ async function buildDataset() {
       registryRecords = [];
     }
   }
-  const records = mergeRecords(legacyRecords, enrichedGap.records, registryRecords).map((record) => ({
+  const records = mergeRecords(catalogRecords, enrichedGap.records, registryRecords).map((record) => ({
     ...record,
     launch: {
       ...record.launch,
@@ -421,7 +421,7 @@ async function buildDataset() {
     snapshotMatchesChain,
   );
   const eventCoverageComplete =
-    legacy !== null &&
+    catalog !== null &&
     snapshotBlock !== null &&
     snapshotMatchesChain === true &&
     scanBlock !== null &&
@@ -446,7 +446,7 @@ async function buildDataset() {
   let status = "degraded";
   if (
     head &&
-    legacy &&
+    catalog &&
     eventCoverageComplete &&
     enrichmentComplete &&
     sourceFreshness === "fresh"
@@ -454,13 +454,13 @@ async function buildDataset() {
     status = "ready";
   } else if (
     head &&
-    legacy &&
+    catalog &&
     eventCoverageComplete &&
     enrichmentComplete &&
     (sourceFreshness === "delayed" || sourceFreshness === "stale")
   ) {
     status = "ready-gap-filled";
-  } else if (head && legacy && eventCoverageComplete) {
+  } else if (head && catalog && eventCoverageComplete) {
     status = "degraded-enrichment";
   } else if (records.length > 0) {
     status = "partial";
@@ -477,10 +477,11 @@ async function buildDataset() {
     status,
     chainId: CHAIN_ID,
     source: {
-      url: LEGACY_SOURCE_URL,
-      statusReported: legacy?.reportedStatus ?? null,
-      schemaVersion: legacy?.schemaVersion ?? null,
-      snapshot: legacy?.snapshot ?? null,
+      url: CLASSIC_CATALOG_SOURCE_URL,
+      statusReported: catalog?.reportedStatus ?? null,
+      schemaVersion: catalog?.schemaVersion ?? null,
+      evidence: catalog?.source ?? null,
+      snapshot: catalog?.snapshot ?? null,
       snapshotMatchesChain,
       freshness: sourceFreshness,
       lagBlocks:
@@ -619,13 +620,13 @@ export function serviceStatus(status) {
     chainId: CHAIN_ID,
     classic: {
       status: classicAvailable ? "live" : "unavailable",
-      note: "Classic V1, V2, and V3 launches are discoverable when event coverage is complete.",
+      note: "Classic V3 and V4 launches are discoverable when event coverage is complete.",
     },
     custom: {
       status: customFeed === "ready" ? "live" : "unavailable",
       note: customFeed === "ready"
         ? "Authenticated finalized Registry launches and existing first-party Custom launches are discoverable in API v2."
-        : "The frozen v1 feed remains available for Classic and legacy first-party records; Registry launches require API v2.",
+        : "The frozen v1 feed remains available for Classic and catalog first-party records; Registry launches require API v2.",
     },
     feeds: {
       manifest: "ready",

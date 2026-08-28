@@ -43,8 +43,8 @@ server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 
 | Surface | Category | Network | State | Meaning |
 | --- | --- | --- | --- | --- |
-| Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
-| Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
+| Classic V3/V4 launch discovery | `classic` | Ethereum | Live | Historical V3 and current V4 launches can appear in the v2 feed; V1/V2 are inactive history |
+| Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from the manifest start block; historical launches are not backfilled |
 | Custom Launch API V2 | `custom` | Ethereum | Historical read-only | Existing resources remain readable; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V2_READ_ONLY` |
 | Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Wallet and approved partner bearer credentials use the same active general lane, exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
 | V3 capabilities and preflight | `custom` | Ethereum | Public / authenticated | Public capability discovery plus authenticated quota-free classification; no launch quota, nonce, persistence, wallet signature, broadcast, deployment, or feed record is created |
@@ -53,7 +53,7 @@ server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 | Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status remain compatible; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
 | Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy, V1, or V2 fresh-write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
-| Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
+| Stock-Paired records | — | Ethereum | Excluded | Not scanned or projected by active v2 discovery; frozen v1 compatibility semantics remain unchanged |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
 | Aion partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner recipient, accepted template, Registry record, or live fee path is published; similarly named code is not evidence |
 | Other networks | — | — | Not declared | Support exists only when a network appears as active in the manifest |
@@ -66,7 +66,13 @@ After registry activation, different providers, factories, templates, token cont
 
 ## Router V1 status
 
-The manifest publishes Router V1 as `live` at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`, with runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546` and `64` finality confirmations. Its approved finalized onchain canary covers `CustomGraph`. No separate Classic onchain canary is published; a future Classic launch is recognized only from a consistent stamp written by the same live Router. This is origin evidence, not a safety, audit, liquidity, tradability, or terminal-support claim.
+The manifest publishes Router V1 as `live`, with its exact address, start block, runtime hash, immutable bindings, finality policy, and separate finalized evidence for `CustomGraph` and Classic V4. Its route coverage therefore reports both `customGraphOnchainCanary: true` and `classicOnchainCanary: true`. Each launch still requires its own consistent stamp from that Router. This is origin evidence, not a safety, audit, liquidity, tradability, or terminal-support claim, and Router is not a public category.
+
+## Classic discovery source
+
+Active Classic discovery includes only historical V3 and current V4. The hosted baseline traverses the canonical paginated `https://programmable.market/api/explore` catalog and validates its schema, scope, evidence and identity commitments. The current evidence reports Envio deployment `production-6157d22`, without pinning availability to that transient release id. The retired legacy source that returned HTTP `410` is no longer a dependency. Classic V1/V2 remain inactive historical manifest entries, and Stock is excluded from active v2 discovery.
+
+Consumers should refresh the manifest, backfill every enabled Classic release, and keep deployment IDs with each record. A generic manifest-driven client therefore discovers V4 without changing code or maintaining a new hard-coded address list.
 
 ## What closed and prelaunch mean
 

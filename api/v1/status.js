@@ -1,4 +1,5 @@
-import { feedStatus, getDataset, serviceStatus } from "../../server/dataset.js";
+import { feedStatus } from "../../server/dataset.js";
+import { getV1Dataset, v1ServiceStatus } from "../../server/v1-frozen.js";
 import {
   error,
   handleOptions,
@@ -6,7 +7,8 @@ import {
   queryParametersAllowed,
 } from "../../server/http.js";
 
-export default async function handler(req, res) {
+export function createStatusHandler(loadDataset = getV1Dataset) {
+  return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET, OPTIONS");
@@ -19,8 +21,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const dataset = await getDataset();
-    json(req, res, 200, serviceStatus(dataset.status), {
+    const dataset = await loadDataset();
+    json(req, res, 200, v1ServiceStatus(dataset.status), {
       cacheControl: "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
       apiStatus: feedStatus(dataset.status.status),
     });
@@ -33,4 +35,7 @@ export default async function handler(req, res) {
       "The developer API status could not be produced",
     );
   }
+  };
 }
+
+export default createStatusHandler();

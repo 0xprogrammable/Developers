@@ -11,8 +11,9 @@ This is a compatibility promise, not a claim that software will never change.
 - Existing meanings are not reinterpreted.
 - `category` remains `classic | custom`.
 - A launch remains valid with `markets: []`.
-- `classic` always means an enabled Classic launcher event.
+- `classic` always means an enabled Classic launcher event; the current active release set is historical V3 plus current V4.
 - `custom` always means an accepted Custom Registry event or a consistent finalized canonical-Router `CustomGraph` stamp.
+- Router is a provenance and transport path for those categories, not another public category.
 - Breaking changes use a new major API path rather than silently changing `/api/v2`.
 
 ## What can be added
@@ -48,7 +49,7 @@ A conforming client must:
 
 ## Deployment changes
 
-The stable discovery document points to the active v2 manifest. The manifest publishes deployment arrays, registry state and start blocks. When Programmable activates another compatible deployment, integrators that read these values automatically discover it.
+The stable discovery document points to the active v2 manifest. The manifest publishes deployment arrays, registry state and start blocks. When Programmable activates another compatible deployment, integrators that read these values automatically discover it. That is the complete client-side change for current Classic V4: refresh the manifest and scan every enabled release instead of adding code or a pinned address.
 
 Do not:
 
@@ -76,7 +77,7 @@ An unknown value is not itself an error or security finding. It is an instructio
 
 Custom Registry discovery is live while legacy Registry and GitHub submission intake are closed. Any future Registry contract change remains independent from public category and launch-schema compatibility. Custom Launch API V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions. All retained profiles remain part of the existing `custom` category and do not create a new API major.
 
-Historical Stock-Paired records are not part of v2. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
+Stock-Paired records are excluded from active v2 discovery. Custom test fixtures use explicit registry provenance and remain separate from live data until a registry deployment is published.
 
 A Registry record generation is not an API major version. It can be projected through v2 only when the public v2 envelope remains backward compatible and historical record meanings do not change. A prelaunch Registry generation identifier is not evidence that its contract or feed is live.
 
@@ -112,4 +113,4 @@ This makes migrations and re-verification possible without guessing what an olde
 
 ## Version 1 compatibility
 
-API v1 remains available for existing consumers and retains its original Stock-Paired classification. New integrations should use v2. Do not merge v1 Stock-Paired results into the v2 Programmable Custom filter. See [Migrate from API v1 to v2](../migrations/v1-to-v2.md).
+API v1 remains available for existing consumers and retains its frozen original Stock-Paired classification. New integrations should use v2. The active v2 discovery pipeline does not scan or import those records. See [Migrate from API v1 to v2](../migrations/v1-to-v2.md).

@@ -6,7 +6,7 @@ API v2 is the canonical integration for new terminals, scanners, bots and launch
 
 API v1 classified historical first-party Stock-Paired launches as `custom`. Programmable no longer uses that model as its public Custom category.
 
-API v2 gives `custom` one precise product meaning: a Programmable Custom launch authenticated by an accepted canonical Custom Registry event or a consistent finalized canonical-Router `CustomGraph` stamp. Stock-Paired records remain available only through v1 compatibility endpoints and are not `Programmable Custom` in v2.
+API v2 gives `custom` one precise product meaning: a Programmable Custom launch authenticated by an accepted canonical Custom Registry event or a consistent finalized canonical-Router `CustomGraph` stamp. Stock-Paired records are entirely excluded from active v2 discovery. Their frozen v1 representation remains only for compatibility and is not an input to v2.
 
 ## Classification contract
 
@@ -40,12 +40,12 @@ The pagination model, response shape and read-only security boundary remain the 
 4. Preserve `token: null`, authenticated assets, and zero, one, or several markets without fabricating a token or pool.
 5. Map only `classic` and `custom` to the two exact display labels above.
 6. Remove v1 Stock-Paired records from any Programmable Custom filter.
-7. Resolve Classic launchers, the Custom Registry and the canonical Router from the v2 manifest.
+7. Resolve Classic launchers, the Custom Registry and the canonical Router from the v2 manifest. Scan only enabled Classic releases, currently historical V3 plus current V4; do not reactivate V1/V2 or import Stock.
 8. Keep the Custom filter visible when no matching records are returned; inspect response quality and do not treat a degraded or unavailable absence as deletion.
 9. Enable a Custom record only when its declared Registry or Router provenance path has complete accepted evidence.
 
 ## Availability
 
-Classic discovery and Custom Registry generation 1 are live. V2 returns only finalized approved Custom Registry records. Legacy Registry and GitHub submission intake are closed and represented separately by `publicSubmissionsEnabled: false`. Custom Launch API V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions.
+Classic V3/V4 discovery and Custom Registry generation 1 are live. Manifest-driven consumers discover V4 by refreshing enabled deployment entries; no code or pinned-address change is required. V2 returns only finalized approved Custom Registry records. Router is a provenance and transport path for the existing categories, not a third category. Legacy Registry and GitHub submission intake are closed and represented separately by `publicSubmissionsEnabled: false`. Custom Launch API V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions.
 
 API v1 remains supported and has no retirement date. New integrations should use v2.

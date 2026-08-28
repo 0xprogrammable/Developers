@@ -29,13 +29,114 @@ const FROZEN_ARTIFACT_PATH =
     "../programmable-launch-stamp-router-main-20260809/out/ProgrammableLaunchStampRouterV1.sol/ProgrammableLaunchStampRouterV1.json",
   );
 
+const EXPECTED_CLASSIC_CANARY_EVIDENCE = {
+  finality: "finalized",
+  source: {
+    sourceRepository: "https://github.com/0xprogrammable/PROGRAMMABLE-EVM",
+    releaseCommit: "707d438576dcf47dc2667125789fd35eb1c3de50",
+    releaseTree: "789161bc206ea145f12b809f9d1746bd1a83468a",
+    manifestPublication: {
+      commit: "ff51e713feb52e4e13f3c553d1c726f3c8f2858c",
+      tree: "53a8ce252d98703008ba17408f6c24555b8be45e",
+      path: "contracts/deployments/mainnet-classic-v4.json",
+      url: "https://raw.githubusercontent.com/0xprogrammable/PROGRAMMABLE-EVM/ff51e713feb52e4e13f3c553d1c726f3c8f2858c/contracts/deployments/mainnet-classic-v4.json",
+      sha256:
+        "sha256:5005df478e1298bbf9c2f1ff9256192290c5ca3652ee7cae13c0326a62893fc6",
+    },
+  },
+  transactionHash:
+    "0xbb6b4c9fc70600e4d5dd394314a49630bf9f837a82065013c397ebebd978aa7c",
+  blockNumber: "25854486",
+  blockHash:
+    "0x66d7201c8274251f7e94960edad2570e9121f7a0209f4528c09c41c5ea9cdb7c",
+  transactionIndex: 188,
+  launchId:
+    "0x75503436c39192ea7f165d1c0140724fed5dbd73c9b4816de713e34fe5a3fc87",
+  stampHash:
+    "0xd173468420cfa5159890896d34746c9c2fc9bb5e3960a1062aa82d1c3ffb5941",
+  launchKind: 2,
+  route: {
+    launcher: "0xBBDF30a2fE1394e4AA864aC269C6cF09b518E699",
+    launcherRuntimeCodeHash:
+      "0xc80a1d3b6b3f196a54cea46fc94913d59aec2937e94e70b53fe5c5fd7f5c4b12",
+    routePayloadHash:
+      "0x344818154572f460bc3fa598678f37fc8f4853e9785ca723419511e5179dab40",
+    expectedResultHash:
+      "0x44e56f4408bee94e5179b10ee30574f740b6bf0e3d47b202b1c0a0e0179403ab",
+    permitDigest:
+      "0xfe2e718590739692dfe500000a18d62c07cb11d44cf5035febb12cac6c4466df",
+  },
+  components: [
+    {
+      role: "positionRecipient",
+      kind: 0,
+      address: "0x0EC0ac6aA9724928aA678c407039D5b2d65cB7Ed",
+      runtimeCodeHash:
+        "0xbfcf00b05d7092f0e47d9dc8ed24cdfab992dfe82da0ac1c1ff8e2c3c2dbc7d7",
+    },
+    {
+      role: "rewardVault",
+      kind: 0,
+      address: "0x541034C6613154e81a64F9A9Ca1A572819E426E3",
+      runtimeCodeHash:
+        "0x263080da69f045205235451b41e17da8f03955ece962f4589ee604ccc3c36625",
+    },
+    {
+      role: "hook",
+      kind: 2,
+      address: "0xADF955a44FD7F009380240d56D71dFAfB46020cc",
+      runtimeCodeHash:
+        "0xf3a1a628ce898c527f24569b426aa795ec65ff9d97afa2b89e8ea5a2b99ad280",
+    },
+    {
+      role: "token",
+      kind: 1,
+      address: "0xB382f738a99820276FD66EfB94b75Eca104c2B4D",
+      runtimeCodeHash:
+        "0x554847de232eb1242cae2befefb8882eb05947e2b103220baaebb3e2ab59b132",
+    },
+  ],
+  pool: {
+    poolManager: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+    poolId:
+      "0xef513a3234ab2eb561aa0a7ee55619ace1624a900e5f7b55156ba6d0cc86334a",
+    activeLiquidity: "47813640512503339560210",
+  },
+  lpPosition: {
+    positionManager: "0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e",
+    tokenId: "386488",
+    owner: "0x0EC0ac6aA9724928aA678c407039D5b2d65cB7Ed",
+  },
+  platformFee: {
+    rateBps: 10,
+    recipient: "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
+  },
+  tokenTotalSupply: "1000000000000000000000000000",
+  verification: {
+    verificationBlock: "25855200",
+    verificationBlockHash:
+      "0x3de5eeb594e8431be0d090f65fe2ddfc38900f0c4bce9320f4a46bb280b9d905",
+    releaseManifestDigest:
+      "0xb08e7032c801ddc3d5ba958eb389d2728bb439e4105aef4e7706969f7426ee00",
+    releaseBindingDigest:
+      "0xf4bd9a33728b62deca13a68b3b5ceedab9504930bf4c1676f3abaa4fc4f8cb13",
+    deploymentEvidenceDigest:
+      "0xd21105b4d7e1a4104457a96cdea9054d027ec46142cc82da858ffb69730fdc7f",
+    sourceEvidenceDigest:
+      "0x8b0d405e1a05ca41b1ff7dee774b9795d0ee4465c7ab505cd26e77c7a7b3c005",
+    lifecycleEvidenceDigest:
+      "0x8cebe98625569273cb3612deb6ea14621ef124c9197418923e034a39db1c316a",
+  },
+};
+
 describe("launch stamp Router documentation", () => {
   test("publishes one top-level future-only Router descriptor", async () => {
     const manifest = await readJson(MANIFEST_PATH);
     const fixture = await readJson(FIXTURE_PATH);
     const router = manifest.launchStampRouter;
 
-    assert.equal(manifest.generatedAt, "2026-08-28T07:18:00Z");
+    assert.equal(manifest.manifestVersion, "12");
+    assert.equal(manifest.generatedAt, "2026-08-28T21:45:04Z");
     assert.ok(router, "top-level launchStampRouter is required");
     assert.equal(manifest.customRegistry.launchStamp, undefined);
     assert.equal(router.status, "live");
@@ -129,7 +230,7 @@ describe("launch stamp Router documentation", () => {
     );
     assert.deepEqual(router.canaryEvidence.routeCoverage, {
       customGraphOnchainCanary: true,
-      classicOnchainCanary: false,
+      classicOnchainCanary: true,
     });
     assert.equal(router.canaryEvidence.launchKind, router.enumValues.launchKind.customGraph);
     assert.equal(router.canaryEvidence.pool.poolManager, router.bindings.poolManager);
@@ -144,6 +245,59 @@ describe("launch stamp Router documentation", () => {
     assert.deepEqual(
       router.canaryEvidence.stampProofs.map(({ component }) => component),
       Object.values(router.canaryEvidence.components),
+    );
+    assert.deepEqual(
+      router.classicCanaryEvidence,
+      EXPECTED_CLASSIC_CANARY_EVIDENCE,
+    );
+    const classicV4Deployments = manifest.deployments.filter(
+      (deployment) =>
+        deployment.category === "classic" &&
+        deployment.modelVersion === "4" &&
+        deployment.lifecycle === "current" &&
+        deployment.discovery === "enabled",
+    );
+    assert.equal(classicV4Deployments.length, 1);
+    const classicV4 = classicV4Deployments[0];
+    assert.equal(
+      router.classicCanaryEvidence.launchKind,
+      router.enumValues.launchKind.classic,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.route.launcher,
+      classicV4.contracts.launcher,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.route.launcherRuntimeCodeHash,
+      classicV4.evidence.launcherRuntimeCodeHash,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.source.sourceRepository,
+      classicV4.evidence.sourceRepository,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.source.releaseCommit,
+      classicV4.evidence.sourceCommit,
+    );
+    const manifestPublication =
+      router.classicCanaryEvidence.source.manifestPublication;
+    assert.equal(
+      manifestPublication.url,
+      `https://raw.githubusercontent.com/0xprogrammable/PROGRAMMABLE-EVM/${manifestPublication.commit}/${manifestPublication.path}`,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.components.find(({ role }) => role === "hook")
+        ?.address,
+      classicV4.contracts.hook,
+    );
+    assert.equal(
+      router.classicCanaryEvidence.pool.poolManager,
+      router.bindings.poolManager,
+    );
+    assert.ok(
+      BigInt(router.classicCanaryEvidence.blockNumber) >=
+        BigInt(classicV4.startBlock),
+      "Classic canary must be at or after Classic V4 activation",
     );
     assert.deepEqual(fixture, prelaunchDescriptor(router));
     assert.match(router.abiSha256, /^sha256:[0-9a-f]{64}$/);
@@ -182,6 +336,9 @@ describe("launch stamp Router documentation", () => {
       (router) => {
         router.canaryEvidence = {};
       },
+      (router) => {
+        router.classicCanaryEvidence = {};
+      },
     ]) {
       const falsePrelaunch = structuredClone(prelaunch);
       mutate(falsePrelaunch.launchStampRouter);
@@ -211,6 +368,9 @@ describe("launch stamp Router documentation", () => {
       },
       (router) => {
         router.canaryEvidence = null;
+      },
+      (router) => {
+        router.classicCanaryEvidence = null;
       },
     ]) {
       const activationDrift = structuredClone(manifest);
@@ -254,7 +414,7 @@ describe("launch stamp Router documentation", () => {
         evidence.finality = "pending";
       },
       (evidence) => {
-        evidence.routeCoverage.classicOnchainCanary = true;
+        evidence.routeCoverage.classicOnchainCanary = false;
       },
       (evidence) => {
         evidence.source.sourceCommit = "1".repeat(40);
@@ -300,6 +460,55 @@ describe("launch stamp Router documentation", () => {
         validate(canaryDrift),
         false,
         "approved finalized Router canary evidence drift must fail schema validation",
+      );
+    }
+
+    for (const mutate of [
+      (evidence) => {
+        evidence.finality = "pending";
+      },
+      (evidence) => {
+        evidence.source.releaseCommit = "1".repeat(40);
+      },
+      (evidence) => {
+        evidence.source.manifestPublication = null;
+      },
+      (evidence) => {
+        evidence.source.manifestPublication.commit = "1".repeat(40);
+      },
+      (evidence) => {
+        evidence.source.manifestPublication.sha256 = `sha256:${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.transactionHash = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.route.launcher =
+          "0x1111111111111111111111111111111111111111";
+      },
+      (evidence) => {
+        evidence.components[0].runtimeCodeHash = `0x${"1".repeat(64)}`;
+      },
+      (evidence) => {
+        evidence.pool.activeLiquidity = "1";
+      },
+      (evidence) => {
+        evidence.lpPosition.owner =
+          "0x1111111111111111111111111111111111111111";
+      },
+      (evidence) => {
+        evidence.platformFee.rateBps = 1;
+      },
+      (evidence) => {
+        evidence.verification.lifecycleEvidenceDigest = `0x${"1".repeat(64)}`;
+      },
+    ]) {
+      const classicCanaryDrift = structuredClone(manifest);
+      mutate(classicCanaryDrift.launchStampRouter.classicCanaryEvidence);
+      assert.equal(
+        validate(classicCanaryDrift),
+        false,
+        "approved finalized Classic Router canary evidence drift must fail schema validation",
       );
     }
 
@@ -491,7 +700,10 @@ describe("launch stamp Router documentation", () => {
     assert.match(guide, /exact manifest router address/i);
     assert.match(guide, /correct topic from any other emitter is not Programmable provenance/i);
     assert.match(guide, /PoolManager \+ PoolId/);
-    assert.match(guide, /Direct calls to the Classic V3 Factory or Graph Factory outside the router/i);
+    assert.match(
+      guide,
+      /Direct calls to a Classic launcher or Graph Factory outside the Router/i,
+    );
     assert.match(guide, /Single Factory is outside Router V1/i);
     assert.match(guide, /no EOA authority fallback/i);
     assert.match(guide, /proxy or beacon/i);
@@ -505,8 +717,31 @@ describe("launch stamp Router documentation", () => {
       guide,
       /routeCoverage\.customGraphOnchainCanary`\s*\|\s*`true/,
     );
-    assert.match(guide, /no separate Classic onchain canary/i);
-    assert.match(guide, /future Classic launch qualifies only when.*stamp/i);
+    assert.match(
+      guide,
+      /routeCoverage\.classicOnchainCanary`\s*\|\s*`true/,
+    );
+    assert.match(guide, /Finalized Classic V4 test vector/i);
+    assert.match(guide, /launchStampRouter\.classicCanaryEvidence/);
+    assert.match(guide, /\/launchStampRouter\/classicCanaryEvidence/);
+    assert.match(
+      guide,
+      /classicCanaryEvidence\.source\.manifestPublication/,
+    );
+    assert.match(guide, /refresh.*manifest/i);
+    assert.match(
+      guide,
+      /resolve the single enabled current Classic V4 deployment dynamically/i,
+    );
+    assert.match(
+      guide,
+      /cross-check `classicCanaryEvidence` against that release and the same canonical Router/i,
+    );
+    assert.match(
+      guide,
+      /Never copy its address, start block, or evidence values into client code/i,
+    );
+    assert.match(guide, /does not retroactively stamp Classic V3/i);
     assert.match(guide, /requires `64` confirmations/i);
     assert.match(guide, /finalized PCAN test vector/i);
     assert.match(guide, /\/launchStampRouter\/canaryEvidence/);
@@ -699,6 +934,7 @@ describe("launch stamp Router documentation", () => {
       poolManagerRuntimeCodeHash: runtimeCodeHash,
     });
     router.canaryEvidence.pool.poolManager = addresses.poolManager;
+    router.classicCanaryEvidence.pool.poolManager = addresses.poolManager;
 
     let servedManifest = { ...publishedManifest, launchStampRouter: router };
     let chainHead = 100n;
@@ -837,12 +1073,67 @@ describe("launch stamp Router documentation", () => {
       );
 
       const falseClassicCoverage = structuredClone(router.canaryEvidence);
-      falseClassicCoverage.routeCoverage.classicOnchainCanary = true;
+      falseClassicCoverage.routeCoverage.classicOnchainCanary = false;
       servedManifest = {
         ...servedManifest,
         launchStampRouter: {
           ...router,
           canaryEvidence: falseClassicCoverage,
+        },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-canary-evidence-incomplete",
+      );
+
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: { ...router, classicCanaryEvidence: null },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-canary-evidence-incomplete",
+      );
+
+      const corruptClassicEvidence = structuredClone(
+        router.classicCanaryEvidence,
+      );
+      corruptClassicEvidence.route.launcher =
+        "0x1111111111111111111111111111111111111111";
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: {
+          ...router,
+          classicCanaryEvidence: corruptClassicEvidence,
+        },
+      };
+      assert.equal(
+        (await verifyLaunchStamp({
+          kind: "token",
+          values: [addresses.token],
+          discoveryUrl,
+        })).reason,
+        "router-canary-evidence-incomplete",
+      );
+
+      const corruptPublicationEvidence = structuredClone(
+        router.classicCanaryEvidence,
+      );
+      corruptPublicationEvidence.source.manifestPublication.sha256 =
+        "sha256:malformed";
+      servedManifest = {
+        ...servedManifest,
+        launchStampRouter: {
+          ...router,
+          classicCanaryEvidence: corruptPublicationEvidence,
         },
       };
       assert.equal(
@@ -932,6 +1223,7 @@ function prelaunchDescriptor(router) {
     endBlock: null,
     runtimeCodeHash: null,
     canaryEvidence: null,
+    classicCanaryEvidence: null,
     finalityConfirmations: null,
   });
   for (const key of Object.keys(descriptor.bindings)) {
