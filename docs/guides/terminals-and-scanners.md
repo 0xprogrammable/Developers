@@ -8,22 +8,22 @@ Expose exactly two filters and labels:
 
 | API value | Display label | Include |
 | --- | --- | --- |
-| `category=classic` | `Programmable Classic` | Current and historical Classic releases |
+| `category=classic` | `Programmable Classic` | Enabled historical V3 and current V4 releases |
 | `category=custom` | `Programmable Custom` | Launches accepted through the manifest-listed Custom Registry or finalized with `CustomGraph` by the canonical Router |
 
-Do not expose internal model IDs as additional public categories. A Programmable label establishes recognized launch provenance. It is not a universal audit, safety, liquidity, or execution guarantee.
+Do not expose internal model IDs or Router as additional public categories. Router is provenance and transport infrastructure. A Programmable label establishes recognized launch provenance. It is not a universal audit, safety, liquidity, or execution guarantee.
 
 ## Current Ethereum sources
 
-Read launcher, hook, registry, event and start-block values from `GET /api/v2/manifest` in production. A complete Classic backfill includes every deployment whose discovery state is enabled, including historical releases. Do not copy a deployment address into consumer code or documentation derived from this guide.
+Read launcher, hook, registry, event and start-block values from `GET /api/v2/manifest` in production. A complete Classic backfill includes every deployment whose discovery state is enabled: historical V3 and current V4 only. Classic V1/V2 remain inactive history, and Stock is excluded from active v2 discovery. Do not copy a deployment address into consumer code or documentation derived from this guide.
 
-The manifest records the historical Classic V2 hook and the current Classic V3 hook separately. New launches follow the current deployment; historical tokens remain associated with the deployment that emitted their launch event.
+The manifest records historical V3 and current V4 separately. New launches follow V4; historical V3 tokens remain associated with the deployment that emitted their launch event. A generic Router-first consumer discovers the V4 range by refreshing the manifest, without changing code or copying a new address.
 
 ## Current Custom boundary
 
 Custom Registry discovery is live and the v2 Custom feed publishes finalized approved records. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions.
 
-Historical Stock-Paired launches are not Programmable Custom in v2. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
+Stock launches are excluded from active v2 discovery and are not Programmable Custom. Do not import them from API v1, infer the label from a hook address, or assign the label from a provider name.
 
 Every recognized Custom launch uses the same `custom` category even when its token, hook, factory, provider, market and template contracts differ from every prior launch. Those values stay on the individual record. Registry records derive the classification from the accepted Registry event; Router records derive it from a consistent finalized `CustomGraph` stamp. Neither lane may infer the label from metadata.
 
@@ -40,7 +40,7 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
 
-For direct onchain consumers, keep the existing deployment sources and the live launch-stamp Router source separate. The manifest marks Router V1 live from block `25717612` with `64` finality confirmations. Its finalized onchain canary covers `CustomGraph`; no separate Classic onchain canary is published. A future Classic label still requires a consistent stamp from the live Router.
+For direct onchain consumers, keep the enabled deployment sources and the live launch-stamp Router source separate. The manifest publishes exact finalized canary evidence for both `CustomGraph` and Classic, with `classicOnchainCanary: true`. Verify the corresponding evidence object and canonical chain boundary; the boolean alone is not proof.
 
 1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
 2. Registry-backed `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
@@ -51,7 +51,7 @@ The hosted v2 launch feed also projects finalized canonical-Router Custom token 
 
 For an interoperable Router point lookup, use the manifest-advertised getter for a token or `PoolManager + PoolId`. Scope every nonzero launch ID with the manifest chain ID and Router address. The Classic hook is shared, so its address must never identify or classify one Classic launch. `launchIdByComponent` may corroborate an exclusive component; for every address-based lookup, require `stampProof` to return the same launch ID and stamp hash. Resolve one finalized or caller-supplied canonical block to a number and hash. Prefer EIP-1898 hash-bound reads with `requireCanonical: true`; otherwise re-read that height after the complete verification and require the hash to be unchanged. Use HTTPS for a remote RPC endpoint; plaintext HTTP is suitable only for loopback development. The lookup needs no Programmable server, database, Registry, or indexer. See [Launch stamp Router verification](../reference/launch-stamp.md).
 
-Logs qualify only when both the emitter and `topic0` exactly match the manifest-bound Router and ABI. A copied event from another address, direct Classic V3 Factory or Graph Factory calls, and every Single Factory call are outside Router V1 provenance.
+Logs qualify only when both the emitter and `topic0` exactly match the manifest-bound Router and ABI. A copied event from another address, direct Classic launcher or Graph Factory calls, and every Single Factory call are outside Router V1 provenance.
 
 For a direct onchain Router index, backfill `eth_getLogs` from the manifest `startBlock` in finality-bounded chunks, filtered by the exact Router emitter and complete topic set. Persist block hash, transaction hash and index, and log index. Verify every candidate through the matching token, pool, or exclusive-component getter plus `launchStamp` at the same canonical block; require `stampProof` for address-based token and component checks. Advance only a durable finalized checkpoint, replay an overlap idempotently, orphan and rewind on a block-hash change, then poll or subscribe from the overlapping checkpoint so the backfill-to-live handoff has no gap. A subscription notification alone is not provenance. The complete sequence and finalized PCAN test vector are in [Launch stamp Router verification](../reference/launch-stamp.md).
 
@@ -105,9 +105,9 @@ Use market kind, capabilities, and optional extensions for secondary details. Th
 
 ## Verification and sell support
 
-Current Classic V3 release evidence establishes a fixed supply of 1,000,000,000 tokens, no owner mint, blacklist, pause, or ERC20 transfer tax, permanently held one-sided Uniswap v4 liquidity, immutable directional fees, and a recorded mainnet buy, sell, and claim lifecycle.
+Classic V3 release evidence establishes a fixed supply of 1,000,000,000 tokens, no owner mint, blacklist, pause, or ERC20 transfer tax, permanently held one-sided Uniswap v4 liquidity, immutable directional fees, and a recorded mainnet buy, sell, and claim lifecycle. Treat V4 as a distinct manifest release and evaluate its own published evidence rather than extending V3 claims by version inference.
 
-Classic V3 has no token-level sell restriction. A terminal must still check current pool state, liquidity, quote, and simulation before enabling a trade. Do not translate the label into a generic `safe`, `audited`, `unruggable`, or `sellable` boolean.
+Classic V3 has no token-level sell restriction. A terminal must still check the applicable release evidence plus current pool state, liquidity, quote, and simulation before enabling a trade. Do not translate the label into a generic `safe`, `audited`, `unruggable`, or `sellable` boolean.
 
 Custom is a launch family rather than one mechanic. Preserve provider, factory, template, hook, source provenance, declared capabilities, market support, fee disclosure and release-specific review evidence as separate fields. Do not infer an audit or `Programmable Verified` from `category=custom`.
 
@@ -201,7 +201,7 @@ Test the client against repository fixtures for:
 - project-only Custom with `token: null` and authenticated contract assets;
 - multiple primary and secondary tokens;
 - unregistered external launch excluded from the feed;
-- historical Stock-Paired launch excluded from v2;
+- every Stock launch excluded from active v2 discovery;
 - paused market;
 - unknown future market kind;
 - unknown capability and extension;

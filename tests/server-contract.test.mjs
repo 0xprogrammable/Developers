@@ -12,6 +12,7 @@ import {
   tokenListPayload,
 } from "../api/v1/token-list.js";
 import {
+  LAUNCH_EVENT_GROUPS,
   LAUNCH_DISCOVERY_FILTER,
   RELEASE_BY_ID,
 } from "../server/constants.js";
@@ -32,8 +33,9 @@ import {
 } from "../server/http.js";
 import {
   compareLaunchesDescending,
+  decodeLaunchLog,
   normalizeGapLaunch,
-  normalizeLegacyToken,
+  normalizeCatalogToken,
   publicLaunch,
 } from "../server/normalize.js";
 import { createSchemaRegistry, assertValid } from "../scripts/lib/schema.mjs";
@@ -49,6 +51,46 @@ function classicV3Pool() {
     poolId: `0x${"c".repeat(64)}`,
     hookAddress: RELEASE_BY_ID.get("classic-v3").hook,
     quoteAssetAddress: null,
+  };
+}
+
+function abiAddressWord(address) {
+  return address.slice(2).padStart(64, "0");
+}
+
+function abiUintWord(value) {
+  return BigInt(value).toString(16).padStart(64, "0");
+}
+
+function classicLaunchLog(release, tokenAddress) {
+  const poolId = `0x${"c".repeat(64)}`;
+  const launchHash = `0x${"d".repeat(64)}`;
+  const rewardVault = "0x3333333333333333333333333333333333333333";
+  const positionRecipient = "0x4444444444444444444444444444444444444444";
+  return {
+    address: release.launcher,
+    topics: [
+      release.launchTopic,
+      `0x${abiAddressWord("0x7777777777777777777777777777777777777777")}`,
+      `0x${abiAddressWord(tokenAddress)}`,
+      poolId,
+    ],
+    data: `0x${[
+      abiAddressWord(release.hook),
+      abiAddressWord(rewardVault),
+      abiAddressWord(positionRecipient),
+      abiUintWord(386_488),
+      abiUintWord(100),
+      abiUintWord(200),
+      "0".repeat(64),
+      launchHash.slice(2),
+    ].join("")}`,
+    blockNumber: `0x${release.startBlock.toString(16)}`,
+    blockHash: `0x${"b".repeat(64)}`,
+    transactionHash: `0x${"a".repeat(64)}`,
+    transactionIndex: "0x2",
+    logIndex: "0x4",
+    blockTimestamp: "0x69a1f100",
   };
 }
 
@@ -557,9 +599,9 @@ describe("server cursor contract", () => {
 });
 
 describe("server normalization contract", () => {
-  test("normalizes a legacy record to the strict public launch schema without executable payloads", async () => {
+  test("normalizes a catalog record to the frozen public v1 launch schema without executable payloads", async () => {
     const poolId = `0x${"c".repeat(64)}`;
-    const legacy = {
+    const catalogToken = {
       schemaVersion: "programmable-token-v1",
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
@@ -592,7 +634,7 @@ describe("server normalization contract", () => {
         launchedAt: "2026-08-04T08:00:00.000Z",
       },
     };
-    const normalized = normalizeLegacyToken(legacy);
+    const normalized = normalizeCatalogToken(catalogToken);
     assert.ok(normalized);
     const publicRecord = publicLaunch(normalized);
     const registry = await createSchemaRegistry();
@@ -651,6 +693,37 @@ describe("server normalization contract", () => {
     assert.equal(publicRecord.verification.provenanceStatus, "verified");
   });
 
+  test("keeps a recognized catalog launch when token identity is partial", async () => {
+    const release = RELEASE_BY_ID.get("classic-v4");
+    const normalized = normalizeCatalogToken({
+      chainId: 1,
+      address: "0x5656565656565656565656565656565656565656",
+      name: null,
+      symbol: null,
+      decimals: null,
+      canonicalPool: {
+        poolId: `0x${"c".repeat(64)}`,
+        hookAddress: release.hook,
+        quoteAssetAddress: null,
+      },
+      launch: {
+        modelId: "classic",
+        modelVersion: "classic-v4",
+        transactionHash: `0x${"a".repeat(64)}`,
+        blockNumber: String(release.startBlock),
+        transactionIndex: 1,
+        logIndex: 2,
+        launchedAt: "2026-08-28T14:58:47.000Z",
+      },
+    });
+    assert.ok(normalized);
+    assert.equal(normalized.token.identityStatus, "partial");
+    assert.equal(normalized.token.name, null);
+    assert.equal(normalized.token.symbol, null);
+    assert.equal(normalized.token.decimals, null);
+    assert.equal(normalized.verification.sourceId, "ethereum-classic-v4");
+  });
+
   test("keeps complete identity with unavailable supply and block timestamp", async () => {
     const release = RELEASE_BY_ID.get("classic-v3");
     const normalized = normalizeGapLaunch(
@@ -692,7 +765,7 @@ describe("server normalization contract", () => {
   });
 
   test("strips bidi controls and rejects non-HTTPS creator metadata", () => {
-    const normalized = normalizeLegacyToken({
+    const normalized = normalizeCatalogToken({
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
       name: "Safe\u202EName",
@@ -724,8 +797,8 @@ describe("server normalization contract", () => {
     );
   });
 
-  test("does not assign Programmable origin to an unmatched legacy record", () => {
-    const normalized = normalizeLegacyToken({
+  test("does not assign Programmable origin to an unmatched catalog record", () => {
+    const normalized = normalizeCatalogToken({
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
       name: "Forged Origin",
@@ -742,35 +815,63 @@ describe("server normalization contract", () => {
     assert.equal(normalized, null);
   });
 
-  test("derives legacy release labels from canonical hook evidence, never the declared model version", () => {
-    const forged = normalizeLegacyToken({
+  test("recognizes Classic V4 from canonical hook evidence, never the declared catalog model version", () => {
+    const classicV4 = RELEASE_BY_ID.get("classic-v4");
+    const normalized = normalizeCatalogToken({
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
-      name: "Forged Classic",
-      symbol: "FORGED",
+      name: "Classic V4",
+      symbol: "CV4",
       decimals: 18,
       canonicalPool: {
         poolId: `0x${"c".repeat(64)}`,
-        hookAddress: RELEASE_BY_ID.get("stock-paired-v1").hook,
-        quoteAssetAddress: "0x2222222222222222222222222222222222222222",
+        hookAddress: classicV4.hook,
+        quoteAssetAddress: null,
       },
       launch: {
         modelId: "classic",
         modelVersion: "classic-v3",
         transactionHash: `0x${"a".repeat(64)}`,
-        blockNumber: String(RELEASE_BY_ID.get("stock-paired-v1").startBlock),
+        blockNumber: String(classicV4.startBlock),
         launchedAt: "2026-08-04T08:00:00.000Z",
       },
     });
-    assert.ok(forged);
-    assert.equal(forged.category, "custom");
-    assert.equal(forged.launch.modelId, "stock-paired");
-    assert.equal(forged.launch.modelVersion, "1");
-    assert.equal(forged.verification.sourceId, "ethereum-stock-paired-v1");
+    assert.ok(normalized);
+    assert.equal(normalized.category, "classic");
+    assert.equal(normalized.launch.modelId, "classic");
+    assert.equal(normalized.launch.modelVersion, "4");
+    assert.equal(normalized.verification.sourceId, "ethereum-classic-v4");
     assert.equal(
-      forged.extensions["programmable/release"].legacyModelVersion,
+      normalized.extensions["programmable/release"].legacyModelVersion,
       "classic-v3",
     );
+  });
+
+  test("decodes the shared MemeTokenLaunchedV2 event for Classic V3 and V4", () => {
+    const releases = [
+      RELEASE_BY_ID.get("classic-v3"),
+      RELEASE_BY_ID.get("classic-v4"),
+    ];
+    const tokenAddresses = [
+      "0x1111111111111111111111111111111111111111",
+      "0x2222222222222222222222222222222222222222",
+    ];
+
+    for (const [index, release] of releases.entries()) {
+      const decoded = decodeLaunchLog(
+        classicLaunchLog(release, tokenAddresses[index]),
+      );
+      assert.ok(decoded);
+      assert.equal(decoded.release.id, release.id);
+      assert.equal(decoded.tokenAddress, tokenAddresses[index]);
+      assert.equal(decoded.poolId, `0x${"c".repeat(64)}`);
+      assert.equal(decoded.hookAddress.toLowerCase(), release.hook.toLowerCase());
+      assert.equal(decoded.fallbackFees.buyTotalFeeBps, 100);
+      assert.equal(decoded.fallbackFees.sellTotalFeeBps, 200);
+      assert.equal(decoded.positionTokenId, "386488");
+      assert.equal(decoded.transactionIndex, 2);
+      assert.equal(decoded.logIndex, 4);
+    }
   });
 });
 
@@ -797,15 +898,29 @@ describe("server projections", () => {
     assert.equal(unavailableStatus.service, "degraded");
   });
 
-  test("keeps Classic v1 in the recognized onchain discovery surface", () => {
-    const classicV1 = RELEASE_BY_ID.get("classic-v1");
+  test("limits active onchain discovery to Classic V3 and V4 on their shared event", () => {
+    const classicV3 = RELEASE_BY_ID.get("classic-v3");
+    const classicV4 = RELEASE_BY_ID.get("classic-v4");
+
+    assert.deepEqual([...RELEASE_BY_ID.keys()], ["classic-v3", "classic-v4"]);
+    assert.deepEqual(LAUNCH_DISCOVERY_FILTER.addresses, [
+      classicV3.launcher,
+      classicV4.launcher,
+    ]);
+    assert.deepEqual(LAUNCH_DISCOVERY_FILTER.topics, [classicV3.launchTopic]);
+    assert.equal(classicV4.launchTopic, classicV3.launchTopic);
+    assert.deepEqual(LAUNCH_EVENT_GROUPS, [
+      {
+        topic: classicV3.launchTopic,
+        addresses: [classicV3.launcher, classicV4.launcher],
+      },
+    ]);
+    assert.equal(RELEASE_BY_ID.has("classic-v1"), false);
+    assert.equal(RELEASE_BY_ID.has("classic-v2"), false);
     assert.equal(
-      classicV1.launcher,
-      "0x51d702731db281EE223904A4663E05BfCA26C775",
+      [...RELEASE_BY_ID.keys()].some((releaseId) => releaseId.includes("stock")),
+      false,
     );
-    assert.equal(classicV1.startBlock, 25_622_048);
-    assert.ok(LAUNCH_DISCOVERY_FILTER.addresses.includes(classicV1.launcher));
-    assert.ok(LAUNCH_DISCOVERY_FILTER.topics.includes(classicV1.launchTopic));
   });
 
   test("serves the canonical deployment manifest without dynamic divergence", async () => {
@@ -834,7 +949,7 @@ describe("server projections", () => {
 
   test("matches normalized source IDs to the canonical deployment manifest", async () => {
     const manifest = await developerManifest();
-    const normalized = normalizeLegacyToken({
+    const normalized = normalizeCatalogToken({
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
       name: "Manifest Match",
@@ -876,7 +991,7 @@ describe("server projections", () => {
         launchedAt: "2026-08-04T08:00:00.000Z",
       },
     };
-    const finalized = normalizeLegacyToken(source);
+    const finalized = normalizeCatalogToken(source);
     finalized.launch.finality = "finalized";
     const confirmed = structuredClone(finalized);
     confirmed.token.address = "0x2222222222222222222222222222222222222222";
@@ -909,7 +1024,7 @@ describe("server projections", () => {
   });
 
   test("returns a known detail during partial coverage but not a false 404", async () => {
-    const known = normalizeLegacyToken({
+    const known = normalizeCatalogToken({
       chainId: 1,
       address: "0x1111111111111111111111111111111111111111",
       name: "Known Token",

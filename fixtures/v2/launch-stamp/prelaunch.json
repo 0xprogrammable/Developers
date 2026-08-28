@@ -49,6 +49,7 @@
     "evidenceSha256": "sha256:f9786ebfb74c96a3c225567ad324f0fbecfd8520b8d8addec85ba58cd67e19ff"
   },
   "canaryEvidence": null,
+  "classicCanaryEvidence": null,
   "finalityConfirmations": null,
   "canonicalReadBlock": "finalized-or-explicit-canonical-block",
   "authorityMode": "eip-1271-contract-only",

@@ -4,7 +4,7 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 ## Current boundary
 
-Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
+Ethereum is the only active chain in the current discovery document. Active Classic discovery consists only of historical V3 and current V4; Classic V1/V2 remain inactive manifest history. Custom Registry generation 1 is published separately in the v2 manifest. Deployment addresses and start blocks must be read from that manifest; public submissions remain disabled. Stock is not an active v2 discovery source. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
 Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 retain historical reads, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions. An unreleased Generation 2 release candidate exists for Registry conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
@@ -12,7 +12,7 @@ Custom Registry Generation 2 is not Custom Fee-Enforced Launch Profile V2. The
 fee-enforced profile is a separate retained historical path. Evidence
 for either surface cannot activate the other.
 
-The launch stamp Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
+The launch stamp Router is live on Ethereum. The manifest pins its exact address, start block, runtime hash, immutable production bindings, finality policy, finalized deployment evidence, and separate approved finalized `CustomGraph` and Classic V4 canaries. Route coverage is therefore `customGraphOnchainCanary: true` and `classicOnchainCanary: true`. Historical launches are not backfilled, and Router remains provenance and transport rather than a third public category.
 
 ## 2026-08-25 exact-source closeout
 
@@ -60,7 +60,9 @@ For Generation 1, authenticate the operation caller against the matching manifes
 
 ## Classic source verification
 
-For each enabled Classic deployment:
+The hosted baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted only when its schema, scope, evidence and identity commitments are internally consistent. Its currently observed Envio deployment is `production-6157d22`; a valid future deployment revision does not require client code changes. The retired legacy source that returned HTTP `410` is not a verification dependency. A direct onchain verifier independently scans only the enabled V3/V4 manifest entries.
+
+For each enabled Classic V3 or V4 deployment:
 
 1. Begin at its published `startBlock`; respect an `endBlock` or retired generation if present.
 2. Select the matching versioned [event ABI](../../abis/README.md), derive the canonical event topic from its signature, and query logs using both the manifest-listed launcher address and that topic.
@@ -70,7 +72,7 @@ For each enabled Classic deployment:
 6. Derive the launch and asset identities according to the published schema; never use name, symbol, image, or creator text as identity.
 7. Reconcile the normalized result with the API record and retain any evidence conflict for operator review.
 
-Multiple enabled deployments can overlap. Deduplicate the normalized launch by `launchId`, not by whichever deployment your scanner encountered first.
+Multiple enabled deployments can overlap. Deduplicate the normalized launch by `launchId`, not by whichever deployment your scanner encountered first. Refreshing the manifest is sufficient for a generic scanner to discover V4; no new hard-coded address or category is required.
 
 ## Launch stamp Router verification
 
@@ -247,14 +249,14 @@ If one required input is unavailable, malformed, or inconsistent, keep independe
 
 ## Published Router V1 activation evidence
 
-Router V1 activation binds one finalized deployment and one approved finalized Router canary. The manifest publishes:
+Router V1 activation binds one finalized deployment and two approved finalized route canaries. Read every exact value from the manifest rather than copying it into scanner code. The manifest publishes:
 
-- chain `1`, canonical Router `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56`, start block `25717612`, ABI, ABI hash, event topics, getter selectors, runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, and `64` finality confirmations;
-- the Router source/artifact binding at commit `0a7134bbb912222639627fb9078df2f8dd3a6c38`, the exact deployed runtime, and immutable EIP-1271 permit-authority, Graph Factory, and PoolManager bindings;
-- exactly one generic market-bearing atomic selector, with no route-specific overload: `CustomGraph` uses the immutable Graph Factory binding, while the Classic V3 route and runtime are permit- and record-bound; no Single Factory route exists;
-- frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics; and
-- finalized `CustomGraph` canary transaction `0xc07b4e70233534a1d4f435ffc9a636ed5f542f4aedcde35052c58224f378b612`, launch ID `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92`, and successful token, `PoolManager + PoolId`, exclusive-component, `stampProof`, stamp-record, and point-in-time code-hash cross-checks.
+- the canonical chain, Router, start block, ABI and runtime hashes, event topics, getter selectors, finality policy, source/artifact binding, and immutable production bindings;
+- exactly one generic market-bearing atomic selector, with no route-specific overload: `CustomGraph` uses the immutable Graph Factory binding, while Classic uses its permit- and record-bound route launcher; no Single Factory route exists;
+- frozen `LaunchKindV1.CustomGraph | Classic` record and event semantics;
+- the finalized PCAN `CustomGraph` vector at `/launchStampRouter/canaryEvidence`; and
+- the finalized current Classic V4 vector at `/launchStampRouter/classicCanaryEvidence`.
 
-The canary source commit `b3cfed41bb841ae8d6188dbb815eddb5e1440218` is separate from the deployed Router source commit and does not replace it. Route coverage is `CustomGraph` onchain canary `true` and Classic onchain canary `false`. The frozen source and tests cover Classic behavior through the same live ABI, but a future Classic launch has onchain provenance only when the live Router writes a consistent `LaunchKindV1.Classic` stamp. Canary liquidity, LP position, fee, and supply values are block-specific observations, not current market or safety claims.
+The two vectors establish exact route coverage as `customGraphOnchainCanary: true` and `classicOnchainCanary: true`. Their source, deployment, lifecycle, component, pool, position, supply, and fee observations remain independently bound in the manifest. They do not replace per-launch stamp verification, backfill historical launches, establish current market state, or create a Router category.
 
 Read [Programmable Verified](../concepts/programmable-verified.md), [Multi-chain discovery](../concepts/multi-chain.md), and [Production operations](../operations.md) before enabling a production scanner.

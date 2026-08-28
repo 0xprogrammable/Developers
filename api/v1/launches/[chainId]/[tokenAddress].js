@@ -1,9 +1,9 @@
 import { CHAIN_ID } from "../../../../server/constants.js";
 import {
   feedStatusForCategory,
-  getDataset,
   isDatasetPublishable,
 } from "../../../../server/dataset.js";
+import { getV1Dataset } from "../../../../server/v1-frozen.js";
 import {
   error,
   handleOptions,
@@ -14,7 +14,7 @@ import {
 } from "../../../../server/http.js";
 import { isV1PublicLaunch, publicLaunch } from "../../../../server/normalize.js";
 
-export function createLaunchDetailHandler(loadDataset = getDataset) {
+export function createLaunchDetailHandler(loadDataset = getV1Dataset) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {

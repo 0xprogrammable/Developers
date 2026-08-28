@@ -30,6 +30,8 @@ curl -fsSL https://developers.programmable.family/api/v2/manifest
 
 The manifest is the integration source for active deployments, start blocks, categories, Custom Registry state, platform fee disclosure, API routes, and compatibility information. Read its arrays at runtime. Do not copy an individual contract address into permanent client code.
 
+Active v2 Classic discovery is intentionally limited to the historical V3 release and the current V4 release. Classic V1 and V2 remain inactive history and Stock is excluded from active v2 discovery. Custom remains a separate source lane. The Router supplies provenance and transport evidence; it is not a third public category. Refreshing the manifest is sufficient for a generic Router-first integration to discover V4 without a client code or address update.
+
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. The Website endpoint at `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror with its own schema; it must not override the Developer manifest. If the two disagree, retain the last trusted Developer manifest, stop accepting new deployment identities, and alert an operator.
 
 ## 4. Fetch launches
@@ -72,6 +74,8 @@ An empty `markets` array is valid. It means the launch currently has no register
 `status: "degraded"` can accompany valid recognized launch items when metadata, supply, or block-timestamp enrichment is incomplete. Preserve null and unavailable fields and inspect each record's `identityStatus`, `supplyStatus`, metadata trust, and `provenanceStatus`. Incomplete enrichment does not remove a recognized launch.
 
 The snapshot's top-level block is the highest represented chain boundary, so an included launch is never newer than the response snapshot. Its finality remains conservative across the represented sources. Inspect `snapshot.sources.classicIndexer`, `snapshot.sources.customRegistry`, and `snapshot.sources.routerCustom` for the exact source vector, including a source that is behind the top-level boundary. Router Custom commitment changes intentionally replay Router identities during an `after` poll so a newly published identity with an older launch block cannot be skipped. Upsert by `launchId` and treat that replay as at-least-once delivery.
+
+The hosted Classic baseline is read from the canonical paginated `https://programmable.market/api/explore` catalog and accepted only when its schema, scope, evidence and identity commitments are internally consistent. The current evidence reports Envio deployment `production-6157d22`, but legitimate deployment revisions do not require code changes. The retired legacy token source returns HTTP `410` and is not used. Consumers should still integrate through the Developer discovery and launch-feed URLs above rather than binding directly to that internal upstream.
 
 If canonical event-log coverage is incomplete, launch-list and token-list return the recognized bounded subset with `status: "degraded"` or `"unavailable"`. Process present records, but do not interpret absence as deletion or complete history.
 

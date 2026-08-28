@@ -7,15 +7,15 @@ info:
   description: |
     Read-only discovery for terminals, scanners, explorers, bots, wallets and apps.
 
-    Classic is live on Ethereum. Existing Custom records include first-party
-    Stock-Paired launches. Authenticated finalized Custom Registry ingestion is
-    configuration-gated; the API never substitutes a placeholder Registry URL,
-    binding, credential, token, pair or pool.
+    API v1 is an immutable compatibility view at its published Ethereum
+    snapshot boundary. It contains historical Classic V1-V3 records and the
+    original first-party Stock-Paired records classified as Custom. It performs
+    no active legacy scans or Registry ingestion. New Classic V4 and Custom
+    launches are available only through API v2.
 
-    Within v1, existing fields keep their type and meaning. New deployments,
-    capabilities and market kinds are additive. Consumers must ignore unknown
-    fields and keep unknown market kinds discoverable, even when they cannot
-    chart, quote or execute them.
+    Within v1, existing fields keep their frozen type and meaning. Consumers
+    must ignore unknown fields and keep unknown market kinds discoverable, even
+    when they cannot chart, quote or execute them.
   license:
     name: MIT
     identifier: MIT
@@ -37,47 +37,18 @@ tags:
     description: Compatibility output for existing token-list consumers.
 security: []
 paths:
-  /.well-known/programmable.json:
-    get:
-      tags: [Discovery]
-      operationId: getProgrammableDiscovery
-      summary: Discover the Programmable Developer API
-      description: |
-        Returns stable links to the v1 API, deployment manifest, schemas,
-        OpenAPI document and documentation. Integrators should begin here and
-        must resolve deployment addresses from the manifest rather than
-        hardcoding them.
-      responses:
-        "200":
-          description: Stable discovery document.
-          headers:
-            Cache-Control:
-              $ref: "#/components/headers/CacheControl"
-            ETag:
-              $ref: "#/components/headers/ETag"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WellKnownDocument"
-        "304":
-          $ref: "#/components/responses/NotModified"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-        "503":
-          $ref: "#/components/responses/Unavailable"
-
   /api/v1/status:
     get:
       tags: [Discovery]
       operationId: getStatus
       summary: Read API and data-pipeline status
       description: |
-        Reports service availability separately from Classic discovery,
-        Custom public-submission readiness and feed freshness. A successful
-        HTTP response is not itself proof that indexed data is current.
+        Reports availability of the immutable v1 compatibility snapshot. Its
+        fixed boundary is historical evidence, not a current indexer freshness
+        signal. Use API v2 status for active discovery readiness.
       responses:
         "200":
-          description: Current service and feed status.
+          description: Immutable v1 compatibility snapshot status.
           headers:
             Cache-Control:
               $ref: "#/components/headers/CacheControl"
@@ -100,16 +71,16 @@ paths:
     get:
       tags: [Discovery]
       operationId: getDeploymentManifest
-      summary: Resolve current and historical deployments
+      summary: Resolve the frozen v1 deployment set
       description: |
-        Returns the dynamic Ethereum deployment manifest. Historical
-        deployments remain present for backfills. New deployments are added
-        here so clients do not need a code change. A prelaunch deployment can
-        carry null address and start-block fields; clients must never replace
-        those nulls with guessed values.
+        Returns the frozen Ethereum deployment manifest retained for v1
+        compatibility and historical backfills. New deployments are published
+        through the v2 manifest. A retained prelaunch deployment can carry null
+        address and start-block fields; clients must never replace those nulls
+        with guessed values.
       responses:
         "200":
-          description: Current deployment manifest.
+          description: Frozen v1 deployment manifest.
           headers:
             Cache-Control:
               $ref: "#/components/headers/CacheControl"
@@ -254,138 +225,6 @@ components:
       $ref: ../schemas/v1/token-list.schema.json
     Problem:
       $ref: ../schemas/v1/problem.schema.json
-    WellKnownDocument:
-      type: object
-      additionalProperties: false
-      required:
-        - schemaVersion
-        - platformId
-        - name
-        - description
-        - apiVersion
-        - apiBaseUrl
-        - statusUrl
-        - manifestUrl
-        - launchesUrl
-        - tokenListUrl
-        - openApiUrl
-        - schemasBaseUrl
-        - documentationUrl
-        - sourceUrl
-        - chains
-        - publicCategories
-        - compatibility
-        - extensions
-      properties:
-        schemaVersion:
-          enum: [1.0.0, 1.1.0]
-        platformId:
-          const: programmable
-        name:
-          type: string
-        description:
-          type: string
-        apiVersion:
-          const: "1"
-        apiBaseUrl:
-          type: string
-          format: uri
-        statusUrl:
-          type: string
-          format: uri
-        manifestUrl:
-          type: string
-          format: uri
-        launchesUrl:
-          type: string
-          format: uri
-        tokenListUrl:
-          type: string
-          format: uri
-        openApiUrl:
-          type: string
-          format: uri
-        schemasBaseUrl:
-          type: string
-          format: uri
-        documentationUrl:
-          type: string
-          format: uri
-        sourceUrl:
-          type: string
-          format: uri
-        chains:
-          type: array
-          minItems: 1
-          items:
-            type: object
-            additionalProperties: false
-            required: [chainId, caip2, name, explorerUrl, status]
-            properties:
-              chainId:
-                const: 1
-              caip2:
-                const: eip155:1
-              name:
-                const: Ethereum Mainnet
-              explorerUrl:
-                type: string
-                format: uri
-              status:
-                const: live
-        publicCategories:
-          type: object
-          additionalProperties: false
-          required: [classic, custom]
-          properties:
-            classic:
-              type: object
-              additionalProperties: false
-              required: [discoveryStatus]
-              properties:
-                discoveryStatus:
-                  const: live
-            custom:
-              type: object
-              additionalProperties: false
-              required: [discoveryStatus, publicSubmissionStatus, note]
-              properties:
-                discoveryStatus:
-                  const: live
-                publicSubmissionStatus:
-                  const: prelaunch
-                note:
-                  type: string
-        compatibility:
-          type: object
-          additionalProperties: false
-          required:
-            - majorVersion
-            - additiveChangesOnly
-            - unknownFields
-            - unknownCapabilities
-            - unknownMarketKinds
-            - deploymentAddresses
-          properties:
-            majorVersion:
-              const: 1
-            additiveChangesOnly:
-              const: true
-            unknownFields:
-              const: ignore
-            unknownCapabilities:
-              const: preserve
-            unknownMarketKinds:
-              const: display-as-unsupported
-            deploymentAddresses:
-              const: resolve-from-manifest
-        extensions:
-          type: object
-          description: Namespaced, non-authoritative additive data. Consumers must never execute extension content.
-          propertyNames:
-            pattern: ^[a-z0-9]+(?:\.[a-z0-9-]+)+$
-          additionalProperties:
-            type: object
 
   parameters:
     ChainIdQuery:

@@ -51,8 +51,17 @@ info:
   description: |
     Read-only discovery for terminals, scanners, explorers, bots, wallets and apps.
 
-    Classic is live on Ethereum. Custom discovery includes Registry-verified and
-    finalized Router-stamped launches. The separate authenticated Custom Launch
+    Classic discovery is live on Ethereum for historical V3 and current V4 only.
+    Classic V1 and V2 remain inactive manifest history and are not scanned.
+    Manifest-following consumers receive V4 through a normal refresh without a
+    client code or address change. The hosted Classic baseline is the complete
+    paginated `https://programmable.market/api/explore` catalog, validated
+    through schema, scope, evidence and identity commitments. It currently
+    reports Envio deployment `production-6157d22`; legitimate deployment
+    revisions do not require code changes. The retired HTTP 410 legacy source
+    is not used. Custom discovery remains separate and includes Registry-verified and
+    finalized Router-stamped launches. The Router is provenance and transport,
+    not a public category. The separate authenticated Custom Launch
     API V1 at `https://api.programmable.market` keeps provenance reads and status
     live, but POST is read-only and returns nonretryable
     `409 CUSTOM_LAUNCH_V1_READ_ONLY`; this Developer v2 service also remains read
@@ -76,8 +85,9 @@ info:
     V1/V2 reads plus the active V3 launch API. Status keeps `customLaunchApi` as the V1 compatibility
     object and publishes `currentCustomLaunchCreate` as the unambiguous active
     V3 create pointer.
-    Historical Stock-Paired
-    launches are not part of the version 2 Programmable Custom classification.
+    Stock-Paired launches are excluded from active API v2 Developer discovery
+    and scanning. The immutable v1 compatibility snapshot retains frozen
+    Stock-Paired history without reactivating Stock scanning.
     `category: custom` is the stable product taxonomy, not a claim of Registry
     acceptance. Consumers must inspect
     `extensions["programmable/classification"].basis` and verify the Registry
@@ -259,24 +269,25 @@ paths:
       operationId: getDeploymentManifest
       summary: Resolve current and historical deployments
       description: |
-        Returns active, historical and prelaunch chain/deployment profiles.
-        Historical deployments remain present for backfills. New EVM chains
-        and Registry generations are added here so clients do not need a code
-        change. A prelaunch Registry carries null address and start-block
+        Returns active, inactive historical and prelaunch chain/deployment profiles.
+        Active Classic discovery uses only the enabled V3 and V4 entries. V1 and
+        V2 remain inactive compatibility history and are not scanned; Stock is
+        excluded. Generic manifest- and Router-first consumers discover V4
+        through a manifest refresh without a client code or address change.
+        New EVM chains and Registry generations are added here so clients do not
+        need a code change. A prelaunch Registry carries null address and start-block
         fields; clients must never replace those nulls with guessed values.
         `launchStampRouter` is the independent provenance-only trust root for
-        future Router-stamped Classic and Custom launches. The frozen ABI,
+        Router-stamped Classic and Custom launches, not a public category. The frozen ABI,
         its hosted URL and published ABI-file hash, pinned source/extraction reference, events,
         indexed layouts, getter selectors, enum values and sole atomic selector are published. Its
         separate `deploymentEvidence` object publishes the finalized Ethereum
-        deployment, runtime identities and observed immutable getters. Router V1
-        is live at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block
-        `25717612`, with runtime Keccak-256
-        `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`,
-        exact production bindings and `64` finality confirmations. Its approved
-        `/launchStampRouter/canaryEvidence` object is the finalized PCAN test
-        vector. It covers `CustomGraph`; no separate Classic onchain canary is
-        published and no additional canary ID is implied. Direct verification uses only the
+        deployment, runtime identities and observed immutable getters. Resolve
+        every address, start block, runtime identity and finality requirement from
+        the manifest. `/launchStampRouter/canaryEvidence` publishes the finalized
+        `CustomGraph` vector, while `/launchStampRouter/classicCanaryEvidence`
+        publishes separate exact finalized Classic V4 evidence.
+        `canaryEvidence.routeCoverage.classicOnchainCanary` is true. Direct verification uses only the
         manifest-listed chain and Router through Ethereum JSON-RPC; historical
         launches are outside Router V1.
         Universal detection uses token or `(PoolManager, PoolId)` and then the
@@ -368,7 +379,13 @@ paths:
       summary: List normalized Programmable launches
       description: |
         Returns Classic and Custom launches through one cursor-paginated
-        envelope. A launch can contain zero, one or several markets. The API
+        envelope. Classic covers manifest-enabled V3 and V4 only. Its hosted
+        baseline is the fully traversed paginated
+        `https://programmable.market/api/explore` catalog, validated through
+        schema, scope, evidence and identity commitments and currently reporting
+        Envio deployment `production-6157d22`; the retired HTTP 410 legacy source
+        is not queried.
+        A launch can contain zero, one or several markets. The API
         never fabricates a pool for a token without one. Token amounts are raw
         decimal integer strings. Persist `page.resumeCursor` after processing a
         completed poll and pass it back as `after`. `page.nextCursor` is only

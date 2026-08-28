@@ -49,7 +49,7 @@ accounting modes; the exact Programmable share is separately fixed at `1000`.
 
 | Resource | Use |
 | --- | --- |
-| [Live manifest](https://developers.programmable.family/api/v2/manifest) | Resolve the active chain, Router, start block, runtime hash, ABI hash, events, getters, finality policy, and PCAN canary |
+| [Live manifest](https://developers.programmable.family/api/v2/manifest) | Resolve the active chain, Classic V3/V4 releases, Router, start blocks, runtime hashes, ABI hashes, events, getters, finality policy, and finalized Router canaries |
 | [Router ABI](https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json) | Decode Router events and point-lookup results |
 | [Launch stamp specification](docs/reference/launch-stamp.md) | Implement backfill, live follow, reorg handling, and direct verification |
 | [Terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features |
@@ -106,9 +106,9 @@ Production consumers must also validate the manifest-published runtime hash, ABI
 
 The Classic hook is shared infrastructure and cannot identify one launch. Use token or `PoolManager + poolId` as the interoperable lookup path. Use component lookup only as corroborating evidence for an exclusive component.
 
-## Finalized PCAN vector
+## Finalized Router vectors
 
-Use the finalized PCAN canary to smoke-test a terminal implementation:
+Use the Finalized PCAN vector to smoke-test a terminal implementation:
 
 | Field | Value |
 | --- | --- |
@@ -118,7 +118,7 @@ Use the finalized PCAN canary to smoke-test a terminal implementation:
 | Launch ID | `0x5a52180427785716bff0a36218dde89f0459db265d0c2bdfcfde81a8fe733c92` |
 | Launch kind | `CustomGraph` (`1`) |
 
-The manifest publishes the complete vector at JSON Pointer `/launchStampRouter/canaryEvidence`. The [PCAN reference](docs/reference/launch-stamp.md#finalized-pcan-test-vector) includes the stamp hash, component proofs, block evidence, and exact guarantee boundary.
+The manifest publishes this complete Custom vector at JSON Pointer `/launchStampRouter/canaryEvidence` and the separate finalized Classic V4 vector at `/launchStampRouter/classicCanaryEvidence`. Together they set `classicOnchainCanary` and `customGraphOnchainCanary` to `true`. The [Router reference](docs/reference/launch-stamp.md#finalized-pcan-test-vector) defines both evidence boundaries; neither vector creates a third public category.
 
 ## Guarantee boundary
 
@@ -128,7 +128,9 @@ It does not establish current liquidity, safety, audit status, sellability, trad
 
 ## Unauthenticated read API
 
-The hosted read API is an optional normalized model for existing Classic, Registry Custom, and finalized canonical-Router records. Router identities follow a bounded current source whose canonical commitment is recomputed before publication, with a separate digest-pinned last-known-good snapshot for outages. The feed reports degraded quality while only the fallback is available; absence is not authoritative in that state. Missing supply, fee, or market state remains unavailable rather than inferred. The hosted API is not a Router verification dependency.
+The hosted read API is an optional normalized model for active Classic V3/V4, Registry Custom, and finalized canonical-Router records. Its Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted through its schema, scope, evidence and identity commitments; it currently reports Envio deployment `production-6157d22`. Legitimate indexer release updates therefore do not require a Developer API code change. The retired legacy source that returned HTTP `410` is not used. Classic V1/V2 remain inactive manifest history, and Stock is excluded from active v2 discovery. Router identities follow a bounded current source whose canonical commitment is recomputed before publication, with a separate digest-pinned last-known-good snapshot for outages. The feed reports degraded quality while only the fallback is available; absence is not authoritative in that state. Missing supply, fee, or market state remains unavailable rather than inferred. The hosted API is not a Router verification dependency.
+
+Generic integrations should refresh the manifest and scan every enabled release instead of pinning launcher addresses. That existing flow discovers Classic V4 without a client code or address-list change; `launchStampRouter` remains provenance and transport, not a public category.
 
 ```bash
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json

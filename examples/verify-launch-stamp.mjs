@@ -23,7 +23,7 @@ export async function verifyLaunchStamp({
   const discovery = await fetchJson(discoveryUrl, "discovery document");
   const manifest = await fetchJson(discovery.manifestUrl, "deployment manifest");
   const router = manifest.launchStampRouter;
-  const unavailableReason = activationUnavailableReason(router);
+  const unavailableReason = activationUnavailableReason(router, manifest);
 
   if (unavailableReason) {
     return outcome("unavailable", unavailableReason, {
@@ -234,7 +234,7 @@ async function verifyActiveRouter({
   });
 }
 
-function activationUnavailableReason(router) {
+function activationUnavailableReason(router, manifest) {
   if (!router || typeof router !== "object") return "router-not-published";
   if (router.status === "prelaunch") return "router-prelaunch";
   if (router.status !== "live" && router.status !== "retired") {
@@ -262,7 +262,14 @@ function activationUnavailableReason(router) {
   if (!completeBindings(router.bindings)) {
     return "router-bindings-incomplete";
   }
-  if (!completeCanaryEvidence(router.canaryEvidence, router)) {
+  if (
+    !completeCanaryEvidence(router.canaryEvidence, router) ||
+    !completeClassicCanaryEvidence(
+      router.classicCanaryEvidence,
+      router,
+      manifest,
+    )
+  ) {
     return "router-canary-evidence-incomplete";
   }
   const requiredGetters = [
@@ -298,7 +305,7 @@ function completeCanaryEvidence(evidence, router) {
   if (
     evidence.finality !== "finalized" ||
     evidence.routeCoverage?.customGraphOnchainCanary !== true ||
-    evidence.routeCoverage?.classicOnchainCanary !== false ||
+    evidence.routeCoverage?.classicOnchainCanary !== true ||
     !evidence.source ||
     typeof evidence.source !== "object" ||
     !remoteHttpsUrl(evidence.source.sourceRepository) ||
@@ -377,6 +384,177 @@ function completeCanaryEvidence(evidence, router) {
     new Set(proofComponents).size === 3 &&
     normalizedComponents.every((component) => proofComponents.includes(component))
   );
+}
+
+function completeClassicCanaryEvidence(evidence, router, manifest) {
+  if (!evidence || typeof evidence !== "object") return false;
+  const release = activeClassicV4Deployment(manifest);
+  if (!release) return false;
+  const publication = evidence.source?.manifestPublication;
+  const expectedPublicationUrl = rawGithubUrl(
+    evidence.source?.sourceRepository,
+    publication?.commit,
+    publication?.path,
+  );
+
+  if (
+    evidence.finality !== "finalized" ||
+    !evidence.source ||
+    typeof evidence.source !== "object" ||
+    !remoteHttpsUrl(evidence.source.sourceRepository) ||
+    evidence.source.sourceRepository !== release.evidence.sourceRepository ||
+    !sourceCommit(evidence.source.releaseCommit) ||
+    evidence.source.releaseCommit !== release.evidence.sourceCommit ||
+    !sourceCommit(evidence.source.releaseTree) ||
+    !publication ||
+    typeof publication !== "object" ||
+    !sourceCommit(publication.commit) ||
+    !sourceCommit(publication.tree) ||
+    !releaseManifestPath(publication.path) ||
+    !remoteHttpsUrl(publication.url) ||
+    expectedPublicationUrl === null ||
+    publication.url !== expectedPublicationUrl ||
+    !isSha256(publication.sha256) ||
+    !nonzeroHash32(evidence.transactionHash) ||
+    !decimal(evidence.blockNumber) ||
+    BigInt(evidence.blockNumber) < BigInt(router.startBlock) ||
+    BigInt(evidence.blockNumber) < BigInt(release.startBlock) ||
+    !nonzeroHash32(evidence.blockHash) ||
+    !Number.isSafeInteger(evidence.transactionIndex) ||
+    evidence.transactionIndex < 0 ||
+    !nonzeroHash32(evidence.launchId) ||
+    !nonzeroHash32(evidence.stampHash) ||
+    evidence.launchKind !== 2
+  ) {
+    return false;
+  }
+
+  if (
+    !evidence.route ||
+    typeof evidence.route !== "object" ||
+    !nonzeroAddress(evidence.route.launcher) ||
+    normalizeAddress(evidence.route.launcher) !==
+      normalizeAddress(release.contracts.launcher) ||
+    !nonzeroHash32(evidence.route.launcherRuntimeCodeHash) ||
+    !sameHash32(
+      evidence.route.launcherRuntimeCodeHash,
+      release.evidence.launcherRuntimeCodeHash,
+    ) ||
+    !nonzeroHash32(evidence.route.routePayloadHash) ||
+    !nonzeroHash32(evidence.route.expectedResultHash) ||
+    !nonzeroHash32(evidence.route.permitDigest)
+  ) {
+    return false;
+  }
+
+  const expectedKinds = new Map([
+    ["positionRecipient", 0],
+    ["rewardVault", 0],
+    ["hook", 2],
+    ["token", 1],
+  ]);
+  if (!Array.isArray(evidence.components) || evidence.components.length !== 4) {
+    return false;
+  }
+  const componentsByRole = new Map();
+  const componentAddresses = new Set();
+  for (const component of evidence.components) {
+    const expectedKind = expectedKinds.get(component?.role);
+    const normalized = normalizeAddress(component?.address);
+    if (
+      expectedKind === undefined ||
+      component?.kind !== expectedKind ||
+      normalized === null ||
+      !nonzeroAddress(component.address) ||
+      !nonzeroHash32(component.runtimeCodeHash) ||
+      componentsByRole.has(component.role) ||
+      componentAddresses.has(normalized)
+    ) {
+      return false;
+    }
+    componentsByRole.set(component.role, component);
+    componentAddresses.add(normalized);
+  }
+  const hook = componentsByRole.get("hook");
+  const token = componentsByRole.get("token");
+  const positionRecipient = componentsByRole.get("positionRecipient");
+  if (
+    componentsByRole.size !== expectedKinds.size ||
+    !hook ||
+    !token ||
+    !positionRecipient ||
+    normalizeAddress(hook.address) !== normalizeAddress(release.contracts.hook) ||
+    !nonzeroAddress(token.address)
+  ) {
+    return false;
+  }
+
+  const configuredFeeBps = manifest?.platformFee?.rateBps;
+  if (
+    !evidence.pool ||
+    typeof evidence.pool !== "object" ||
+    !nonzeroAddress(evidence.pool.poolManager) ||
+    normalizeAddress(evidence.pool.poolManager) !==
+      normalizeAddress(router.bindings.poolManager) ||
+    !nonzeroHash32(evidence.pool.poolId) ||
+    !positiveDecimal(evidence.pool.activeLiquidity) ||
+    !evidence.lpPosition ||
+    typeof evidence.lpPosition !== "object" ||
+    !nonzeroAddress(evidence.lpPosition.positionManager) ||
+    !positiveDecimal(evidence.lpPosition.tokenId) ||
+    !nonzeroAddress(evidence.lpPosition.owner) ||
+    normalizeAddress(evidence.lpPosition.owner) !==
+      normalizeAddress(positionRecipient.address) ||
+    !evidence.platformFee ||
+    typeof evidence.platformFee !== "object" ||
+    !Number.isSafeInteger(evidence.platformFee.rateBps) ||
+    evidence.platformFee.rateBps < 0 ||
+    evidence.platformFee.rateBps > 10_000 ||
+    !decimal(configuredFeeBps) ||
+    BigInt(evidence.platformFee.rateBps) !== BigInt(configuredFeeBps) ||
+    !nonzeroAddress(evidence.platformFee.recipient) ||
+    normalizeAddress(evidence.platformFee.recipient) !==
+      normalizeAddress(manifest.platformFee.recipient) ||
+    !positiveDecimal(evidence.tokenTotalSupply)
+  ) {
+    return false;
+  }
+
+  const verification = evidence.verification;
+  if (
+    !verification ||
+    typeof verification !== "object" ||
+    !decimal(verification.verificationBlock) ||
+    BigInt(verification.verificationBlock) < BigInt(evidence.blockNumber) ||
+    !nonzeroHash32(verification.verificationBlockHash) ||
+    !nonzeroHash32(verification.releaseManifestDigest) ||
+    !nonzeroHash32(verification.releaseBindingDigest) ||
+    !nonzeroHash32(verification.deploymentEvidenceDigest) ||
+    !nonzeroHash32(verification.sourceEvidenceDigest) ||
+    !nonzeroHash32(verification.lifecycleEvidenceDigest)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function activeClassicV4Deployment(manifest) {
+  if (!Array.isArray(manifest?.deployments)) return null;
+  const matches = manifest.deployments.filter(
+    (deployment) =>
+      deployment?.category === "classic" &&
+      deployment?.modelId === "classic" &&
+      deployment?.modelVersion === "4" &&
+      deployment?.lifecycle === "current" &&
+      deployment?.discovery === "enabled" &&
+      decimal(deployment?.startBlock) &&
+      nonzeroAddress(deployment?.contracts?.launcher) &&
+      nonzeroAddress(deployment?.contracts?.hook) &&
+      remoteHttpsUrl(deployment?.evidence?.sourceRepository) &&
+      sourceCommit(deployment?.evidence?.sourceCommit) &&
+      nonzeroHash32(deployment?.evidence?.launcherRuntimeCodeHash),
+  );
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function completeBindings(bindings) {
@@ -803,6 +981,23 @@ function sameHash32(left, right) {
 
 function sourceCommit(value) {
   return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+
+function releaseManifestPath(value) {
+  return (
+    typeof value === "string" &&
+    value === "contracts/deployments/mainnet-classic-v4.json"
+  );
+}
+
+function rawGithubUrl(sourceRepository, commit, path) {
+  if (!sourceCommit(commit) || !releaseManifestPath(path)) return null;
+  const match =
+    typeof sourceRepository === "string"
+      ? /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(sourceRepository)
+      : null;
+  if (!match) return null;
+  return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/${commit}/${path}`;
 }
 
 function isSha256(value) {

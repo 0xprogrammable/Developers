@@ -111,6 +111,79 @@ type CanaryEvidence = {
   evidenceLineSha256: string;
 };
 
+type ClassicCanaryEvidence = {
+  finality: "finalized";
+  source: {
+    sourceRepository: string;
+    releaseCommit: string;
+    releaseTree: string;
+    manifestPublication: {
+      commit: string;
+      tree: string;
+      path: string;
+      url: string;
+      sha256: string;
+    };
+  };
+  transactionHash: Hex;
+  blockNumber: string;
+  blockHash: Hex;
+  transactionIndex: number;
+  launchId: Hex;
+  stampHash: Hex;
+  launchKind: 2;
+  route: {
+    launcher: Address;
+    launcherRuntimeCodeHash: Hex;
+    routePayloadHash: Hex;
+    expectedResultHash: Hex;
+    permitDigest: Hex;
+  };
+  components: Array<{
+    role: "positionRecipient" | "rewardVault" | "hook" | "token";
+    kind: 0 | 1 | 2;
+    address: Address;
+    runtimeCodeHash: Hex;
+  }>;
+  pool: {
+    poolManager: Address;
+    poolId: Hex;
+    activeLiquidity: string;
+  };
+  lpPosition: {
+    positionManager: Address;
+    tokenId: string;
+    owner: Address;
+  };
+  platformFee: {
+    rateBps: number;
+    recipient: Address;
+  };
+  tokenTotalSupply: string;
+  verification: {
+    verificationBlock: string;
+    verificationBlockHash: Hex;
+    releaseManifestDigest: Hex;
+    releaseBindingDigest: Hex;
+    deploymentEvidenceDigest: Hex;
+    sourceEvidenceDigest: Hex;
+    lifecycleEvidenceDigest: Hex;
+  };
+};
+
+type ClassicV4Deployment = {
+  startBlock: string;
+  contracts: {
+    launcher: Address;
+    hook: Address;
+  };
+  evidence: {
+    sourceRepository: string;
+    sourceCommit: string;
+    launcherRuntimeCodeHash: Hex;
+  };
+};
+
 type RouterManifest = {
   status: "prelaunch" | "live" | "retired";
   address: Address | null;
@@ -121,6 +194,7 @@ type RouterManifest = {
   abiSha256: string | null;
   finalityConfirmations: number | null;
   canaryEvidence: CanaryEvidence | null;
+  classicCanaryEvidence: ClassicCanaryEvidence | null;
   atomicSignature: string;
   atomicSelector: Hex;
   bindings: RouterBindings;
@@ -176,7 +250,12 @@ export async function verifyLaunchStampWithViem({
     !router.getters.componentRuntimeCodeHash ||
     !router.getters.record ||
     !router.getters.stampProof ||
-    !completeCanaryEvidence(router.canaryEvidence, router)
+    !completeCanaryEvidence(router.canaryEvidence, router) ||
+    !completeClassicCanaryEvidence(
+      router.classicCanaryEvidence,
+      router,
+      manifest,
+    )
   ) {
     return result("unavailable", "router-prelaunch-or-incomplete", query);
   }
@@ -651,7 +730,7 @@ function completeCanaryEvidence(
   if (
     evidence.finality !== "finalized" ||
     evidence.routeCoverage?.customGraphOnchainCanary !== true ||
-    evidence.routeCoverage?.classicOnchainCanary !== false ||
+    evidence.routeCoverage?.classicOnchainCanary !== true ||
     !remoteHttpsUrl(evidence.source?.sourceRepository) ||
     !sourceCommit(evidence.source?.sourceCommit) ||
     typeof evidence.source?.commitSubject !== "string" ||
@@ -723,6 +802,179 @@ function completeCanaryEvidence(
       (component) => component !== null && proofComponents.includes(component),
     )
   );
+}
+
+function completeClassicCanaryEvidence(
+  value: ClassicCanaryEvidence | null | undefined,
+  router: RouterManifest,
+  manifest: {
+    deployments?: Array<Record<string, unknown>>;
+    platformFee?: { rateBps?: unknown; recipient?: unknown };
+  },
+): value is ClassicCanaryEvidence {
+  if (!value || typeof value !== "object") return false;
+  const evidence = value as Partial<ClassicCanaryEvidence>;
+  const release = activeClassicV4Deployment(manifest);
+  if (!release || !decimal(router.startBlock)) return false;
+  const publication = evidence.source?.manifestPublication;
+  const expectedPublicationUrl = rawGithubUrl(
+    evidence.source?.sourceRepository,
+    publication?.commit,
+    publication?.path,
+  );
+
+  if (
+    evidence.finality !== "finalized" ||
+    !remoteHttpsUrl(evidence.source?.sourceRepository) ||
+    evidence.source?.sourceRepository !== release.evidence.sourceRepository ||
+    !sourceCommit(evidence.source?.releaseCommit) ||
+    evidence.source.releaseCommit !== release.evidence.sourceCommit ||
+    !sourceCommit(evidence.source?.releaseTree) ||
+    !sourceCommit(publication?.commit) ||
+    !sourceCommit(publication?.tree) ||
+    !releaseManifestPath(publication?.path) ||
+    !remoteHttpsUrl(publication?.url) ||
+    expectedPublicationUrl === null ||
+    publication?.url !== expectedPublicationUrl ||
+    !sha256Digest(publication?.sha256) ||
+    !nonzeroHash32(evidence.transactionHash) ||
+    !decimal(evidence.blockNumber) ||
+    BigInt(evidence.blockNumber) < BigInt(router.startBlock) ||
+    BigInt(evidence.blockNumber) < BigInt(release.startBlock) ||
+    !nonzeroHash32(evidence.blockHash) ||
+    !Number.isSafeInteger(evidence.transactionIndex) ||
+    (evidence.transactionIndex ?? -1) < 0 ||
+    !nonzeroHash32(evidence.launchId) ||
+    !nonzeroHash32(evidence.stampHash) ||
+    evidence.launchKind !== 2
+  ) {
+    return false;
+  }
+
+  if (
+    !nonzeroAddress(evidence.route?.launcher) ||
+    normalizeAddress(evidence.route.launcher) !==
+      normalizeAddress(release.contracts.launcher) ||
+    !nonzeroHash32(evidence.route.launcherRuntimeCodeHash) ||
+    !sameHash32(
+      evidence.route.launcherRuntimeCodeHash,
+      release.evidence.launcherRuntimeCodeHash,
+    ) ||
+    !nonzeroHash32(evidence.route.routePayloadHash) ||
+    !nonzeroHash32(evidence.route.expectedResultHash) ||
+    !nonzeroHash32(evidence.route.permitDigest)
+  ) {
+    return false;
+  }
+
+  const expectedKinds = new Map<string, number>([
+    ["positionRecipient", 0],
+    ["rewardVault", 0],
+    ["hook", 2],
+    ["token", 1],
+  ]);
+  if (!Array.isArray(evidence.components) || evidence.components.length !== 4) {
+    return false;
+  }
+  const componentsByRole = new Map<
+    string,
+    ClassicCanaryEvidence["components"][number]
+  >();
+  const componentAddresses = new Set<string>();
+  for (const component of evidence.components) {
+    const expectedKind = expectedKinds.get(component?.role);
+    const normalized = normalizeAddress(component?.address);
+    if (
+      expectedKind === undefined ||
+      component?.kind !== expectedKind ||
+      normalized === null ||
+      !nonzeroAddress(component.address) ||
+      !nonzeroHash32(component.runtimeCodeHash) ||
+      componentsByRole.has(component.role) ||
+      componentAddresses.has(normalized)
+    ) {
+      return false;
+    }
+    componentsByRole.set(component.role, component);
+    componentAddresses.add(normalized);
+  }
+  const hook = componentsByRole.get("hook");
+  const token = componentsByRole.get("token");
+  const positionRecipient = componentsByRole.get("positionRecipient");
+  if (
+    componentsByRole.size !== expectedKinds.size ||
+    !hook ||
+    !token ||
+    !positionRecipient ||
+    normalizeAddress(hook.address) !== normalizeAddress(release.contracts.hook) ||
+    !nonzeroAddress(token.address)
+  ) {
+    return false;
+  }
+
+  const configuredFeeBps = manifest.platformFee?.rateBps;
+  if (
+    !nonzeroAddress(evidence.pool?.poolManager) ||
+    normalizeAddress(evidence.pool.poolManager) !==
+      normalizeAddress(router.bindings.poolManager) ||
+    !nonzeroHash32(evidence.pool.poolId) ||
+    !positiveDecimal(evidence.pool.activeLiquidity) ||
+    !nonzeroAddress(evidence.lpPosition?.positionManager) ||
+    !positiveDecimal(evidence.lpPosition.tokenId) ||
+    !nonzeroAddress(evidence.lpPosition.owner) ||
+    normalizeAddress(evidence.lpPosition.owner) !==
+      normalizeAddress(positionRecipient.address) ||
+    !Number.isSafeInteger(evidence.platformFee?.rateBps) ||
+    (evidence.platformFee?.rateBps ?? -1) < 0 ||
+    (evidence.platformFee?.rateBps ?? 10_001) > 10_000 ||
+    !decimal(configuredFeeBps) ||
+    BigInt(evidence.platformFee?.rateBps ?? -1) !== BigInt(configuredFeeBps) ||
+    !nonzeroAddress(evidence.platformFee?.recipient) ||
+    normalizeAddress(evidence.platformFee.recipient) !==
+      normalizeAddress(manifest.platformFee?.recipient) ||
+    !positiveDecimal(evidence.tokenTotalSupply)
+  ) {
+    return false;
+  }
+
+  if (
+    !decimal(evidence.verification?.verificationBlock) ||
+    BigInt(evidence.verification.verificationBlock) <
+      BigInt(evidence.blockNumber) ||
+    !nonzeroHash32(evidence.verification.verificationBlockHash) ||
+    !nonzeroHash32(evidence.verification.releaseManifestDigest) ||
+    !nonzeroHash32(evidence.verification.releaseBindingDigest) ||
+    !nonzeroHash32(evidence.verification.deploymentEvidenceDigest) ||
+    !nonzeroHash32(evidence.verification.sourceEvidenceDigest) ||
+    !nonzeroHash32(evidence.verification.lifecycleEvidenceDigest)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function activeClassicV4Deployment(manifest: {
+  deployments?: Array<Record<string, unknown>>;
+}): ClassicV4Deployment | null {
+  if (!Array.isArray(manifest.deployments)) return null;
+  const matches = manifest.deployments.filter((deployment) => {
+    const contracts = deployment.contracts as Record<string, unknown> | undefined;
+    const evidence = deployment.evidence as Record<string, unknown> | undefined;
+    return (
+      deployment.category === "classic" &&
+      deployment.modelId === "classic" &&
+      deployment.modelVersion === "4" &&
+      deployment.lifecycle === "current" &&
+      deployment.discovery === "enabled" &&
+      decimal(deployment.startBlock) &&
+      nonzeroAddress(contracts?.launcher) &&
+      nonzeroAddress(contracts?.hook) &&
+      remoteHttpsUrl(evidence?.sourceRepository) &&
+      sourceCommit(evidence?.sourceCommit) &&
+      nonzeroHash32(evidence?.launcherRuntimeCodeHash)
+    );
+  });
+  return matches.length === 1 ? (matches[0] as unknown as ClassicV4Deployment) : null;
 }
 
 function functionSignature(item: AbiFunction) {
@@ -810,6 +1062,24 @@ function positiveDecimal(value: unknown): value is string {
 
 function sourceCommit(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+
+function releaseManifestPath(value: unknown): value is string {
+  return value === "contracts/deployments/mainnet-classic-v4.json";
+}
+
+function rawGithubUrl(
+  sourceRepository: unknown,
+  commit: unknown,
+  path: unknown,
+): string | null {
+  if (!sourceCommit(commit) || !releaseManifestPath(path)) return null;
+  const match =
+    typeof sourceRepository === "string"
+      ? /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(sourceRepository)
+      : null;
+  if (!match) return null;
+  return `https://raw.githubusercontent.com/${match[1]}/${match[2]}/${commit}/${path}`;
 }
 
 function sha256Digest(value: unknown): value is string {

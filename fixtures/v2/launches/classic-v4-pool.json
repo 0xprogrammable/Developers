@@ -2,29 +2,29 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "publicLabel": "Programmable Classic",
-  "launchId": "eip155:1:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:0",
+  "launchId": "eip155:1:0xb382f738a99820276fd66efb94b75eca104c2b4d",
   "category": "classic",
   "chainId": 1,
   "caip2": "eip155:1",
   "projectId": null,
   "model": {
     "id": "classic",
-    "version": "3"
+    "version": "4"
   },
   "token": {
-    "address": "0x1111111111111111111111111111111111111111",
+    "address": "0xB382f738a99820276FD66EfB94b75Eca104c2B4D",
     "identityStatus": "complete",
-    "name": "Classic Fixture",
-    "symbol": "CLASSIC",
+    "name": "Programmable Classic V4 Canary",
+    "symbol": "PCV4C",
     "decimals": 18,
     "totalSupplyRaw": "1000000000000000000000000000",
     "supplyStatus": "observed",
-    "supplyAsOfBlock": "25650000",
+    "supplyAsOfBlock": "25854486",
     "metadata": {
-      "description": "A deterministic Classic consumer fixture.",
-      "imageUrl": "https://developers.programmable.family/fixtures/classic.png",
+      "description": "Programmable Classic V4 Mainnet lifecycle canary",
+      "imageUrl": null,
       "links": {
-        "website": "https://developers.programmable.family"
+        "website": "https://programmable.market/"
       },
       "trustStatus": "creator-declared"
     }
@@ -33,22 +33,23 @@
     "status": "live",
     "origin": "first-party",
     "modelId": "classic",
-    "modelVersion": "3",
+    "modelVersion": "4",
     "publicSubmission": false,
-    "creatorAddress": "0x7777777777777777777777777777777777777777",
-    "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "blockNumber": "25650000",
-    "blockHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "logIndex": 0,
-    "timestamp": "2026-08-04T08:00:00.000Z",
-    "finality": "confirmed"
+    "creatorAddress": "0x2Bb333d48DFAF1596D9036671d2E43168994249E",
+    "transactionHash": "0xbb6b4c9fc70600e4d5dd394314a49630bf9f837a82065013c397ebebd978aa7c",
+    "blockNumber": "25854486",
+    "blockHash": "0x66d7201c8274251f7e94960edad2570e9121f7a0209f4528c09c41c5ea9cdb7c",
+    "transactionIndex": 188,
+    "logIndex": 1033,
+    "timestamp": "2026-08-28T14:58:47.000Z",
+    "finality": "finalized"
   },
   "verification": {
-    "sourceId": "ethereum-classic-v3",
-    "launcherAddress": "0x2222222222222222222222222222222222222222",
+    "sourceId": "ethereum-classic-v4",
+    "launcherAddress": "0xBBDF30a2fE1394e4AA864aC269C6cF09b518E699",
     "registryAddress": null,
     "provenanceStatus": "verified",
-    "sourceUrl": "https://github.com/0xprogrammable/programmable"
+    "sourceUrl": "https://etherscan.io/tx/0xbb6b4c9fc70600e4d5dd394314a49630bf9f837a82065013c397ebebd978aa7c"
   },
   "capabilities": [
     {
@@ -60,42 +61,37 @@
   ],
   "markets": [
     {
-      "marketId": "uniswap-v4:0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "marketId": "uniswap-v4:0xef513a3234ab2eb561aa0a7ee55619ace1624a900e5f7b55156ba6d0cc86334a",
       "kind": "uniswap-v4",
       "status": "active",
-      "baseTokenAddress": "0x1111111111111111111111111111111111111111",
+      "baseTokenAddress": "0xB382f738a99820276FD66EfB94b75Eca104c2B4D",
       "quoteTokenAddress": null,
       "protocol": "uniswap-v4",
-      "poolId": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "poolId": "0xef513a3234ab2eb561aa0a7ee55619ace1624a900e5f7b55156ba6d0cc86334a",
       "poolAddress": null,
-      "hookAddress": "0x5555555555555555555555555555555555555555",
+      "hookAddress": "0xADF955a44FD7F009380240d56D71dFAfB46020cc",
       "support": {
         "discovery": "available",
-        "charting": "available",
-        "quote": "unknown",
-        "simulation": "unknown",
-        "execution": "unknown"
+        "charting": "unknown",
+        "quote": "unavailable",
+        "simulation": "unavailable",
+        "execution": "unavailable"
       },
-      "adapter": {
-        "kind": "uniswap-v4-observation",
-        "version": "1",
-        "adapterId": "programmable/uniswap-v4-observation",
-        "verificationStatus": "verified"
-      },
+      "adapter": null,
       "metrics": {
         "price": {
-          "value": "0.000001",
-          "status": "estimated"
+          "value": null,
+          "status": "unavailable"
         },
         "liquidity": {
-          "value": "12.5",
-          "status": "estimated"
+          "value": null,
+          "status": "unavailable"
         },
         "volume24h": {
-          "value": "2.25",
-          "status": "estimated"
+          "value": null,
+          "status": "unavailable"
         },
-        "updatedAt": "2026-08-04T08:05:00.000Z"
+        "updatedAt": null
       }
     }
   ],
@@ -106,17 +102,7 @@
       "rateBps": 10,
       "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c",
       "chargeMode": "included",
-      "basis": "swap-volume",
-      "assetAddress": null,
-      "verificationStatus": "verified"
-    },
-    {
-      "kind": "creator",
-      "ratePpm": 9000,
-      "rateBps": 90,
-      "recipient": "0x7777777777777777777777777777777777777777",
-      "chargeMode": "included",
-      "basis": "swap-volume",
+      "basis": "executed-gross-quote-volume",
       "assetAddress": null,
       "verificationStatus": "verified"
     }
@@ -127,6 +113,36 @@
       "category": "classic",
       "label": "Programmable Classic",
       "basis": "recognized-classic-launcher-event"
+    },
+    "programmable/release": {
+      "deploymentId": "ethereum-classic-v4",
+      "releaseId": "classic-v4",
+      "modelVersion": "4",
+      "launchHash": "0x7bfbdb011786613d3d269a05c7b2a3a1743dcb51e407892b3f21299108d6992e",
+      "rewardVault": "0x541034C6613154e81a64F9A9Ca1A572819E426E3"
+    },
+    "programmable/market-disclosure": {
+      "quoteAssetSymbol": "ETH",
+      "quoteAssetName": "Ether",
+      "quoteIsCurrency0": null,
+      "fees": {
+        "currency": "ETH",
+        "currencyAddress": null,
+        "buyTotalFeeBps": 100,
+        "sellTotalFeeBps": 200,
+        "buyProjectFeeBps": 90,
+        "sellProjectFeeBps": 190,
+        "programmableFeeBps": 10,
+        "chargeMode": "included",
+        "transferTaxBps": null,
+        "lpFeePips": 0
+      },
+      "liquidityPosition": {
+        "recipient": "0x0EC0ac6aA9724928aA678c407039D5b2d65cB7Ed",
+        "tokenId": "386488",
+        "tokenLiquidityAmountRaw": "999999999999999999999988193",
+        "lockedTokenDustRaw": "11807"
+      }
     }
   }
 }

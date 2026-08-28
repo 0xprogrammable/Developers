@@ -116,6 +116,16 @@ assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2
 if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
   throw new Error("Version 2 deployment inventory must remain Classic-only; Custom discovery uses its separate Registry and Router roots");
 }
+const activeClassicDeployments = v2Manifest.deployments
+  .filter((deployment) => deployment.discovery === "enabled")
+  .map((deployment) => deployment.deploymentId)
+  .sort();
+if (
+  JSON.stringify(activeClassicDeployments) !==
+  JSON.stringify(["ethereum-classic-v3", "ethereum-classic-v4"])
+) {
+  throw new Error("Version 2 active Classic discovery must contain only V3 and V4");
+}
 
 const v2Core = await readJson(
   path.join(REPOSITORY_ROOT, "compatibility", "core-v2.json"),

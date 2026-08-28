@@ -169,7 +169,7 @@ Use `launch.timestamp` for new-launch ordering. Do not replace it with the time 
 | `provenanceStatus` | `prelaunch`, `partial`, `verified`, or `revoked` |
 | `sourceUrl` | Human-readable supporting source |
 
-Legacy indexer records can have `partial` provenance because they do not carry every canonical event coordinate required for full verification. A recognized onchain event can also remain partial when block or receipt enrichment is unavailable. Partial means incomplete evidence, not an unsafe verdict.
+Older compatibility records can have `partial` provenance because they do not carry every canonical event coordinate required for full verification. A recognized onchain event can also remain partial when block or receipt enrichment is unavailable. Partial means incomplete evidence, not an unsafe verdict.
 
 The API is a projection. Consumers that require independent verification should reproduce the event and runtime checks against the manifest and chain.
 
@@ -190,7 +190,7 @@ v2 has exactly two public categories:
 - `classic`
 - `custom`
 
-`classic` requires an event from a Classic launcher in the v2 manifest. `custom` requires either an accepted event from the Custom Registry in the v2 manifest or a consistent finalized `CustomGraph` stamp from its exact canonical Router. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Historical Stock-Paired launches are excluded from v2. The category is not provenance: use `extensions["programmable/classification"].basis` to select the Registry or Router verification path.
+`classic` requires an event from an enabled Classic launcher in the v2 manifest. The active release set is historical V3 plus current V4; V1/V2 remain inactive history. `custom` requires either an accepted event from the Custom Registry in the v2 manifest or a consistent finalized `CustomGraph` stamp from its exact canonical Router. Provider, factory, token, hook, template and market contracts may differ on every Custom launch; their actual behavior belongs in provenance, capabilities and markets. Stock is excluded from active v2 discovery. Router is provenance and transport for the existing two categories, never a third category. The category is not provenance: use `extensions["programmable/classification"].basis` to select the Registry or Router verification path.
 
 ## Capabilities
 

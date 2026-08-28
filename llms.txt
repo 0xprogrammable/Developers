@@ -38,24 +38,26 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
 ## Current status
 
-- Classic launch discovery is live on Ethereum.
+- Classic launch discovery is live on Ethereum for historical V3 and current V4 only. Classic V1 and V2 remain inactive manifest history and are not scanned. Manifest-following consumers receive V4 through a normal manifest refresh without a client code or address change.
+- The hosted Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, validated through schema, scope, evidence and identity commitments. It currently reports Envio deployment `production-6157d22`; legitimate deployment revisions do not require code changes. The retired legacy source returns HTTP 410 and is no longer used.
 - Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
 - Custom Launch API V1 and V2 historical reads are live on Ethereum Mainnet; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`.
 - Direct Native Hook Graph Profile V3 is live through API V3 and public CLI `3.3.8`, with exactly `pack`, `validate`, `submit`, and `status`. Fresh packs default to profile `3.3.0`; explicit `3.4.0` output remains preparatory and is rejected until independent activation. Resolve the immutable release and current V3 OpenAPI from the active descriptor. Revision 2 remains historical-read/exact-retry only and the V1 descriptor remains gated.
 - Additive profile `3.4.0` is pending and fail-closed. It must not be packed, submitted, or described as active until live capabilities and OpenAPI select it after the same-app runner and observation ABI are deployed and read back and a separately signed exact settlement-dataflow closure validates against its pinned authority trust root. Its pending strict evidence gate and canonical fee-vault auto-injection do not reinterpret `3.3.0`.
 - Custom Registry Generation 2 remains a separate unavailable release candidate. It does not activate the public fee-enforced profile, and neither creates a third public category.
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
-- Historical Stock-Paired records are not part of the v2 Programmable Custom classification.
+- Stock-Paired records are excluded from active v2 discovery. Their immutable v1 compatibility records remain readable without reactivating Stock scanning.
 - Ethereum Mainnet is the only chain currently advertised by the well-known document.
 - No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is currently verified by the public v2 manifest.
 - `provider` is optional secondary attribution. Only `registry-bound` with its evidence hash is authenticated provider provenance; unfamiliar or `display-only` provider data never upgrades origin, fees, review, or execution.
 - Every registered launch is discoverable.
 - Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
 - The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
-- The separate operator console at `https://claimhazard.vercel.app` rescans reviewed Classic, fixed Stock-Paired, and finalized standard Custom Registry V1 fee sources. Its discovery policy is read-only; it does not expand the Developer API into a transaction API.
-- Legacy indexer records can have partial provenance. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
+- The separate operator console at `https://claimhazard.vercel.app` applies its own read-only claim policy to reviewed Classic and finalized standard Custom Registry V1 fee sources. It does not expand the Developer API into a transaction API.
+- Canonical catalog records can still have partial enrichment. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
 - Launch-list and token-list return recognized bounded records with `degraded` or `unavailable` quality when canonical coverage is incomplete; missing enrichment never hides a recognized identity.
-- Finalized canonical-Router Custom token identities remain in v2 launches and token-list independently from Registry freshness. Router provenance does not invent current market support, supply, or a fee policy.
+- Finalized canonical-Router Custom token identities remain in v2 launches and token-list independently from Registry freshness. Router provenance does not invent current market support, supply, or a fee policy. Router is provenance and transport, never a public category.
+- `launchStampRouter.canaryEvidence.routeCoverage.classicOnchainCanary` is true. The exact finalized Classic V4 canary proof is published in the manifest's `launchStampRouter.classicCanaryEvidence` object.
 - Do not claim that launches are unconditionally safe, audited, or unruggable.
 - Do not claim that any named terminal or partner has integrated Programmable without confirmation.
 
@@ -133,7 +135,7 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and either atomic with the launch or emitted only after a verified staged workflow is finalized.
 18. Resolve the live Custom Registry address and start block from the manifest. Keep legacy Registry and GitHub submission intake closed. Treat unapproved provider examples as prelaunch unless their exact approval and Registry evidence are published. The Custom Launch API publishes its own live status and readiness URL.
 19. Assign `Programmable Custom` only from manifest-listed Custom Registry evidence or a consistent canonical Router `CustomGraph` stamp. Provider metadata, hook addresses and API responses cannot self-assign the label.
-20. For a Router stamp check, bind `chainId + Router address + launchId`, resolve the Router and start block from top-level `launchStampRouter`, use one finalized or explicit canonical block, and reject copied emitters. Router V1 covers launches stamped at or after its published start block only. Detect by token or `(PoolManager, PoolId)`, then map `CustomGraph = 1` or `Classic = 2`; never classify Classic by its shared hook. Use `stampProof` only for address-based token or exclusive-component corroboration.
+20. For a Router stamp check, bind `chainId + Router address + launchId`, resolve the Router and start block from top-level `launchStampRouter`, use one finalized or explicit canonical block, and reject copied emitters. Router V1 covers launches stamped at or after its published start block only. Detect by token or `(PoolManager, PoolId)`, then map `CustomGraph = 1` or `Classic = 2`; never classify Classic by its shared hook. Use `stampProof` only for address-based token or exclusive-component corroboration. Treat Router as provenance and transport, not as a third category; active Classic discovery scans only manifest-enabled V3 and V4 releases.
 21. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
 22. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
 23. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.

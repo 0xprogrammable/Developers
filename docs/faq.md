@@ -10,7 +10,7 @@ The client must read deployment arrays dynamically, accept unknown optional valu
 
 Yes, through metadata-bound profile `3.3.0` on the separate authenticated [Custom Launch API V3](https://programmable.market/docs/developers/custom-launch) on Ethereum Mainnet. Existing wallet keys remain compatible; approved partner roots and bounded one-level subkeys use the same V3 routes and server-side policy. No credential signs, broadcasts, bypasses admission, or supplies attribution. The API server, not a CLI, LLM, or client, decides authorization after the exact static admission baseline and pinned Router simulation. Missing or unavailable runtime behavior evidence keeps claims unverified rather than proving behavior; an authenticated executed negative blocks handoff. This does not make arbitrary hooks safe or universally fee-enforced. Custom Launch API V1 and V2 retain historical reads, but authenticated POST returns nonretryable HTTP 409. Custom Registry discovery is live; legacy Registry and GitHub submission intake are closed.
 
-Future Custom fixtures are examples, not live registry launches. Historical Stock-Paired records are not Programmable Custom in v2.
+Future Custom fixtures are examples, not live registry launches. Stock-Paired records are excluded from active v2 discovery; the frozen v1 compatibility contract is not an input to the v2 feed.
 
 ## Can every Custom launch be displayed?
 
@@ -45,6 +45,16 @@ If `token` is null, the launch does not advertise a token. Use `projectId`, `lau
 
 No. Read active deployment arrays and start blocks from `/api/v2/manifest`. This is how compatible deployments are added without a mandatory client update.
 
+## Do I need to change my indexer for Classic V4?
+
+Not if it already refreshes the manifest and scans every enabled release. Active Classic discovery now consists of historical V3 plus current V4; V1/V2 remain inactive history. A generic manifest-driven client discovers V4 without a code or pinned-address change.
+
+The hosted feed uses the canonical paginated `https://programmable.market/api/explore` catalog and validates its schema, scope, evidence and identity commitments. The current catalog reports Envio deployment `production-6157d22`, but a legitimate deployment revision does not require a code update. It no longer depends on the retired legacy source that returned HTTP `410`. Stock is excluded, and Custom remains a separate category and provenance path.
+
+## Is Router a third launch category?
+
+No. `launchStampRouter` is a provenance and transport trust root. Its stamped kind maps a verified launch to the existing `classic` or `custom` category. The manifest now publishes finalized exact canary evidence for both `CustomGraph` and Classic V4, but that does not create a `router` category or replace per-launch verification.
+
 ## What does registration prove?
 
 It establishes the launch provenance represented by the record: recognized source, transaction, block, token, and verification state.
@@ -63,7 +73,7 @@ Not by default. Names, symbols, descriptions, images, and links are creator-supp
 
 ## What does partial provenance mean?
 
-Some canonical evidence is unavailable. Legacy indexer records can be partial because they do not contain every event coordinate needed for full verification. A newly recognized onchain event can also be partial when receipt or block enrichment is missing. Partial is an evidence state, not an unsafe verdict.
+Some canonical evidence is unavailable. Older compatibility records can be partial because they do not contain every event coordinate needed for full verification. A newly recognized onchain event can also be partial when receipt or block enrichment is missing. Partial is an evidence state, not an unsafe verdict.
 
 ## Does missing metadata remove a launch?
 

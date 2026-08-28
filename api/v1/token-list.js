@@ -1,9 +1,9 @@
 import { API_SCHEMA_VERSION, CHAIN_ID } from "../../server/constants.js";
 import {
   feedStatusForCategory,
-  getDataset,
   isDatasetPublishable,
 } from "../../server/dataset.js";
+import { getV1Dataset } from "../../server/v1-frozen.js";
 import {
   error,
   handleOptions,
@@ -63,7 +63,7 @@ export function tokenListPayload(records, generatedAt, category = null) {
   };
 }
 
-export function createTokenListHandler(loadDataset = getDataset) {
+export function createTokenListHandler(loadDataset = getV1Dataset) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {

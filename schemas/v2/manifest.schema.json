@@ -957,6 +957,7 @@
         "artifact",
         "deploymentEvidence",
         "canaryEvidence",
+        "classicCanaryEvidence",
         "finalityConfirmations",
         "canonicalReadBlock",
         "authorityMode",
@@ -1040,6 +1041,16 @@
             },
             {
               "$ref": "#/$defs/launchStampRouterCanaryEvidence"
+            }
+          ]
+        },
+        "classicCanaryEvidence": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/launchStampRouterClassicCanaryEvidence"
             }
           ]
         },
@@ -1275,7 +1286,7 @@
         "finality": "finalized",
         "routeCoverage": {
           "customGraphOnchainCanary": true,
-          "classicOnchainCanary": false
+          "classicOnchainCanary": true
         },
         "source": {
           "sourceRepository": "https://github.com/0xprogrammable/programmable",
@@ -1327,6 +1338,87 @@
         ],
         "evidenceFileSha256": "sha256:1325d1333b6df9545cb87048e2b8d1c57a63af5b6790c329c0e95157a0d16d2c",
         "evidenceLineSha256": "sha256:615a20b31f454afb020a8fa83653c7685328e3f12ad58d3ac11ddab2d02968b5"
+      }
+    },
+    "launchStampRouterClassicCanaryEvidence": {
+      "const": {
+        "finality": "finalized",
+        "source": {
+          "sourceRepository": "https://github.com/0xprogrammable/PROGRAMMABLE-EVM",
+          "releaseCommit": "707d438576dcf47dc2667125789fd35eb1c3de50",
+          "releaseTree": "789161bc206ea145f12b809f9d1746bd1a83468a",
+          "manifestPublication": {
+            "commit": "ff51e713feb52e4e13f3c553d1c726f3c8f2858c",
+            "tree": "53a8ce252d98703008ba17408f6c24555b8be45e",
+            "path": "contracts/deployments/mainnet-classic-v4.json",
+            "url": "https://raw.githubusercontent.com/0xprogrammable/PROGRAMMABLE-EVM/ff51e713feb52e4e13f3c553d1c726f3c8f2858c/contracts/deployments/mainnet-classic-v4.json",
+            "sha256": "sha256:5005df478e1298bbf9c2f1ff9256192290c5ca3652ee7cae13c0326a62893fc6"
+          }
+        },
+        "transactionHash": "0xbb6b4c9fc70600e4d5dd394314a49630bf9f837a82065013c397ebebd978aa7c",
+        "blockNumber": "25854486",
+        "blockHash": "0x66d7201c8274251f7e94960edad2570e9121f7a0209f4528c09c41c5ea9cdb7c",
+        "transactionIndex": 188,
+        "launchId": "0x75503436c39192ea7f165d1c0140724fed5dbd73c9b4816de713e34fe5a3fc87",
+        "stampHash": "0xd173468420cfa5159890896d34746c9c2fc9bb5e3960a1062aa82d1c3ffb5941",
+        "launchKind": 2,
+        "route": {
+          "launcher": "0xBBDF30a2fE1394e4AA864aC269C6cF09b518E699",
+          "launcherRuntimeCodeHash": "0xc80a1d3b6b3f196a54cea46fc94913d59aec2937e94e70b53fe5c5fd7f5c4b12",
+          "routePayloadHash": "0x344818154572f460bc3fa598678f37fc8f4853e9785ca723419511e5179dab40",
+          "expectedResultHash": "0x44e56f4408bee94e5179b10ee30574f740b6bf0e3d47b202b1c0a0e0179403ab",
+          "permitDigest": "0xfe2e718590739692dfe500000a18d62c07cb11d44cf5035febb12cac6c4466df"
+        },
+        "components": [
+          {
+            "role": "positionRecipient",
+            "kind": 0,
+            "address": "0x0EC0ac6aA9724928aA678c407039D5b2d65cB7Ed",
+            "runtimeCodeHash": "0xbfcf00b05d7092f0e47d9dc8ed24cdfab992dfe82da0ac1c1ff8e2c3c2dbc7d7"
+          },
+          {
+            "role": "rewardVault",
+            "kind": 0,
+            "address": "0x541034C6613154e81a64F9A9Ca1A572819E426E3",
+            "runtimeCodeHash": "0x263080da69f045205235451b41e17da8f03955ece962f4589ee604ccc3c36625"
+          },
+          {
+            "role": "hook",
+            "kind": 2,
+            "address": "0xADF955a44FD7F009380240d56D71dFAfB46020cc",
+            "runtimeCodeHash": "0xf3a1a628ce898c527f24569b426aa795ec65ff9d97afa2b89e8ea5a2b99ad280"
+          },
+          {
+            "role": "token",
+            "kind": 1,
+            "address": "0xB382f738a99820276FD66EfB94b75Eca104c2B4D",
+            "runtimeCodeHash": "0x554847de232eb1242cae2befefb8882eb05947e2b103220baaebb3e2ab59b132"
+          }
+        ],
+        "pool": {
+          "poolManager": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+          "poolId": "0xef513a3234ab2eb561aa0a7ee55619ace1624a900e5f7b55156ba6d0cc86334a",
+          "activeLiquidity": "47813640512503339560210"
+        },
+        "lpPosition": {
+          "positionManager": "0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e",
+          "tokenId": "386488",
+          "owner": "0x0EC0ac6aA9724928aA678c407039D5b2d65cB7Ed"
+        },
+        "platformFee": {
+          "rateBps": 10,
+          "recipient": "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c"
+        },
+        "tokenTotalSupply": "1000000000000000000000000000",
+        "verification": {
+          "verificationBlock": "25855200",
+          "verificationBlockHash": "0x3de5eeb594e8431be0d090f65fe2ddfc38900f0c4bce9320f4a46bb280b9d905",
+          "releaseManifestDigest": "0xb08e7032c801ddc3d5ba958eb389d2728bb439e4105aef4e7706969f7426ee00",
+          "releaseBindingDigest": "0xf4bd9a33728b62deca13a68b3b5ceedab9504930bf4c1676f3abaa4fc4f8cb13",
+          "deploymentEvidenceDigest": "0xd21105b4d7e1a4104457a96cdea9054d027ec46142cc82da858ffb69730fdc7f",
+          "sourceEvidenceDigest": "0x8b0d405e1a05ca41b1ff7dee774b9795d0ee4465c7ab505cd26e77c7a7b3c005",
+          "lifecycleEvidenceDigest": "0x8cebe98625569273cb3612deb6ea14621ef124c9197418923e034a39db1c316a"
+        }
       }
     },
     "launchStampRouterObservedBindings": {
@@ -1528,6 +1620,9 @@
               "canaryEvidence": {
                 "type": "null"
               },
+              "classicCanaryEvidence": {
+                "type": "null"
+              },
               "finalityConfirmations": {
                 "type": "null"
               },
@@ -1586,6 +1681,9 @@
               },
               "canaryEvidence": {
                 "$ref": "#/$defs/launchStampRouterCanaryEvidence"
+              },
+              "classicCanaryEvidence": {
+                "$ref": "#/$defs/launchStampRouterClassicCanaryEvidence"
               },
               "finalityConfirmations": {
                 "const": 64

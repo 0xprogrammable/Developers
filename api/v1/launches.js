@@ -1,9 +1,9 @@
 import { API_SCHEMA_VERSION, CHAIN_ID } from "../../server/constants.js";
 import {
   feedStatusForCategory,
-  getDataset,
   isDatasetPublishable,
 } from "../../server/dataset.js";
+import { getV1Dataset } from "../../server/v1-frozen.js";
 import {
   cursorScope,
   decodePageCursor,
@@ -33,8 +33,16 @@ function currentSnapshot(dataset) {
     blockHash: checkpoint.blockHash,
     indexedAt: dataset.status.generatedAt,
     finality: checkpoint.finality,
-    customRegistryHighWaterGeneration:
-      dataset.status.customRegistry?.highWaterGeneration ?? null,
+  };
+}
+
+function publicSnapshot(snapshot) {
+  if (!snapshot) return null;
+  return {
+    blockNumber: snapshot.blockNumber,
+    blockHash: snapshot.blockHash,
+    indexedAt: snapshot.indexedAt,
+    finality: snapshot.finality,
   };
 }
 
@@ -132,7 +140,7 @@ export function launchFeedPayload(
     status: feedStatusForCategory(dataset, category),
     snapshot: traversalSnapshot
       ? {
-          ...traversalSnapshot,
+          ...publicSnapshot(traversalSnapshot),
           cursor: resumeCursor,
         }
       : null,
@@ -156,7 +164,7 @@ export function launchFeedPayload(
   };
 }
 
-export function createLaunchesHandler(loadDataset = getDataset) {
+export function createLaunchesHandler(loadDataset = getV1Dataset) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {

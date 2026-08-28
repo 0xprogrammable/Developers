@@ -18,6 +18,10 @@ Both paths must use the same identities and lifecycle rules.
 
 Cursors are opaque. Return them unchanged. A replayed page must be harmless.
 
+The Developer service obtains its hosted Classic baseline from the canonical paginated `https://programmable.market/api/explore` catalog. It accepts that catalog only with the expected schema, identity, scope, and Envio deployment `production-6157d22` binding. The retired legacy token source returns HTTP `410` and is no longer used. Downstream consumers should continue to use the Developer feed, which exposes the validated normalized projection and its source boundary.
+
+Active v2 Classic discovery contains the historical V3 release and current V4 release only. V1 and V2 remain inactive manifest history, and Stock is excluded from active v2 discovery. Custom is ingested separately through its Registry and canonical-Router evidence lanes. The Router is provenance and transport infrastructure, not a public launch category.
+
 For applicant ingestion, require `customRegistryPublication.expectedSourceId === customRegistryPublication.observedSourceId`, `sourceConfigured`, `sourceCurrent`, and `sourceReady`. The current Generation 1 source is `programmable-custom-launch-registry-v3`; do not substitute the Website v1 presentation mirror or merge it with the Developer manifest. Treat `baselineLaunches` as canary coverage and `applicantLaunches` as the separate real-applicant count.
 
 Router Custom discovery is an independent lane. Require `routerCustom.status === "current"` and equal verified and published identity counts before treating absence as authoritative. A `last-known-good` Router snapshot remains ingestible, but it must not be merged into Registry applicant coverage or used to produce a final deletion or 404 conclusion.
@@ -70,7 +74,7 @@ from Programmable provenance.
 
 ## Direct onchain path
 
-Use the manifest's deployment arrays and start blocks. Do not assume one launcher or registry represents all versions.
+Use the manifest's enabled deployment arrays and start blocks. Do not assume one launcher or registry represents all versions. For Classic, scan only the enabled historical V3 and current V4 deployment ranges; do not revive inactive V1/V2 or any Stock range.
 
 For each recognized event, retain enough evidence to reproduce ordering and detect reorgs:
 
@@ -143,6 +147,8 @@ Treat manifest versions as monotonic. On a newer valid manifest:
 - preserve records from older recognized deployments;
 - apply activation or retirement state;
 - record which manifest version supported verification.
+
+This manifest-driven loop is the compatibility mechanism for Classic V4: a generic Router-first consumer refreshes the manifest and begins the newly enabled range without a code release or copied-address update. The live Router evidence reports `classicOnchainCanary: true`; require the exact manifest-bound Classic canary evidence rather than inferring coverage from that boolean alone.
 
 For a new chain, create a distinct backfill, cursor scope, and reorg state. Do not reuse a cursor or finality policy from another network. See [Multi-chain discovery](../concepts/multi-chain.md).
 
