@@ -8,15 +8,16 @@ GET https://developers.programmable.family/api/v2/manifest
 ```
 
 This status page covers the unauthenticated read/discovery API. The separately hosted
-[Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch)
-accepts wallet keys and approved partner root or one-level subkey credentials for public
-launch requests on Ethereum Mainnet. Its machine readiness
+[Custom Launch API](https://programmable.market/docs/developers/custom-launch)
+accepts wallet keys and approved partner root or one-level subkey credentials for fresh
+V3 profile `3.3.0` launch requests on Ethereum Mainnet. Its machine readiness
 endpoint is [`https://api.programmable.market/readyz`](https://api.programmable.market/readyz),
 and its canonical contracts are the versioned
 [`V2`](https://programmable.market/openapi/custom-launch-v2.json) and
 [`V3`](https://programmable.market/openapi/custom-launch-v3.json) OpenAPI documents.
-V1 reads and status remain compatible; V1 POST remains read-only and returns nonretryable
-`409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+V1 and V2 historical reads remain compatible. Their authenticated POST routes are read-only
+and return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`.
 
 In the v2 status response, `customLaunchApi` is the retained V1 compatibility
 object. `currentCustomLaunchCreate` is the additive current V3 write pointer;
@@ -38,13 +39,13 @@ verification or safety claim.
 | --- | --- | --- | --- | --- |
 | Classic launch discovery | `classic` | Ethereum | Live | Current Classic launches can appear in the v2 feed |
 | Router V1 launch provenance | `classic` or `custom` | Ethereum | Live | Direct stamps are recognized from block `25717612`; historical launches are not backfilled |
-| Custom Launch API V2 | `custom` | Ethereum | Public | Wallet-bound API keys may prepare and track deterministic launches; the controller wallet reviews and signs separately |
+| Custom Launch API V2 | `custom` | Ethereum | Historical read-only | Existing resources remain readable; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V2_READ_ONLY` |
 | Direct Native Hook Graph Profile V3 / Custom Launch API V3 | `custom` | Ethereum | Public | Wallet and approved partner bearer credentials use the same active general lane, exact source/compiler/graph binding, deterministic static admission, and mandatory exact Router simulation before authorization |
 | V3 capabilities and preflight | `custom` | Ethereum | Public / authenticated | Public capability discovery plus authenticated quota-free classification; no launch quota, nonce, persistence, wallet signature, broadcast, deployment, or feed record is created |
-| Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Retained compatible | Revision 2 remains published for compatible exact-graph clients |
-| Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the active V3 or compatible V2 descriptor |
+| Direct Native Hook Graph Profile V2 / Custom Launch API V3 | `custom` | Ethereum | Historical read / exact retry | Revision 2 remains published for existing resources and exact-byte retries only; it cannot admit a fresh request |
+| Direct Native Hook Graph Profile V1 | `custom` if activated | Ethereum | Retained gated preview | Preserved unchanged for discovery compatibility; it does not override the active V3 or historical V2 descriptor |
 | Custom Launch API V1 | `custom` | Ethereum | Read-only writes | Reads/status remain compatible; POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` |
-| Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy or V1 write path is open |
+| Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy, V1, or V2 fresh-write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
 | Historical Stock-Paired records | — | Ethereum | Excluded from v2 | Available only through the v1 compatibility API |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
@@ -63,7 +64,7 @@ The manifest publishes Router V1 as `live` at `0x8622DD5bAb44185f2A458ac90384Ac9
 
 ## What closed and prelaunch mean
 
-Closed means the legacy Registry and GitHub submission routes are not accepted. It does not close the separate authenticated Custom Launch API V2 or V3. Prelaunch refers only to a future Registry generation, provider integration, fixture, or fee path that is available for client development but not active. V1 reads/status remain live, but V1 POST is independently read-only. In particular:
+Closed means the legacy Registry and GitHub submission routes are not accepted. Custom Launch API V1 and V2 separately retain historical reads, but their authenticated POST routes are read-only. Only metadata-bound V3 profile `3.3.0` accepts fresh submissions. Prelaunch refers only to a future Registry generation, provider integration, fixture, or fee path that is available for client development but not active. In particular:
 
 - future Custom examples are fixtures, not live assets;
 - approval or submission records do not belong in the public launch feed;
@@ -74,8 +75,8 @@ Closed means the legacy Registry and GitHub submission routes are not accepted. 
 The v2 manifest reports `customRegistry.status: "live"`,
 `customRegistry.publicSubmissionsEnabled: false`, and
 `publicCategories.custom.publicSubmissionStatus: "closed"` for the legacy
-Registry and GitHub intake, plus separately live public Custom Launch API V2
-and V3 profiles. The
+Registry and GitHub intake, plus separately retained V1/V2 historical read
+contracts and the active V3 profile `3.3.0` create pointer. The
 filtered v2 Custom feed begins with the finalized project-only genesis canary.
 These values are the controlling public state; provider catalogs and intake
 drafts cannot override them.
@@ -88,9 +89,11 @@ Generation 1 is the manifest-published Custom Registry trust root. Its finalized
 
 Custom Registry Generation 2 and Custom Fee-Enforced Launch Profile V2 are
 different systems. The first is a future four-contract discovery trust root.
-The second is the public production launch profile for one exact additive fee
-path. Generation 2 remains inactive; the V2 profile is live. Neither creates a
+The second is the retained historical profile for one exact additive fee path.
+Generation 2 remains inactive; the V2 profile is read-only for writes. Neither creates a
 new category, and evidence for one cannot activate the other.
+Any historical V2 conformance receipt describes one exact retained resource; it is not
+current fee-accrual evidence and cannot authorize a new request.
 
 ## Direct Native Hook Graph V3 general lane
 
@@ -111,20 +114,31 @@ product truth axes plus platform-owned behavior evidence; no client can declare
 an unexecuted vector verified. Its deployable, routable, and featured flags do
 not establish deployment, trading, fee behavior, verification, indexing, or
 featured placement; each later state requires its own evidence. A wallet
-handoff appears only later with an explicit URL and expiry.
+handoff appears only after the API server verifies the exact request's required
+behavior, applicable platform-fee, and declared-liquidity-model evidence.
 
 Policy publication and enforcement are separate. The active
 `directNativeHookGraphProfileV3.platformAdmissionPolicy` is the public machine
 contract for static admission. An exact versioned Launch Policy commit or
 release may provide its authored source; an unversioned repository branch does
 not select the live API or decide a request. Live V3 capabilities and OpenAPI
-publish the current transport contract. The CLI is a
-preparation tool. Server-side preflight, request-specific admission, and exact
-Router simulation decide whether the request reaches `authorized`. The
-controller wallet alone signs and broadcasts, and canonical Router finality
+publish the current transport contract. The CLI and any LLM or client-side
+report are preparation tools, never authorization authorities. Server-side
+preflight, request-specific behavior, applicable platform-fee and declared-
+liquidity-model evidence, admission, and exact Router simulation decide whether
+the request reaches `authorized` and may expose a wallet handoff. The
+stable unsatisfied-gate code is `BEHAVIOR_EVIDENCE_NOT_VERIFIED`; not-configured
+or unavailable evidence blocks public permit, wallet-transaction, and handoff
+exposure, while a worker-private permit may exist only for the pinned simulation.
+Public `simulating` and `failed` output keeps permit and wallet-transaction fields null.
+The controller wallet alone signs and broadcasts, and canonical Router finality
 alone permits feed indexing. `authorized` is not signed or deployed,
 `submitted` is not finalized, and `lifecycleQueue.state` is not the launch
 resource status.
+
+For fresh V3.3 requests, both directions and both accounting modes cap
+`applicantSelectedHundredthsOfBip` at `100000`; the Programmable share remains
+separately exact at `1000`, and the API server enforces the bound.
 
 Revision 3 accepts project-supplied token, hook, initializer, and support
 artifacts in exact 3–16-target direct graphs and represents every valid v4 hook
@@ -158,28 +172,29 @@ and return-delta/custom-accounting designs require exact evidence instead of a
 categorical rejection. Zero hard blocks only make the exact request eligible
 for later Router simulation; they do not verify runtime behavior.
 
-Authorization requires the exact prepared Router launch transaction to succeed
-as a pinned Ethereum simulation. Neither the static result nor simulation is a
+Authorization requires server-verified evidence for the exact prepared request,
+including its required behavior, applicable platform-fee path, declared
+liquidity model, and pinned Ethereum Router simulation. Neither that evidence nor simulation is a
 security audit, honeypot-free guarantee, liquidity or tradeability proof, or
 fee-behavior certification. Generic claiming for arbitrary hooks and generic
 buybacks are not live. See the [Revision 3 contract](guides/direct-native-hook-graph-profile-v3.md).
 
-## Direct Native Hook Graph V2 compatible profile
+## Direct Native Hook Graph V2 historical profile
 
-`directNativeHookGraphProfileV2` is the retained compatible descriptor under
+`directNativeHookGraphProfileV2` is the retained historical descriptor under
 `programmable.direct-native-hook-graph-profile-discovery.v2`. It preserves the
 only public categories, `classic` and `custom`, and leaves the V1 descriptor
-unchanged. It describes the separate authenticated Custom Launch API V3 route;
-the Developer API itself remains read-only.
+unchanged. Historical resources remain readable and exact old request bytes may
+be retried only under their original V3 compatibility contract. Revision 2 is
+not publicly routable for fresh submissions; the Developer API itself remains read-only.
 
-V2 accepts an atomic acyclic graph of 3–16 exact targets with distinct project
+The retained V2 contract describes an atomic acyclic graph of 3–16 exact targets with distinct project
 token, hook, and initializer roles. All valid v4 hook permission masks from
 `0` through `16383` are supported when callback dependencies, compiled
 permissions, and hook address bits agree. Funding is exactly one of `none`,
 exact native wallet transaction value, or a separately wallet-signed EIP-3009
-authorization. A project submission is not universal approval: every accepted
-launch requires exact source/build/runtime binding, simulation, admission, and
-a platform-issued conformance receipt bound to that final graph.
+authorization. These historical shapes are not fresh-write authority. Only V3
+profile `3.3.0` accepts a fresh submission.
 
 Pool initialization does not add concentrated liquidity and trading volume does
 not create an LP position. A normal pool stays empty until someone supplies a
@@ -239,7 +254,7 @@ Every registered launch is discoverable. Feature availability is separate:
 
 If a requirement is not met, keep the launch visible and mark that feature unavailable. Do not infer support from contract names, metadata text, category, or an unfamiliar market type.
 
-The Developer v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. The separate Custom Launch API V2 or V3 may prepare an exact transaction, but only the controller wallet may review, sign and broadcast it. V1 POST remains read-only.
+The Developer v2 API is read-only. Support states describe verified availability; they do not return calldata, submit transactions, or authorize an action. Custom Launch API V1 and V2 POST routes are read-only. For fresh V3.3 submissions, only the API server may authorize a wallet handoff after exact evidence checks; only the controller wallet may review, sign, and broadcast it.
 
 The status of an API does not establish fee enforcement, an exact-source match,
 a successful simulation, finality, tradability, claim support, or an audit. Read

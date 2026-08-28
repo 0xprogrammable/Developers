@@ -24,7 +24,7 @@ Use only the URLs returned by the canonical discovery document. Do not place API
 
 ### `GET /api/v2/status`
 
-Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the `customLaunchApi` V1 compatibility state, the additive `currentCustomLaunchCreate` V3 write pointer and its exact `partnerCredentials` contract, the exact public Custom Launch API V2 production-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the compatible V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
+Returns service lifecycle, supported chain state, indexer freshness, the synchronization or finality boundary needed to interpret feed responses, the `customLaunchApi` V1 compatibility state, the additive `currentCustomLaunchCreate` V3 write pointer and its exact `partnerCredentials` contract, the exact retained Custom Launch API V2 historical-profile descriptor, the retained gated Direct Native Hook Graph V1 preview, the historical-read/exact-retry V2 descriptor, and the active additive Direct Native Hook Graph V3 general-lane descriptor. API readiness is not fee-accrual, source-exact, finality, tradability, claim, or audit evidence.
 
 Use it to distinguish:
 
@@ -45,7 +45,8 @@ The optional `routerCustom` object reports the independent canonical-Router iden
 clients use `currentCustomLaunchCreate`, then follow its V3 capabilities,
 preflight, readiness, OpenAPI, and single-resource status contracts. The
 pointer is discovery data; it does not waive server admission or authorize a
-wallet action. Wallet keys remain compatible. Approved partner roots and their
+wallet action. V2 authenticated POST is also read-only and returns nonretryable
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`. Wallet keys remain compatible. Approved partner roots and their
 bounded one-level subkeys use those same contracts and policies; only the root
 can manage credentials, and neither root nor child can sign, broadcast, bypass
 admission, or provide caller-selected attribution.
@@ -93,8 +94,11 @@ to a deterministic role-aware static baseline. A code blocks only for its
 published target roles; every unmatched finding stays bound and visible as a
 warning, with no project-specific exception. Blocking findings produce
 `action_required`; zero blocking findings only make the exact request eligible
-for mandatory pinned Router launch simulation. Authorization requires that
-exact simulation. Admission is not an audit or a safety, honeypot, liquidity,
+for mandatory pinned Router launch simulation. The API server, not a CLI, LLM,
+or client, decides authorization and may expose a wallet handoff only after
+server-verified exact-request behavior, applicable platform-fee, declared-
+liquidity-model, admission, and Router-simulation evidence passes. This is not
+an audit or an arbitrary-hook safety, honeypot, liquidity,
 tradeability, or fee-behavior guarantee. The descriptor names authenticated
 V3 surface, but this Developer API returns no executable calldata and
 authorizes no transaction. Its `api.agentIntegration` object links the
@@ -119,9 +123,9 @@ The active `directNativeHookGraphProfileV3.platformAdmissionPolicy` is the
 machine-readable static admission contract. An exact versioned Launch Policy
 commit or release may provide its authored source; an unversioned repository
 branch neither selects the live API nor decides a request. Live capabilities
-and V3 OpenAPI define the current transport. Local CLI checks are preparatory.
-Server-side preflight, exact-request admission, and pinned Router simulation
-decide authorization;
+and V3 OpenAPI define the current transport. Local CLI checks, LLM output, and
+client reports are preparatory. The API server alone decides authorization
+from the required exact-request evidence;
 the controller wallet alone signs and broadcasts. `authorized` is not signed,
 `submitted` is not finalized, and worker `lifecycleQueue.state` never replaces
 the launch resource status.
@@ -164,7 +168,7 @@ fields, and makes no claim about fees, safety, liquidity, tradeability, or
 external provider indexing. GMGN-, Dexscreener-, or FOMO-style ingestion and
 provider-specific `safe` labels are not guaranteed.
 
-`directNativeHookGraphProfileV2` remains the compatible Revision 2 descriptor.
+`directNativeHookGraphProfileV2` remains the historical-read/exact-retry Revision 2 descriptor.
 It binds project-owned token and hook artifacts in exact acyclic graphs of
 3–16 direct targets, covers every valid v4 permission mask, and supports
 `none`, exact wallet transaction value, or EIP-3009 funding. Its exact
@@ -188,10 +192,10 @@ additive V2 and V3 descriptors. V1 `productionLaunchAuthorized` is false, admiss
 permit authority and the fixed signature-patch evidence are pending, and a
 per-launch initializer is a direct stamped target rather than a separate trust
 root. Clients may inspect the V1 contract but must not construct or submit a
-request from it; production clients use `directNativeHookGraphProfileV3` or the
-retained compatible `directNativeHookGraphProfileV2`. An older v2 discovery response
+request from it; fresh clients use `directNativeHookGraphProfileV3`, while the
+retained `directNativeHookGraphProfileV2` is historical-read/exact-retry only. An older v2 discovery response
 may omit the optional field; that omission does not affect `classic`, `custom`,
-Custom Launch API V1 compatibility, or the public V2 production profile.
+Custom Launch API V1 compatibility, or the retained read-only V2 profile.
 
 Clients should reject an unexplained manifest rollback and alert on conflicting data for the same manifest version.
 
@@ -220,7 +224,7 @@ by a finalized consistent canonical-Router launch and an enabled projector;
 profile documentation, an API key, source review or a prepared graph is not
 launch provenance.
 
-The active V3 and retained compatible V2 descriptors follow the same provenance
+The active V3 and retained historical V2 descriptors follow the same provenance
 boundary without the preview gate: only a finalized consistent canonical-Router launch may enter the launch
 feed. Token-list projection additionally requires a recognized token identity.
 Submission, conformance, authorization, or wallet preparation alone never

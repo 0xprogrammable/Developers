@@ -7,10 +7,11 @@ if (
   profile.schemaVersion !==
     "programmable.direct-native-hook-graph-profile-discovery.v2" ||
   profile.publicCategory !== "custom" ||
-  profile.productionLaunchAuthorized !== true ||
-  object(profile.api).publiclyRoutable !== true
+  profile.productionLaunchAuthorized !== false ||
+  object(profile.api).publiclyRoutable !== false ||
+  object(profile.api).freshSubmissions !== false
 ) {
-  throw new Error("Direct Native Hook Graph Profile V2 is not live");
+  throw new Error("Direct Native Hook Graph Profile V2 is not historical read-only");
 }
 
 console.log(JSON.stringify({
@@ -18,6 +19,8 @@ console.log(JSON.stringify({
   profileRevision: profile.profileRevision,
   category: profile.publicCategory,
   apiVersion: object(profile.api).apiVersion,
+  freshSubmissions: object(profile.api).freshSubmissions,
+  exactByteRetriesOnly: object(profile.api).exactByteRetriesOnly,
   cliVersion: object(profile.cli).releaseVersion,
   targetRange: [
     object(profile.graphContract).minimumTargets,

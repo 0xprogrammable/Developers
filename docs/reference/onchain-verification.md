@@ -6,10 +6,10 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 Ethereum is the only active chain in the current discovery document. Classic deployments and Custom Registry generation 1 are published in the v2 manifest. The Registry address and start block must be read from that manifest; public submissions remain disabled. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
-Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed. The separate authenticated Custom Launch API V2 prepares public Mainnet launches; V1 reads/status remain compatible, but V1 POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`. An unreleased Generation 2 release candidate exists for Registry conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
+Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 retain historical reads, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions. An unreleased Generation 2 release candidate exists for Registry conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
 Custom Registry Generation 2 is not Custom Fee-Enforced Launch Profile V2. The
-fee-enforced profile is the separate authenticated public launch path. Evidence
+fee-enforced profile is a separate retained historical path. Evidence
 for either surface cannot activate the other.
 
 The launch stamp Router is live on Ethereum at `0x8622DD5bAb44185f2A458ac90384Ac99248f8d56` from block `25717612`. The manifest pins runtime Keccak-256 `0x40e27ecf201761d5eb66bc4f2d5c6124831ef078d7baf458ca5f41b1a8108546`, immutable production bindings, a `64`-confirmation policy, finalized deployment evidence, and one approved finalized `CustomGraph` canary. No separate Classic onchain canary is published. Historical launches are not backfilled.
@@ -105,8 +105,9 @@ swap enforcement.
 
 ## Custom Fee-Enforced Launch Profile V2 verification
 
-The V2 profile is public only while its exact manifest descriptor reports
-`productionLaunchAuthorized: true`. A verifier must use one finalized
+The V2 profile is retained for historical verification while its exact manifest
+descriptor reports `productionLaunchAuthorized: false` and
+`api.publiclyRoutable: false`. A verifier must use one finalized
 canonical block and require all of the following to agree:
 
 - the exact Router launch identity, profile hash, launch-intent hash and bound

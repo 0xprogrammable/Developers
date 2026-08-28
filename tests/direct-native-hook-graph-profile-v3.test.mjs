@@ -267,6 +267,14 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       Object.keys(profile.platformFeePolicy.accountingModes).sort(),
       ["additive-platform-share", "inclusive-selected-total"],
     );
+    for (const accountingMode of Object.values(
+      profile.platformFeePolicy.accountingModes,
+    )) {
+      assert.deepEqual(accountingMode.applicantSelectedRangeHundredthsOfBip, {
+        minimum: "0",
+        maximum: "100000",
+      });
+    }
     assert.equal(profile.platformFeePolicy.admissionCertifiesFeeBehavior, false);
     assert.deepEqual(profile.generalLane.projectOwnedRoles, ["token", "hook"]);
     assert.deepEqual(profile.generalLane.supportedHookPermissions, [
@@ -445,6 +453,21 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
             "programmable.custom-graph-project-metadata.v1",
           postDeploymentTokenReadbackRequired: true,
         },
+        behaviorEvidence: {
+          configurationIsExecutionEvidence: false,
+          walletHandoffRequiresVerifiedEvidence: true,
+          minimumWalletHandoffEvidenceStatus: "verified",
+          walletHandoffFailureCode: "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+          notConfiguredDisposition: "blocks_wallet_handoff",
+          unavailableDisposition: "blocks_wallet_handoff",
+          feeBehaviorClaim: false,
+        },
+        feePolicy: {
+          tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence: true,
+        },
+        safetyClaim: false,
+        auditClaim: false,
+        universalCompatibilityClaim: false,
       },
       preflight: {
         method: "POST",
@@ -791,8 +814,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /Legacy Registry and\s+GitHub submission intake are closed/iu);
     assert.match(guide, /Policy authority and resource lifecycle/u);
     assert.match(guide, /exact versioned Programmable Launch Policy commit or release/iu);
-    assert.match(guide, /server-side preflight, exact-request admission/iu);
-    assert.match(guide, /`authorized` means an exact wallet handoff is available/iu);
+    assert.match(guide, /API server alone decides authorization from server-verified exact-request/iu);
+    assert.match(guide, /`authorized` means the API server completed the required evidence\s+decision and an exact wallet handoff is available/iu);
     assert.match(guide, /`submitted` is not finality/iu);
     assert.match(guide, /`finalized`,\s+`failed`, and `cancelled` are terminal/iu);
     assert.match(guide, /`lifecycleQueue\.state` is worker progress/iu);

@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "10",
-  "generatedAt": "2026-08-26T14:36:00Z",
+  "manifestVersion": "11",
+  "generatedAt": "2026-08-28T07:18:00Z",
   "chainId": 1,
   "chains": [
     {
@@ -27,7 +27,7 @@
     "custom": {
       "discoveryStatus": "live",
       "publicSubmissionStatus": "closed",
-      "note": "Custom Launch API V2 and V3 are public on Ethereum Mainnet. V1 reads and status remain compatible, but V1 POST is read-only. Legacy Registry and GitHub submission intake are closed."
+      "note": "Custom Launch API V1 and V2 historical reads remain available, but authenticated POST is read-only and returns nonretryable HTTP 409. Only metadata-bound V3 profile 3.3.0 accepts fresh submissions. Legacy Registry and GitHub submission intake are closed."
     }
   },
   "deployments": [
@@ -116,7 +116,7 @@
     "eventTopic": "0x8ee074138114415a92a0797b4f1f4c6353f8bd15d8031433abf0cc42c2dc274a",
     "abiUrl": "https://developers.programmable.family/abis/ethereum/programmable-custom-registry-v1.json",
     "finalityConfirmations": 64,
-    "note": "Registry discovery is live for finalized approved launches. Legacy Registry and GitHub submission intake are closed independently of the public authenticated Custom Launch API V2; V1 POST remains read-only."
+    "note": "Registry discovery is live for finalized approved launches. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 historical reads remain available, but fresh POST writes are read-only; only metadata-bound V3 profile 3.3.0 accepts fresh submissions."
   },
   "launchStampRouter": {
     "version": "1",
@@ -369,29 +369,28 @@
     "profileVersion": "2.0.0",
     "publicCategory": "custom",
     "registryRelationship": "independent-from-custom-registry-generation-2",
-    "releaseStage": "production",
-    "status": "live",
-    "activationStatus": "production",
-    "productionLaunchAuthorized": true,
+    "releaseStage": "compatibility",
+    "status": "read-only",
+    "activationStatus": "historical-read-only",
+    "productionLaunchAuthorized": false,
     "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
     "api": {
       "apiVersion": "2",
-      "availability": "public",
-      "publiclyRoutable": true,
+      "availability": "authenticated-historical-reads",
+      "publiclyRoutable": false,
       "collectionPath": "/v2/custom-launches",
       "singleResourcePath": "/v2/custom-launches/{requestId}",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
       "walletBoundary": "separate-wallet-signature",
+      "writeStatus": "read-only",
+      "postAuthentication": "wallet-bound-api-key",
+      "postResponse": {
+        "httpStatus": 409,
+        "code": "CUSTOM_LAUNCH_V2_READ_ONLY",
+        "retryable": false
+      },
       "listReconciliation": "bounded-opportunistic-for-pending-records",
-      "recommendedPollingPath": "single-resource",
-      "retryPolicy": {
-        "httpStatuses": [
-          429,
-          503
-        ],
-        "retryAfter": "honor",
-        "requestBytes": "exact-idempotency-bound-replay"
-      }
+      "recommendedPollingPath": "single-resource"
     },
     "cli": {
       "packageName": "@programmable/launch",
@@ -598,7 +597,7 @@
       ],
       "developerDiscoveryApi": "v2-optional-profile-descriptor",
       "customLaunchApiV1": "unchanged-read-status-post-read-only",
-      "customLaunchApiV2": "unchanged-public-production-profile",
+      "customLaunchApiV2": "historical-reads-post-read-only",
       "customLaunchApiV3": "gated-not-publicly-routable"
     },
     "graphContract": {
@@ -983,19 +982,20 @@
     "profileRevision": 2,
     "profileVersion": "2.0.0",
     "publicCategory": "custom",
-    "releaseStage": "production",
-    "status": "live",
-    "activationStatus": "live",
-    "productionLaunchAuthorized": true,
+    "releaseStage": "compatibility",
+    "status": "read-only",
+    "activationStatus": "historical-read-only",
+    "productionLaunchAuthorized": false,
     "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md",
     "api": {
       "apiVersion": "3",
       "baseUrl": "https://api.programmable.market",
       "routeId": "custom-launch:create:v3",
-      "supportStatus": "live",
-      "availability": "public-authenticated",
-      "publiclyRoutable": true,
+      "supportStatus": "historical-read-only",
+      "availability": "authenticated-historical-reads",
+      "publiclyRoutable": false,
       "collectionPath": "/v3/custom-launches",
+      "singleResourcePath": "/v3/custom-launches/{launchId}",
       "openApiPath": "/openapi/custom-launch-v3.json",
       "openApiStatus": "live",
       "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -1004,13 +1004,15 @@
       "profileSelectionSchema": "programmable.direct-native-hook-graph-profile-selection.v2",
       "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
       "authentication": "wallet-bound-api-key",
+      "freshSubmissions": false,
+      "exactByteRetriesOnly": true,
       "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
     },
     "cli": {
       "packageName": "@programmable/launch",
       "releaseVersion": "3.0.0",
       "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
-      "supportStatus": "live",
+      "supportStatus": "historical-read-only",
       "minimumSupportingVersion": "3.0.0",
       "packConfigSchema": "programmable.launch-pack-config.v3",
       "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -1030,7 +1032,7 @@
       ],
       "developerDiscoveryApi": "v2-optional-profile-descriptor",
       "customLaunchApiV1": "unchanged-read-status-post-read-only",
-      "customLaunchApiV2": "unchanged-public-production-profile",
+      "customLaunchApiV2": "historical-reads-post-read-only",
       "customLaunchApiV3": "public-production-profile",
       "discoveryV1": "retained-unchanged"
     },
@@ -1566,7 +1568,22 @@
             "projectMetadataHashDomain": "programmable.project-metadata.v1",
             "graphBundleHashBindingDomain": "programmable.custom-graph-project-metadata.v1",
             "postDeploymentTokenReadbackRequired": true
-          }
+          },
+          "behaviorEvidence": {
+            "configurationIsExecutionEvidence": false,
+            "walletHandoffRequiresVerifiedEvidence": true,
+            "minimumWalletHandoffEvidenceStatus": "verified",
+            "walletHandoffFailureCode": "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+            "notConfiguredDisposition": "blocks_wallet_handoff",
+            "unavailableDisposition": "blocks_wallet_handoff",
+            "feeBehaviorClaim": false
+          },
+          "feePolicy": {
+            "tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence": true
+          },
+          "safetyClaim": false,
+          "auditClaim": false,
+          "universalCompatibilityClaim": false
         },
         "preflight": {
           "method": "POST",
@@ -1677,10 +1694,10 @@
       ],
       "developerDiscoveryApi": "v2-additive-profile-descriptor",
       "customLaunchApiV1": "unchanged-read-status-post-read-only",
-      "customLaunchApiV2": "unchanged-public-production-profile",
+      "customLaunchApiV2": "historical-reads-post-read-only",
       "customLaunchApiV3": "public-production-profile",
       "profileRevision1": "retained-gated-preview",
-      "profileRevision2": "retained-live-compatible",
+      "profileRevision2": "retained-historical-read-and-exact-retry",
       "profileRevision3": "active-general-lane",
       "profileVersion3_0_0": "retained-exact-read-and-retry",
       "profileVersion3_1_0": "retained-exact-read-and-retry",
@@ -1747,7 +1764,7 @@
         "additive-platform-share": {
           "applicantSelectedRangeHundredthsOfBip": {
             "minimum": "0",
-            "maximum": "998999"
+            "maximum": "100000"
           },
           "projectFormula": "applicant-selected",
           "programmableFormula": "1000",
@@ -1756,7 +1773,7 @@
         "inclusive-selected-total": {
           "applicantSelectedRangeHundredthsOfBip": {
             "minimum": "0",
-            "maximum": "999999"
+            "maximum": "100000"
           },
           "projectFormula": "max-applicant-selected-and-1000-minus-1000",
           "programmableFormula": "1000",

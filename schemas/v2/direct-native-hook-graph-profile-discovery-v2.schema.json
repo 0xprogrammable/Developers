@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://developers.programmable.family/schemas/v2/direct-native-hook-graph-profile-discovery-v2.schema.json",
-  "title": "Programmable Direct Native Hook Graph Profile Discovery V2 production status",
+  "title": "Programmable Direct Native Hook Graph Profile Discovery V2 historical read-only status",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -54,16 +54,16 @@
       "const": "custom"
     },
     "releaseStage": {
-      "const": "production"
+      "const": "compatibility"
     },
     "status": {
-      "const": "live"
+      "const": "read-only"
     },
     "activationStatus": {
-      "const": "live"
+      "const": "historical-read-only"
     },
     "productionLaunchAuthorized": {
-      "const": true
+      "const": false
     },
     "guideUrl": {
       "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md"
@@ -73,10 +73,11 @@
         "apiVersion": "3",
         "baseUrl": "https://api.programmable.market",
         "routeId": "custom-launch:create:v3",
-        "supportStatus": "live",
-        "availability": "public-authenticated",
-        "publiclyRoutable": true,
+        "supportStatus": "historical-read-only",
+        "availability": "authenticated-historical-reads",
+        "publiclyRoutable": false,
         "collectionPath": "/v3/custom-launches",
+        "singleResourcePath": "/v3/custom-launches/{launchId}",
         "openApiPath": "/openapi/custom-launch-v3.json",
         "openApiStatus": "live",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -85,6 +86,8 @@
         "profileSelectionSchema": "programmable.direct-native-hook-graph-profile-selection.v2",
         "profileSelectionBindingSchema": "programmable.direct-native-hook-graph-profile-selection-binding.v2",
         "authentication": "wallet-bound-api-key",
+        "freshSubmissions": false,
+        "exactByteRetriesOnly": true,
         "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
       }
     },
@@ -93,7 +96,7 @@
         "packageName": "@programmable/launch",
         "releaseVersion": "3.0.0",
         "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
-        "supportStatus": "live",
+        "supportStatus": "historical-read-only",
         "minimumSupportingVersion": "3.0.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
@@ -115,7 +118,7 @@
         ],
         "developerDiscoveryApi": "v2-optional-profile-descriptor",
         "customLaunchApiV1": "unchanged-read-status-post-read-only",
-        "customLaunchApiV2": "unchanged-public-production-profile",
+        "customLaunchApiV2": "historical-reads-post-read-only",
         "customLaunchApiV3": "public-production-profile",
         "discoveryV1": "retained-unchanged"
       }

@@ -74,6 +74,20 @@ false. Behavior evidence lists the exact swap, liquidity, callback, fee, and,
 when applicable, custom-accounting vectors. A missing runtime executor remains
 `not_executed`; a client or agent cannot turn it into `verified`.
 
+Live capabilities make the wallet boundary exact. Under `behaviorEvidence`,
+`configurationIsExecutionEvidence` is false,
+`walletHandoffRequiresVerifiedEvidence` is true, and
+`minimumWalletHandoffEvidenceStatus` is `verified`. `not_configured` and
+`unavailable` both block the wallet handoff; the stable failure code is
+`BEHAVIOR_EVIDENCE_NOT_VERIFIED`, and `feeBehaviorClaim` remains false. The
+capability `feePolicy.tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence`
+is true. A worker may create a private exact permit only to run the required
+pinned Router simulation, but no public permit, wallet transaction, or handoff
+is exposed while the evidence gate is unsatisfied. Public `simulating` and
+`failed` resources therefore keep permit and wallet-transaction output null.
+`safetyClaim`, `auditClaim`,
+and `universalCompatibilityClaim` all remain false.
+
 ### Eligibility is not lifecycle evidence
 
 The three `launchEligibility` booleans answer different preflight questions:
@@ -106,13 +120,18 @@ launch decision. The authority boundary is:
    not select the live API or decide a request;
 3. live `GET /v3/capabilities` and the V3 OpenAPI publish the current route and
    transport contract;
-4. the CLI prepares and validates exact bytes locally but cannot authorize a
-   request;
-5. server-side preflight, exact-request admission, and the required pinned
-   Router simulation produce the operational decision;
+4. the CLI, an LLM, and client-side reports may prepare or describe exact bytes
+   but cannot authorize a request;
+5. the API server alone decides authorization from server-verified exact-request
+   behavior, applicable platform-fee, declared-liquidity-model, admission, and
+   required pinned Router-simulation evidence;
 6. only the controller wallet may review, sign, and broadcast; and
 7. finalized canonical-Router evidence, not an API status alone, permits feed
    indexing.
+
+The API server must not expose a wallet handoff before those exact evidence
+checks pass. That boundary is per request and is not a claim that arbitrary
+hooks are safe or that every hook or market universally enforces or pays a fee.
 
 The V3 resource status vocabulary is `received`, `validating`,
 `pending_review`, `action_required`, `prepared`, `simulating`,
@@ -121,7 +140,8 @@ The V3 resource status vocabulary is `received`, `validating`,
 the canonical vocabulary, not permission to invent transitions; follow the
 returned resource and its V3 OpenAPI contract. `action_required` means repair
 the exact request, repack, and submit new exact bytes. It is not manual
-approval. `authorized` means an exact wallet handoff is available; it does not
+approval. `authorized` means the API server completed the required evidence
+decision and an exact wallet handoff is available; it does not
 mean signed, broadcast, or deployed. `submitted` is not finality. `finalized`,
 `failed`, and `cancelled` are terminal.
 
@@ -361,6 +381,11 @@ selected total as inclusive and reserves the same Programmable share inside
 that total. Integrators must read the selected mode, assessment base, fee
 currency, rounding, and claim mode from the exact request; they must not infer
 added-on-top behavior from the `custom` category.
+
+For both fee directions and both accounting modes,
+`applicantSelectedHundredthsOfBip` is bounded to `0..100000`. The exact
+Programmable share remains `1000` separately. The API server enforces this cap;
+a CLI, LLM, or client cannot widen it.
 
 The machine descriptor publishes both allowed accounting modes, the 10 bps
 Programmable share, assessment pairs, and claim modes. The older top-level

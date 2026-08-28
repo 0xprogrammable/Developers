@@ -35,7 +35,7 @@ describe("launch stamp Router documentation", () => {
     const fixture = await readJson(FIXTURE_PATH);
     const router = manifest.launchStampRouter;
 
-    assert.equal(manifest.generatedAt, "2026-08-26T14:36:00Z");
+    assert.equal(manifest.generatedAt, "2026-08-28T07:18:00Z");
     assert.ok(router, "top-level launchStampRouter is required");
     assert.equal(manifest.customRegistry.launchStamp, undefined);
     assert.equal(router.status, "live");
@@ -529,7 +529,7 @@ describe("launch stamp Router documentation", () => {
     assert.match(guide, /not an Explorer source-publication status/i);
     assert.match(
       guide,
-      /Custom Launch API V1.*no write path.*409 CUSTOM_LAUNCH_V1_READ_ONLY.*GitHub approval flow must not be revived/is,
+      /Custom Launch API V1 and V2 retain historical reads.*409 CUSTOM_LAUNCH_V1_READ_ONLY.*409 CUSTOM_LAUNCH_V2_READ_ONLY.*GitHub approval flow must not be revived/is,
     );
     assert.match(terminalGuide, /finalized PCAN test vector/i);
     assert.match(terminalGuide, /backfill-to-live handoff has no gap/i);
@@ -538,7 +538,7 @@ describe("launch stamp Router documentation", () => {
     assert.match(terminalGuide, /ordinary market/i);
     assert.match(terminalGuide, /read current pool state separately through PoolManager or StateView/i);
     assert.match(faq, /Custom launches still use GitHub approval pull requests/i);
-    assert.match(faq, /API key is never wallet signing or broadcast\s+authority/i);
+    assert.match(faq, /No credential signs, broadcasts, bypasses admission, or supplies attribution/i);
     assert.match(faq, /ordinary token and pool listing/i);
     assert.match(faq, /not canonical onchain evidence/i);
     assert.match(faq, /No\./);

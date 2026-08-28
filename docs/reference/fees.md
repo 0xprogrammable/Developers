@@ -18,7 +18,7 @@ The platform rate is:
 1,000 parts per million
 ```
 
-Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from the exact public Custom profile. A rate and recipient without a bound deployed path are not proof of accrual or payment.
+Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from retained exact Custom profiles. A rate and recipient without a bound deployed path are not proof of accrual or payment.
 
 ## Classic
 
@@ -30,10 +30,12 @@ The corresponding fee disclosure uses an included charge mode.
 
 ## Custom Fee-Enforced Launch Profile V2
 
-The public Custom Fee-Enforced Launch Profile V2 specifies an additive
+The retained historical Custom Fee-Enforced Launch Profile V2 specifies an additive
 `1,000 ppm` Programmable fee for successful swaps through one exact bound V2
-pool on Ethereum Mainnet. The current machine descriptor publishes its exact
-production revision and hash with `productionLaunchAuthorized: true`.
+pool on Ethereum Mainnet. The current machine descriptor keeps its exact
+revision and hash with `productionLaunchAuthorized: false` and
+`api.publiclyRoutable: false`; authenticated POST returns nonretryable
+`409 CUSTOM_LAUNCH_V2_READ_ONLY`.
 
 The fee basis is the gross amount of the unspecified pool currency for each
 swap. Exact-input swaps account the output currency; exact-output swaps account
@@ -47,7 +49,7 @@ The additive Programmable fee is separate from the liquidity-provider fee,
 protocol fee, creator or custom-module fee, and network gas. A consumer must not
 collapse those components into “10 bps total.”
 
-Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V2 is a separate authenticated public preparation path; V1 POST remains read-only. API availability does not prove that any specific launch accrued or paid a fee. A request hash, Router stamp, or successful HTTP response is not fee-payment evidence.
+Legacy Registry and GitHub submission intake are closed. The live Registry does not create a global partner fee: every published fee path stays bound to its provider, model, version, and verified market path. Custom Launch API V1 and V2 retain historical reads but no POST writes; only V3 profile `3.3.0` accepts fresh submissions. API availability does not prove that any specific launch accrued or paid a fee. A request hash, Router stamp, or successful HTTP response is not fee-payment evidence.
 
 Never infer added-on-top behavior from `category: "custom"`; read `fees` and `verificationStatus` for the actual record. The top-level `customPublicSubmissions.chargeMode: added-on-top` compatibility field is scoped only to the legacy Fee-Enforced Isolated After-Swap profile and does not describe Direct Native Hook Graph V3.
 
@@ -55,7 +57,7 @@ There is no partner share in this fee-enforced launch profile.
 The current FADE claim adapter is specific to FADE. It is not a generic fee
 claim or buyback interface for V2 or arbitrary hooks.
 
-See the [V2 production profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
+See the [retained V2 profile guide](../guides/custom-fee-enforced-launch-profile-v2.md)
 for the exact authorization and polling boundaries.
 
 ## Direct Native Hook Graph Profile V3
@@ -67,9 +69,14 @@ and require separate onchain evidence for accrual or claimability. LP fees,
 project economics, the Programmable charge, and network gas remain separate
 disclosures. Generic fee claiming and buyback management are not live.
 
+For both directions and for additive or inclusive accounting,
+`applicantSelectedHundredthsOfBip` is `0..100000`. The Programmable share is
+the separate exact `1000`. The API server enforces this bound; clients cannot
+widen it, and the bound does not prove actual fee behavior.
+
 ## Direct Native Hook Graph Profile V2
 
-The retained compatible V2 descriptor requires `1,000` hundredths of a bip for Programmable
+The retained historical V2 descriptor required `1,000` hundredths of a bip for Programmable
 on each successful swap under the exact selected assessment base and fee
 currency: `1,000 / 1,000,000 = 0.10% = 10 bps`. A launch selects either an
 additive platform share or an inclusive selected total. The effective project

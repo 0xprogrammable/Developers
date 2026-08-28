@@ -159,7 +159,22 @@
               "projectMetadataHashDomain": "programmable.project-metadata.v1",
               "graphBundleHashBindingDomain": "programmable.custom-graph-project-metadata.v1",
               "postDeploymentTokenReadbackRequired": true
-            }
+            },
+            "behaviorEvidence": {
+              "configurationIsExecutionEvidence": false,
+              "walletHandoffRequiresVerifiedEvidence": true,
+              "minimumWalletHandoffEvidenceStatus": "verified",
+              "walletHandoffFailureCode": "BEHAVIOR_EVIDENCE_NOT_VERIFIED",
+              "notConfiguredDisposition": "blocks_wallet_handoff",
+              "unavailableDisposition": "blocks_wallet_handoff",
+              "feeBehaviorClaim": false
+            },
+            "feePolicy": {
+              "tenBpsClaimRequiresExactPerLaunchVerifiedFeePathEvidence": true
+            },
+            "safetyClaim": false,
+            "auditClaim": false,
+            "universalCompatibilityClaim": false
           },
           "preflight": {
             "method": "POST",
@@ -274,10 +289,10 @@
         ],
         "developerDiscoveryApi": "v2-additive-profile-descriptor",
         "customLaunchApiV1": "unchanged-read-status-post-read-only",
-        "customLaunchApiV2": "unchanged-public-production-profile",
+        "customLaunchApiV2": "historical-reads-post-read-only",
         "customLaunchApiV3": "public-production-profile",
         "profileRevision1": "retained-gated-preview",
-        "profileRevision2": "retained-live-compatible",
+        "profileRevision2": "retained-historical-read-and-exact-retry",
         "profileRevision3": "active-general-lane",
         "profileVersion3_0_0": "retained-exact-read-and-retry",
         "profileVersion3_1_0": "retained-exact-read-and-retry",
@@ -348,7 +363,7 @@
           "additive-platform-share": {
             "applicantSelectedRangeHundredthsOfBip": {
               "minimum": "0",
-              "maximum": "998999"
+              "maximum": "100000"
             },
             "projectFormula": "applicant-selected",
             "programmableFormula": "1000",
@@ -357,7 +372,7 @@
           "inclusive-selected-total": {
             "applicantSelectedRangeHundredthsOfBip": {
               "minimum": "0",
-              "maximum": "999999"
+              "maximum": "100000"
             },
             "projectFormula": "max-applicant-selected-and-1000-minus-1000",
             "programmableFormula": "1000",

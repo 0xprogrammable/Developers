@@ -824,7 +824,7 @@ describe("server projections", () => {
     );
     assert.match(
       canonical.publicCategories.custom.note,
-      /Custom Launch API V2 and V3 are live/u,
+      /Custom Launch API V1 and V2 historical reads remain available/u,
     );
     assert.match(
       canonical.customRegistry.note,

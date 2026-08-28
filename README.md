@@ -2,10 +2,10 @@
 
 # Programmable developer reference
 
-Unauthenticated read and discovery contracts for detecting and verifying Programmable launches. The authenticated
-Custom Launch API V2 retains its exact fee-enforced profile, while V3 is the public general direct-hook graph route
-for exact project token and hook artifacts on Ethereum Mainnet. V1 reads and status remain compatible, while V1 POST stays read-only and returns nonretryable
-`409 CUSTOM_LAUNCH_V1_READ_ONLY`.
+Unauthenticated read and discovery contracts for detecting and verifying Programmable launches. Custom Launch API V1
+and V2 historical reads remain available, while authenticated POST is read-only and returns nonretryable
+`409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only metadata-bound V3 profile `3.3.0`
+accepts fresh submissions for exact project token and hook artifacts on Ethereum Mainnet.
 
 ## Choose the API surface
 
@@ -13,7 +13,7 @@ for exact project token and hook artifacts on Ethereum Mainnet. V1 reads and sta
 | --- | --- | --- | --- |
 | Developer read API at `developers.programmable.family` | None | Discover launches, resolve deployments and verify provenance | [Read API OpenAPI](openapi/programmable-v2.yaml) |
 | Custom Launch API V3 at `api.programmable.market` | Wallet key or approved partner root/subkey bearer credential | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
-| Custom Launch API V2 at `api.programmable.market` | Wallet-bound bearer API key | Pack, validate, submit and track a deterministic Mainnet launch; the wallet reviews and signs separately | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) and [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
+| Custom Launch API V2 compatibility at `api.programmable.market` | Wallet-bound bearer API key | Read historical V2 resources; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V2_READ_ONLY` | [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Custom Launch API V1 compatibility | Wallet-bound bearer API key | Inspect existing V1 provenance reads and request status; V1 POST is read-only | [V1 compatibility guide](https://programmable.market/developers/custom-launch-api-v1.md) and [V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
 
 Create or revoke a wallet-bound key on the [API key management page](https://programmable.market/developers/api-keys).
@@ -21,16 +21,24 @@ Approved partners use a root credential or one bounded child level on the same V
 policy. A root with `partner-subkeys:manage` may issue, list, rotate, or revoke its own subkeys; children cannot manage
 credentials, exceed root scopes, budgets, or expiry, or create another level. Store every credential in an encrypted
 secret or `PROGRAMMABLE_API_KEY`, never in a prompt or chat. No API credential can sign, broadcast, bypass policy or
-supply its own attribution. V2 and V3 return a transaction for the connected controller wallet to review and sign separately.
+supply its own attribution. Only an authorized V3 resource may expose a transaction for the connected controller wallet
+to review and sign separately.
 Launch create, resource, and status schemas remain owned by their respective OpenAPI contracts. This read/discovery
 repository publishes only the standalone V3 preflight response contract needed for capability discovery. Resolve the
 active write entry from `extensions["programmable.custom-launch-api"].currentCreate` in discovery or
 `currentCustomLaunchCreate` in status, then read live V3 capabilities, OpenAPI,
 the exact `partnerCredentials` contract, and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned
 [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) commit or release can provide the reviewable
-authored source, but its unversioned default branch does not select the live API or decide a request. The CLI only prepares
-bytes. Server-side preflight, request-specific admission, and exact Router simulation make the operational decision. The
-API key authenticates the request and never overrides policy or wallet authority.
+authored source, but its unversioned default branch does not select the live API or decide a request. A CLI, LLM, or
+client-side report only prepares or describes bytes and cannot authorize a launch. The API server alone makes the
+operational decision from server-verified, exact-request behavior, applicable platform-fee, declared-liquidity-model,
+admission, and Router-simulation evidence. It must not expose a wallet handoff before those checks pass. This boundary
+does not make an arbitrary hook safe or prove that every hook or market universally enforces or pays a fee. Live
+capabilities use `BEHAVIOR_EVIDENCE_NOT_VERIFIED` and block public permit, wallet-transaction, and handoff exposure when
+behavior evidence is not configured, unavailable, or below `verified`; a worker-private permit may still exist solely
+for the pinned Router simulation. Public `simulating` and `failed` output keeps permit and wallet-transaction fields null.
+For fresh V3.3 requests, the server caps `applicantSelectedHundredthsOfBip` at `100000` for both directions and
+accounting modes; the exact Programmable share is separately fixed at `1000`.
 
 ## Start here
 
@@ -43,14 +51,14 @@ API key authenticates the request and never overrides policy or wallet authority
 | [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
 | [Protocol fee claim discovery](docs/reference/protocol-fee-claims.md) | Understand the operator claim inventory, refresh behavior, wallet boundary, and fail-closed Custom admission rules |
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
-| [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) | Prepare and track a public launch while keeping wallet signing separate |
+| [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) | Prepare and track a fresh V3.3 launch while keeping server authorization and wallet signing separate |
 | [Custom Launch V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) | Generate a client for the general project-owned token and hook graph route |
-| [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) | Generate a client from the canonical public V2 machine contract |
+| [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) | Preserve historical V2 reads and the authenticated read-only POST boundary |
 | [Custom Launch V1 compatibility](https://programmable.market/openapi/custom-launch-v1.json) | Preserve existing V1 reads/status and the V1 read-only POST boundary |
-| [Custom Fee-Enforced Launch Profile V2](docs/guides/custom-fee-enforced-launch-profile-v2.md) | Verify the exact production profile, 1,000 ppm fee semantics and evidence boundaries |
+| [Custom Fee-Enforced Launch Profile V2](docs/guides/custom-fee-enforced-launch-profile-v2.md) | Interpret the retained historical profile, its exact fee semantics, and its read-only write boundary |
 | [Direct Native Hook Graph Profile V1](docs/guides/direct-native-hook-graph-profile-v1.md) | Inspect the gated V3 preview contract for a direct project hook, a 3–16-target profile over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, two-stage funding and an inclusive 10-bps platform split |
 | [Direct Native Hook Graph Profile V3](docs/guides/direct-native-hook-graph-profile-v3.md) | Integrate the active general V3 lane for exact project graphs, deterministic static admission, mandatory Router simulation, and explicit non-guarantees |
-| [Direct Native Hook Graph Profile V2](docs/guides/direct-native-hook-graph-profile-v2.md) | Integrate the retained compatible Revision 2 contract for 3–16 exact targets, all valid v4 permission masks, three funding modes, and per-launch conformance |
+| [Direct Native Hook Graph Profile V2](docs/guides/direct-native-hook-graph-profile-v2.md) | Read retained Revision 2 resources and preserve exact-byte retry compatibility without creating a fresh V2 request |
 | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) | Resolve the current versioned requirements without relying on copied policy text |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
@@ -125,11 +133,11 @@ curl -fsSL https://developers.programmable.family/api/v2/launches
 curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 
-No SDK or API key is required for this Developer read API. The Developer v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md). The separate authenticated [Custom Launch API V2 and V3](https://programmable.market/docs/developers/custom-launch) prepare public Mainnet launches; V1 reads/status remain compatible and V1 POST remains read-only.
+No SDK or API key is required for this Developer read API. The Developer v2 API is read-only and never authorizes a transaction. Follow discovery URLs, finish every cursor traversal, deduplicate by `launchId`, preserve unknown launch shapes, and never infer chart, quote, simulation, or execution support from provenance alone. See the [API quickstart](docs/quickstart.md) and [HTTP reference](docs/reference/http-api.md). The separate authenticated Custom Launch API retains V1 and V2 historical reads while rejecting their POST writes with nonretryable HTTP 409. Only V3 profile `3.3.0` accepts fresh submissions.
 
 For an existing Custom project, resolve `directNativeHookGraphProfileV3.api.agentIntegration` from the manifest. It links the canonical [agent remediation catalog](https://programmable.market/policies/custom-launch-agent-remediation-v1.json), pack-config schema, and existing-project guide. A returned `action_required` status means the exact source or configuration must be repaired, repacked, validated, and resubmitted through the API; it is not a manual allowlist or legacy GitHub submission path. New EIP-3009 integrations use `programmable.eip3009-authorization-patch.v2`, whose static ABI paths identify the nonce, `r`, `s`, and `v` leaves without applicant-supplied byte offsets. Exact v1 retries remain compatible.
 
-Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. Only metadata-bound profile `3.3.0` accepts fresh submissions. Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` bytes remain readable and may be retried byte-for-byte only; they cannot be repacked or admitted as fresh submissions. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; exposes platform-authored behavior evidence and all six product truth axes; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. A later authorized resource supplies an expiring wallet-handoff URL for separate controller-wallet review and signature. Authenticated resources can expose a bounded [`lifecycleQueue`](schemas/v2/custom-launch-lifecycle-queue-v3.schema.json) projection for single-resource polling; queue state is not launch finality and is not a Developer feed field.
+Before creating a V3 launch, read public `GET https://api.programmable.market/v3/capabilities`, then use authenticated quota-free `POST /v3/custom-launches/preflight`. Only metadata-bound profile `3.3.0` accepts fresh submissions. Exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` bytes remain readable and may be retried byte-for-byte only; they cannot be repacked or admitted as fresh submissions. The [`programmable.custom-launch-preflight.v1`](schemas/v2/custom-launch-preflight-v1.schema.json) response keeps hard blocks, missing evidence, and warnings separate; exposes platform-authored behavior evidence and all six product truth axes; consumes no launch quota, allocates no nonce, persists nothing, and never signs or broadcasts. `deployable`, `routable`, and `featured` are independent preflight eligibility fields, not proof of deployment, trading, fee behavior, source verification, indexing, or featured placement. Only the API server may authorize the exact request, and it must verify the required behavior, applicable platform-fee, and declared-liquidity-model evidence before a later resource exposes an expiring wallet-handoff URL for separate controller-wallet review and signature. Authenticated resources can expose a bounded [`lifecycleQueue`](schemas/v2/custom-launch-lifecycle-queue-v3.schema.json) projection for single-resource polling; queue state is not launch finality and is not a Developer feed field.
 
 The durable resource vocabulary is `received`, `validating`, `pending_review`,
 `action_required`, `prepared`, `simulating`,
