@@ -188,6 +188,7 @@ describe("OpenAPI v2 contract", () => {
       /finalized-v3-project-metadata-ledger/u,
     );
     assert.match(finalizedMetadata.description, /retained `3\.2\.0`/u);
+    assert.match(finalizedMetadata.description, /immutable `launchProfileVersion`/u);
     assert.match(finalizedMetadata.description, /tokenMetadataReadback\.status/u);
     assert.match(finalizedMetadata.description, /cannot guarantee GMGN, Dexscreener/u);
     assert.equal(

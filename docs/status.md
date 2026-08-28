@@ -159,13 +159,14 @@ separate post-deployment readback. Images, descriptions, and links remain
 creator-supplied display data and cannot authorize wallet or API actions.
 Every V3 resource carries immutable `launchProfileVersion`. Its always-present
 `projectMetadata` and `projectMetadataHash` keys are non-null for metadata-bound
-`3.2.0` and `3.3.0`; both are null for retained `2.0.0`, `3.0.0`, and `3.1.0`
-resources. Profile `3.2.0` keeps its legacy nullable-image metadata contract;
-fresh `3.3.0` packs use the stricter complete policy.
+`3.2.0`, `3.3.0`, and prepared `3.4.0`; both are null for retained `2.0.0`,
+`3.0.0`, and `3.1.0` resources. Profile `3.2.0` keeps its legacy nullable-image
+metadata contract; `3.3.0` and prepared `3.4.0` use the stricter complete policy.
 The unauthenticated `/v3/finalized-custom-launches` snapshot is backed by the
 `finalized-v3-project-metadata-ledger` and exposes finalized metadata-bearing V3
 rows under their original contracts, including retained `3.2.0` and current
-`3.3.0` rows, plus their declared-versus-observed token readback state. It
+`3.3.0` rows, plus immutable `launchProfileVersion` and their
+declared-versus-observed token readback state. It
 requires `schemaVersion`, `generatedAt`, `launches`, `nextCursor`, and `quality`
 on every page. `quality.status` is `complete` or `partial`; published plus
 quarantined rows equals the source count. The snapshot excludes pending and
