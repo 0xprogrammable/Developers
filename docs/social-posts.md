@@ -2,11 +2,13 @@
 
 These are copy-ready drafts, not authorization to post. Verify the URL and current status immediately before use.
 
-## Current — Registry discovery and Custom Launch API V2 live
+## Current — Custom Launch API V3 live
 
-Use only while Registry generation 1 remains public, the exact production-profile descriptor authorizes V2, V1 POST remains read-only, and legacy Registry and GitHub submission intake remain closed:
+Use only while profile `3.3.0` accepts fresh V3 submissions, Registry generation
+1 remains public, V1 and V2 POST remain read-only, and legacy Registry and GitHub
+submission intake remain closed:
 
-> Programmable Custom discovery and authenticated Mainnet launch preparation are live. API keys prepare and track exact transactions; the controller wallet reviews and signs separately. The profile discloses an additive 10 bps fee, while generic claiming and buybacks remain unavailable. Legacy Registry and GitHub intake are closed. Docs: https://developers.programmable.family/
+> Programmable Custom discovery and authenticated Ethereum Mainnet launch preparation are live through API V3. API keys prepare and track exact transactions; the controller wallet reviews and signs separately. Fees, market support, liquidity and source verification depend on each launch's own evidence. Legacy Registry and GitHub intake are closed. Docs: https://developers.programmable.family/
 
 ## Live — after the Custom canary
 
