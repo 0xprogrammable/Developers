@@ -510,7 +510,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 ## Pending additive profile 3.4.0 (not active)
 
 Profile `3.4.0` is a release-readiness target, not a currently accepted profile.
-Live capabilities, OpenAPI, and CLI `3.3.7` continue to select `3.3.0` for fresh
+Live capabilities, OpenAPI, and CLI `3.3.8` continue to select `3.3.0` for fresh
 writes. Do not submit, pack, or describe a `3.4.0` request as live until the
 same-app runner and observation ABI are deployed, a separately signed exact
 settlement-dataflow closure validates against its pinned authority trust root,
@@ -552,7 +552,7 @@ that every hook or PoolKey is tradeable on site.
 
 ## CLI contract
 
-Revision 3 uses public CLI contract version `3.3.7`, with exactly four commands:
+Revision 3 uses public CLI contract version `3.3.8`, with exactly four commands:
 
 ```text
 pack
@@ -561,8 +561,8 @@ submit
 status
 ```
 
-The immutable `3.3.7` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.7`.
+The immutable `3.3.8` release locator is
+`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.8`.
 The discovery descriptor reports `releaseLocatorStatus: published` and
 `supportStatus: live`. Resolve release assets and their verification material
 from that immutable locator at installation time; do not reuse an older
