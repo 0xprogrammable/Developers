@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { describe, test } from "node:test";
 
@@ -55,10 +56,18 @@ function releaseId(record) {
 
 describe("frozen API v1 dataset", () => {
   test("loads and publishes the immutable historical snapshot", async () => {
-    const artifact = JSON.parse(await readFile(
+    const artifactBytes = await readFile(
       new URL("../snapshots/v1-launches.frozen.json", import.meta.url),
-      "utf8",
-    ));
+    );
+    assert.equal(
+      createHash("sha256").update(artifactBytes).digest("hex"),
+      "34306ba1f55cd2ec5acae2f190c34702ab3e66130a71bf3fc06bea0b976e066b",
+    );
+    const artifact = JSON.parse(artifactBytes.toString("utf8"));
+    assert.equal(
+      artifact.source.stockFeePolicy.repository,
+      "https://github.com/0xprogrammable/PROGRAMMABLE-EVM",
+    );
     const dataset = await getV1Dataset();
     const status = v1ServiceStatus(dataset.status);
 

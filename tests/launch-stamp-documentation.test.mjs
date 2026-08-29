@@ -32,14 +32,14 @@ const FROZEN_ARTIFACT_PATH =
 const EXPECTED_CLASSIC_CANARY_EVIDENCE = {
   finality: "finalized",
   source: {
-    sourceRepository: "https://github.com/0xprogrammable/PROGRAMMABLE-EVM",
+    sourceRepository: "https://github.com/programmablehq/PROGRAMMABLE-EVM",
     releaseCommit: "707d438576dcf47dc2667125789fd35eb1c3de50",
     releaseTree: "789161bc206ea145f12b809f9d1746bd1a83468a",
     manifestPublication: {
       commit: "ff51e713feb52e4e13f3c553d1c726f3c8f2858c",
       tree: "53a8ce252d98703008ba17408f6c24555b8be45e",
       path: "contracts/deployments/mainnet-classic-v4.json",
-      url: "https://raw.githubusercontent.com/0xprogrammable/PROGRAMMABLE-EVM/ff51e713feb52e4e13f3c553d1c726f3c8f2858c/contracts/deployments/mainnet-classic-v4.json",
+      url: "https://raw.githubusercontent.com/programmablehq/PROGRAMMABLE-EVM/ff51e713feb52e4e13f3c553d1c726f3c8f2858c/contracts/deployments/mainnet-classic-v4.json",
       sha256:
         "sha256:5005df478e1298bbf9c2f1ff9256192290c5ca3652ee7cae13c0326a62893fc6",
     },
@@ -283,7 +283,7 @@ describe("launch stamp Router documentation", () => {
       router.classicCanaryEvidence.source.manifestPublication;
     assert.equal(
       manifestPublication.url,
-      `https://raw.githubusercontent.com/0xprogrammable/PROGRAMMABLE-EVM/${manifestPublication.commit}/${manifestPublication.path}`,
+      `https://raw.githubusercontent.com/programmablehq/PROGRAMMABLE-EVM/${manifestPublication.commit}/${manifestPublication.path}`,
     );
     assert.equal(
       router.classicCanaryEvidence.components.find(({ role }) => role === "hook")

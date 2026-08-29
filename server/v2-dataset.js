@@ -1,9 +1,15 @@
-import { readFile } from "node:fs/promises";
-
 import { API_V2_SCHEMA_VERSION } from "./constants.js";
+import {
+  DEFAULT_CHAIN_ID,
+  developerManifestForChain,
+} from "./chain-manifests.js";
 import { canonicalizeJson } from "./canonical.js";
 import { gen2ContractSetMatchesEvidence } from "./custom-registry-gen2.js";
 import { feedStatus, getDataset } from "./dataset.js";
+import {
+  isTrustedFinalizedCustomV4Record,
+  readFinalizedCustomLaunchesV4,
+} from "./finalized-v4-feed.js";
 import {
   CUSTOM_REGISTRY_GENESIS_CANARY,
   CUSTOM_REGISTRY_GENESIS_CANARY_SORT_KEY,
@@ -22,8 +28,6 @@ import {
 import {
   assertExactLaunchPartnerAttribution,
 } from "./partner-attribution.js";
-
-let manifestPromise = null;
 
 const GEN1_OPERATION_AUTHORITIES = Object.freeze({
   registered: Object.freeze({
@@ -179,13 +183,15 @@ export function isV2PublicLaunch(record, manifest = null) {
     return record.launch?.modelId === "classic";
   }
   return isRouterStampedCustom(record, manifest) ||
+    isTrustedFinalizedCustomV4Record(record) ||
     isRegisteredCustom(record, manifest);
 }
 
 function classification(record) {
   const isClassic = record.category === "classic";
   const isRouterCustom = !isClassic &&
-    isTrustedRouterStampedCustomRecord(record);
+    (isTrustedRouterStampedCustomRecord(record) ||
+      isTrustedFinalizedCustomV4Record(record));
   return {
     namespace: "programmable",
     category: record.category,
@@ -349,6 +355,7 @@ export function projectV2Dataset(dataset, manifest = null) {
       isV2PublicLaunch(record, manifest) &&
       (record.category !== "custom" ||
         isRouterStampedCustom(record, manifest) ||
+        isTrustedFinalizedCustomV4Record(record) ||
         (customRegistryLive &&
           (isExactCustomRegistryGenesisCanary(record)
             ? baselineReady
@@ -366,7 +373,11 @@ export function projectV2Dataset(dataset, manifest = null) {
       ...dataset.status,
       schemaVersion: API_V2_SCHEMA_VERSION,
       customRegistryPublication: {
-        status: customRegistryLive ? "live" : "prelaunch",
+        status: customRegistryLive
+          ? "live"
+          : manifest?.chainId && manifest.chainId !== DEFAULT_CHAIN_ID
+            ? "planned"
+            : "prelaunch",
         publicSubmissionsEnabled,
         publicationReady: customPublicationReady,
         baselineReady,
@@ -395,10 +406,8 @@ export function projectV2Dataset(dataset, manifest = null) {
         baselineLaunches: records.filter(isExactCustomRegistryGenesisCanary).length,
         applicantLaunches: sourceCoverage.applicants.length,
       },
-      supportedChainIds: Array.isArray(manifest?.chains)
-        ? manifest.chains
-            .filter((chain) => chain.status === "live")
-            .map((chain) => chain.chainId)
+      supportedChainIds: Array.isArray(manifest?.supportedChainIds)
+        ? [...manifest.supportedChainIds]
         : [dataset.status.chainId].filter(Number.isSafeInteger),
       counts,
     },
@@ -407,17 +416,24 @@ export function projectV2Dataset(dataset, manifest = null) {
 
 export function mergeRouterCustomRecords(dataset, routerCustom) {
   const existingLaunchIds = new Set(
-    dataset.records.map((record) => record.launchId.toLowerCase()),
+    dataset.records.map((record) =>
+      `${record.chainId}:${record.launchId.toLowerCase()}`),
   );
   const existingTokens = new Set(
     dataset.records
-      .map((record) => record.token?.address?.toLowerCase())
+      .map((record) => record.token?.address
+        ? `${record.chainId}:${record.token.address.toLowerCase()}`
+        : null)
       .filter(Boolean),
   );
   for (const record of routerCustom.records) {
     if (
-      existingLaunchIds.has(record.launchId.toLowerCase()) ||
-      existingTokens.has(record.token.address.toLowerCase())
+      existingLaunchIds.has(
+        `${record.chainId}:${record.launchId.toLowerCase()}`,
+      ) ||
+      existingTokens.has(
+        `${record.chainId}:${record.token.address.toLowerCase()}`,
+      )
     ) {
       throw new Error("Router Custom identity conflicts with another public source");
     }
@@ -444,17 +460,91 @@ export function mergeRouterCustomRecords(dataset, routerCustom) {
   };
 }
 
-export async function getV2Dataset() {
-  const [dataset, manifest] = await Promise.all([
-    getDataset(),
-    developerManifestV2(),
-  ]);
+function chainDatasetFromFinalizedFeed(manifest, finalizedFeed) {
+  const hasBoundary = typeof finalizedFeed.asOfBlock === "string" &&
+    /^(0|[1-9][0-9]*)$/.test(finalizedFeed.asOfBlock) &&
+    /^0x[0-9a-fA-F]{64}$/.test(finalizedFeed.asOfBlockHash ?? "");
+  const current = finalizedFeed.status === "current" && hasBoundary;
+  const stale = finalizedFeed.status === "last-known-good" && hasBoundary;
+  return {
+    records: finalizedFeed.records,
+    status: {
+      schemaVersion: API_V2_SCHEMA_VERSION,
+      status: current ? "ready" : stale ? "partial" : "unavailable",
+      generatedAt: finalizedFeed.generatedAt,
+      chainId: manifest.chainId,
+      chain: {
+        id: manifest.chainId,
+        name: manifest.network.name,
+        caip2: manifest.caip2,
+      },
+      source: "backend-finalized-custom-launches",
+      coverage: {
+        status: current ? "complete" : stale ? "partial" : "unavailable",
+        checkpoint: hasBoundary
+          ? {
+              blockNumber: finalizedFeed.asOfBlock,
+              blockHash: finalizedFeed.asOfBlockHash,
+              finality: "finalized",
+            }
+          : null,
+      },
+      customRegistry: {
+        configured: false,
+        status: "unavailable",
+        sourceId: null,
+        expectedSourceId: null,
+        completeness: "unavailable",
+        freshness: "unavailable",
+        highWaterGeneration: "0",
+        launches: 0,
+      },
+      routerCustom: finalizedFeed.sourceIdentityCommitment === null
+        ? null
+        : {
+            source: "canonical-launch-stamp-router",
+            status: finalizedFeed.status,
+            generatedAt: finalizedFeed.generatedAt,
+            asOfBlock: finalizedFeed.asOfBlock,
+            asOfBlockHash: finalizedFeed.asOfBlockHash,
+            sourceIdentityCommitment:
+              finalizedFeed.sourceIdentityCommitment,
+            snapshotSha256: finalizedFeed.snapshotSha256,
+            verifiedIdentityCount: finalizedFeed.verifiedIdentityCount,
+            publishedIdentityCount: finalizedFeed.publishedIdentityCount,
+            backendQuality: finalizedFeed.quality,
+            lastKnownGood: finalizedFeed.lastKnownGood,
+          },
+      errors: finalizedFeed.error === null
+        ? []
+        : [{
+            source: "backend-finalized-custom-launches",
+            ...finalizedFeed.error,
+          }],
+    },
+  };
+}
+
+export async function getV2DatasetForChain(chainId = DEFAULT_CHAIN_ID) {
+  const manifest = await developerManifestV2(chainId);
+  if (chainId !== DEFAULT_CHAIN_ID) {
+    const finalizedFeed = await readFinalizedCustomLaunchesV4(manifest);
+    return projectV2Dataset(
+      chainDatasetFromFinalizedFeed(manifest, finalizedFeed),
+      manifest,
+    );
+  }
+  const dataset = await getDataset();
   const seeded = seedCustomRegistryBaseline(dataset);
   const routerCustom = await readRouterCustomRecords(manifest);
   return projectV2Dataset(
     mergeRouterCustomRecords(seeded, routerCustom),
     manifest,
   );
+}
+
+export async function getV2Dataset() {
+  return getV2DatasetForChain(DEFAULT_CHAIN_ID);
 }
 
 export function isV2DatasetPublishable(dataset, category = null) {
@@ -523,6 +613,46 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
     manifestOrStatus && typeof manifestOrStatus === "object"
       ? manifestOrStatus
       : null;
+  if (manifest && manifest.chainId !== DEFAULT_CHAIN_ID) {
+    const customLaunchV4 = manifest.customLaunchV4;
+    const promotionStatus = customLaunchV4?.status ?? "degraded";
+    const launchFeedStatus = feedStatusV2({ records: [], status });
+    return {
+      schemaVersion: API_V2_SCHEMA_VERSION,
+      apiVersion: "2",
+      service: promotionStatus === "live" && launchFeedStatus === "ready"
+        ? "operational"
+        : "degraded",
+      checkedAt: status.generatedAt,
+      chainId: manifest.chainId,
+      caip2: manifest.caip2,
+      supportedChainIds: [...manifest.supportedChainIds],
+      chains: manifest.chains,
+      classic: {
+        status: manifest.publicCategories.classic.discoveryStatus,
+        note: manifest.publicCategories.classic.note ??
+          "No chain-local Programmable Classic feed is active.",
+      },
+      custom: {
+        status: promotionStatus,
+        note: manifest.publicCategories.custom.note,
+      },
+      ...(customLaunchV4 ? { customLaunchV4 } : {}),
+      feeds: {
+        manifest: "ready",
+        launches: launchFeedStatus,
+        tokenList: launchFeedStatus,
+      },
+      source: status.source,
+      chain: status.chain,
+      coverage: status.coverage,
+      customRegistry: status.customRegistry,
+      ...(status.routerCustom ? { routerCustom: status.routerCustom } : {}),
+      customRegistryPublication: status.customRegistryPublication ?? null,
+      counts: status.counts,
+      errors: status.errors,
+    };
+  }
   const customRegistryStatus = manifest?.customRegistry?.status ?? manifestOrStatus;
   const routesAvailable = Boolean(
     status.coverage?.status === "complete" && status.coverage?.checkpoint,
@@ -661,7 +791,7 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
         activationStatus: "historical-read-only",
         productionLaunchAuthorized: false,
         guideUrl:
-          "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
+          "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
         api: {
           apiVersion: "2",
           availability: "authenticated-historical-reads",
@@ -685,9 +815,9 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           version: "2.0.1",
           distributionStatus: "github-release",
           releaseUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
+            "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
           packageAssetUrl:
-            "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz",
+            "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz",
           commands: ["pack", "validate", "submit", "status"],
         },
         requestContract: {
@@ -889,10 +1019,6 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
   };
 }
 
-export async function developerManifestV2() {
-  manifestPromise ??= readFile(
-    new URL("../deployments/ethereum-v2.json", import.meta.url),
-    "utf8",
-  ).then((source) => JSON.parse(source));
-  return structuredClone(await manifestPromise);
+export async function developerManifestV2(chainId = DEFAULT_CHAIN_ID) {
+  return developerManifestForChain(chainId);
 }

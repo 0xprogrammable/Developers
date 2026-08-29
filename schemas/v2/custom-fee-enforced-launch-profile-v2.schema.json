@@ -58,7 +58,7 @@
       "const": false
     },
     "guideUrl": {
-      "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md"
+      "const": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md"
     },
     "api": {
       "type": "object",
@@ -141,10 +141,10 @@
           "const": "github-release"
         },
         "releaseUrl": {
-          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1"
+          "const": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1"
         },
         "packageAssetUrl": {
-          "const": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz"
+          "const": "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz"
         },
         "commands": {
           "const": [

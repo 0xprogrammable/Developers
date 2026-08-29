@@ -111,7 +111,7 @@ The immutable release asset remains available for exact historical reproduction:
 
 ```sh
 npm install --global \
-  https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.0.0/programmable-launch-3.0.0.tgz
+  https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v3.0.0/programmable-launch-3.0.0.tgz
 programmable-launch --version
 ```
 

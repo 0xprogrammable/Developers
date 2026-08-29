@@ -477,7 +477,7 @@ catalog:
   "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
   "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
   "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-  "packConfigSchemaSha256": "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074"
+  "packConfigSchemaSha256": "sha256:65e80af492582b8e42a440d9bbb23a776af31e22306ec828208959e8a790be15"
 }
 ```
 
@@ -511,7 +511,7 @@ descriptors remain compatible for exact retries; new requests use v2.
 ## Pending additive profile 3.4.0 (not active)
 
 Profile `3.4.0` is a release-readiness target, not a currently accepted profile.
-Live capabilities, OpenAPI, and CLI `3.3.8` continue to select `3.3.0` for fresh
+Live capabilities, OpenAPI, and CLI `3.3.9` continue to select `3.3.0` for fresh
 writes. Do not submit, pack, or describe a `3.4.0` request as live until the
 same-app runner and observation ABI are deployed, a separately signed exact
 settlement-dataflow closure validates against its pinned authority trust root,
@@ -553,7 +553,7 @@ that every hook or PoolKey is tradeable on site.
 
 ## CLI contract
 
-Revision 3 uses public CLI contract version `3.3.8`, with exactly four commands:
+Revision 3 uses public CLI contract version `3.3.9`, with exactly four commands:
 
 ```text
 pack
@@ -562,8 +562,8 @@ submit
 status
 ```
 
-The immutable `3.3.8` release locator is
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.8`.
+The immutable `3.3.9` release locator is
+`https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.9`.
 The discovery descriptor reports `releaseLocatorStatus: published` and
 `supportStatus: live`. Resolve release assets and their verification material
 from that immutable locator at installation time; do not reuse an older

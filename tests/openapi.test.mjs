@@ -56,6 +56,7 @@ describe("OpenAPI v2 contract", () => {
       "/api/v2/launches/{chainId}/{tokenAddress}",
       "/api/v2/launches/{launchId}",
       "/api/v2/manifest",
+      "/api/v2/manifests/{chainId}",
       "/api/v2/status",
       "/api/v2/token-list",
       "/v3/finalized-custom-launches",

@@ -6,12 +6,16 @@ Unauthenticated read and discovery contracts for detecting and verifying Program
 and V2 historical reads remain available, while authenticated POST is read-only and returns nonretryable
 `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only metadata-bound V3 profile `3.3.0`
 accepts fresh submissions for exact project token and hook artifacts on Ethereum Mainnet.
+Robinhood Chain Mainnet (`eip155:4663`) is now discoverable through a separate
+V4 manifest, but its deployment, write API, CLI release and public read model
+remain `planned`; no Robinhood launch or live indexing claim is made here.
 
 ## Choose the API surface
 
 | Surface | Authentication | Purpose | Canonical contract |
 | --- | --- | --- | --- |
 | Developer read API at `developers.programmable.family` | None | Discover launches, resolve deployments and verify provenance | [Read API OpenAPI](openapi/programmable-v2.yaml) |
+| Custom Launch API V4 for Robinhood Chain | Existing Programmable bearer credential when promoted | Chain-bound `pack`, `validate`, `submit`, `status` contract with separate wallet signing | [Robinhood manifest](https://developers.programmable.family/api/v2/manifests/4663); currently `planned`, with a [byte-pinned V4 OpenAPI mirror](openapi/custom-launch-v4.json) of the expected release contract |
 | Custom Launch API V3 at `api.programmable.market` | Wallet key or approved partner root/subkey bearer credential | Pack, validate, submit and track a 3–16-target project-owned token and hook graph; the wallet reviews and signs separately | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) and [V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) |
 | Custom Launch API V2 compatibility at `api.programmable.market` | Wallet-bound bearer API key | Read historical V2 resources; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V2_READ_ONLY` | [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Custom Launch API V1 compatibility | Wallet-bound bearer API key | Inspect existing V1 provenance reads and request status; V1 POST is read-only | [V1 compatibility guide](https://programmable.market/developers/custom-launch-api-v1.md) and [V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json) |
@@ -49,8 +53,9 @@ accounting modes; the exact Programmable share is separately fixed at `1000`.
 
 | Resource | Use |
 | --- | --- |
-| [Live manifest](https://developers.programmable.family/api/v2/manifest) | Resolve the active chain, Classic V3/V4 releases, Router, start blocks, runtime hashes, ABI hashes, events, getters, finality policy, and finalized Router canaries |
-| [Router ABI](https://developers.programmable.family/abis/ethereum/programmable-launch-stamp-router-v1.json) | Decode Router events and point-lookup results |
+| [Ethereum manifest alias](https://developers.programmable.family/api/v2/manifest) | Preserve the existing chain-1 integration; this is an alias for `/api/v2/manifests/1` |
+| [Per-chain manifests](https://developers.programmable.family/api/v2/manifests/1) | Bind deployment and feed discovery to the selected `chainId`; chain 4663 is published separately and remains planned |
+| [Chain-neutral Router ABI](https://developers.programmable.family/abis/programmable-launch-stamp-router-v1.json) | Decode the published Router interface without implying that one chain's deployment address applies to another |
 | [Launch stamp specification](docs/reference/launch-stamp.md) | Implement backfill, live follow, reorg handling, and direct verification |
 | [Terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features |
 | [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
@@ -58,6 +63,8 @@ accounting modes; the exact Programmable share is separately fixed at `1000`.
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |
 | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch) | Prepare and track a fresh V3.3 launch while keeping server authorization and wallet signing separate |
 | [Custom Launch V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json) | Generate a client for the general project-owned token and hook graph route |
+| [Custom Launch V4 OpenAPI mirror](openapi/custom-launch-v4.json) | Generate against the planned chain-4663 API without treating the mirrored contract as deployment, availability, or write authority |
+| [Custom Launch V4 pack-config schema](schemas/custom-launch/v4/pack-config.json) | Validate the planned CLI input contract; the wallet still reviews, signs, and broadcasts separately |
 | [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) | Preserve historical V2 reads and the authenticated read-only POST boundary |
 | [Custom Launch V1 compatibility](https://programmable.market/openapi/custom-launch-v1.json) | Preserve existing V1 reads/status and the V1 read-only POST boundary |
 | [Custom Fee-Enforced Launch Profile V2](docs/guides/custom-fee-enforced-launch-profile-v2.md) | Interpret the retained historical profile, its exact fee semantics, and its read-only write boundary |
@@ -70,7 +77,7 @@ The manifest is the deployment authority. Do not copy an address, topic, start b
 
 ## Router-first integration
 
-`ProgrammableLaunchStampRouterV1` is the trust root for Router-stamped Programmable Classic and Programmable Custom launches on Ethereum. Detection requires the official manifest, an Ethereum RPC endpoint, and the canonical Router.
+`ProgrammableLaunchStampRouterV1` is the trust root for Router-stamped Programmable Classic and Programmable Custom launches only on chains whose exact manifest marks that Router `live`. Ethereum is live. Robinhood is planned and publishes null Programmable deployment fields, so consumers must not scan or classify Robinhood launches yet.
 
 1. Fetch the live manifest and require a complete `launchStampRouter` entry for the selected chain.
 2. Verify the Router runtime and hosted ABI hashes before decoding data.
@@ -80,11 +87,12 @@ The manifest is the deployment authority. Do not copy an address, topic, start b
 6. Assign a public label only after every required identity and proof agrees.
 
 ```js
-const manifestUrl = "https://developers.programmable.family/api/v2/manifest"
+const chainId = 1
+const manifestUrl = `https://developers.programmable.family/api/v2/manifests/${chainId}`
 const manifest = await fetch(manifestUrl).then(requireOk).then((response) => response.json())
 const router = manifest.launchStampRouter
 
-if (manifest.chainId !== 1 || router?.status !== "live") {
+if (manifest.chainId !== chainId || manifest.caip2 !== `eip155:${chainId}` || router?.status !== "live") {
   throw new Error("Programmable Router is not live for this chain")
 }
 
@@ -128,7 +136,7 @@ It does not establish current liquidity, safety, audit status, sellability, trad
 
 ## Unauthenticated read API
 
-The hosted read API is an optional normalized model for active Classic V3/V4, Registry Custom, and finalized canonical-Router records. Its Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted through its schema, scope, evidence and identity commitments; it currently reports Envio deployment `production-6157d22`. Legitimate indexer release updates therefore do not require a Developer API code change. The retired legacy source that returned HTTP `410` is not used. Classic V1/V2 remain inactive manifest history, and Stock is excluded from active v2 discovery. Router identities follow a bounded current source whose canonical commitment is recomputed before publication, with a separate digest-pinned last-known-good snapshot for outages. The feed reports degraded quality while only the fallback is available; absence is not authoritative in that state. Missing supply, fee, or market state remains unavailable rather than inferred. The hosted API is not a Router verification dependency.
+The hosted read API is an optional normalized model for active Classic V3/V4, Registry Custom, and finalized canonical-Router records. Its Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted through its schema, scope, evidence and identity commitments; it currently reports Envio deployment `production-6157d22`. Legitimate indexer release updates therefore do not require a Developer API code change. The retired legacy source that returned HTTP `410` is not used. Classic V1/V2 remain inactive manifest history, and Stock is excluded from active v2 discovery. Router identities follow a bounded current source whose canonical commitment is recomputed before publication, with a separate digest-pinned last-known-good snapshot for outages. V4 chain feeds additionally require complete `programmable.custom-launch-list.v4` pagination, `ready` backend quality, exact manifest deployment/profile/finality bindings, and terminal `ethereum_finalized` Router evidence. Last-known-good snapshots are keyed by chain and exact deployment binding. The feed reports degraded quality while only the fallback is available; absence is not authoritative in that state. Missing supply, fee, or market state remains unavailable rather than inferred. The hosted API is not a Router verification dependency.
 
 Generic integrations should refresh the manifest and scan every enabled release instead of pinning launcher addresses. That existing flow discovers Classic V4 without a client code or address-list change; `launchStampRouter` remains provenance and transport, not a public category.
 
@@ -136,7 +144,9 @@ Generic integrations should refresh the manifest and scan every enabled release 
 curl -fsSL https://developers.programmable.family/.well-known/programmable.json
 curl -fsSL https://developers.programmable.family/api/v2/status
 curl -fsSL https://developers.programmable.family/api/v2/manifest
+curl -fsSL https://developers.programmable.family/api/v2/manifests/4663
 curl -fsSL https://developers.programmable.family/api/v2/launches
+curl -fsSL 'https://developers.programmable.family/api/v2/launches?chainId=4663'
 curl -fsSL https://developers.programmable.family/api/v2/token-list
 ```
 

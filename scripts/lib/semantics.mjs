@@ -2,6 +2,8 @@ import { isExactCustomRegistryGenesisCanary } from
   "../../server/genesis-canary.js";
 import { isAcceptedRouterStampedCustomRecord } from
   "../../server/router-custom.js";
+import { canonicalSha256, canonicalizeJson } from
+  "../../server/canonical.js";
 import {
   isCanonicalHttpsUrl,
   isExactLaunchPartnerAttribution,
@@ -18,6 +20,38 @@ const MAX_METADATA_NODES = 4_096;
 const MAX_METADATA_CHILDREN = 256;
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 const ZERO_HASH32 = `0x${"0".repeat(64)}`;
+const ROBINHOOD_CUSTOM_LAUNCH_V4_RELEASE_IDENTITY = Object.freeze({
+  policySource: Object.freeze({
+    schemaVersion: "programmable.custom-launch-policy-source.v1",
+    repository: "programmablehq/Launch-Policy",
+    repositoryId: 1_320_171_831,
+    protectedBranch: "main",
+    verifiedMergeCommit: "987215867472229690e30e11000c626d58f46e16",
+    verifiedTree: "284fb19f05cdf9b5b60b8bacfbd480f6b98decd3",
+    artifacts: Object.freeze({
+      descriptor: Object.freeze({
+        path: "policy/custom-launch-admission-v4.json",
+        digest:
+          "sha256:99b4ccabdaaf143bad28a8f6af441a1b93e1f113d0179236328b7fa594d1f948",
+      }),
+      businessPolicy: Object.freeze({
+        path: "policy/launch-policy.v1.json",
+        digest:
+          "sha256:31e6b286ca839b31cb1edfe30c05d9f334892f3d84377961dc10b93959c7e216",
+      }),
+      generatedBinding: Object.freeze({
+        path: ".programmable/custom-launch-admission.v4.json",
+        digest:
+          "sha256:f31643e6e9ff6d5409d59a2fc3ac7fb5ac9cfcb3af08e95c9478bc95ddfa66a2",
+      }),
+      schema: Object.freeze({
+        path: "policy/schemas/custom-launch-admission-v4.schema.json",
+        digest:
+          "sha256:a28a6de6208d6ba7b65b4b706174509570955ba9ce9714624bcb2046ab7beae7",
+      }),
+    }),
+  }),
+});
 const GEN2_EVENT_EMITTERS = Object.freeze({
   approvalAuthorized: "registry",
   partnerFactoryAuthorized: "partnerFactoryRegistry",
@@ -909,6 +943,436 @@ export function validateFeedSemantics(feed) {
   return findings;
 }
 
+function sameHex(left, right) {
+  return typeof left === "string" && typeof right === "string" &&
+    left.toLowerCase() === right.toLowerCase();
+}
+
+function robinhoodCustomLaunchBindingFindings(manifest) {
+  if (manifest.chainId !== 4663) return [];
+  const binding = manifest.robinhoodCustomLaunchBinding;
+  const router = manifest.launchStampRouter;
+  const v4 = manifest.customLaunchV4;
+  if (!binding) {
+    return [finding(
+      "ROBINHOOD_CUSTOM_LAUNCH_BINDING",
+      "/robinhoodCustomLaunchBinding",
+      "Robinhood must publish its chain-owned Custom Launch binding",
+    )];
+  }
+  const routerLive = ["live", "retired"].includes(router?.status);
+  const v4Live = v4?.status === "live";
+  if (!routerLive && !v4Live) {
+    if (binding.state !== "prepared-not-broadcast" ||
+      binding.chainDeployment !== null || binding.publication !== null) {
+      return [finding(
+        "ROBINHOOD_CUSTOM_LAUNCH_PLANNED_BINDING",
+        "/robinhoodCustomLaunchBinding",
+        "Planned Robinhood metadata may not publish finalized deployment evidence",
+      )];
+    }
+    return [];
+  }
+  if (binding.state !== "finalized-live") {
+    return [finding(
+      "ROBINHOOD_CUSTOM_LAUNCH_LIVE_BINDING",
+      "/robinhoodCustomLaunchBinding/state",
+      "Live Robinhood metadata requires the finalized chain-owned branch",
+    )];
+  }
+
+  try {
+    const chainDeployment = binding.chainDeployment;
+    const publication = binding.publication;
+    const deployment = binding.deployment;
+    const chainBindings = binding.chainBindings;
+    const profileBinding = binding.profileBinding;
+    const externalEvidence = new Map(
+      chainDeployment.externalRootDeploymentEvidence.map((evidence) => [
+        evidence.contract,
+        evidence,
+      ]),
+    );
+    const profileMatches =
+      v4.profile.structuralProfileId ===
+        profileBinding.structuralProfile.profileId &&
+      v4.profile.businessProfileId ===
+        profileBinding.serverBusinessProfile.profileId &&
+      v4.profile.profileRevision ===
+        profileBinding.serverBusinessProfile.profileRevision &&
+      v4.profile.profileVersion ===
+        profileBinding.serverBusinessProfile.profileVersion &&
+      v4.profile.profileDigest ===
+        profileBinding.serverBusinessProfile.profileDigest &&
+      v4.profile.admissionDescriptorDigest ===
+        profileBinding.admission.descriptorSha256 &&
+      v4.profile.admissionPolicyDigest ===
+        profileBinding.admission.businessPolicySha256 &&
+      v4.profile.admissionSchemaDigest ===
+        profileBinding.admission.bindingSchemaSha256 &&
+      v4.profile.admissionBindingDigest ===
+        profileBinding.admission.bindingSha256;
+    const contractsMatch = Object.entries(chainBindings).every(
+      ([contract, root]) => sameHex(
+        root.address,
+        chainDeployment.contracts[contract]?.address,
+      ) && sameHex(
+        root.runtimeCodeHash,
+        chainDeployment.contracts[contract]?.runtimeCodeHash,
+      ),
+    );
+    const externalRootsMatch = [
+      "poolManager", "positionManager", "stateView", "v4Quoter",
+      "universalRouter",
+    ].every((contract) => {
+      const root = chainBindings[contract];
+      const evidence = externalEvidence.get(contract);
+      return evidence !== undefined && root.provenance === "deployment-block" &&
+        root.startBlock === evidence.startBlock &&
+        sameHex(root.address, evidence.address) &&
+        sameHex(root.runtimeCodeHash, evidence.runtimeCodeHash);
+    });
+    const finalizedFeedUrl =
+      `${v4.api.baseUrl}${v4.api.finalizedLaunchesPath}`;
+    const chainProfile = manifest.chains.find(
+      (entry) => entry.chainId === manifest.chainId,
+    );
+    const readModel = manifest.extensions?.["programmable/read-model-v1"];
+    const eventEvidenceDigest = canonicalSha256(
+      "programmable.router-event-evidence.v1",
+      router.events,
+    );
+    const getterEvidenceDigest = canonicalSha256(
+      "programmable.router-getter-evidence.v1",
+      router.getters,
+    );
+    const { evidenceDigest: publicationDigest, ...publicationWithoutDigest } =
+      publication;
+    const expectedPublicationDigest = canonicalSha256(
+      publication.schemaVersion,
+      publicationWithoutDigest,
+    );
+    const expectedFinalityEvidence = canonicalSha256(
+      "programmable.robinhood-custom-launch-deployment-finality.v1",
+      {
+        chainDeploymentDescriptorDigest:
+          publication.chainDeploymentDescriptorDigest,
+        transactionHash: deployment.transactionHash,
+        blockNumber: deployment.blockNumber,
+        blockHash: deployment.blockHash,
+        finalizedBlockNumber: deployment.finalizedBlockNumber,
+        finalizedBlockHash: deployment.finalizedBlockHash,
+        finalityPolicy: chainDeployment.finality,
+        canaryEvidence: router.canaryEvidence,
+      },
+    );
+    const safeConfiguration = chainDeployment
+      .permitAuthoritySourceProvenance.configurationEvidence;
+    const ethereumFinality = safeConfiguration.ethereumFinalityEvidence;
+    const {
+      evidenceDigest: ethereumFinalityDigest,
+      ...ethereumFinalityWithoutDigest
+    } = ethereumFinality;
+    const {
+      evidenceDigest: safeConfigurationDigest,
+      ...safeConfigurationWithoutDigest
+    } = safeConfiguration;
+    const permit2Genesis = chainDeployment.permit2GenesisProvenance;
+    const {
+      evidenceDigest: permit2GenesisDigest,
+      ...permit2GenesisWithoutDigest
+    } = permit2Genesis;
+    const permit2ReadbacksValid = permit2Genesis.providerReadbacks.every(
+      (readback) => {
+        const { evidenceDigest, ...withoutDigest } = readback;
+        return evidenceDigest === canonicalSha256(
+          readback.schemaVersion,
+          withoutDigest,
+        );
+      },
+    );
+    const permitAuthoritySource =
+      chainDeployment.permitAuthoritySourceProvenance;
+    const {
+      evidenceDigest: permitAuthoritySourceDigest,
+      ...permitAuthoritySourceWithoutDigest
+    } = permitAuthoritySource;
+    const atomic = chainDeployment.deploymentEvidence;
+    const { evidenceDigest: atomicDigest, ...atomicWithoutDigest } = atomic;
+    const atomicProviderReadbacksValid = atomic.providerReadbacks.every(
+      (readback, index) => {
+        const { evidenceDigest, ...withoutDigest } = readback;
+        const expectedProvider = [
+          ["drpc", "drpc.org"],
+          ["alchemy", "alchemy.com"],
+        ][index];
+        return readback.providerId === expectedProvider[0] &&
+          readback.trustDomain === expectedProvider[1] &&
+          readback.transactionHash === atomic.transactionHash &&
+          evidenceDigest === canonicalSha256(
+            "programmable.robinhood-atomic-root-deployment-provider-readback.v1",
+            withoutDigest,
+          );
+      },
+    );
+    const atomicResultsValid = [
+      "permitAuthority", "graphFactory", "programmableLaunchStampRouter",
+    ].every((contract, index) => {
+      const result = atomic.resultingContracts[index];
+      const root = chainDeployment.contracts[contract];
+      const transitionReadbacksValid = result.providerReadbacks.every(
+        (readback, providerIndex) => {
+          const expectedProvider = [
+            ["drpc", "drpc.org"],
+            ["alchemy", "alchemy.com"],
+          ][providerIndex];
+          const { evidenceDigest, ...withoutDigest } = readback;
+          return readback.schemaVersion ===
+              "programmable.robinhood-atomic-root-runtime-transition-provider-readback.v1" &&
+            readback.providerId === expectedProvider[0] &&
+            readback.trustDomain === expectedProvider[1] &&
+            readback.contract === contract && sameHex(readback.address, root.address) &&
+            readback.preDeploymentBlockNumber ===
+              (BigInt(atomic.blockNumber) - 1n).toString(10) &&
+            readback.preDeploymentRuntimeCodeHash ===
+              "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470" &&
+            readback.deploymentBlockNumber === atomic.blockNumber &&
+            readback.deploymentBlockHash === atomic.blockHash &&
+            sameHex(readback.deploymentRuntimeCodeHash, root.runtimeCodeHash) &&
+            evidenceDigest === canonicalSha256(
+              readback.schemaVersion,
+              withoutDigest,
+            );
+        },
+      );
+      const { stateEvidenceDigest, ...resultWithoutDigest } = result;
+      return result.contract === contract && sameHex(result.address, root.address) &&
+        sameHex(result.runtimeCodeHash, root.runtimeCodeHash) &&
+        result.previousBlockRuntimeCodeHash ===
+          "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470" &&
+        result.providerReadbacks.length === 2 && transitionReadbacksValid &&
+        result.providerReadbacks[0].preDeploymentBlockHash ===
+          result.providerReadbacks[1].preDeploymentBlockHash &&
+        stateEvidenceDigest === canonicalSha256(
+          "programmable.robinhood-atomic-root-deployment-result-state.v1",
+          resultWithoutDigest,
+        );
+    });
+    const uniswapRegistrySource = {
+      repository: "Uniswap/contracts",
+      commit: "4cfc406c8e34da3ce04e60657a7825075b64fd22",
+      path: "deployments/json/4663.json",
+      rawUrl:
+        "https://raw.githubusercontent.com/Uniswap/contracts/4cfc406c8e34da3ce04e60657a7825075b64fd22/deployments/json/4663.json",
+      sha256:
+        "sha256:21964cefbfc24b0ee89e7427acf74d223ce5a50aeb4216a9bac361a6148dea15",
+    };
+    const externalRootConstants = [
+      [
+        "poolManager",
+        "0x4fb28d4935866f462582c6c931c6f2705e55f5be5eb178c7d8d9329a95c44c41",
+        "9070",
+      ],
+      [
+        "positionManager",
+        "0x228c18ada6cb46b4fbcc18f4ec1519953415393e256fa8349aafbd5a2db037c8",
+        "9073",
+      ],
+      [
+        "stateView",
+        "0x3d61e2c9eeb482385b1aa436b9e8f812167ea579cc390e4f93bc5abde00582f4",
+        "9075",
+      ],
+      [
+        "v4Quoter",
+        "0x6bf436d72a17f87284ddcab43094689bd320dfb39b535213b9a0b669fabc4ab4",
+        "9074",
+      ],
+      [
+        "universalRouter",
+        "0xdfb76494e158d8dea4376160315239271636a18515207fd4526e574bc7eeb456",
+        "3347899",
+      ],
+    ];
+    const externalEvidenceValid =
+      chainDeployment.externalRootDeploymentEvidence.every((evidence, index) => {
+        const [contract, transactionHash, startBlock] =
+          externalRootConstants[index];
+        const root = chainBindings[contract];
+        const readbacksValid = evidence.providerReadbacks.every(
+          (readback, providerIndex) => {
+            const { evidenceDigest, ...withoutDigest } = readback;
+            const expectedProvider = [
+              ["drpc", "drpc.org"],
+              ["alchemy", "alchemy.com"],
+            ][providerIndex];
+            return readback.providerId === expectedProvider[0] &&
+              readback.trustDomain === expectedProvider[1] &&
+              readback.transactionHash === transactionHash &&
+              readback.blockNumber === startBlock &&
+              readback.blockHash === evidence.blockHash &&
+              sameHex(readback.runtimeCodeHash, root.runtimeCodeHash) &&
+              evidenceDigest === canonicalSha256(
+                "programmable.custom-launch-deployment-provider-readback.v1",
+                withoutDigest,
+              );
+          },
+        );
+        const { evidenceDigest, ...withoutDigest } = evidence;
+        return evidence.contract === contract &&
+          evidence.transactionHash === transactionHash &&
+          evidence.startBlock === startBlock &&
+          canonicalizeJson(evidence.registrySource) ===
+            canonicalizeJson(uniswapRegistrySource) && readbacksValid &&
+          evidenceDigest === canonicalSha256(
+            "programmable.custom-launch-deployment-evidence.v1",
+            withoutDigest,
+          );
+      });
+    const exact =
+      chainDeployment.chainDeploymentId === binding.chainDeploymentId &&
+      chainDeployment.chainDeploymentId === v4.chainDeploymentId &&
+      chainDeployment.chainId === "4663" &&
+      chainDeployment.caip2 === "eip155:4663" &&
+      chainDeployment.foundationSourceCommitment ===
+        binding.foundationSourceCommitment &&
+      chainDeployment.foundationSourceCommitment ===
+        v4.foundationSourceCommitment &&
+      canonicalizeJson(chainDeployment.finality) ===
+        canonicalizeJson(binding.finalityPolicy) &&
+      canonicalizeJson(chainDeployment.finality) ===
+        canonicalizeJson(v4.finalityPolicy) && profileMatches &&
+      contractsMatch && externalRootsMatch && externalEvidenceValid &&
+      permitAuthoritySourceDigest === canonicalSha256(
+        permitAuthoritySource.schemaVersion,
+        permitAuthoritySourceWithoutDigest,
+      ) && atomic.schemaVersion ===
+        "programmable.robinhood-atomic-root-deployment-evidence.v1" &&
+      atomic.deploymentId === "robinhood-mainnet-custom-launch-v1" &&
+      atomic.chainId === "4663" &&
+      atomic.from !== undefined && [
+        "0x032b1c7b96793717F0BD2f11eb86cd10CdefC4a3",
+        "0x2Bb333d48DFAF1596D9036671d2E43168994249E",
+      ].includes(atomic.from) &&
+      atomic.to === "0xcA11bde05977b3631167028862bE2a173976CA11" &&
+      atomic.valueWei === "0" && atomic.selector === "0x82ad56cb" &&
+      atomic.calldataHash ===
+        "0x3ba04469085b17e12843a94c154a335c9c384837f8f6531f179cb4915fd237d9" &&
+      atomic.calldataBytes === 33_412 && atomic.receiptStatus === "1" &&
+      atomic.receiptLogsDigest === canonicalSha256(
+        "programmable.robinhood-atomic-root-deployment-receipt-logs.v1",
+        atomic.receiptLogs,
+      ) && atomicProviderReadbacksValid && atomicResultsValid &&
+      safeConfiguration.atomicRootStateEvidenceDigest ===
+        atomic.resultingContracts[0].stateEvidenceDigest &&
+      canonicalizeJson(atomic.ethereumFinalityEvidence) ===
+        canonicalizeJson(ethereumFinality) &&
+      atomicDigest === canonicalSha256(atomic.schemaVersion, atomicWithoutDigest) &&
+      publication.chainDeploymentDescriptorDigest ===
+        v4.chainDeploymentDescriptorDigest &&
+      publication.finalizedFeedUrl === finalizedFeedUrl &&
+      publication.finalizedFeedUrl === chainProfile?.finalizedFeedUrl &&
+      publication.finalizedFeedUrl === readModel?.finalizedFeedUrl &&
+      publication.routerEventEvidenceDigest === eventEvidenceDigest &&
+      publication.routerGetterEvidenceDigest === getterEvidenceDigest &&
+      publicationDigest === expectedPublicationDigest &&
+      deployment.finalityEvidence === expectedFinalityEvidence &&
+      chainBindings.programmableLaunchStampRouter.provenance ===
+        "deployment-block" &&
+      chainBindings.programmableLaunchStampRouter.startBlock ===
+        chainDeployment.deploymentEvidence.blockNumber &&
+      chainBindings.programmableLaunchStampRouter.startBlock ===
+        router.startBlock &&
+      chainBindings.graphFactory.provenance === "deployment-block" &&
+      chainBindings.graphFactory.startBlock ===
+        chainDeployment.deploymentEvidence.blockNumber &&
+      chainBindings.permitAuthority.provenance === "deployment-block" &&
+      chainBindings.permitAuthority.startBlock ===
+        chainDeployment.deploymentEvidence.blockNumber &&
+      chainDeployment.permitAuthoritySourceProvenance.transactionHash ===
+        chainDeployment.deploymentEvidence.transactionHash &&
+      chainDeployment.permitAuthoritySourceProvenance.blockNumber ===
+        chainDeployment.deploymentEvidence.blockNumber &&
+      chainDeployment.permitAuthoritySourceProvenance.blockHash ===
+        chainDeployment.deploymentEvidence.blockHash &&
+      safeConfiguration.blockNumber === deployment.blockNumber &&
+      safeConfiguration.blockHash === deployment.blockHash &&
+      ethereumFinality.l2Checkpoint.blockNumber === deployment.blockNumber &&
+      ethereumFinality.l2Checkpoint.blockHash === deployment.blockHash &&
+      canonicalizeJson(ethereumFinality.profile) ===
+        canonicalizeJson(v4.profile) &&
+      ethereumFinalityDigest === canonicalSha256(
+        ethereumFinality.schemaVersion,
+        ethereumFinalityWithoutDigest,
+      ) && safeConfigurationDigest === canonicalSha256(
+        safeConfiguration.schemaVersion,
+        safeConfigurationWithoutDigest,
+      ) && BigInt(ethereumFinality.ethereumFinalizedCheckpoint.blockNumber) >=
+        BigInt(ethereumFinality.postingBlockNumber) &&
+      chainBindings.permit2.provenance === "genesis-allocation" &&
+      chainBindings.permit2.startBlock === "0" &&
+      chainDeployment.permit2GenesisProvenance.startBlock === "0" &&
+      chainDeployment.permit2GenesisProvenance.genesisSourceUrl ===
+        "https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/chain-node-configs/robinhood-genesis.json" &&
+      chainDeployment.permit2GenesisProvenance.genesisSourceDigest ===
+        "sha256:353e6f6441b47695b41cee0c3645cde8dd7492d2f7f574bfb6aa4371e41bb6ba" &&
+      chainDeployment.permit2GenesisProvenance.allocRuntimeCodeBytes ===
+        9_152 && permit2ReadbacksValid &&
+      permit2Genesis.providerReadbacks[0].blockHash ===
+        permit2Genesis.providerReadbacks[1].blockHash &&
+      permit2GenesisDigest === canonicalSha256(
+        permit2Genesis.schemaVersion,
+        permit2GenesisWithoutDigest,
+      ) &&
+      sameHex(
+        chainDeployment.permit2GenesisProvenance.address,
+        chainBindings.permit2.address,
+      ) && sameHex(
+        chainDeployment.permitAuthoritySourceProvenance
+          .configurationEvidence.proxyRuntimeCodeHash,
+        chainBindings.permitAuthority.runtimeCodeHash,
+      ) && sameHex(router.address, chainBindings
+        .programmableLaunchStampRouter.address) &&
+      sameHex(router.runtimeCodeHash, chainBindings
+        .programmableLaunchStampRouter.runtimeCodeHash) &&
+      deployment.transactionHash ===
+        chainDeployment.deploymentEvidence.transactionHash &&
+      deployment.blockNumber ===
+        chainDeployment.deploymentEvidence.blockNumber &&
+      deployment.blockHash === chainDeployment.deploymentEvidence.blockHash &&
+      deployment.startBlock === router.startBlock &&
+      deployment.transactionHash ===
+        router.deploymentEvidence.deploymentTransactionHash &&
+      deployment.blockNumber ===
+        router.deploymentEvidence.deploymentBlockNumber &&
+      deployment.blockHash === router.deploymentEvidence.deploymentBlockHash &&
+      deployment.finalizedBlockNumber ===
+        router.deploymentEvidence.finalizedBlockNumber &&
+      deployment.finalizedBlockHash ===
+        router.deploymentEvidence.finalizedBlockHash &&
+      router.events.launchStamped.signature ===
+        "ProgrammableLaunchStampedV1(bytes32,address,address,address,bytes32,bytes32)" &&
+      router.events.launchRouteStamped.signature ===
+        "ProgrammableLaunchRouteStampedV1(bytes32,uint8,bytes32,bytes32,bytes32)" &&
+      router.getters.launchWallet.signature === "launchStamp(bytes32)" &&
+      router.getters.launchWallet.result === "stamp-record.launchWallet" &&
+      router.getters.stampRequestHash.signature ===
+        "computeStampRequestHash((bytes32,address,bytes32,(address,address,uint24,int24,address),bytes32,(uint8,address,bytes32,uint8,uint8)[]))" &&
+      router.getters.stampRequestHash.selector === "0x1f2efd85";
+    return exact ? [] : [finding(
+      "ROBINHOOD_CUSTOM_LAUNCH_FINALIZED_BINDING",
+      "/robinhoodCustomLaunchBinding",
+      "Finalized Robinhood deployment, profile, Router and publication evidence disagree",
+    )];
+  } catch {
+    return [finding(
+      "ROBINHOOD_CUSTOM_LAUNCH_FINALIZED_BINDING",
+      "/robinhoodCustomLaunchBinding",
+      "Finalized Robinhood evidence is incomplete or malformed",
+    )];
+  }
+}
+
 export function validateManifestSemantics(manifest) {
   const findings = [];
   if (manifest.schemaVersion === "2.0.0" && manifest.platformId !== PLATFORM_ID) {
@@ -926,24 +1390,40 @@ export function validateManifestSemantics(manifest) {
     );
   }
   if (
-    manifest.platformFee?.ratePpm !== "1000" ||
-    manifest.platformFee?.rateBps !== "10"
+    manifest.schemaVersion === "2.0.0" &&
+    manifest.caip2 !== `eip155:${manifest.chainId}`
   ) {
     findings.push(
-      finding("PLATFORM_FEE_RATE", "/platformFee", "Manifest platform fee must be 10 bps"),
+      finding("CHAIN_IDENTITY", "/caip2", "Root CAIP-2 identity does not match chainId"),
     );
   }
-  if (
-    manifest.platformFee?.recipient?.toLowerCase() !==
-    PLATFORM_FEE_RECIPIENT.toLowerCase()
-  ) {
-    findings.push(
-      finding(
-        "PLATFORM_FEE_RECIPIENT",
-        "/platformFee/recipient",
-        "Manifest fee recipient is not canonical",
-      ),
-    );
+  if (manifest.platformFee !== undefined) {
+    if (
+      manifest.platformFee?.ratePpm !== "1000" ||
+      manifest.platformFee?.rateBps !== "10"
+    ) {
+      findings.push(
+        finding("PLATFORM_FEE_RATE", "/platformFee", "Manifest platform fee must be 10 bps"),
+      );
+    }
+    if (
+      manifest.platformFee?.recipient?.toLowerCase() !==
+      PLATFORM_FEE_RECIPIENT.toLowerCase()
+    ) {
+      findings.push(
+        finding(
+          "PLATFORM_FEE_RECIPIENT",
+          "/platformFee/recipient",
+          "Manifest fee recipient is not canonical",
+        ),
+      );
+    }
+  } else if (manifest.publicCategories?.custom?.publicSubmissionStatus === "open") {
+    findings.push(finding(
+      "PLATFORM_FEE_UNPUBLISHED",
+      "/platformFee",
+      "An open Custom submission lane must publish its exact fee policy",
+    ));
   }
   const deployments = manifest.deployments ?? [];
   for (const duplicate of duplicateValues(deployments.map((item) => item.deploymentId))) {
@@ -968,7 +1448,7 @@ export function validateManifestSemantics(manifest) {
   }
   const registry = manifest.customRegistry;
   if (
-    registry?.status === "prelaunch" &&
+    ["planned", "prelaunch"].includes(registry?.status) &&
     (registry.address !== null ||
       registry.startBlock !== null ||
       registry.publicSubmissionsEnabled !== false ||
@@ -978,7 +1458,7 @@ export function validateManifestSemantics(manifest) {
       finding(
         "PRELAUNCH_REGISTRY",
         "/customRegistry",
-        "A prelaunch registry may not publish placeholder deployment facts",
+        "A planned registry may not publish placeholder deployment facts",
       ),
     );
   }
@@ -1027,6 +1507,88 @@ export function validateManifestSemantics(manifest) {
     ));
   }
   const chainIds = new Set((manifest.chains ?? []).map((chain) => chain.chainId));
+  const supportedChainIds = manifest.supportedChainIds ?? [];
+  if (
+    manifest.schemaVersion === "2.0.0" &&
+    (!chainIds.has(manifest.chainId) ||
+      supportedChainIds.length !== chainIds.size ||
+      supportedChainIds.some((chainId) => !chainIds.has(chainId)))
+  ) {
+    findings.push(finding(
+      "SUPPORTED_CHAIN_IDS",
+      "/supportedChainIds",
+      "supportedChainIds must exactly match the published chain profiles",
+    ));
+  }
+  for (const [index, chain] of (manifest.chains ?? []).entries()) {
+    if (chain.caip2 !== `eip155:${chain.chainId}`) {
+      findings.push(finding(
+        "CHAIN_PROFILE_IDENTITY",
+        `/chains/${index}/caip2`,
+        "Chain profile CAIP-2 identity must match chainId",
+      ));
+    }
+  }
+  const v4 = manifest.customLaunchV4;
+  if (v4 !== undefined && (
+    v4.chainId !== manifest.chainId ||
+    v4.caip2 !== manifest.caip2 ||
+    !v4.api?.capabilitiesPath?.includes(`/chains/${manifest.chainId}/`) ||
+    !v4.api?.preflightPath?.includes(`/chains/${manifest.chainId}/`) ||
+    !v4.api?.collectionPath?.includes(`/chains/${manifest.chainId}/`) ||
+    !v4.api?.resourcePath?.includes(`/chains/${manifest.chainId}/`) ||
+    !v4.api?.finalizedLaunchesPath?.includes(`/chains/${manifest.chainId}/`)
+  )) {
+    findings.push(finding(
+      "CUSTOM_LAUNCH_V4_CHAIN_BINDING",
+      "/customLaunchV4",
+      "Custom Launch V4 routes and identities must match the manifest chain",
+    ));
+  }
+  if (v4 !== undefined && manifest.chainId === 4663 &&
+    v4.foundationSourceCommitment !==
+      "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730") {
+    findings.push(finding(
+      "CUSTOM_LAUNCH_V4_FOUNDATION_SOURCE",
+      "/customLaunchV4/foundationSourceCommitment",
+      "Robinhood Custom Launch V4 must bind the exact foundation source commitment",
+    ));
+  }
+  if (v4 !== undefined && manifest.chainId === 4663 &&
+    canonicalizeJson(v4.releaseIdentity) !==
+      canonicalizeJson(ROBINHOOD_CUSTOM_LAUNCH_V4_RELEASE_IDENTITY)) {
+    findings.push(finding(
+      "CUSTOM_LAUNCH_V4_POLICY_SOURCE",
+      "/customLaunchV4/releaseIdentity/policySource",
+      "Robinhood Custom Launch V4 must bind the exact protected policy source",
+    ));
+  }
+  if (v4?.status === "planned" && (
+    v4.chainDeploymentDescriptorDigest !== null || v4.profile !== null ||
+    v4.finalityPolicy !== null
+  )) {
+    findings.push(finding(
+      "CUSTOM_LAUNCH_V4_PLANNED_EVIDENCE",
+      "/customLaunchV4",
+      "A planned V4 lane must not publish deployment, profile or finality trust roots",
+    ));
+  }
+  const readModel = manifest.extensions?.["programmable/read-model-v1"];
+  if (v4?.status === "live" && (
+    typeof v4.chainDeploymentDescriptorDigest !== "string" ||
+    v4.profile === null || v4.finalityPolicy === null ||
+    manifest.launchStampRouter?.status !== "live" ||
+    readModel?.status !== "live" ||
+    readModel?.lastKnownGoodScope !== "chain-id" ||
+    readModel?.absenceAuthoritative !== true
+  )) {
+    findings.push(finding(
+      "CUSTOM_LAUNCH_V4_LIVE_READ_MODEL",
+      "/customLaunchV4",
+      "A live V4 lane must bind exact deployment, profile, finality, Router and chain-scoped read-model evidence",
+    ));
+  }
+  findings.push(...robinhoodCustomLaunchBindingFindings(manifest));
   const registryKeys = [];
   for (const [index, generation] of (manifest.registryGenerations ?? []).entries()) {
     registryKeys.push(

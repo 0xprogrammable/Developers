@@ -1,7 +1,7 @@
 import { API_V2_SCHEMA_VERSION } from "../../server/constants.js";
 import {
   feedStatusV2,
-  getV2Dataset,
+  getV2DatasetForChain,
   publicLaunchV2,
 } from "../../server/v2-dataset.js";
 import {
@@ -150,7 +150,10 @@ function withinRegistryHighWater(record, highWaterGeneration) {
 }
 
 function isRouterCustomRecord(record) {
-  return Boolean(record.extensions?.["programmable/router-stamp-v1"]);
+  return Boolean(
+    record.extensions?.["programmable/router-stamp-v1"] ||
+      record.extensions?.["programmable/backend-finalized-v4"],
+  );
 }
 
 function afterBoundary(
@@ -283,7 +286,7 @@ export function launchFeedPayload(
   };
 }
 
-export function createLaunchesHandler(loadDataset = getV2Dataset) {
+export function createLaunchesHandler(loadDataset = getV2DatasetForChain) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {
@@ -336,7 +339,7 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
   }
 
   try {
-    const dataset = await loadDataset();
+    const dataset = await loadDataset(chainId ?? 1);
     if (
       chainId !== null &&
       !dataset.status.supportedChainIds?.includes(chainId)
@@ -359,7 +362,17 @@ export function createLaunchesHandler(loadDataset = getV2Dataset) {
       payload,
       { apiStatus: feedStatusV2(dataset, category) },
     );
-  } catch {
+  } catch (loadError) {
+    if (loadError?.code === "CHAIN_NOT_SUPPORTED") {
+      error(
+        req,
+        res,
+        400,
+        "CHAIN_NOT_SUPPORTED",
+        "No Programmable launch feed is published for this chain",
+      );
+      return;
+    }
     error(
       req,
       res,

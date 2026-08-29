@@ -1,0 +1,1200 @@
+name: Vercel release control
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Exact fail-closed release transition
+        required: true
+        type: choice
+        options: [stage, promote, rollback]
+      stage_run_id:
+        description: Successful stage run ID; promote only
+        required: false
+        type: string
+      stage_run_attempt:
+        description: Successful stage run attempt; promote only
+        required: false
+        default: "1"
+        type: string
+      previous_promotion_run_id:
+        description: Current live promotion run ID; blank while chain 4663 is planned
+        required: false
+        type: string
+      previous_promotion_run_attempt:
+        description: Current live promotion run attempt
+        required: false
+        default: "1"
+        type: string
+      promotion_run_id:
+        description: Current live promotion run ID; rollback only
+        required: false
+        type: string
+      promotion_run_attempt:
+        description: Current live promotion run attempt; rollback only
+        required: false
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: developers-vercel-release-control
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  NPM_CONFIG_AUDIT: "false"
+  NPM_CONFIG_FUND: "false"
+  PRODUCTION_ORIGIN: https://developers.programmable.family
+  ROBINHOOD_STAGE_BUNDLE_PATH: release/robinhood-chain-4663/programmable-stage-bundle.json
+  ROBINHOOD_PROMOTION_BUNDLE_PATH: release/robinhood-chain-4663/programmable-promotion-bundle.json
+  INDEXER_RELEASE_IDENTITY_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-release-identity.json
+  INDEXER_DEPLOYMENT_RECEIPT_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-deployment-receipt.json
+  INDEXER_RELEASE_AUDIT_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-release-audit.json
+
+jobs:
+  validate-source:
+    name: Validate immutable protected source
+    if: >-
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      source-tree: ${{ steps.source.outputs.tree }}
+      release-bundle-digest: ${{ steps.bundle.outputs.digest }}
+    steps:
+      - name: Validate dispatch before artifact access
+        env:
+          OPERATION: ${{ inputs.operation }}
+          STAGE_RUN_ID: ${{ inputs.stage_run_id }}
+          STAGE_RUN_ATTEMPT: ${{ inputs.stage_run_attempt }}
+          PREVIOUS_RUN_ID: ${{ inputs.previous_promotion_run_id }}
+          PREVIOUS_RUN_ATTEMPT: ${{ inputs.previous_promotion_run_attempt }}
+          PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          PROMOTION_RUN_ATTEMPT: ${{ inputs.promotion_run_attempt }}
+        run: |
+          set -euo pipefail
+          decimal='^[1-9][0-9]*$'
+          case "$OPERATION" in
+            stage)
+              test -z "$STAGE_RUN_ID" && test -z "$PREVIOUS_RUN_ID" && test -z "$PROMOTION_RUN_ID"
+              ;;
+            promote)
+              [[ "$STAGE_RUN_ID" =~ $decimal ]] && [[ "$STAGE_RUN_ATTEMPT" =~ $decimal ]]
+              test -z "$PROMOTION_RUN_ID"
+              if test -n "$PREVIOUS_RUN_ID"; then
+                [[ "$PREVIOUS_RUN_ID" =~ $decimal ]]
+                [[ "$PREVIOUS_RUN_ATTEMPT" =~ $decimal ]]
+              fi
+              ;;
+            rollback)
+              test -z "$STAGE_RUN_ID" && test -z "$PREVIOUS_RUN_ID"
+              [[ "$PROMOTION_RUN_ID" =~ $decimal ]]
+              [[ "$PROMOTION_RUN_ATTEMPT" =~ $decimal ]]
+              ;;
+            *) exit 1 ;;
+          esac
+
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install audited locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit --ignore-scripts
+          test "$(./node_modules/.bin/vercel --version | tail -n 1)" = "59.10.0"
+
+      - name: Resolve source tree
+        id: source
+        run: printf 'tree=%s\n' "$(git rev-parse HEAD^{tree})" >> "$GITHUB_OUTPUT"
+
+      - name: Build and run full repository checks
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+          if test "$OPERATION" = stage; then
+            unset ROBINHOOD_PROMOTION_BUNDLE_PATH
+          else
+            unset ROBINHOOD_STAGE_BUNDLE_PATH
+          fi
+          npm run build
+          npm run check
+          git diff --exit-code
+
+      - name: Validate exact phase bundle without inferring public authority
+        id: bundle
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/source
+          if test "$OPERATION" = stage; then
+            phase=stage
+            bundle_path="$ROBINHOOD_STAGE_BUNDLE_PATH"
+          else
+            phase=promotion
+            bundle_path="$ROBINHOOD_PROMOTION_BUNDLE_PATH"
+          fi
+          npm run release:vercel -- validate-bundle \
+            --phase "$phase" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --bundle "$bundle_path" \
+            --manifest deployments/robinhood-v2.json \
+            --ethereum-manifest deployments/ethereum-v2.json \
+            --output .release-evidence/source/bundle.json
+          digest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/source/bundle.json --path bundleDigest)"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+
+  stage:
+    name: Stage protected unaliased deployment
+    if: >-
+      inputs.operation == 'stage' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Pull exact Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
+          ./node_modules/.bin/vercel pull --yes --environment=production \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Build production bytes without publishing
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: ./node_modules/.bin/vercel build --prod --scope "$VERCEL_ORG_ID"
+
+      - name: Reconfirm current protected main before Vercel mutation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Create unaliased production-target deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/stage
+          ./node_modules/.bin/vercel deploy --prebuilt --target=production --skip-domain --yes --json \
+            --scope "$VERCEL_ORG_ID" \
+            --meta "programmableSourceRevision=$GITHUB_SHA" \
+            --meta "programmableSourceTree=${{ needs.validate-source.outputs.source-tree }}" \
+            --meta "programmableStageBundleDigest=${{ needs.validate-source.outputs.release-bundle-digest }}" \
+            > .release-evidence/stage/deploy.json
+
+      - name: Provider-requery stage and protection
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          deployment_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/stage/deploy.json --path deployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$deployment_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --stage-bundle-digest "${{ needs.validate-source.outputs.release-bundle-digest }}" \
+            --output .release-evidence/stage/deployment.json \
+            --protection-output .release-evidence/stage/protection-evidence.json
+
+      - name: Smoke exact stage through scoped bypass
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
+          url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/stage/deployment.json --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$url" npm run smoke:chain-4663 -- \
+            --mode live --bundle-phase stage --bundle "$ROBINHOOD_STAGE_BUNDLE_PATH" \
+            --protection-bypass true \
+            --output .release-evidence/stage/staged-smoke.json
+
+      - name: Seal non-public stage receipt
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          staged_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- create-stage-receipt \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --bundle "$ROBINHOOD_STAGE_BUNDLE_PATH" \
+            --manifest deployments/robinhood-v2.json \
+            --ethereum-manifest deployments/ethereum-v2.json \
+            --deployment .release-evidence/stage/deployment.json \
+            --protection-evidence .release-evidence/stage/protection-evidence.json \
+            --staged-smoke .release-evidence/stage/staged-smoke.json \
+            --build-root .vercel/output \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID" \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --staged-at "$staged_at" \
+            --output .release-evidence/stage/stage-receipt.json
+          cp "$ROBINHOOD_STAGE_BUNDLE_PATH" .release-evidence/stage/stage-bundle.json
+          rm .release-evidence/stage/deploy.json
+          git diff --exit-code
+
+      - name: Upload immutable stage evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-stage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/stage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report stage boundary
+        run: |
+          receipt=.release-evidence/stage/stage-receipt.json
+          {
+            printf '### Staged and protected, not public\n\n'
+            printf -- '- Deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$receipt" --path deployment.id)"
+            printf -- '- Receipt: `%s`\n' "$(npm run --silent release:vercel -- field --file "$receipt" --path stageReceiptDigest)"
+            printf -- '- `publicAuthorization:false`; `publicWrites:false`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  prepare-promotion:
+    name: Prepare reviewed promotion plan
+    if: >-
+      inputs.operation == 'promote' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      plan-digest: ${{ steps.plan.outputs.digest }}
+    steps:
+      - name: Check out protected evidence source with ancestry
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Seal selected stage run and artifact evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          STAGE_RUN_ID: ${{ inputs.stage_run_id }}
+          STAGE_RUN_ATTEMPT: ${{ inputs.stage_run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/plan
+          npm run capture:github-release-evidence -- \
+            --run-id "$STAGE_RUN_ID" --run-attempt "$STAGE_RUN_ATTEMPT" \
+            --artifact-name "developers-vercel-stage-$STAGE_RUN_ID-$STAGE_RUN_ATTEMPT" \
+            --run-output .release-evidence/plan/stage-run-evidence.json \
+            --artifact-output .release-evidence/plan/stage-artifact-evidence.json
+
+      - name: Download exact validated stage artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: developers-vercel-stage-${{ inputs.stage_run_id }}-${{ inputs.stage_run_attempt }}
+          path: .release-evidence/plan/stage
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.stage_run_id }}
+
+      - name: Seal prior promotion provenance when already live
+        if: inputs.previous_promotion_run_id != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PRIOR_RUN_ID: ${{ inputs.previous_promotion_run_id }}
+          PRIOR_RUN_ATTEMPT: ${{ inputs.previous_promotion_run_attempt }}
+        run: |
+          npm run capture:github-release-evidence -- \
+            --run-id "$PRIOR_RUN_ID" --run-attempt "$PRIOR_RUN_ATTEMPT" \
+            --artifact-name "developers-vercel-promotion-$PRIOR_RUN_ID-$PRIOR_RUN_ATTEMPT" \
+            --run-output .release-evidence/plan/prior-run-evidence.json \
+            --artifact-output .release-evidence/plan/prior-artifact-evidence.json
+
+      - name: Download exact prior promotion artifact
+        if: inputs.previous_promotion_run_id != ''
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: developers-vercel-promotion-${{ inputs.previous_promotion_run_id }}-${{ inputs.previous_promotion_run_attempt }}
+          path: .release-evidence/plan/prior
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.previous_promotion_run_id }}
+
+      - name: Pull project and reproduce current reviewed build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vercel pull --yes --environment=production \
+            --scope "$VERCEL_ORG_ID"
+          ./node_modules/.bin/vercel build --prod \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Provider-requery selected stage and protection
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          receipt=.release-evidence/plan/stage/stage-receipt.json
+          deployment_id="$(npm run --silent release:vercel -- field --file "$receipt" --path deployment.id)"
+          source_revision="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/plan/stage-run-evidence.json --path sourceRevision)"
+          source_tree="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/plan/stage-run-evidence.json --path sourceTree)"
+          bundle_digest="$(npm run --silent release:vercel -- field --file "$receipt" --path stageBundleDigest)"
+          npm run capture:vercel-provider -- \
+            --selector "$deployment_id" \
+            --source-revision "$source_revision" --source-tree "$source_tree" \
+            --stage-bundle-digest "$bundle_digest" \
+            --output .release-evidence/plan/stage-deployment.json \
+            --protection-output .release-evidence/plan/stage-protection.json
+
+      - name: Validate stage against provider and protected source
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run release:vercel -- validate-stage \
+            --receipt .release-evidence/plan/stage/stage-receipt.json \
+            --bundle .release-evidence/plan/stage/stage-bundle.json \
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID" \
+            --deployment .release-evidence/plan/stage-deployment.json \
+            --protection-evidence .release-evidence/plan/stage-protection.json \
+            --staged-smoke .release-evidence/plan/stage/staged-smoke.json \
+            --run-evidence .release-evidence/plan/stage-run-evidence.json \
+            --artifact-evidence .release-evidence/plan/stage-artifact-evidence.json \
+            --output .release-evidence/plan/validated-stage.json
+          cmp --silent "$ROBINHOOD_STAGE_BUNDLE_PATH" \
+            .release-evidence/plan/stage/stage-bundle.json
+
+      - name: Smoke only the provider-verified stage
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/plan/stage-deployment.json --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$url" npm run smoke:chain-4663 -- \
+            --mode live --bundle-phase stage --bundle "$ROBINHOOD_STAGE_BUNDLE_PATH" \
+            --protection-bypass true \
+            --output .release-evidence/plan/staged-smoke.json
+
+      - name: Provider-requery current public deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/plan/current-deployment.json
+
+      - name: Smoke current public mode without bypass
+        env:
+          PRIOR_RUN_ID: ${{ inputs.previous_promotion_run_id }}
+        run: |
+          set -euo pipefail
+          if test -n "$PRIOR_RUN_ID"; then
+            PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+              --mode live --bundle-phase promotion \
+              --bundle .release-evidence/plan/prior/promotion-bundle.json \
+              --protection-bypass false --output .release-evidence/plan/current-smoke.json
+          else
+            PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+              --mode planned --protection-bypass false \
+              --output .release-evidence/plan/current-smoke.json
+          fi
+
+      - name: Create non-authorizing promotion plan
+        id: plan
+        env:
+          PRIOR_RUN_ID: ${{ inputs.previous_promotion_run_id }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          prepared_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          args=(
+            --stage-receipt .release-evidence/plan/stage/stage-receipt.json
+            --stage-run-evidence .release-evidence/plan/stage-run-evidence.json
+            --stage-artifact-evidence .release-evidence/plan/stage-artifact-evidence.json
+            --staged-deployment .release-evidence/plan/stage-deployment.json
+            --stage-bundle "$ROBINHOOD_STAGE_BUNDLE_PATH"
+            --promotion-bundle "$ROBINHOOD_PROMOTION_BUNDLE_PATH"
+            --staged-smoke .release-evidence/plan/staged-smoke.json
+            --stage-artifact-smoke .release-evidence/plan/stage/staged-smoke.json
+            --stage-protection-evidence .release-evidence/plan/stage-protection.json
+            --previous-smoke .release-evidence/plan/current-smoke.json
+            --previous-deployment .release-evidence/plan/current-deployment.json
+            --build-root .vercel/output
+            --source-revision "$GITHUB_SHA"
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}"
+            --repository-root "$GITHUB_WORKSPACE"
+            --indexer-release-identity "$INDEXER_RELEASE_IDENTITY_PATH"
+            --indexer-deployment-receipt "$INDEXER_DEPLOYMENT_RECEIPT_PATH"
+            --indexer-release-audit "$INDEXER_RELEASE_AUDIT_PATH"
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID"
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF"
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID"
+            --prepared-at "$prepared_at"
+            --output .release-evidence/plan/promotion-plan.json
+          )
+          if test -n "$PRIOR_RUN_ID"; then
+            args+=(
+              --previous-mode live
+              --previous-bundle .release-evidence/plan/prior/promotion-bundle.json
+              --previous-promotion-receipt .release-evidence/plan/prior/promotion-receipt.json
+              --previous-promotion-artifact-evidence .release-evidence/plan/prior-artifact-evidence.json
+            )
+            cp .release-evidence/plan/prior/promotion-bundle.json \
+              .release-evidence/plan/previous-promotion-bundle.json
+          else
+            args+=(--previous-mode planned)
+          fi
+          npm run release:vercel -- create-promotion-plan "${args[@]}"
+          cp "$ROBINHOOD_PROMOTION_BUNDLE_PATH" .release-evidence/plan/promotion-bundle.json
+          digest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/plan/promotion-plan.json --path promotionPlanDigest)"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          rm -rf .release-evidence/plan/stage .release-evidence/plan/prior
+          git diff --exit-code
+
+      - name: Upload immutable promotion plan
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-promotion-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/plan
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Present exact transition for protected owner review
+        run: |
+          plan=.release-evidence/plan/promotion-plan.json
+          {
+            printf '### Canonical owner-dispatched promotion plan\n\n'
+            printf -- '- Plan: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path promotionPlanDigest)"
+            printf -- '- Staged deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path stagedDeployment.id)"
+            printf -- '- Current deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path previousRelease.deployment.id)"
+            printf -- '- Current mode: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path previousRelease.mode)"
+            printf -- '- Stage source: `%s` / `%s`\n' \
+              "$(npm run --silent release:vercel -- field --file "$plan" --path stagedSource.revision)" \
+              "$(npm run --silent release:vercel -- field --file "$plan" --path stagedSource.tree)"
+            printf -- '- Promotion source: `%s` / `%s`\n' \
+              "$(npm run --silent release:vercel -- field --file "$plan" --path source.revision)" \
+              "$(npm run --silent release:vercel -- field --file "$plan" --path source.tree)"
+            printf -- '- Bundle: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path promotionBundleDigest)"
+            printf -- '- Indexer audit: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path indexerEvidence.auditDigest)"
+            printf -- '- Indexer evidence: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path indexerEvidence.indexerEvidenceDigest)"
+            printf '\nThe exact owner dispatch grants one fresh alias mutation after provider re-query.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  promote:
+    name: Protected owner-authorized promotion
+    if: >-
+      inputs.operation == 'promote' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: [validate-source, prepare-promotion]
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Download exact plan from this run
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: developers-vercel-promotion-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/promote
+
+      - name: Seal canonical owner-dispatch authorization
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_ENVIRONMENT: production
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > .release-evidence/promote/owner-dispatch-run.raw.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/environments/production" \
+            > .release-evidence/promote/production-environment.raw.json
+          authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- authorize \
+            --operation promote --plan .release-evidence/promote/promotion-plan.json \
+            --workflow-run .release-evidence/promote/owner-dispatch-run.raw.json \
+            --environment .release-evidence/promote/production-environment.raw.json \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --authorized-at "$authorized_at" \
+            --output .release-evidence/promote/authorization.json
+          rm .release-evidence/promote/owner-dispatch-run.raw.json \
+            .release-evidence/promote/production-environment.raw.json
+
+      - name: Pull exact Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+
+      - name: Fresh provider-requery current and selected deployments
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          plan=.release-evidence/promote/promotion-plan.json
+          selected_id="$(npm run --silent release:vercel -- field --file "$plan" --path stagedDeployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/promote/current-deployment.json
+          npm run capture:vercel-provider -- \
+            --selector "$selected_id" \
+            --output .release-evidence/promote/selected-deployment.json \
+            --protection-output .release-evidence/promote/selected-protection.json
+
+      - name: Fresh selected chain-4663 smoke
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/promote/selected-deployment.json --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$url" npm run smoke:chain-4663 -- \
+            --mode live --bundle-phase promotion \
+            --bundle .release-evidence/promote/promotion-bundle.json \
+            --protection-bypass true \
+            --output .release-evidence/promote/selected-smoke.json
+
+      - name: Seal fresh pre-mutation state
+        run: |
+          checked_at="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/promote/selected-smoke.json --path checkedAt)"
+          npm run release:vercel -- create-pre-mutation-state \
+            --operation promote --plan .release-evidence/promote/promotion-plan.json \
+            --current-deployment .release-evidence/promote/current-deployment.json \
+            --selected-deployment .release-evidence/promote/selected-deployment.json \
+            --selected-protection-evidence .release-evidence/promote/selected-protection.json \
+            --selected-smoke .release-evidence/promote/selected-smoke.json \
+            --selected-bundle .release-evidence/promote/promotion-bundle.json \
+            --checked-at "$checked_at" \
+            --output .release-evidence/promote/pre-mutation-state.json
+
+      - name: Reconfirm current protected main before Vercel mutation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Promote only authorization-bound deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          selected_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/promote/promotion-plan.json --path stagedDeployment.id)"
+          ./node_modules/.bin/vercel promote "$selected_id" --yes \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Provider-requery promoted public deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/promote/production-deployment.json
+
+      - name: Post-promotion public smoke without bypass
+        run: |
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+            --mode live --bundle-phase promotion \
+            --bundle .release-evidence/promote/promotion-bundle.json \
+            --protection-bypass false \
+            --output .release-evidence/promote/production-smoke.json
+
+      - name: Seal immutable promotion receipt
+        run: |
+          promoted_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- create-promotion-receipt \
+            --plan .release-evidence/promote/promotion-plan.json \
+            --authorization .release-evidence/promote/authorization.json \
+            --pre-mutation-state .release-evidence/promote/pre-mutation-state.json \
+            --selected-smoke .release-evidence/promote/selected-smoke.json \
+            --bundle .release-evidence/promote/promotion-bundle.json \
+            --production-deployment .release-evidence/promote/production-deployment.json \
+            --production-smoke .release-evidence/promote/production-smoke.json \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --promoted-at "$promoted_at" \
+            --output .release-evidence/promote/promotion-receipt.json
+          git diff --exit-code
+
+      - name: Upload immutable promotion evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/promote
+          if-no-files-found: error
+          retention-days: 90
+
+  prepare-rollback:
+    name: Prepare reviewed rollback plan
+    if: >-
+      inputs.operation == 'rollback' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      plan-digest: ${{ steps.plan.outputs.digest }}
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Seal selected promotion run and artifact evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PROMOTION_RUN_ID: ${{ inputs.promotion_run_id }}
+          PROMOTION_RUN_ATTEMPT: ${{ inputs.promotion_run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/rollback
+          npm run capture:github-release-evidence -- \
+            --run-id "$PROMOTION_RUN_ID" --run-attempt "$PROMOTION_RUN_ATTEMPT" \
+            --artifact-name "developers-vercel-promotion-$PROMOTION_RUN_ID-$PROMOTION_RUN_ATTEMPT" \
+            --run-output .release-evidence/rollback/promotion-run-evidence.json \
+            --artifact-output .release-evidence/rollback/promotion-artifact-evidence.json
+
+      - name: Download exact validated promotion artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: developers-vercel-promotion-${{ inputs.promotion_run_id }}-${{ inputs.promotion_run_attempt }}
+          path: .release-evidence/rollback/promotion
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.promotion_run_id }}
+
+      - name: Validate promotion receipt before provider access
+        run: |
+          npm run release:vercel -- inspect \
+            --kind promotion \
+            --file .release-evidence/rollback/promotion/promotion-receipt.json \
+            --bundle .release-evidence/rollback/promotion/promotion-bundle.json \
+            --output .release-evidence/rollback/validated-promotion.json
+
+      - name: Pull exact Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+
+      - name: Provider-requery current and rollback target
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          target_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/validated-promotion.json \
+            --path previousRelease.deployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/rollback/current-deployment.json
+          npm run capture:vercel-provider -- \
+            --selector "$target_id" \
+            --output .release-evidence/rollback/target-deployment.json \
+            --protection-output .release-evidence/rollback/target-protection.json
+
+      - name: Smoke current live production without bypass
+        run: |
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+            --mode live --bundle-phase promotion \
+            --bundle .release-evidence/rollback/promotion/promotion-bundle.json \
+            --protection-bypass false \
+            --output .release-evidence/rollback/current-smoke.json
+
+      - name: Smoke only provider-verified rollback target
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          target_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/target-deployment.json --path deployment.url)"
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/validated-promotion.json --path previousRelease.mode)"
+          args=(--mode "$restored_mode" --protection-bypass true \
+            --output .release-evidence/rollback/target-smoke.json)
+          if test "$restored_mode" = live; then
+            args+=(--bundle-phase promotion \
+              --bundle .release-evidence/rollback/promotion/previous-promotion-bundle.json)
+          fi
+          PROGRAMMABLE_API_BASE="$target_url" npm run smoke:chain-4663 -- "${args[@]}"
+
+      - name: Create non-authorizing rollback plan
+        id: plan
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          prepared_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/validated-promotion.json --path previousRelease.mode)"
+          args=(
+            --promotion-receipt .release-evidence/rollback/promotion/promotion-receipt.json
+            --promotion-artifact-evidence .release-evidence/rollback/promotion-artifact-evidence.json
+            --bundle .release-evidence/rollback/promotion/promotion-bundle.json
+            --current-smoke .release-evidence/rollback/current-smoke.json
+            --current-deployment .release-evidence/rollback/current-deployment.json
+            --target-smoke .release-evidence/rollback/target-smoke.json
+            --target-deployment .release-evidence/rollback/target-deployment.json
+            --target-protection-evidence .release-evidence/rollback/target-protection.json
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID"
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF"
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID"
+            --prepared-at "$prepared_at"
+            --output .release-evidence/rollback/rollback-plan.json
+          )
+          if test "$restored_mode" = live; then
+            args+=(--previous-bundle .release-evidence/rollback/promotion/previous-promotion-bundle.json)
+            cp .release-evidence/rollback/promotion/previous-promotion-bundle.json \
+              .release-evidence/rollback/previous-promotion-bundle.json
+          fi
+          npm run release:vercel -- create-rollback-plan "${args[@]}"
+          cp .release-evidence/rollback/promotion/promotion-bundle.json \
+            .release-evidence/rollback/promotion-bundle.json
+          digest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackPlanDigest)"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          rm -rf .release-evidence/rollback/promotion
+          git diff --exit-code
+
+      - name: Upload immutable rollback plan
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-rollback-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/rollback
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Present exact rollback for protected owner review
+        run: |
+          plan=.release-evidence/rollback/rollback-plan.json
+          {
+            printf '### Canonical owner-dispatched rollback plan\n\n'
+            printf -- '- Plan: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path rollbackPlanDigest)"
+            printf -- '- Current deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path currentDeployment.id)"
+            printf -- '- Target deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path rollbackDeployment.id)"
+            printf -- '- Restored mode: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path rollbackTarget.mode)"
+            printf -- '- Promotion receipt: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path promotionReceiptDigest)"
+            printf -- '- Indexer evidence: `%s`\n' "$(npm run --silent release:vercel -- field --file "$plan" --path indexerEvidence.indexerEvidenceDigest)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  rollback:
+    name: Protected owner-authorized rollback
+    if: >-
+      inputs.operation == 'rollback' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: [validate-source, prepare-rollback]
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Download exact rollback plan from this run
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: developers-vercel-rollback-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/rollback
+
+      - name: Seal canonical owner-dispatch authorization
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_ENVIRONMENT: production
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > .release-evidence/rollback/owner-dispatch-run.raw.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/environments/production" \
+            > .release-evidence/rollback/production-environment.raw.json
+          authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- authorize \
+            --operation rollback --plan .release-evidence/rollback/rollback-plan.json \
+            --workflow-run .release-evidence/rollback/owner-dispatch-run.raw.json \
+            --environment .release-evidence/rollback/production-environment.raw.json \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --authorized-at "$authorized_at" \
+            --output .release-evidence/rollback/authorization.json
+          rm .release-evidence/rollback/owner-dispatch-run.raw.json \
+            .release-evidence/rollback/production-environment.raw.json
+
+      - name: Pull exact Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+
+      - name: Fresh provider-requery current and target deployments
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          plan=.release-evidence/rollback/rollback-plan.json
+          target_id="$(npm run --silent release:vercel -- field --file "$plan" --path rollbackDeployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/rollback/current-deployment.json
+          npm run capture:vercel-provider -- \
+            --selector "$target_id" \
+            --output .release-evidence/rollback/target-deployment.json \
+            --protection-output .release-evidence/rollback/target-protection.json
+
+      - name: Fresh smoke of provider-verified target
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          target_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/target-deployment.json --path deployment.url)"
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackTarget.mode)"
+          args=(--mode "$restored_mode" --protection-bypass true \
+            --output .release-evidence/rollback/target-smoke-fresh.json)
+          if test "$restored_mode" = live; then
+            args+=(--bundle-phase promotion \
+              --bundle .release-evidence/rollback/previous-promotion-bundle.json)
+          fi
+          PROGRAMMABLE_API_BASE="$target_url" npm run smoke:chain-4663 -- "${args[@]}"
+
+      - name: Seal fresh rollback pre-mutation state
+        run: |
+          checked_at="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/target-smoke-fresh.json --path checkedAt)"
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackTarget.mode)"
+          args=(
+            --operation rollback
+            --plan .release-evidence/rollback/rollback-plan.json
+            --current-deployment .release-evidence/rollback/current-deployment.json
+            --selected-deployment .release-evidence/rollback/target-deployment.json
+            --selected-protection-evidence .release-evidence/rollback/target-protection.json
+            --selected-smoke .release-evidence/rollback/target-smoke-fresh.json
+            --checked-at "$checked_at"
+            --output .release-evidence/rollback/pre-mutation-state.json
+          )
+          if test "$restored_mode" = live; then
+            args+=(--selected-bundle .release-evidence/rollback/previous-promotion-bundle.json)
+          fi
+          npm run release:vercel -- create-pre-mutation-state "${args[@]}"
+
+      - name: Reconfirm current protected main before Vercel mutation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Roll back only to authorization-bound deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          target_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackDeployment.id)"
+          ./node_modules/.bin/vercel promote "$target_id" --yes \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Provider-requery restored public deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/rollback/production-deployment.json
+
+      - name: Post-rollback public smoke without bypass
+        run: |
+          set -euo pipefail
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackTarget.mode)"
+          args=(--mode "$restored_mode" --protection-bypass false \
+            --output .release-evidence/rollback/production-smoke.json)
+          if test "$restored_mode" = live; then
+            args+=(--bundle-phase promotion \
+              --bundle .release-evidence/rollback/previous-promotion-bundle.json)
+          fi
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- "${args[@]}"
+
+      - name: Seal immutable rollback receipt
+        run: |
+          set -euo pipefail
+          rolled_back_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          restored_mode="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/rollback/rollback-plan.json --path rollbackTarget.mode)"
+          args=(
+            --plan .release-evidence/rollback/rollback-plan.json
+            --authorization .release-evidence/rollback/authorization.json
+            --pre-mutation-state .release-evidence/rollback/pre-mutation-state.json
+            --selected-smoke .release-evidence/rollback/target-smoke-fresh.json
+            --production-deployment .release-evidence/rollback/production-deployment.json
+            --production-smoke .release-evidence/rollback/production-smoke.json
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF"
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID"
+            --rolled-back-at "$rolled_back_at"
+            --output .release-evidence/rollback/rollback-receipt.json
+          )
+          if test "$restored_mode" = live; then
+            args+=(--previous-bundle .release-evidence/rollback/previous-promotion-bundle.json)
+          fi
+          npm run release:vercel -- create-rollback-receipt "${args[@]}"
+          git diff --exit-code
+
+      - name: Upload immutable rollback evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-rollback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/rollback
+          if-no-files-found: error
+          retention-days: 90

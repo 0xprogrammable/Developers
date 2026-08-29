@@ -1,14 +1,16 @@
 import {
   developerManifestV2,
   feedStatusV2,
-  getV2Dataset,
+  getV2DatasetForChain,
   serviceStatusV2,
 } from "../../server/v2-dataset.js";
 import {
   error,
   handleOptions,
   json,
+  parseEvmChainId,
   queryParametersAllowed,
+  queryValue,
 } from "../../server/http.js";
 
 export default async function handler(req, res) {
@@ -18,15 +20,20 @@ export default async function handler(req, res) {
     error(req, res, 405, "METHOD_NOT_ALLOWED", "Only GET is supported");
     return;
   }
-  if (!queryParametersAllowed(req, [])) {
-    error(req, res, 400, "INVALID_QUERY", "This endpoint does not accept query parameters");
+  if (!queryParametersAllowed(req, ["chainId"])) {
+    error(req, res, 400, "INVALID_QUERY", "Query parameters are invalid or repeated");
+    return;
+  }
+  const chainId = parseEvmChainId(queryValue(req, "chainId"));
+  if (chainId === undefined) {
+    error(req, res, 400, "INVALID_CHAIN_ID", "chainId must be a positive EVM chain id");
     return;
   }
 
   try {
     const [dataset, manifest] = await Promise.all([
-      getV2Dataset(),
-      developerManifestV2(),
+      getV2DatasetForChain(chainId ?? 1),
+      developerManifestV2(chainId ?? 1),
     ]);
     json(
       req,
@@ -38,7 +45,11 @@ export default async function handler(req, res) {
       apiStatus: feedStatusV2(dataset),
       },
     );
-  } catch {
+  } catch (statusError) {
+    if (statusError?.code === "CHAIN_NOT_SUPPORTED") {
+      error(req, res, 404, "CHAIN_NOT_SUPPORTED", "No Programmable status is published for this chain");
+      return;
+    }
     error(
       req,
       res,

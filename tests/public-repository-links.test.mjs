@@ -20,6 +20,7 @@ describe("public repository navigation", () => {
       "llms.txt",
       "llms-full.txt",
       "package.json",
+      "public/.well-known/programmable.json",
       "public/index.html",
     ];
     const contents = await Promise.all(files.map(read));
@@ -30,6 +31,14 @@ describe("public repository navigation", () => {
         content,
         new RegExp(
           `(?:github\\.com|raw\\.githubusercontent\\.com)/${retiredOwner}/(?:Developers|developers|Launch-Policy)`,
+          "u",
+        ),
+        files[index],
+      );
+      assert.doesNotMatch(
+        content,
+        new RegExp(
+          `github\\.com/${retiredOwner}/PROGRAMMABLE/releases`,
           "u",
         ),
         files[index],

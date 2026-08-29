@@ -4,6 +4,9 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": false
+  },
   "redirects": [
     {
       "source": "/",
@@ -174,6 +177,10 @@
     {
       "source": "/v2/manifest",
       "destination": "/api/v2/manifest"
+    },
+    {
+      "source": "/v2/manifests/:chainId",
+      "destination": "/api/v2/manifests/:chainId"
     },
     {
       "source": "/v2/launches",

@@ -13,12 +13,19 @@ import {
 } from "./lib/programmable-client.mjs";
 
 const checkpointPath = process.env.PROGRAMMABLE_CURSOR_FILE || null;
-const manifest = await fetchJson("/api/v2/manifest");
+const chainId = positiveInteger(process.env.PROGRAMMABLE_CHAIN_ID, 1);
+const manifest = await fetchJson(`/api/v2/manifests/${chainId}`);
+if (manifest.chainId !== chainId || manifest.caip2 !== `eip155:${chainId}`) {
+  throw new Error("The manifest does not match PROGRAMMABLE_CHAIN_ID");
+}
 const checkpoint = await readCheckpoint(checkpointPath);
+if (checkpoint.chainId !== null && checkpoint.chainId !== chainId) {
+  throw new Error("The saved cursor belongs to a different chain");
+}
 const limit = process.env.PROGRAMMABLE_PAGE_SIZE || 100;
 const maximumPages = positiveInteger(process.env.PROGRAMMABLE_MAX_PAGES, 1_000);
 const traversedCursors = new Set();
-let request = { after: checkpoint.cursor, limit };
+let request = { after: checkpoint.cursor, chainId, limit };
 let resumableCursor = null;
 let schemaVersion = null;
 let sourceWasSafe = true;
@@ -82,11 +89,12 @@ for (;;) {
     throw new Error("Feed repeated a page cursor during one traversal");
   }
   traversedCursors.add(followingCursor);
-  request = { cursor: followingCursor, limit };
+  request = { chainId, cursor: followingCursor, limit };
 }
 
 if (resumableCursor && sourceWasSafe) {
   await writeCheckpoint(checkpointPath, {
+    chainId,
     cursor: resumableCursor,
     schemaVersion,
     savedAt: new Date().toISOString(),
@@ -108,15 +116,21 @@ console.error(
 );
 
 async function readCheckpoint(path) {
-  if (!path) return { cursor: process.env.PROGRAMMABLE_CURSOR || null };
+  if (!path) {
+    return {
+      chainId: null,
+      cursor: process.env.PROGRAMMABLE_CURSOR || null,
+    };
+  }
 
   try {
     const parsed = JSON.parse(await readFile(path, "utf8"));
     return {
+      chainId: Number.isSafeInteger(parsed.chainId) ? parsed.chainId : null,
       cursor: typeof parsed.cursor === "string" && parsed.cursor ? parsed.cursor : null,
     };
   } catch (error) {
-    if (error?.code === "ENOENT") return { cursor: null };
+    if (error?.code === "ENOENT") return { chainId: null, cursor: null };
     throw error;
   }
 }

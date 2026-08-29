@@ -16,10 +16,49 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs && node scripts/strict-openapi-check.mjs && node --test tests/*.test.mjs",
     "test": "node --test tests/*.test.mjs",
-    "smoke:live": "node scripts/live-smoke.mjs"
+    "smoke:live": "node scripts/live-smoke.mjs",
+    "smoke:chain-4663": "node scripts/chain-4663-live-smoke.mjs",
+    "capture:vercel-provider": "node scripts/vercel-provider-capture.mjs",
+    "capture:github-release-evidence": "node scripts/github-release-evidence.mjs",
+    "release:vercel": "node scripts/vercel-release.mjs"
   },
   "devDependencies": {
     "ajv": "8.20.0",
+    "vercel": "59.10.0",
     "yaml": "^2.8.3"
+  },
+  "overrides": {
+    "@vercel/backends": {
+      "path-to-regexp": "8.4.2"
+    },
+    "@vercel/express": {
+      "path-to-regexp": "8.4.2"
+    },
+    "@vercel/fun": {
+      "@tootallnate/once": "2.0.1",
+      "path-to-regexp": "8.4.2",
+      "tar": "7.5.22"
+    },
+    "@vercel/hono": {
+      "path-to-regexp": "8.4.2"
+    },
+    "@vercel/node": {
+      "path-to-regexp": "6.3.0",
+      "undici": "6.28.0"
+    },
+    "@vercel/python-analysis": {
+      "js-yaml": "4.3.1",
+      "minimatch": "10.2.6",
+      "smol-toml": "1.8.0"
+    },
+    "@vercel/remix-builder": {
+      "path-to-regexp": "6.3.0"
+    },
+    "ajv": "8.20.0",
+    "vercel": {
+      "smol-toml": "1.8.0",
+      "undici": "6.28.0"
+    },
+    "tar": "7.5.22"
   }
 }

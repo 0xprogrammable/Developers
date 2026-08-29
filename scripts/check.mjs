@@ -12,11 +12,47 @@ import {
   compareV1Schemas,
 } from "./lib/compatibility.mjs";
 import { hardcodedDeploymentFindings } from "./lib/source-scan.mjs";
+import {
+  CANONICAL_PROMOTION_BUNDLE_PATH,
+  CANONICAL_STAGE_BUNDLE_PATH,
+  frozenEthereumV3Identity,
+  parsePromotionBundle,
+  parseStageBundle,
+  validateLiveRobinhoodManifest,
+  validatePlannedRobinhoodManifest,
+} from "./lib/vercel-release.mjs";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 
 const registry = await createSchemaRegistry();
 const v2Registry = await createSchemaRegistry("v2");
+const MAX_RELEASE_BUNDLE_BYTES = 32 * 1024 * 1024;
+
+async function canonicalTrackedBundlePresent(relativePath) {
+  const absolutePath = path.join(REPOSITORY_ROOT, relativePath);
+  let metadata;
+  try {
+    metadata = await lstat(absolutePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+  if (!metadata.isFile() || metadata.size > MAX_RELEASE_BUNDLE_BYTES) {
+    throw new Error(
+      `${relativePath} must be a regular non-symlink file no larger than ${MAX_RELEASE_BUNDLE_BYTES} bytes`,
+    );
+  }
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", relativePath], {
+      cwd: REPOSITORY_ROOT,
+      stdio: "ignore",
+    });
+  } catch {
+    throw new Error(`${relativePath} must be tracked by Git`);
+  }
+  return true;
+}
+
 const testFiles = await listFiles(
   path.join(REPOSITORY_ROOT, "tests"),
   (file) => file.endsWith(".test.mjs"),
@@ -113,6 +149,73 @@ assertValid(
   "deployments/ethereum-v2.json",
 );
 assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2.json");
+const robinhoodV2Manifest = await readJson(
+  path.join(REPOSITORY_ROOT, "deployments", "robinhood-v2.json"),
+);
+assertValid(
+  v2Registry.validator("manifest.schema.json"),
+  robinhoodV2Manifest,
+  "deployments/robinhood-v2.json",
+);
+assertNoFindings(
+  validateManifestSemantics(robinhoodV2Manifest),
+  "deployments/robinhood-v2.json",
+);
+const configuredStageBundlePath = (process.env.ROBINHOOD_STAGE_BUNDLE_PATH ?? "").trim();
+const configuredPromotionBundlePath =
+  (process.env.ROBINHOOD_PROMOTION_BUNDLE_PATH ?? "").trim();
+const stageBundlePresent = await canonicalTrackedBundlePresent(CANONICAL_STAGE_BUNDLE_PATH);
+const promotionBundlePresent =
+  await canonicalTrackedBundlePresent(CANONICAL_PROMOTION_BUNDLE_PATH);
+if (configuredStageBundlePath && configuredStageBundlePath !== CANONICAL_STAGE_BUNDLE_PATH) {
+  throw new Error(`Robinhood Phase A requires ${CANONICAL_STAGE_BUNDLE_PATH}`);
+}
+if (configuredPromotionBundlePath &&
+  configuredPromotionBundlePath !== CANONICAL_PROMOTION_BUNDLE_PATH) {
+  throw new Error(`Robinhood Phase B requires ${CANONICAL_PROMOTION_BUNDLE_PATH}`);
+}
+if (configuredStageBundlePath && configuredPromotionBundlePath) {
+  throw new Error("Robinhood checks may select only one release phase");
+}
+if (robinhoodV2Manifest.customLaunchV4?.status === "planned") {
+  if (configuredStageBundlePath || configuredPromotionBundlePath || stageBundlePresent ||
+    promotionBundlePresent) {
+    throw new Error(
+      "A Robinhood stage or promotion bundle may not exist for a planned/null read model",
+    );
+  }
+  validatePlannedRobinhoodManifest(robinhoodV2Manifest);
+} else {
+  const releasePhase = configuredStageBundlePath
+    ? "stage"
+    : configuredPromotionBundlePath
+      ? "promotion"
+      : promotionBundlePresent
+        ? "promotion"
+        : stageBundlePresent
+          ? "stage"
+          : null;
+  if (releasePhase === null || (releasePhase === "stage" && !stageBundlePresent) ||
+    (releasePhase === "promotion" && !promotionBundlePresent)) {
+    throw new Error(
+      "Live Robinhood metadata requires its tracked canonical phase bundle",
+    );
+  }
+  if (releasePhase === "stage" && promotionBundlePresent) {
+    throw new Error("Phase A cannot be selected after the immutable Phase-B bundle exists");
+  }
+  const releaseBundlePath = releasePhase === "stage"
+    ? CANONICAL_STAGE_BUNDLE_PATH
+    : CANONICAL_PROMOTION_BUNDLE_PATH;
+  const releaseBundle = await readJson(path.join(REPOSITORY_ROOT, releaseBundlePath));
+  validateLiveRobinhoodManifest(
+    robinhoodV2Manifest,
+    releasePhase === "stage"
+      ? parseStageBundle(releaseBundle)
+      : parsePromotionBundle(releaseBundle),
+  );
+}
+frozenEthereumV3Identity(v2Manifest);
 if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
   throw new Error("Version 2 deployment inventory must remain Classic-only; Custom discovery uses its separate Registry and Router roots");
 }
