@@ -456,6 +456,14 @@ paths:
         read-only projection of the Custom Launch API's server-owned
         `partnerAttribution` snapshot. It never changes `category`, economic
         fee policy, provider evidence, review, safety, or index status.
+        Promoted Robinhood V4 records also retain the backend's complete
+        source-verification status in
+        `extensions["programmable/backend-finalized-v4"].sourceVerification`.
+        This status is independent from Router provenance and launch finality.
+        Only a durable Sourcify V2 exact result may name `sourcify-v2` and carry
+        an evidence digest; Blockscout observations alone never establish an
+        exact match. Aggregate precedence is `needs_attention`, then `retrying`,
+        then `queued`, unless every component is `exact_match`.
       parameters:
         - $ref: "#/components/parameters/ChainIdQuery"
         - $ref: "#/components/parameters/CategoryQuery"

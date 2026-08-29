@@ -277,6 +277,21 @@ description, image, and links `creator-declared`. Missing, malformed, or
 mismatched metadata remains null without hiding or weakening the raw Router
 provenance.
 
+Promoted Robinhood V4 records preserve the backend's complete
+`sourceVerification` readback at
+`extensions["programmable/backend-finalized-v4"].sourceVerification`. Its
+`queued`, `retrying`, `exact_match`, or `needs_attention` state is independent
+from both `launch.finality` and `verification.provenanceStatus`. Only an actual
+Sourcify V2 exact result may set a component's `exactMatchProvider` to
+`sourcify-v2` and attach an `evidenceDigest`; every other component state keeps
+both fields null. A Blockscout observation is supplementary provider evidence,
+not an exact-match authority. Pending verification never hides a finalized
+Router launch or rewrites its finality. The aggregate is `exact_match` only
+when every component is exact; otherwise `needs_attention` takes precedence,
+then `retrying`, then `queued`. Queued and retrying components include a
+canonical `nextAttemptAt`; terminal components omit it. The aggregate
+`updatedAt` is the latest component update time.
+
 `token` is an ERC-20 convenience view. It is `null` for a truthful project-only Custom launch. `assets` preserves the authenticated identity-first asset graph and its immutable launch-produced, protocol-external, or adopted-external provenance. Only a launch-produced primary token may populate `token`. `markets` is empty when no market is registered. Consumers must not manufacture a token, pair, or pool from the project launch identity. The token-list and token-address detail surfaces remain token-only projections and skip `token: null` records.
 
 Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kind `uniswap-v4`, preserving the verifier and PoolManager authority bindings. Unknown authenticated market kinds remain visible with their pending verifier state as unsupported discovery data; they are never silently relabeled as a pair or executable market.

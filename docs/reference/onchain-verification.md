@@ -147,7 +147,10 @@ custom module's business semantics. Post-finality source verification runs
 asynchronously and may be labeled exact only after a real provider exact match;
 its pending or unavailable state cannot block or reverse launch finality.
 Source verification, launch finality and fee enforcement remain independently
-reported states.
+reported states. For Robinhood V4, only a durable Sourcify V2 exact result is
+reported as `exact_match`; a Blockscout observation alone never grants that
+state. The Developer feed retains this status separately from canonical-Router
+provenance and Ethereum finality.
 
 ## Separate Custom Registry verification
 

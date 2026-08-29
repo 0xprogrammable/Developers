@@ -3,9 +3,14 @@ import { canonicalSha256, canonicalizeJson } from "./canonical.js";
 import { keccak256 } from "./keccak.js";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u;
+const LOWERCASE_ADDRESS = /^0x[0-9a-f]{40}$/u;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/u;
 const SHA256 = /^sha256:[0-9a-f]{64}$/u;
 const DECIMAL = /^(0|[1-9][0-9]*)$/u;
+const SOURCE_VERIFICATION_TARGET_ID =
+  /^[A-Za-z0-9][A-Za-z0-9._:@/+\-]{0,255}$/u;
+const SOURCE_VERIFICATION_INSTANT =
+  /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/u;
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const CURSOR = /^[A-Za-z0-9._~-]{1,1024}$/u;
@@ -37,6 +42,8 @@ const FINALITY_SCHEMA =
   "programmable.custom-launch-finality-policy-ref.v1";
 const FUNDING_SCHEMA = "programmable.custom-launch-funding-intent.v2";
 const LIQUIDITY_SCHEMA = "programmable.custom-launch-liquidity-model.v1";
+const SOURCE_VERIFICATION_SCHEMA =
+  "programmable.source-verification-status.v4";
 const RESPONSE_BYTES = 4 * 1_024 * 1_024;
 const REQUEST_TIMEOUT_MS = 6_000;
 const MAXIMUM_PAGES = 400;
@@ -259,6 +266,12 @@ function safeInstant(value) {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) && new Date(parsed).toISOString() === value
     ? value
+    : null;
+}
+
+function safeSourceVerificationInstant(value) {
+  return typeof value === "string" && SOURCE_VERIFICATION_INSTANT.test(value)
+    ? safeInstant(value)
     : null;
 }
 
@@ -1256,6 +1269,84 @@ function validLiquidityModel(value) {
     (value.model !== "none-empty-pool" || value.targetIds.length === 0);
 }
 
+function sourceVerificationAggregateStatus(components) {
+  if (components.every((component) => component.status === "exact_match")) {
+    return "exact_match";
+  }
+  if (components.some((component) => component.status === "needs_attention")) {
+    return "needs_attention";
+  }
+  if (components.some((component) => component.status === "retrying")) {
+    return "retrying";
+  }
+  return "queued";
+}
+
+function validSourceVerification(value, binding) {
+  if (!exactKeys(value, [
+    "caip2", "chainDeploymentId", "chainId", "components", "schemaVersion",
+    "status", "updatedAt",
+  ]) || value.schemaVersion !== SOURCE_VERIFICATION_SCHEMA ||
+    value.chainId !== String(binding.chainId) || value.caip2 !== binding.caip2 ||
+    value.chainDeploymentId !== binding.chainDeploymentId ||
+    ![
+      "queued", "retrying", "exact_match", "needs_attention",
+    ].includes(value.status) || !Array.isArray(value.components) ||
+    value.components.length < 1 || value.components.length > 16 ||
+    safeSourceVerificationInstant(value.updatedAt) === null) {
+    return false;
+  }
+
+  let previousTargetId = null;
+  let latestUpdatedAt = null;
+  for (const component of value.components) {
+    const hasNextAttemptAt = Object.hasOwn(component ?? {}, "nextAttemptAt");
+    if (!exactKeys(component, [
+      "address", "evidenceDigest", "exactMatchProvider", "status", "targetId",
+      "updatedAt", ...(hasNextAttemptAt ? ["nextAttemptAt"] : []),
+    ]) || !SOURCE_VERIFICATION_TARGET_ID.test(component.targetId ?? "") ||
+      !LOWERCASE_ADDRESS.test(component.address ?? "") ||
+      ![
+        "queued", "retrying", "exact_match", "needs_attention",
+      ].includes(component.status) ||
+      safeSourceVerificationInstant(component.updatedAt) === null) {
+      return false;
+    }
+    if (previousTargetId !== null && Buffer.compare(
+      Buffer.from(previousTargetId, "utf8"),
+      Buffer.from(component.targetId, "utf8"),
+    ) >= 0) {
+      return false;
+    }
+    previousTargetId = component.targetId;
+    latestUpdatedAt = latestUpdatedAt === null || component.updatedAt > latestUpdatedAt
+      ? component.updatedAt
+      : latestUpdatedAt;
+
+    if (component.status === "exact_match") {
+      if (component.exactMatchProvider !== "sourcify-v2" ||
+        !SHA256.test(component.evidenceDigest ?? "") || hasNextAttemptAt) {
+        return false;
+      }
+      continue;
+    }
+    if (component.exactMatchProvider !== null || component.evidenceDigest !== null) {
+      return false;
+    }
+    if (component.status === "needs_attention") {
+      if (hasNextAttemptAt) return false;
+      continue;
+    }
+    if (!hasNextAttemptAt ||
+      safeSourceVerificationInstant(component.nextAttemptAt) === null) {
+      return false;
+    }
+  }
+
+  return value.status === sourceVerificationAggregateStatus(value.components) &&
+    value.updatedAt === latestUpdatedAt;
+}
+
 function validOnchainEvidence(onchain, resource, binding) {
   return exactKeys(onchain, [
     "apiVersion", "blockHash", "blockNumber", "caip2", "chainDeployment",
@@ -1294,7 +1385,7 @@ function validateResource(resource, binding) {
     "apiVersion", "caip2", "chainDeployment", "chainDeploymentDescriptorDigest",
     "chainDeploymentId", "chainId", "commitments", "createdAt", "finalizedAt",
     "funding", "launchId", "liquidityModel", "onchain", "profile",
-    "projectMetadata", "schemaVersion",
+    "projectMetadata", "schemaVersion", "sourceVerification",
   ]) ||
     resource.schemaVersion !== RESOURCE_SCHEMA || resource.apiVersion !== "v4" ||
     !UUID.test(resource.launchId ?? "") ||
@@ -1315,6 +1406,7 @@ function validateResource(resource, binding) {
     Date.parse(resource.finalizedAt) < Date.parse(resource.createdAt) ||
     !validFunding(resource.funding) ||
     !validLiquidityModel(resource.liquidityModel) ||
+    !validSourceVerification(resource.sourceVerification, binding) ||
     !validOnchainEvidence(onchain, resource, binding) ||
     Date.parse(onchain.observedAt) > Date.parse(resource.finalizedAt)) {
     throw new TypeError("Finalized V4 resource binding is invalid");
@@ -1349,6 +1441,7 @@ function projectResource(validated, binding) {
     projectMetadata: structuredClone(resource.projectMetadata),
     funding: structuredClone(resource.funding),
     liquidityModel: structuredClone(resource.liquidityModel),
+    sourceVerification: structuredClone(resource.sourceVerification),
   };
   const record = {
     schemaVersion: "2.0.0",
