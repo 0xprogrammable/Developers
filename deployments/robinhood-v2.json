@@ -1,0 +1,464 @@
+{
+  "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
+  "schemaVersion": "2.0.0",
+  "platformId": "programmable",
+  "manifestVersion": "1",
+  "generatedAt": "2026-08-29T00:00:00Z",
+  "chainId": 4663,
+  "caip2": "eip155:4663",
+  "supportedChainIds": [
+    1,
+    4663
+  ],
+  "chains": [
+    {
+      "chainId": 1,
+      "caip2": "eip155:1",
+      "name": "Ethereum Mainnet",
+      "status": "live",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/1",
+      "readModelStatus": "ready",
+      "finalizedFeedUrl": "https://api.programmable.market/v3/finalized-custom-launches"
+    },
+    {
+      "chainId": 4663,
+      "caip2": "eip155:4663",
+      "name": "Robinhood Chain Mainnet",
+      "status": "planned",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
+      "readModelStatus": "planned",
+      "finalizedFeedUrl": "https://api.programmable.market/v4/chains/4663/finalized-custom-launches"
+    }
+  ],
+  "network": {
+    "name": "Robinhood Chain Mainnet",
+    "caip2": "eip155:4663",
+    "explorerUrl": "https://robinhoodchain.blockscout.com"
+  },
+  "publicCategories": {
+    "classic": {
+      "discoveryStatus": "planned",
+      "publicSubmissionStatus": "not-applicable",
+      "note": "No Robinhood Programmable Classic deployment is published."
+    },
+    "custom": {
+      "discoveryStatus": "planned",
+      "publicSubmissionStatus": "planned",
+      "note": "Robinhood Custom Launch V4 is discoverable as a planned chain lane, but launch submission and public feed publication remain unavailable until the exact Programmable Router deployment and release gates are published."
+    }
+  },
+  "deployments": [],
+  "customRegistry": {
+    "category": "custom",
+    "modelId": "custom-registry",
+    "status": "planned",
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null,
+    "generation": null,
+    "eventSignature": null,
+    "eventTopic": null,
+    "abiUrl": null,
+    "finalityConfirmations": null,
+    "note": "Robinhood Custom discovery uses the canonical Launch Stamp Router. No chain-local Registry deployment is published."
+  },
+  "launchStampRouter": {
+    "version": "1",
+    "generation": "1",
+    "status": "planned",
+    "scope": "future-launches-only",
+    "supportsFutureClassic": false,
+    "supportsFutureCustom": true,
+    "supportsHistoricalLaunches": false,
+    "provenanceClaim": "launched-on-programmable",
+    "provenanceOnly": true,
+    "verificationMode": "canonical-router",
+    "launchIdentityScope": "chain-id+router-address+launch-id",
+    "address": null,
+    "startBlock": null,
+    "endBlock": null,
+    "runtimeCodeHash": null,
+    "abiUrl": "https://developers.programmable.family/abis/programmable-launch-stamp-router-v1.json",
+    "abiSha256": "sha256:bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86",
+    "contractName": "ProgrammableLaunchStampRouterV1",
+    "artifact": null,
+    "deploymentEvidence": null,
+    "canaryEvidence": null,
+    "classicCanaryEvidence": null,
+    "finalityConfirmations": null,
+    "canonicalReadBlock": "finalized-or-explicit-canonical-block",
+    "authorityMode": "eip-1271-contract-only",
+    "enumValues": {
+      "launchKind": {
+        "invalid": 0,
+        "customGraph": 1,
+        "classic": 2
+      },
+      "componentKind": {
+        "other": 0,
+        "token": 1,
+        "hook": 2
+      },
+      "componentScope": {
+        "invalid": 0,
+        "exclusive": 1,
+        "sharedInfrastructure": 2
+      }
+    },
+    "eip712": {
+      "name": "ProgrammableLaunchStampRouter",
+      "version": "1",
+      "primaryType": "ProgrammableLaunchPermitV1",
+      "permitType": "ProgrammableLaunchPermitV1(uint256 chainId,address router,address launchWallet,uint8 kind,bytes32 routePayloadHash,bytes32 expectedResultHash,bytes32 stampRequestHash,bytes32 nonce,uint64 validAfter,uint64 deadline,uint256 value)",
+      "permitTypeHash": "0x5147473bd302ad67f9ef14ef9262d1b0f8d4f7155081bc8c508195b647413761"
+    },
+    "bindings": {
+      "permitAuthority": null,
+      "permitAuthorityRuntimeCodeHash": null,
+      "graphFactory": null,
+      "graphFactoryRuntimeCodeHash": null,
+      "poolManager": null,
+      "poolManagerRuntimeCodeHash": null
+    },
+    "atomicSignature": "launchAndStampV1((uint256,address,address,uint8,bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint256),(bytes32,address,bytes32,(address,address,uint24,int24,address),bytes32,(uint8,address,bytes32,uint8,uint8)[]),bytes,bytes)",
+    "atomicSelector": "0xe5f6b8cd",
+    "events": {
+      "launchStamped": {
+        "name": "ProgrammableLaunchStampedV1",
+        "signature": "ProgrammableLaunchStampedV1(bytes32,address,address,address,bytes32,bytes32)",
+        "topic0": "0x6cf479a102f1eebc9244f48f8d68f6aa52b4c5a4516318df58ba46614a5b14f2",
+        "indexedInputs": [
+          "launchId",
+          "token",
+          "hook"
+        ]
+      },
+      "launchRouteStamped": {
+        "name": "ProgrammableLaunchRouteStampedV1",
+        "signature": "ProgrammableLaunchRouteStampedV1(bytes32,uint8,bytes32,bytes32,bytes32)",
+        "topic0": "0x45e7cc355b63ca67d6278a0d8d23470ce2a0741a9c60283d7dee712df7a877a5",
+        "indexedInputs": [
+          "launchId",
+          "kind",
+          "routePayloadHash"
+        ]
+      },
+      "componentStamped": {
+        "name": "ProgrammableComponentStampedV1",
+        "signature": "ProgrammableComponentStampedV1(bytes32,address,uint8,bytes32)",
+        "topic0": "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b",
+        "indexedInputs": [
+          "launchId",
+          "component",
+          "kind"
+        ]
+      }
+    },
+    "getters": {
+      "chainId": {
+        "signature": "CHAIN_ID()",
+        "selector": "0x85e1f4d0",
+        "result": "chain-id"
+      },
+      "permitAuthority": {
+        "signature": "PERMIT_AUTHORITY()",
+        "selector": "0xc3a3d03c",
+        "result": "address"
+      },
+      "permitAuthorityRuntimeCodeHash": {
+        "signature": "PERMIT_AUTHORITY_RUNTIME_CODE_HASH()",
+        "selector": "0xa497c61c",
+        "result": "runtime-code-hash"
+      },
+      "graphFactory": {
+        "signature": "GRAPH_FACTORY()",
+        "selector": "0x1cc9e5ce",
+        "result": "address"
+      },
+      "graphFactoryRuntimeCodeHash": {
+        "signature": "GRAPH_FACTORY_RUNTIME_CODE_HASH()",
+        "selector": "0x92989a00",
+        "result": "runtime-code-hash"
+      },
+      "poolManager": {
+        "signature": "POOL_MANAGER()",
+        "selector": "0x62308e85",
+        "result": "address"
+      },
+      "poolManagerRuntimeCodeHash": {
+        "signature": "POOL_MANAGER_RUNTIME_CODE_HASH()",
+        "selector": "0x38d831c4",
+        "result": "runtime-code-hash"
+      },
+      "token": {
+        "signature": "launchIdByToken(address)",
+        "selector": "0x1dad847c",
+        "result": "launch-id"
+      },
+      "pool": {
+        "signature": "launchIdByPool(address,bytes32)",
+        "selector": "0x361df6f3",
+        "result": "launch-id"
+      },
+      "component": {
+        "signature": "launchIdByComponent(address)",
+        "selector": "0x58c5e373",
+        "result": "launch-id"
+      },
+      "componentRuntimeCodeHash": {
+        "signature": "componentRuntimeCodeHash(address)",
+        "selector": "0xc892d353",
+        "result": "runtime-code-hash"
+      },
+      "record": {
+        "signature": "launchStamp(bytes32)",
+        "selector": "0x4c9e4764",
+        "result": "stamp-record"
+      },
+      "launchWallet": {
+        "signature": "launchStamp(bytes32)",
+        "selector": "0x4c9e4764",
+        "result": "stamp-record.launchWallet"
+      },
+      "stampProof": {
+        "signature": "stampProof(address)",
+        "selector": "0x174b9f9d",
+        "result": "stamp-proof"
+      },
+      "stampRequestHash": {
+        "signature": "computeStampRequestHash((bytes32,address,bytes32,(address,address,uint24,int24,address),bytes32,(uint8,address,bytes32,uint8,uint8)[]))",
+        "selector": "0x1f2efd85",
+        "result": "bytes32"
+      }
+    }
+  },
+  "customLaunchV4": {
+    "schemaVersion": "programmable.custom-launch-capabilities.v2",
+    "status": "planned",
+    "chainId": 4663,
+    "caip2": "eip155:4663",
+    "chainDeploymentId": "robinhood-mainnet-custom-launch-v1",
+    "chainDeploymentDescriptorDigest": null,
+    "foundationSourceCommitment": "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730",
+    "releaseIdentity": {
+      "policySource": {
+        "schemaVersion": "programmable.custom-launch-policy-source.v1",
+        "repository": "programmablehq/Launch-Policy",
+        "repositoryId": 1320171831,
+        "protectedBranch": "main",
+        "verifiedMergeCommit": "987215867472229690e30e11000c626d58f46e16",
+        "verifiedTree": "284fb19f05cdf9b5b60b8bacfbd480f6b98decd3",
+        "artifacts": {
+          "descriptor": {
+            "path": "policy/custom-launch-admission-v4.json",
+            "digest": "sha256:99b4ccabdaaf143bad28a8f6af441a1b93e1f113d0179236328b7fa594d1f948"
+          },
+          "businessPolicy": {
+            "path": "policy/launch-policy.v1.json",
+            "digest": "sha256:31e6b286ca839b31cb1edfe30c05d9f334892f3d84377961dc10b93959c7e216"
+          },
+          "generatedBinding": {
+            "path": ".programmable/custom-launch-admission.v4.json",
+            "digest": "sha256:f31643e6e9ff6d5409d59a2fc3ac7fb5ac9cfcb3af08e95c9478bc95ddfa66a2"
+          },
+          "schema": {
+            "path": "policy/schemas/custom-launch-admission-v4.schema.json",
+            "digest": "sha256:a28a6de6208d6ba7b65b4b706174509570955ba9ce9714624bcb2046ab7beae7"
+          }
+        }
+      }
+    },
+    "profile": null,
+    "finalityPolicy": null,
+    "api": {
+      "version": "4.0.0",
+      "status": "planned",
+      "baseUrl": "https://api.programmable.market",
+      "capabilitiesPath": "/v4/chains/4663/capabilities",
+      "preflightPath": "/v4/chains/4663/custom-launches/preflight",
+      "collectionPath": "/v4/chains/4663/custom-launches",
+      "resourcePath": "/v4/chains/4663/custom-launches/{launchId}",
+      "finalizedLaunchesPath": "/v4/chains/4663/finalized-custom-launches",
+      "openApiUrl": "https://programmable.market/openapi/custom-launch-v4.json",
+      "openApiStatus": "planned",
+      "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v4/pack-config.json"
+    },
+    "cli": {
+      "packageName": "@programmable/launch",
+      "version": "4.0.0",
+      "status": "planned",
+      "releaseUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v4.0.0",
+      "commands": [
+        "pack",
+        "validate",
+        "submit",
+        "status"
+      ]
+    },
+    "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately"
+  },
+  "robinhoodCustomLaunchBinding": {
+    "schemaVersion": "programmable.robinhood-custom-launch-chain-binding.v1",
+    "state": "prepared-not-broadcast",
+    "chainDeploymentId": "robinhood-mainnet-custom-launch-v1",
+    "chainId": "4663",
+    "caip2": "eip155:4663",
+    "foundationSourceCommitment": "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730",
+    "sourceBinding": {
+      "schemaVersion": "programmable.robinhood-custom-launch-source-binding.v1",
+      "repository": "https://github.com/programmablehq/PROGRAMMABLE",
+      "sourceCommit": "7aa16a1921ad357b31a5071acbc3dd5d646cf9c0",
+      "sourceTree": "df36bb728018a0c5bed78517330328dd45e0b1e4",
+      "routerSourcePath": "contracts/src/robinhood-custom-launch/ProgrammableLaunchStampRouterV1.sol",
+      "routerStandardJsonInputSha256": "0x6abca24d06b013599f4ff63e049976419c3f17455fa9bc343b15ec0d6e6a078a",
+      "graphFactoryStandardJsonInputSha256": "0x8ab811a215d70b1d5aef0c71a47153173953ee78d7632725413833888369ec4d",
+      "foundationSourceCommitment": "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730"
+    },
+    "profileBinding": {
+      "schemaVersion": "programmable.robinhood-custom-launch-profile-binding.v1",
+      "structuralProfile": {
+        "profileId": "programmable.custom-launch.robinhood-mainnet.v1",
+        "profileRevision": 1,
+        "profileVersion": "4.0.0"
+      },
+      "serverBusinessProfile": {
+        "profileId": "robinhood-production-launch",
+        "profileRevision": 1,
+        "profileVersion": "4.0.0",
+        "profileDigest": "sha256:484b1dc6e9091804fabc230f2b3a7504940fa00264f8e66e82a66a951e71f1a0"
+      },
+      "selection": "api-server-chain-binding",
+      "admission": {
+        "descriptorSchemaVersion": "programmable.custom-launch-admission-descriptor.v4",
+        "descriptorSha256": "sha256:99b4ccabdaaf143bad28a8f6af441a1b93e1f113d0179236328b7fa594d1f948",
+        "businessPolicySha256": "sha256:31e6b286ca839b31cb1edfe30c05d9f334892f3d84377961dc10b93959c7e216",
+        "bindingSchemaVersion": "programmable.custom-launch-admission-binding.v4",
+        "bindingSchemaSha256": "sha256:a28a6de6208d6ba7b65b4b706174509570955ba9ce9714624bcb2046ab7beae7",
+        "bindingSha256": "sha256:f31643e6e9ff6d5409d59a2fc3ac7fb5ac9cfcb3af08e95c9478bc95ddfa66a2"
+      }
+    },
+    "finalityPolicy": {
+      "schemaVersion": "programmable.custom-launch-finality-policy-ref.v1",
+      "policyId": "robinhood-stage-finality-v1",
+      "policyRevision": 1,
+      "policyDigest": "sha256:537d531423d1285a3808556a57303ec68f1e6bdeea3c9aaf6320f9e5a0e47153"
+    },
+    "chainBindings": {
+      "programmableLaunchStampRouter": {
+        "address": "0x34965F2A2ee9254522232C32F02056E92BE0C98a",
+        "runtimeCodeHash": "0x1dbbdaaad901ea3c6134dca0d4872a4789b3c071bf8ccfb44edd65d26d817388",
+        "provenance": "prepared-not-broadcast",
+        "startBlock": null
+      },
+      "permitAuthority": {
+        "address": "0xeD617CE7f82e2AB589aDeFFD319D1D872Bc8De06",
+        "runtimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+        "provenance": "prepared-not-broadcast",
+        "startBlock": null
+      },
+      "graphFactory": {
+        "address": "0x0B6b3F40f84Df25D3bd69238f937096177DD09Bd",
+        "runtimeCodeHash": "0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8",
+        "provenance": "prepared-not-broadcast",
+        "startBlock": null
+      },
+      "poolManager": {
+        "address": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
+        "runtimeCodeHash": "0xbd3881180b547f5fe817545743cfb4343e96b1bc6640dcd70c106b0066e95626",
+        "provenance": "deployment-block",
+        "startBlock": "9070"
+      },
+      "positionManager": {
+        "address": "0x58daec3116aae6D93017bAAea7749052E8a04fA7",
+        "runtimeCodeHash": "0xc873e135dc9aaec88489cfbad146b4cb49d6a32e0d80326377784b7ba17670b2",
+        "provenance": "deployment-block",
+        "startBlock": "9073"
+      },
+      "stateView": {
+        "address": "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
+        "runtimeCodeHash": "0x7d9c591e0956fd89d98feb4ffcfe8bf1f7a62bd485edd979fa21d104b49878a6",
+        "provenance": "deployment-block",
+        "startBlock": "9075"
+      },
+      "v4Quoter": {
+        "address": "0x8Dc178eFB8111BB0973Dd9d722ebeFF267c98F94",
+        "runtimeCodeHash": "0xd707b1da8cb165e5ea35a3b4450d971eb562ec171e23492aa117036b78a868f6",
+        "provenance": "deployment-block",
+        "startBlock": "9074"
+      },
+      "permit2": {
+        "address": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "runtimeCodeHash": "0x5208783f52488f7d3493e5e38311ab707c1d75457fe472a19b0b4d57d66a7fca",
+        "provenance": "genesis-allocation",
+        "startBlock": "0",
+        "source": {
+          "documentationUrl": "https://docs.robinhood.com/chain/run-a-full-node/",
+          "genesisUrl": "https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/chain-node-configs/robinhood-genesis.json",
+          "genesisSha256": "sha256:353e6f6441b47695b41cee0c3645cde8dd7492d2f7f574bfb6aa4371e41bb6ba",
+          "codeBytes": 9152
+        }
+      },
+      "universalRouter": {
+        "address": "0x06AfBA43Fd06227fA663b0DAecF536f6EaA6bf99",
+        "runtimeCodeHash": "0xbe8e8191bb42d843c2e948a5a55772eaab864ce01e54dcd47c9d089170b302d5",
+        "provenance": "deployment-block",
+        "startBlock": "3347899"
+      }
+    },
+    "deployment": {
+      "transactionHash": null,
+      "blockNumber": null,
+      "blockHash": null,
+      "startBlock": null,
+      "finalizedBlockNumber": null,
+      "finalizedBlockHash": null,
+      "finalityEvidence": null
+    },
+    "chainDeployment": null,
+    "publication": null
+  },
+  "endpoints": {
+    "wellKnown": "https://developers.programmable.family/.well-known/programmable.json",
+    "status": "https://developers.programmable.family/api/v2/status?chainId=4663",
+    "manifest": "https://developers.programmable.family/api/v2/manifests/4663",
+    "launches": "https://developers.programmable.family/api/v2/launches?chainId=4663",
+    "tokenList": "https://developers.programmable.family/api/v2/token-list?chainId=4663",
+    "openApi": "https://developers.programmable.family/openapi/programmable-v2.yaml"
+  },
+  "compatibility": {
+    "majorVersion": 2,
+    "additiveChangesOnly": true,
+    "noMandatoryClientChangesWithinMajorVersion": true,
+    "unknownFields": "ignore",
+    "unknownCapabilities": "preserve",
+    "unknownMarketKinds": "display-as-unsupported",
+    "deploymentDiscovery": "refresh-manifest",
+    "hardcodeDeploymentAddresses": false
+  },
+  "extensions": {
+    "programmable/read-model-v1": {
+      "status": "planned",
+      "source": "backend-finalized-custom-launches",
+      "finalizedFeedUrl": "https://api.programmable.market/v4/chains/4663/finalized-custom-launches",
+      "lastKnownGoodScope": "chain-id",
+      "absenceAuthoritative": false,
+      "activationRequirements": [
+        "exact-router-address-and-runtime-hash",
+        "finalized-router-canary",
+        "backend-quality-current",
+        "chain-scoped-last-known-good-snapshot"
+      ]
+    },
+    "programmable/uniswap-v4-bindings-v1": {
+      "status": "planned",
+      "registry": "https://github.com/Uniswap/contracts/blob/4cfc406c8e34da3ce04e60657a7825075b64fd22/deployments/json/4663.json",
+      "observedAtBlock": "49209971",
+      "poolManager": {
+        "address": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
+        "runtimeCodeHash": "0xbd3881180b547f5fe817545743cfb4343e96b1bc6640dcd70c106b0066e95626",
+        "verificationStatus": "candidate-pinned-readback"
+      },
+      "otherBindingsStatus": "pending-current-runtime-readback"
+    }
+  }
+}

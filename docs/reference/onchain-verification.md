@@ -16,7 +16,7 @@ The launch stamp Router is live on Ethereum. The manifest pins its exact address
 
 ## 2026-08-25 exact-source closeout
 
-The sanitized [exact-source closeout release](https://github.com/0xprogrammable/Developers/releases/tag/exact-source-closeout-2026-08-25)
+The sanitized [exact-source closeout release](https://github.com/programmablehq/Developers/releases/tag/exact-source-closeout-2026-08-25)
 binds the five recovered Standard JSON inputs, constructor bytes, local runtime
 reproduction, and provider receipts. Its classifications are deliberately
 narrow:

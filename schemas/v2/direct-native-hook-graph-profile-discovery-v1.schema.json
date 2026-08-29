@@ -59,7 +59,7 @@
       "const": false
     },
     "guideUrl": {
-      "const": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md"
+      "const": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md"
     },
     "api": {
       "const": {

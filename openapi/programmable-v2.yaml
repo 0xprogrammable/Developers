@@ -242,6 +242,8 @@ paths:
         Launch API V3 route. A successful HTTP response is not itself proof that indexed
         data is current, that a fee is enforced, that source is an exact match,
         or that a contract was audited.
+      parameters:
+        - $ref: "#/components/parameters/ChainIdQuery"
       responses:
         "200":
           description: Current service and feed status.
@@ -267,8 +269,10 @@ paths:
     get:
       tags: [Discovery]
       operationId: getDeploymentManifest
-      summary: Resolve current and historical deployments
+      summary: Resolve Ethereum current and historical deployments
       description: |
+        Compatibility alias for `/api/v2/manifests/1`. New integrations should
+        resolve the selected chain through the per-chain manifest route.
         Returns active, inactive historical and prelaunch chain/deployment profiles.
         Active Classic discovery uses only the enabled V3 and V4 entries. V1 and
         V2 remain inactive compatibility history and are not scanned; Stock is
@@ -367,6 +371,44 @@ paths:
                 $ref: "#/components/schemas/Manifest"
         "304":
           $ref: "#/components/responses/NotModified"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v2/manifests/{chainId}:
+    get:
+      tags: [Discovery]
+      operationId: getChainDeploymentManifest
+      summary: Resolve one chain-bound deployment manifest
+      description: |
+        Returns a manifest whose root `chainId` and `caip2` match the path.
+        Ethereum remains live through chain 1. Robinhood Chain 4663 is published
+        as `planned` until exact Programmable Router deployment, runtime, start
+        block, finalized canary, backend quality, CLI and OpenAPI release evidence
+        is available. Planned null deployment fields must never be replaced with
+        guessed addresses. A listed chain is discoverable; its feed quality and
+        promotion status determine whether absence is authoritative.
+      parameters:
+        - $ref: "#/components/parameters/ChainIdPath"
+      responses:
+        "200":
+          description: Exact chain-bound deployment manifest.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            X-Request-Id:
+              $ref: "#/components/headers/RequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Manifest"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "404":
+          description: No manifest is published for the requested chain (`CHAIN_NOT_SUPPORTED`).
         "429":
           $ref: "#/components/responses/RateLimited"
         "503":
@@ -750,7 +792,7 @@ components:
       name: chainId
       in: query
       required: false
-      description: Optional EIP-155 chain ID from the manifest. Omit to read every active chain.
+      description: Optional EIP-155 chain ID from `supportedChainIds`. Omit for the Ethereum compatibility lane.
       schema:
         type: integer
         minimum: 1
@@ -796,7 +838,7 @@ components:
       name: chainId
       in: path
       required: true
-      description: Active EIP-155 chain ID from the manifest.
+      description: Published EIP-155 chain ID from `supportedChainIds`; planned chains remain explicitly non-authoritative.
       schema:
         type: integer
         minimum: 1

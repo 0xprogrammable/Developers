@@ -18,7 +18,7 @@
   "abiSha256": "sha256:bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86",
   "contractName": "ProgrammableLaunchStampRouterV1",
   "artifact": {
-    "sourceRepository": "https://github.com/0xprogrammable/programmable",
+    "sourceRepository": "https://github.com/programmablehq/programmable",
     "sourceCommit": "0a7134bbb912222639627fb9078df2f8dd3a6c38",
     "sourceTree": "24ffb0c6b04af7993254560b4f03608de8f52231",
     "sourcePath": "src/ProgrammableLaunchStampRouterV1.sol",

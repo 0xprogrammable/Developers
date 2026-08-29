@@ -1,6 +1,6 @@
 import {
   feedStatusV2,
-  getV2Dataset,
+  getV2DatasetForChain,
   isV2DatasetPublishable,
   publicLaunchV2,
 } from "../../../../server/v2-dataset.js";
@@ -14,7 +14,7 @@ import {
   routeValue,
 } from "../../../../server/http.js";
 
-export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
+export function createLaunchDetailHandler(loadDataset = getV2DatasetForChain) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {
@@ -39,7 +39,7 @@ export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
   }
 
   try {
-    const dataset = await loadDataset();
+    const dataset = await loadDataset(chainId);
     if (!dataset.status.supportedChainIds?.includes(chainId)) {
       error(req, res, 404, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
       return;
@@ -70,7 +70,17 @@ export function createLaunchDetailHandler(loadDataset = getV2Dataset) {
       publicLaunchV2(launch),
       { apiStatus: feedStatusV2(dataset) },
     );
-  } catch {
+  } catch (loadError) {
+    if (loadError?.code === "CHAIN_NOT_SUPPORTED") {
+      error(
+        req,
+        res,
+        404,
+        "CHAIN_NOT_SUPPORTED",
+        "No Programmable launch lookup is published for this chain",
+      );
+      return;
+    }
     error(
       req,
       res,

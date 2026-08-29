@@ -1,7 +1,7 @@
 import { API_V2_SCHEMA_VERSION } from "../../server/constants.js";
 import {
   feedStatusV2,
-  getV2Dataset,
+  getV2DatasetForChain,
 } from "../../server/v2-dataset.js";
 import {
   error,
@@ -50,6 +50,11 @@ export function tokenListPayload(
       extensions: {
         programmable: {
           platformId: "programmable",
+          tokenIdentity: {
+            chainId: record.chainId,
+            caip2: record.caip2 ?? `eip155:${record.chainId}`,
+            address: record.token.address,
+          },
           launchId: record.launchId,
           category: record.category,
           provenanceStatus: record.verification.provenanceStatus,
@@ -88,12 +93,12 @@ export function tokenListPayload(
     name: "Programmable",
     timestamp: generatedAt,
     version: { major: 2, minor: 0, patch: 0 },
-    keywords: ["programmable", "uniswap-v4", "ethereum"],
+    keywords: ["programmable", "uniswap-v4", "multi-chain"],
     tokens,
   };
 }
 
-export function createTokenListHandler(loadDataset = getV2Dataset) {
+export function createTokenListHandler(loadDataset = getV2DatasetForChain) {
   return async function handler(req, res) {
   if (handleOptions(req, res)) return;
   if (req.method !== "GET") {
@@ -118,7 +123,7 @@ export function createTokenListHandler(loadDataset = getV2Dataset) {
   }
 
   try {
-    const dataset = await loadDataset();
+    const dataset = await loadDataset(chainId ?? 1);
     if (chainId !== null && !dataset.status.supportedChainIds?.includes(chainId)) {
       error(req, res, 400, "CHAIN_NOT_SUPPORTED", "chainId is not active in the manifest");
       return;
@@ -137,7 +142,17 @@ export function createTokenListHandler(loadDataset = getV2Dataset) {
       ),
       { apiStatus: status },
     );
-  } catch {
+  } catch (loadError) {
+    if (loadError?.code === "CHAIN_NOT_SUPPORTED") {
+      error(
+        req,
+        res,
+        400,
+        "CHAIN_NOT_SUPPORTED",
+        "No Programmable token list is published for this chain",
+      );
+      return;
+    }
     error(
       req,
       res,

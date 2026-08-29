@@ -44,7 +44,7 @@ const PLATFORM_CURATED_LEGACY_PRESENTATION_EXTENSION =
 const ROUTER_CUSTOM_MODEL = "custom-graph";
 const ROUTER_CUSTOM_MODEL_VERSION = "programmable-launch-stamp-router-v1";
 const ROUTER_CUSTOM_VERIFICATION_URL =
-  "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md";
+  "https://raw.githubusercontent.com/programmablehq/developers/main/docs/reference/launch-stamp.md";
 const EXPECTED_BUNDLED_SNAPSHOT_SHA256 =
   "sha256:25f47a745c4704af13787340dc855ad13a9e3eb12023352c88b0befc2d93d771";
 const EXPECTED_SNAPSHOT_BOUNDARY = Object.freeze({

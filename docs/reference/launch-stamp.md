@@ -58,7 +58,7 @@ Activation is bound to the finalized deployment evidence above and two approved 
 | `finality` | `finalized` |
 | `routeCoverage.customGraphOnchainCanary` | `true` |
 | `routeCoverage.classicOnchainCanary` | `true` |
-| `source.sourceRepository` | `https://github.com/0xprogrammable/programmable` |
+| `source.sourceRepository` | `https://github.com/programmablehq/programmable` |
 | `source.sourceCommit` | `b3cfed41bb841ae8d6188dbb815eddb5e1440218` |
 | `source.commitSubject` | `Add graph launch stamp canary` |
 | `transactionHash` | `0xc07b4e70233534a1d4f435ffc9a636ed5f542f4aedcde35052c58224f378b612` |

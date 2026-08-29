@@ -4,7 +4,13 @@ The integration is chain-aware and designed to add EVM networks without requirin
 
 ## Current status
 
-Ethereum Mainnet is the only active chain in the current well-known document. Base, BNB Chain, Arbitrum, and other EVM networks are not live through this API unless a later discovery document explicitly lists them.
+Ethereum Mainnet is the only `live` chain. Robinhood Chain Mainnet is listed as
+`planned` under chain ID `4663` / `eip155:4663`, with its own
+`/api/v2/manifests/4663` document. Its Programmable Router address, start block,
+runtime hash, deployment evidence and canary remain null, and its launch and
+token feeds return an explicit empty `unavailable` projection. That absence is
+not authoritative. Base, BNB Chain, Arbitrum, and other EVM networks are not
+published through this API.
 
 Architecture readiness is not production support. Do not preconfigure a planned chain as live.
 
@@ -15,7 +21,7 @@ Use both forms for their intended purpose:
 - numeric EVM `chainId` for the public API path and record;
 - CAIP-2, such as `eip155:<chainId>`, for globally scoped storage and cross-chain interchange.
 
-An ERC-20 is identified by chain plus contract address. The same address on two chains is two different assets. A launch is deduplicated by its globally scoped `launchId`, and a market by its chain-scoped `marketId`.
+An ERC-20 is identified by chain plus contract address. The same address on two chains is two different assets. A Router launch is deduplicated by chain ID plus Router address plus Router `launchId`, and a market by its chain-scoped `marketId`.
 
 Never key an asset by symbol, name, logo, creator, template, or address alone.
 
@@ -23,13 +29,18 @@ Never key an asset by symbol, name, logo, creator, template, or address alone.
 
 1. Fetch `/.well-known/programmable.json`.
 2. Read the advertised chain list and lifecycle state.
-3. Resolve the current manifest for each active chain.
+3. Resolve `/api/v2/manifests/{chainId}` for each selected chain. Treat the
+   legacy `/api/v2/manifest` route only as the Ethereum chain-1 alias.
 4. Validate chain ID, CAIP-2, manifest version, deployments, registry generations, start blocks, and endpoints.
 5. Backfill the chain feed from its published boundary.
 6. Store cursors with API major version, chain scope, and filter scope.
 7. Refresh discovery and manifests independently from high-frequency feed polling.
 
 Do not reuse a cursor across API versions, chains, or filter scopes.
+
+The shared launch and token-list endpoints accept `chainId`. Omitting it keeps
+the existing Ethereum behavior. Supplying a planned chain never falls back to
+Ethereum, and supplying an unpublished chain returns `CHAIN_NOT_SUPPORTED`.
 
 ## Per-chain registry generations
 
@@ -51,6 +62,30 @@ The same `platformId` and public categories remain stable across chains. Provide
 Do not copy Ethereum confirmation counts to every network. Read the published finality boundary and status for the selected chain. Preserve `observed`, `confirmed`, `finalized`, and `orphaned` transitions independently per chain.
 
 If one chain is stale or unavailable, keep other healthy chains ingesting. Do not report a global complete state when a requested chain is incomplete.
+
+Backend finalized-feed snapshots and last-known-good caches are scoped by chain.
+A successful Ethereum refresh cannot make Robinhood healthy, and a Robinhood
+failure cannot downgrade Ethereum. Treat a planned or degraded chain's missing
+record as unknown, never as deletion.
+
+For V4, accept only `programmable.custom-launch-list.v4` pages whose quality is
+`ready`, exhaust every opaque cursor, and require the published row count to
+match the complete traversal. Every resource must remain internally bound to
+the manifest's chain deployment digest, profile digest, finality-policy digest,
+Router address and runtime hash. Only terminal `ethereum_finalized` onchain
+evidence is projected. A failed refresh may reuse the last accepted snapshot
+for that same chain and exact deployment binding, but the response becomes
+`last-known-good`/degraded and its absence is not authoritative.
+
+Promotion is code-pinned, not shape-based. Robinhood binds foundation source
+commitment
+`0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730`,
+the exact finality-policy digest, and the prepared Router, PermitAuthority,
+GraphFactory, and PoolManager address/runtime tuple. The canonical deployment
+descriptor digest, profile digest, finalized start block, complete deployment
+receipt, and canary object remain unresolved. Until a reviewed release pins
+every one of those values in code, changing a manifest to a syntactically
+valid `live` shape cannot activate the source and performs no backend read.
 
 ## Safe client behavior
 

@@ -62,6 +62,6 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 - Machine-readable schemas, API definitions, examples, fixtures, and conformance checks for integrators.
 - Versioning, contribution, support, security, and licensing guidance.
 
-[Unreleased]: https://github.com/0xprogrammable/developers/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/0xprogrammable/developers/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/0xprogrammable/developers/releases/tag/v1.0.0
+[Unreleased]: https://github.com/programmablehq/developers/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/programmablehq/developers/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/programmablehq/developers/releases/tag/v1.0.0

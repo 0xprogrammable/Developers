@@ -176,6 +176,10 @@
       "destination": "/api/v2/manifest"
     },
     {
+      "source": "/v2/manifests/:chainId",
+      "destination": "/api/v2/manifests/:chainId"
+    },
+    {
       "source": "/v2/launches",
       "destination": "/api/v2/launches"
     },

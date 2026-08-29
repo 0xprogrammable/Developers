@@ -113,6 +113,34 @@ assertValid(
   "deployments/ethereum-v2.json",
 );
 assertNoFindings(validateManifestSemantics(v2Manifest), "deployments/ethereum-v2.json");
+const robinhoodV2Manifest = await readJson(
+  path.join(REPOSITORY_ROOT, "deployments", "robinhood-v2.json"),
+);
+assertValid(
+  v2Registry.validator("manifest.schema.json"),
+  robinhoodV2Manifest,
+  "deployments/robinhood-v2.json",
+);
+assertNoFindings(
+  validateManifestSemantics(robinhoodV2Manifest),
+  "deployments/robinhood-v2.json",
+);
+if (
+  robinhoodV2Manifest.chainId !== 4663 ||
+  robinhoodV2Manifest.caip2 !== "eip155:4663" ||
+  robinhoodV2Manifest.customLaunchV4?.status !== "planned" ||
+  robinhoodV2Manifest.launchStampRouter?.status !== "planned" ||
+  robinhoodV2Manifest.launchStampRouter?.address !== null ||
+  robinhoodV2Manifest.launchStampRouter?.startBlock !== null ||
+  robinhoodV2Manifest.launchStampRouter?.runtimeCodeHash !== null ||
+  robinhoodV2Manifest.launchStampRouter?.artifact !== null ||
+  robinhoodV2Manifest.launchStampRouter?.deploymentEvidence !== null ||
+  robinhoodV2Manifest.deployments.length !== 0
+) {
+  throw new Error(
+    "Robinhood V2 manifest must remain planned and fail closed until exact Programmable deployment evidence is published",
+  );
+}
 if (v2Manifest.deployments.some((deployment) => deployment.modelId !== "classic")) {
   throw new Error("Version 2 deployment inventory must remain Classic-only; Custom discovery uses its separate Registry and Router roots");
 }

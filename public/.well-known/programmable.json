@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical discovery for Programmable Classic and Custom launches, including retained Custom Launch API V1/V2 reads and the public authenticated V3 fresh-write route.",
+  "description": "Canonical multi-chain discovery for Programmable Classic and Custom launches. Ethereum V1/V2/V3 behavior remains live; Robinhood Custom Launch V4 is advertised only as planned until its exact deployment and release evidence is published.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -19,7 +19,18 @@
       "caip2": "eip155:1",
       "name": "Ethereum Mainnet",
       "explorerUrl": "https://etherscan.io",
-      "status": "live"
+      "status": "live",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/1",
+      "readModelStatus": "ready"
+    },
+    {
+      "chainId": 4663,
+      "caip2": "eip155:4663",
+      "name": "Robinhood Chain Mainnet",
+      "explorerUrl": "https://robinhoodchain.blockscout.com",
+      "status": "planned",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
+      "readModelStatus": "planned"
     }
   ],
   "publicCategories": {
@@ -47,6 +58,30 @@
     "deploymentAddresses": "resolve-from-manifest"
   },
   "extensions": {
+    "programmable.custom-launch-v4": {
+      "schemaVersion": "programmable.custom-launch-capabilities.v2",
+      "status": "planned",
+      "chainId": 4663,
+      "caip2": "eip155:4663",
+      "chainDeploymentId": "robinhood-mainnet-custom-launch-v1",
+      "foundationSourceCommitment": "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
+      "capabilitiesUrl": "https://api.programmable.market/v4/chains/4663/capabilities",
+      "preflightUrl": "https://api.programmable.market/v4/chains/4663/custom-launches/preflight",
+      "collectionUrl": "https://api.programmable.market/v4/chains/4663/custom-launches",
+      "finalizedMetadataUrl": "https://api.programmable.market/v4/chains/4663/finalized-custom-launches",
+      "openApiUrl": "https://programmable.market/openapi/custom-launch-v4.json",
+      "openApiStatus": "planned",
+      "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v4/pack-config.json",
+      "cli": {
+        "packageName": "@programmable/launch",
+        "version": "4.0.0",
+        "status": "planned",
+        "releaseUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v4.0.0"
+      },
+      "walletBoundary": "wallet-reviews-signs-and-broadcasts-separately",
+      "absenceAuthoritative": false
+    },
     "programmable.custom-launch-api": {
       "status": "live",
       "scope": "provenance-only",
@@ -135,7 +170,7 @@
         "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
         "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
         "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-        "packConfigSchemaSha256": "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074",
+        "packConfigSchemaSha256": "sha256:65e80af492582b8e42a440d9bbb23a776af31e22306ec828208959e8a790be15",
         "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
       },
       "publicRelease": {
@@ -155,8 +190,8 @@
           "packageName": "@programmable/launch",
           "binary": "programmable-launch",
           "releaseVersion": "2.0.1",
-          "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
-          "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz"
+          "releaseUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
+          "tarballUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz"
         }
       },
       "versions": {
@@ -402,7 +437,7 @@
       "productionLaunchAuthorized": false,
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
-      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
+      "guideUrl": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md",
       "openApiUrl": "https://programmable.market/openapi/custom-launch-v2.json",
       "writeStatus": "read-only",
       "postResponse": {
@@ -437,7 +472,7 @@
       "admissionTrustRootRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
-      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
+      "guideUrl": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md",
       "note": "Retained preview contract only. This revision remains gated and publishes no launch; fresh submissions use the active V3 descriptor, while V2 is retained for historical reads and exact-byte retries."
     },
     "programmable.direct-native-hook-graph-profile-v2": {
@@ -476,7 +511,7 @@
       "cli": {
         "packageName": "@programmable/launch",
         "releaseVersion": "3.0.0",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
+        "releaseUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v3.0.0",
         "supportStatus": "historical-read-only",
         "minimumSupportingVersion": "3.0.0",
         "packConfigSchema": "programmable.launch-pack-config.v3",
@@ -492,7 +527,7 @@
       },
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
-      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md"
+      "guideUrl": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md"
     },
     "programmable.direct-native-hook-graph-profile-v3": {
       "discoverySchemaVersion": "programmable.direct-native-hook-graph-profile-discovery.v3",
@@ -523,8 +558,8 @@
         "collectionPath": "/v3/custom-launches",
         "openApiPath": "/openapi/custom-launch-v3.json",
         "openApiUrl": "https://programmable.market/openapi/custom-launch-v3.json",
-        "openApiVersion": "3.3.8",
-        "openApiSha256": "sha256:e8c642e3318aa315ddbad42904befb0703865eff83176dcc0a0bb29c2b6d300d",
+        "openApiVersion": "3.3.9",
+        "openApiSha256": "sha256:8c7f90255f62bb8c27083c868dfdef5a7cc15d9ed0815248c55b67b7b9302b6a",
         "openApiStatus": "live",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "resourceSchema": "programmable.custom-launch.v3",
@@ -725,21 +760,21 @@
           "remediationCatalogUrl": "https://programmable.market/policies/custom-launch-agent-remediation-v1.json",
           "existingProjectGuideUrl": "https://programmable.market/docs/developers/custom-launch#existing-project-integration",
           "packConfigSchemaUrl": "https://programmable.market/schemas/custom-launch/v3/pack-config.json",
-          "packConfigSchemaSha256": "sha256:40ec776b04f9a4cd4f0fc50b977c2b9954d25205133251bb1c9d2e7a400dc074",
+          "packConfigSchemaSha256": "sha256:65e80af492582b8e42a440d9bbb23a776af31e22306ec828208959e8a790be15",
           "finalizedMetadataUrl": "https://api.programmable.market/v3/finalized-custom-launches"
         }
       },
       "cli": {
         "packageName": "@programmable/launch",
-        "releaseVersion": "3.3.8",
+        "releaseVersion": "3.3.9",
         "releaseLocatorStatus": "published",
-        "releaseUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.8",
-        "tarballUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.8/programmable-launch-3.3.8.tgz",
-        "checksumUrl": "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v3.3.8/programmable-launch-3.3.8.tgz.sha256",
-        "tarballSha256": "sha256:13b7a73ab87fa2acca8d3be672e32b89c2d895fe7a715c09f3b3617379f77a30",
-        "tarballByteLength": 308587,
+        "releaseUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v3.3.9",
+        "tarballUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v3.3.9/programmable-launch-3.3.9.tgz",
+        "checksumUrl": "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v3.3.9/programmable-launch-3.3.9.tgz.sha256",
+        "tarballSha256": "sha256:44b71185355bea8db6820b61f12351db7cc1237aa7ecf9b0db3cfbb09bebee01",
+        "tarballByteLength": 309223,
         "supportStatus": "live",
-        "minimumSupportingVersion": "3.3.8",
+        "minimumSupportingVersion": "3.3.9",
         "packConfigSchema": "programmable.launch-pack-config.v3",
         "createRequestSchema": "programmable.custom-launch-create-request.v3",
         "fundingAuthorizationPatch": {
@@ -995,12 +1030,12 @@
       },
       "statusUrl": "https://developers.programmable.family/api/v2/status",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifest",
-      "guideUrl": "https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v3.md"
+      "guideUrl": "https://raw.githubusercontent.com/programmablehq/developers/main/docs/guides/direct-native-hook-graph-profile-v3.md"
     },
     "programmable.legacy-v1": {
       "status": "supported",
       "apiBaseUrl": "https://developers.programmable.family/api/v1",
-      "migrationGuideUrl": "https://github.com/0xprogrammable/developers/blob/main/docs/migrations/v1-to-v2.md"
+      "migrationGuideUrl": "https://github.com/programmablehq/developers/blob/main/docs/migrations/v1-to-v2.md"
     }
   }
 }

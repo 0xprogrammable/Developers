@@ -52,7 +52,7 @@ The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches
 | [`programmable-client.ts`](programmable-client.ts) | Small typed client for discovery, status, manifest, feed pagination, launch-ID lookup, token lookup, and token-list access |
 | [`terminal-scanner.mjs`](terminal-scanner.mjs) | Shows token and project-only Classic or Custom launches with zero, one, or several markets |
 | [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
-| [`indexer-cursor.mjs`](indexer-cursor.mjs) | Separates page traversal from a durable high-water cursor and avoids checkpointing degraded data |
+| [`indexer-cursor.mjs`](indexer-cursor.mjs) | Selects a per-chain manifest, separates page traversal from a chain-scoped durable high-water cursor, and avoids checkpointing degraded data |
 | [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
 | [`profile-discovery.mjs`](profile-discovery.mjs) | Reads the live Direct Native Hook Graph V2 descriptor without constructing a request or wallet transaction |
 | [`finalized-metadata-indexer.mjs`](finalized-metadata-indexer.mjs) | Completes the external finalized-metadata cursor, preserves legacy missing fields, separates declared metadata from onchain name/symbol readback, validates partner attribution, and emits exact Router evidence without price, liquidity, safety, or provider-index claims |
@@ -84,6 +84,10 @@ For a durable local indexer checkpoint, choose a path explicitly:
 ```sh
 PROGRAMMABLE_CURSOR_FILE=/tmp/programmable-cursor.json node examples/indexer-cursor.mjs
 ```
+
+Set `PROGRAMMABLE_CHAIN_ID=4663` to inspect the planned Robinhood lane. It
+currently returns empty `unavailable` quality and does not advance a durable
+checkpoint; omitting the variable preserves Ethereum behavior.
 
 The indexer sends the saved `resumeCursor` as `after` when polling. `nextCursor` is used only to continue the current
 page traversal; the two cursor roles are never substituted for one another.

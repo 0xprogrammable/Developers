@@ -16,13 +16,17 @@ integration to one launcher address.
 | `ethereum/stock-paired-coordinator.json` | Stock-Paired ETH coordinator event |
 | `ethereum/programmable-custom-registry-v1.json` | Full normative Custom Registry V1 ABI |
 | `ethereum/programmable-launch-stamp-router-v1.json` | Frozen Router V1 verification ABI for Router-stamped Classic and Custom launches; authoritative only when its hash and deployment identity match top-level `launchStampRouter` |
+| `programmable-launch-stamp-router-v1.json` | Byte-identical chain-neutral Router V1 ABI for per-chain manifests; never deployment authority |
 
 The Router file is the exact 44-item ABI from Forge artifact commit
 `0a7134bbb912222639627fb9078df2f8dd3a6c38`. Its published ABI-file SHA-256 is
 `bb4e728e9f9c850eb01f928e8a798ac206a82e241a8d93b3b3c686635c88ed86`.
-The interface is frozen and the Router is live. Resolve its current address,
+The chain-neutral file is byte-identical and has the same digest. The interface
+is frozen and the Router is live on Ethereum only. Resolve its current address,
 start block, runtime identity, finality policy, and immutable production
-bindings from the [live version 2 manifest](https://developers.programmable.family/api/v2/manifest).
+bindings from the selected [per-chain version 2 manifest](https://developers.programmable.family/api/v2/manifests/1).
+Robinhood remains `planned`; its manifest intentionally publishes null Router
+deployment fields until exact finalized evidence exists.
 The repository snapshot is
 [`deployments/ethereum-v2.json`](../deployments/ethereum-v2.json); this ABI file
 is not deployment authority.

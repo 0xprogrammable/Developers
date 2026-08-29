@@ -200,9 +200,9 @@ describe("JSON Schema registry", () => {
       version: "2.0.1",
       distributionStatus: "github-release",
       releaseUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
+        "https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1",
       packageAssetUrl:
-        "https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz",
+        "https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz",
       commands: ["pack", "validate", "submit", "status"],
     });
 

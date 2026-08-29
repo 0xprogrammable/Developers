@@ -7,14 +7,16 @@ Both paths must use the same identities and lifecycle rules.
 ## Hosted feed path
 
 1. Bootstrap from `/.well-known/programmable.json`.
-2. Store the highest accepted `manifestVersion`.
-3. Check `/api/v2/status` for freshness and lifecycle.
-4. Fetch `/api/v2/launches` and use `page.nextCursor` to complete the current traversal.
-5. Upsert records by `launchId`.
-6. Key token assets by chain ID and address; key project-only records by `projectId` and `launchId` and preserve their asset graph.
-7. After the traversal is durably applied, store `page.resumeCursor` and use it as `after` for the next incremental poll.
-8. Process finality changes and any `orphaned` correction the API returns.
-9. Reconcile non-final records periodically from a prior finalized boundary.
+2. Select a published chain and fetch `/api/v2/manifests/{chainId}`. The
+   unparameterized manifest remains the Ethereum alias.
+3. Store the highest accepted `manifestVersion` per chain.
+4. Check `/api/v2/status?chainId={chainId}` for freshness and lifecycle.
+5. Fetch `/api/v2/launches?chainId={chainId}` and use `page.nextCursor` to complete the current traversal.
+6. Upsert records by the launch's chain-bound identity.
+7. Key token assets by chain ID and address; key project-only records by `projectId` and `launchId` and preserve their asset graph.
+8. After the traversal is durably applied, store `page.resumeCursor` with its chain scope and use it as `after` for the next incremental poll.
+9. Process finality changes and any `orphaned` correction the API returns.
+10. Reconcile non-final records periodically from a prior finalized boundary.
 
 Cursors are opaque. Return them unchanged. A replayed page must be harmless.
 
@@ -25,6 +27,30 @@ Active v2 Classic discovery contains the historical V3 release and current V4 re
 For applicant ingestion, require `customRegistryPublication.expectedSourceId === customRegistryPublication.observedSourceId`, `sourceConfigured`, `sourceCurrent`, and `sourceReady`. The current Generation 1 source is `programmable-custom-launch-registry-v3`; do not substitute the Website v1 presentation mirror or merge it with the Developer manifest. Treat `baselineLaunches` as canary coverage and `applicantLaunches` as the separate real-applicant count.
 
 Router Custom discovery is an independent lane. Require `routerCustom.status === "current"` and equal verified and published identity counts before treating absence as authoritative. A `last-known-good` Router snapshot remains ingestible, but it must not be merged into Registry applicant coverage or used to produce a final deletion or 404 conclusion.
+
+Robinhood chain 4663 currently advertises `planned` quality. Its separate V4
+finalized route is
+`GET https://api.programmable.market/v4/chains/4663/finalized-custom-launches`,
+but the URL is a release projection, not evidence that the route or indexer is
+live. Until the chain manifest contains the exact finalized Router deployment
+and both API/read-model status are promoted, keep the feed empty and
+non-authoritative. Never substitute the Ethereum V3 finalized ledger.
+
+The planned descriptor already publishes the exact foundation source
+commitment, but no deployment address. Promotion additionally requires the
+code-pinned finalized descriptor digest, profile digest, start block, complete
+Router/PermitAuthority/GraphFactory/PoolManager runtime tuple, finality policy,
+deployment receipt, and canary evidence. A self-consistent or merely
+well-shaped manifest is not a trust root.
+
+When promoted, validate the V4 list schema, `chainId`, CAIP-2 identity, complete
+pagination and `quality` counts before accepting a snapshot. Publish only
+resources with status `finalized` and terminal `ethereum_finalized` evidence
+whose chain-deployment, profile, finality-policy, Router and runtime bindings
+match the selected manifest. Decode the exact Router transaction only to bind
+the stamped token, hook and PoolKey; do not infer those identities from names or
+metadata. A source failure can fall back only to the last accepted snapshot for
+the same chain and exact deployment binding, and that fallback is degraded.
 
 A `degraded` feed still contains recognized events when canonical event coverage or enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. Launch-list and token-list return the bounded recognized subset with HTTP `200` and explicit quality; never interpret an absent record in a degraded or unavailable response as deletion.
 
@@ -106,7 +132,7 @@ Do not use API receipt time, database insertion time, or token metadata timestam
 
 Use:
 
-- `launchId` for launch deduplication;
+- chain ID plus Router address plus Router `launchId` for Router launch deduplication;
 - `projectId` for project identity;
 - chain ID plus asset address or stable asset ID for asset identity;
 - `marketId` for a market;

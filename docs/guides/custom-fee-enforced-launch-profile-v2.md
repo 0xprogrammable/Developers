@@ -62,11 +62,11 @@ explicit zero address `0x0000000000000000000000000000000000000000`.
 There is no `launchWallet` coupling. This is not an arbitrary-hook profile.
 
 The retained CLI artifact is version `2.0.1`, distributed as an immutable GitHub release at
-`https://github.com/0xprogrammable/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1`.
+`https://github.com/programmablehq/PROGRAMMABLE/releases/tag/programmable-launch-v2.0.1`.
 Install the immutable release asset directly:
 
 ```sh
-npm install --global https://github.com/0xprogrammable/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz
+npm install --global https://github.com/programmablehq/PROGRAMMABLE/releases/download/programmable-launch-v2.0.1/programmable-launch-2.0.1.tgz
 ```
 
 The CLI distribution state is `github-release`; it is not an npm registry
