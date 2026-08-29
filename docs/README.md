@@ -15,7 +15,7 @@ Use these docs to verify origin and decide which market features your product ca
 | Integrate the active V3 general direct-hook lane | [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md), with exact graph binding, deterministic static admission and mandatory Router simulation |
 | Keep a Revision 2 integration compatible | [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md), retained for exact 3–16-target graphs, all valid v4 masks and three funding modes |
 | Inspect the retained V3 preview | [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md), preserved unchanged for discovery compatibility |
-| Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) |
+| Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) |
 
 The Custom Launch API is separately hosted at `https://api.programmable.market`. V1 and V2 retain historical reads,
 but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or

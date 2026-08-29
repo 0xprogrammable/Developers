@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability privately
-    url: https://github.com/0xprogrammable/developers/security/advisories/new
+    url: https://github.com/programmablehq/Developers/security/advisories/new
     about: Do not disclose vulnerabilities, secrets, or exploit details in a public issue.

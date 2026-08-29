@@ -6,7 +6,7 @@ For Custom Launch API availability, check [`https://api.programmable.market/read
 
 ## Ask a question or report a problem
 
-Use [GitHub Issues](https://github.com/0xprogrammable/Developers/issues) for:
+Use [GitHub Issues](https://github.com/programmablehq/Developers/issues) for:
 
 - integration questions;
 - documentation corrections;

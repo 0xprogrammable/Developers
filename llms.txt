@@ -3,7 +3,7 @@
 > Public, unauthenticated read and discovery contract for Programmable Classic and Programmable Custom launches.
 
 Canonical site: https://developers.programmable.family
-Source repository: https://github.com/0xprogrammable/Developers
+Source repository: https://github.com/programmablehq/Developers
 Read API base: https://developers.programmable.family/api/v2
 Full agent context: https://developers.programmable.family/llms-full.txt
 Custom Launch API base: https://api.programmable.market
@@ -12,7 +12,7 @@ Custom Launch V3 OpenAPI: https://programmable.market/openapi/custom-launch-v3.j
 Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
 Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
 API key management: https://programmable.market/developers/api-keys
-Launch policy: https://github.com/0xprogrammable/Launch-Policy
+Launch policy: https://github.com/programmablehq/Launch-Policy
 
 ## API surface boundary
 
@@ -63,45 +63,45 @@ Launch policy: https://github.com/0xprogrammable/Launch-Policy
 
 ## Start here
 
-- [Documentation index](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/README.md): Human documentation map and current state.
+- [Documentation index](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/README.md): Human documentation map and current state.
 - [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch): Wallet and approved partner authentication, fresh V3.3 preparation, status polling and separate wallet signing.
 - [Custom Launch V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json): Canonical public general project-hook graph machine contract.
 - [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json): Historical V2 reads and authenticated read-only POST contract.
 - [Custom Launch V1 compatibility OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Existing V1 reads/status and read-only POST contract.
-- [Custom Fee-Enforced Launch Profile V2](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md): Exact retained 1,000 ppm historical semantics, pinned artifacts, read-only write boundary, and unsupported claims.
-- [Direct Native Hook Graph Profile V1](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v1.md): Gated Custom Launch API V3 preview for profile version `1.0.0`, published through the separate `programmable.direct-native-hook-graph-profile-discovery.v1` descriptor; 3–16 targets over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, ERC-20/native pools, two-stage `fundingIntentHash` signing and an inclusive selected-total fee split; not a live launch route.
-- [Direct Native Hook Graph Profile V3](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v3.md): Active general lane with exact source/compiler/graph binding, blocking-versus-warning static indicators, mandatory Router simulation, and explicit non-guarantees.
-- [Direct Native Hook Graph Profile V2](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/direct-native-hook-graph-profile-v2.md): Retained historical-read/exact-retry descriptor for 3–16 exact targets, all valid v4 masks, `none`, wallet-value or EIP-3009 funding, and per-launch conformance.
+- [Custom Fee-Enforced Launch Profile V2](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md): Exact retained 1,000 ppm historical semantics, pinned artifacts, read-only write boundary, and unsupported claims.
+- [Direct Native Hook Graph Profile V1](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v1.md): Gated Custom Launch API V3 preview for profile version `1.0.0`, published through the separate `programmable.direct-native-hook-graph-profile-discovery.v1` descriptor; 3–16 targets over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, ERC-20/native pools, two-stage `fundingIntentHash` signing and an inclusive selected-total fee split; not a live launch route.
+- [Direct Native Hook Graph Profile V3](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v3.md): Active general lane with exact source/compiler/graph binding, blocking-versus-warning static indicators, mandatory Router simulation, and explicit non-guarantees.
+- [Direct Native Hook Graph Profile V2](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v2.md): Retained historical-read/exact-retry descriptor for 3–16 exact targets, all valid v4 masks, `none`, wallet-value or EIP-3009 funding, and per-launch conformance.
 - [API key management](https://programmable.market/developers/api-keys): Create or revoke a wallet-bound Custom Launch API key; approved partner roots manage bounded children through the partner routes.
-- [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy): Current versioned requirements and machine-readable policy contracts.
-- [Minimal API integration](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
-- [Integration status](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/status.md): Live Classic and Custom discovery, V1/V2 historical read-only boundaries, active V3.3 fresh submissions, and closed legacy intake.
-- [Launch data model](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
-- [v2 compatibility](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
-- [Production operations](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
-- [Programmable Verified](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/programmable-verified.md): Exact-review and deployed-revision binding without a blanket safety claim.
-- [Multi-chain discovery](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/concepts/multi-chain.md): Chain activation, identity, registry generations, and cursor partitioning.
-- [Direct onchain verification](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
-- [Launch stamp Router](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/launch-stamp.md): Direct Router verification for Router-stamped Classic and Custom token, v4 pool, and exclusive-component provenance.
-- [Production checklist](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
-- [Protocol fee claim discovery](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/protocol-fee-claims.md): Operator wallet boundary, atomic batching, source inventory, refresh behavior, and fail-closed Custom admission.
-- [FAQ](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/faq.md): Common product and integration questions.
+- [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy): Current versioned requirements and machine-readable policy contracts.
+- [Minimal API integration](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
+- [Integration status](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/status.md): Live Classic and Custom discovery, V1/V2 historical read-only boundaries, active V3.3 fresh submissions, and closed legacy intake.
+- [Launch data model](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
+- [v2 compatibility](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
+- [Production operations](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
+- [Programmable Verified](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/programmable-verified.md): Exact-review and deployed-revision binding without a blanket safety claim.
+- [Multi-chain discovery](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/multi-chain.md): Chain activation, identity, registry generations, and cursor partitioning.
+- [Direct onchain verification](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
+- [Launch stamp Router](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/launch-stamp.md): Direct Router verification for Router-stamped Classic and Custom token, v4 pool, and exclusive-component provenance.
+- [Production checklist](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
+- [Protocol fee claim discovery](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/protocol-fee-claims.md): Operator wallet boundary, atomic batching, source inventory, refresh behavior, and fail-closed Custom admission.
+- [FAQ](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/faq.md): Common product and integration questions.
 
 ## Integration guides
 
-- [Trading terminals and scanners](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
-- [Launch providers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/launch-providers.md): Prelaunch atomic or finalized staged registration, provider handoff, registry invariants and activation gates.
-- [Wallets and explorers](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
-- [Indexers and data platforms](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
-- [Apps, games, and bots](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
+- [Trading terminals and scanners](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
+- [Launch providers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/launch-providers.md): Prelaunch atomic or finalized staged registration, provider handoff, registry invariants and activation gates.
+- [Wallets and explorers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
+- [Indexers and data platforms](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
+- [Apps, games, and bots](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
 
 ## Reference
 
-- [HTTP API](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
-- [Platform fees](https://raw.githubusercontent.com/0xprogrammable/developers/main/docs/reference/fees.md): Classic included-fee semantics, public Custom V2 additive 1,000 ppm semantics, the live Direct Native V3 additive-or-inclusive selection, the retained gated V1 preview, partnership-template 20/15/5 policy, evidence, claims, and scope.
-- [OpenAPI 3.1](https://raw.githubusercontent.com/0xprogrammable/developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
-- [JSON Schemas](https://github.com/0xprogrammable/Developers/tree/main/schemas/v2): Normative public response schemas.
-- [Examples](https://github.com/0xprogrammable/Developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
+- [HTTP API](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
+- [Platform fees](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/fees.md): Classic included-fee semantics, public Custom V2 additive 1,000 ppm semantics, the live Direct Native V3 additive-or-inclusive selection, the retained gated V1 preview, partnership-template 20/15/5 policy, evidence, claims, and scope.
+- [OpenAPI 3.1](https://raw.githubusercontent.com/programmablehq/Developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
+- [JSON Schemas](https://github.com/programmablehq/Developers/tree/main/schemas/v2): Normative public response schemas.
+- [Examples](https://github.com/programmablehq/Developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
 
 ## Live discovery and API
 

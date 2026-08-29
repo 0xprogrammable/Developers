@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/0xprogrammable/developers.git"
+    "url": "git+https://github.com/programmablehq/Developers.git"
   },
   "homepage": "https://developers.programmable.family",
   "engines": {

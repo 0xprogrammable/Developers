@@ -12,7 +12,7 @@
   "openApiUrl": "https://developers.programmable.family/openapi/programmable-v2.yaml",
   "schemasBaseUrl": "https://developers.programmable.family/schemas/v2/",
   "documentationUrl": "https://developers.programmable.family/",
-  "sourceUrl": "https://github.com/0xprogrammable/developers",
+  "sourceUrl": "https://github.com/programmablehq/Developers",
   "chains": [
     {
       "chainId": 1,

@@ -32,7 +32,7 @@ repository publishes only the standalone V3 preflight response contract needed f
 active write entry from `extensions["programmable.custom-launch-api"].currentCreate` in discovery or
 `currentCustomLaunchCreate` in status, then read live V3 capabilities, OpenAPI,
 the exact `partnerCredentials` contract, and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned
-[Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) commit or release can provide the reviewable
+[Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) commit or release can provide the reviewable
 authored source, but its unversioned default branch does not select the live API or decide a request. A CLI, LLM, or
 client-side report only prepares or describes bytes and cannot authorize a launch. The API server alone makes the
 operational decision from the exact static admission baseline and pinned Router simulation. Current profile `3.3.0`
@@ -64,7 +64,7 @@ accounting modes; the exact Programmable share is separately fixed at `1000`.
 | [Direct Native Hook Graph Profile V1](docs/guides/direct-native-hook-graph-profile-v1.md) | Inspect the gated V3 preview contract for a direct project hook, a 3–16-target profile over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, two-stage funding and an inclusive 10-bps platform split |
 | [Direct Native Hook Graph Profile V3](docs/guides/direct-native-hook-graph-profile-v3.md) | Integrate the active general V3 lane for exact project graphs, deterministic static admission, mandatory Router simulation, and explicit non-guarantees |
 | [Direct Native Hook Graph Profile V2](docs/guides/direct-native-hook-graph-profile-v2.md) | Read retained Revision 2 resources and preserve exact-byte retry compatibility without creating a fresh V2 request |
-| [Programmable Launch Policy](https://github.com/0xprogrammable/Launch-Policy) | Resolve the current versioned requirements without relying on copied policy text |
+| [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) | Resolve the current versioned requirements without relying on copied policy text |
 
 The manifest is the deployment authority. Do not copy an address, topic, start block, or runtime hash from token metadata or a third-party API.
 
@@ -234,7 +234,7 @@ Run the bounded production smoke only when live verification is intentional:
 PROGRAMMABLE_API_BASE=https://developers.programmable.family npm run smoke:live
 ```
 
-Use [GitHub issues](https://github.com/0xprogrammable/Developers/issues) for public documentation or integration problems. Follow [SECURITY.md](SECURITY.md) for vulnerabilities. Do not post credentials, private source, or user data.
+Use [GitHub issues](https://github.com/programmablehq/Developers/issues) for public documentation or integration problems. Follow [SECURITY.md](SECURITY.md) for vulnerabilities. Do not post credentials, private source, or user data.
 
 ## License
 
