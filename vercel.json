@@ -4,6 +4,9 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
+  "git": {
+    "deploymentEnabled": false
+  },
   "redirects": [
     {
       "source": "/",

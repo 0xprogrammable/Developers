@@ -160,6 +160,9 @@ Alert on:
 
 ## Release checks
 
+For the protected two-phase Robinhood Chain publication procedure, see
+[Chain 4663 Vercel release control](vercel-release-control.md).
+
 Before releasing an integration:
 
 1. Run all repository fixtures and conformance tests.
