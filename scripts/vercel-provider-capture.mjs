@@ -24,6 +24,7 @@ import {
   releaseTarget,
 } from "./lib/vercel-release.mjs";
 import { parseJsonStrict } from "./lib/files.mjs";
+import { probeGeneratedDeploymentProtection } from "./lib/vercel-protection-probe.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const VERCEL = path.join(ROOT, "node_modules", ".bin", "vercel");
@@ -270,17 +271,15 @@ let projectState;
 function projectQuery() {
   projectState ??= vercelJson([
     "api", `/v9/projects/${projectId}`, "--raw", ...auth,
-  ], "Vercel project mutation-control query");
+  ], "Vercel project protection and mutation-control query");
   return projectState;
 }
 
 if (protectionOutput) {
   const projectProtection = projectQuery();
-  const response = await fetch(`${deployment.url}/api/v2/status?chainId=4663`, {
-    headers: { accept: "application/json" },
-    redirect: "manual",
-    signal: AbortSignal.timeout(30_000),
-  });
+  const response = await probeGeneratedDeploymentProtection(
+    `${deployment.url}/api/v2/status?chainId=4663`,
+  );
   const evidence = createStageProtectionEvidence({
     deployment,
     projectId,
