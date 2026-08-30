@@ -3316,10 +3316,19 @@ export function assertVercelDeploymentMetadata(apiOutput, expected) {
 }
 
 export function assertVercelProjectBinding(apiOutput, linkOutput, expected) {
-  const api = apiOutput?.deployment ?? apiOutput;
+  const api = plainObject(apiOutput?.deployment ?? apiOutput, "Vercel deployment");
   const link = plainObject(linkOutput, "Vercel project link");
+  // Vercel v13 returns team ownership as ownerId and team.id for some
+  // team-scoped deployments while leaving teamId null. Every identity the
+  // provider does return must agree so contradictory metadata fails closed.
+  const deploymentOrgIds = [api.teamId, api.ownerId, api.team?.id]
+    .filter((value) => value !== null && value !== undefined);
+  const deploymentProjectIds = [api.projectId, api.project?.id]
+    .filter((value) => value !== null && value !== undefined);
   assert(link.orgId === expected.orgId && link.projectId === expected.projectId &&
-    api.teamId === expected.orgId && api.projectId === expected.projectId,
+    deploymentOrgIds.length > 0 && deploymentOrgIds.every((id) => id === expected.orgId) &&
+    deploymentProjectIds.length > 0 &&
+    deploymentProjectIds.every((id) => id === expected.projectId),
   "Vercel deployment is not bound to the protected project and organization");
   return exactTarget({
     provider: "vercel",
