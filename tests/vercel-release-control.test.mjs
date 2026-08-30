@@ -19,6 +19,7 @@ import {
   PROMOTION_PLAN_SCHEMA,
   PLANNED_DEPLOY_AUTHORIZATION_SCHEMA,
   PRODUCTION_ORIGIN,
+  VERCEL_PRODUCTION_ORIGIN,
   PUBLIC_AUTHORIZATION_SCHEMA,
   RELEASE_CONSTANTS,
   ROLLBACK_PLAN_SCHEMA,
@@ -34,6 +35,11 @@ import {
   createSmokeReceipt,
   createStageProtectionEvidence,
   createStageReceipt,
+  createVercelProductionBinding,
+  createVercelProductionDomainInventory,
+  createVercelProviderAliasBinding,
+  createVercelProviderDeploymentResolution,
+  createVercelPublicAliasBinding,
   createVercelPublicDeploymentResolution,
   createEvidenceOnlySourceTransition,
   createPlannedDeployAuthorization,
@@ -48,9 +54,16 @@ import {
   parsePromotionReceipt,
   parseGitHubOwnerDispatchAuthorization,
   parsePlannedDeployAuthorization,
+  parsePreMutationState,
   parsePublicAuthorization,
   parseRollbackPlan,
+  parseRollbackReceipt,
   parseStageReceipt,
+  parseVercelProductionBinding,
+  parseVercelProductionDomainInventory,
+  parseVercelProviderAliasBinding,
+  parseVercelProviderDeploymentResolution,
+  parseVercelPublicAliasBinding,
   parseVercelPublicDeploymentResolution,
   releaseSource,
   releaseTarget,
@@ -1731,6 +1744,99 @@ function deployment(id, url, aliases = []) {
   };
 }
 
+const formalProductionAliases = [VERCEL_PRODUCTION_ORIGIN, PRODUCTION_ORIGIN]
+  .map((origin) => new URL(origin).hostname)
+  .sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+const vercelProductionAliases = [new URL(VERCEL_PRODUCTION_ORIGIN).hostname];
+
+function productionDomainInventory(
+  checkedAt = "2026-08-29T15:00:30.000Z",
+  overrides = {},
+) {
+  return createVercelProductionDomainInventory({
+    domainsOutput: {
+      domains: formalProductionAliases.map((name) => ({
+        name,
+        verified: true,
+        gitBranch: null,
+        customEnvironmentId: null,
+        projectId: target.projectId,
+        ...overrides[name],
+      })),
+    },
+    projectId: target.projectId,
+    checkedAt,
+  });
+}
+
+function productionBinding(
+  value,
+  checkedAt = "2026-08-29T15:00:30.000Z",
+  evidenceCheckedAt = checkedAt,
+) {
+  const providerResolution = createVercelProviderDeploymentResolution({
+    origin: VERCEL_PRODUCTION_ORIGIN,
+    deployment: value,
+    target,
+    checkedAt,
+  });
+  const publicResolution = createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: value,
+    target,
+    checkedAt: evidenceCheckedAt,
+  });
+  return createVercelProductionBinding({
+    deployment: value,
+    target,
+    providerResolution,
+    providerAliasBinding: providerAliasBinding(value, evidenceCheckedAt),
+    publicResolution,
+    publicAliasBinding: publicAliasBinding(value, evidenceCheckedAt),
+    productionDomainInventory: productionDomainInventory(evidenceCheckedAt),
+  });
+}
+
+function providerAliasBinding(
+  value,
+  checkedAt = "2026-08-29T15:00:30.000Z",
+  overrides = {},
+) {
+  return createVercelProviderAliasBinding({
+    aliasOutput: {
+      alias: new URL(VERCEL_PRODUCTION_ORIGIN).hostname,
+      deploymentId: value.id,
+      projectId: target.projectId,
+      redirect: null,
+      deletedAt: null,
+      ...overrides,
+    },
+    deployment: value,
+    projectId: target.projectId,
+    checkedAt,
+  });
+}
+
+function publicAliasBinding(
+  value,
+  checkedAt = "2026-08-29T15:00:30.000Z",
+  overrides = {},
+) {
+  return createVercelPublicAliasBinding({
+    aliasOutput: {
+      alias: new URL(PRODUCTION_ORIGIN).hostname,
+      deploymentId: value.id,
+      projectId: target.projectId,
+      redirect: null,
+      deletedAt: null,
+      ...overrides,
+    },
+    deployment: value,
+    projectId: target.projectId,
+    checkedAt,
+  });
+}
+
 function protectionEvidence(
   value,
   checkedAt = "2026-08-29T14:59:00.000Z",
@@ -1764,12 +1870,13 @@ function smoke(
   bundle,
   checkedAt = "2026-08-29T15:00:00.000Z",
   bundlePhase = "promotion",
+  manifestDigest = sha(mode === "live" ? "6" : "7"),
 ) {
   return createSmokeReceipt({
     mode,
     origin,
     ...(bundle ? { bundlePhase, bundle } : {}),
-    manifestDigest: sha(mode === "live" ? "6" : "7"),
+    manifestDigest,
     manifestStatus: mode,
     service: mode === "live" ? "operational" : "degraded",
     launchFeedStatus: mode === "live" ? "ready" : "unavailable",
@@ -2335,7 +2442,7 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
   ), /without protecting its public domain/u);
 
   const aliased = structuredClone(api);
-  aliased.alias = [new URL(PRODUCTION_ORIGIN).hostname];
+  aliased.alias = vercelProductionAliases;
   const publicDeployment = normalizeVercelDeployment({
     deployOutput: deploy,
     inspectOutput: inspect,
@@ -2354,46 +2461,150 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
     target,
     workflow,
     stagedAt: "2026-08-29T15:00:00.000Z",
-  }), /public production alias/u);
+  }), /formal production domain/u);
+
+  const resolvedProduction = normalizeVercelDeployment({
+    inspectOutput: { ...inspect, aliases: vercelProductionAliases },
+    apiOutput: aliased,
+    providerOrigin: VERCEL_PRODUCTION_ORIGIN,
+    providerRereadOutput: { ...inspect, aliases: vercelProductionAliases },
+  });
+  assert.deepEqual(resolvedProduction.aliases, vercelProductionAliases);
+  const binding = publicAliasBinding(resolvedProduction);
+  assert.deepEqual(parseVercelPublicAliasBinding(binding, {
+    deployment: resolvedProduction,
+    projectId: target.projectId,
+  }), binding);
+  const providerBinding = providerAliasBinding(resolvedProduction);
+  assert.deepEqual(parseVercelProviderAliasBinding(providerBinding, {
+    deployment: resolvedProduction,
+    projectId: target.projectId,
+  }), providerBinding);
+  const missingProviderDomain = structuredClone(aliased);
+  missingProviderDomain.alias = [];
+  assert.throws(() => normalizeVercelDeployment({
+    inspectOutput: inspect,
+    apiOutput: missingProviderDomain,
+    providerOrigin: VERCEL_PRODUCTION_ORIGIN,
+    providerRereadOutput: inspect,
+  }), /Vercel production alias/u);
+  assert.throws(() => normalizeVercelDeployment({
+    inspectOutput: inspect,
+    apiOutput: aliased,
+    providerOrigin: VERCEL_PRODUCTION_ORIGIN,
+    providerRereadOutput: { ...inspect, id: "dpl_other123" },
+  }), /reread differs/u);
+  for (const aliasOverrides of [
+    { deploymentId: "dpl_other123" },
+    { projectId: "prj_other" },
+    { redirect: "redirect.example" },
+    { deletedAt: 1_787_990_400_000 },
+  ]) {
+    assert.throws(() => publicAliasBinding(resolvedProduction,
+      "2026-08-29T15:00:30.000Z", aliasOverrides),
+    /does not bind the protected deployment/u);
+  }
+  for (const aliasOverrides of [
+    { deploymentId: "dpl_other123" },
+    { projectId: "prj_other" },
+    { redirect: "redirect.example" },
+    { deletedAt: 1_787_990_400_000 },
+  ]) {
+    assert.throws(() => providerAliasBinding(resolvedProduction,
+      "2026-08-29T15:00:30.000Z", aliasOverrides),
+    /does not bind the protected deployment/u);
+  }
+  const inventory = productionDomainInventory();
+  assert.deepEqual(parseVercelProductionDomainInventory(inventory, {
+    projectId: target.projectId,
+  }), inventory);
+  for (const [name, overrides] of [
+    [new URL(PRODUCTION_ORIGIN).hostname, { verified: false }],
+    [new URL(PRODUCTION_ORIGIN).hostname, { gitBranch: "main" }],
+    [new URL(PRODUCTION_ORIGIN).hostname, { customEnvironmentId: "env_preview" }],
+    [new URL(VERCEL_PRODUCTION_ORIGIN).hostname, { projectId: "prj_other" }],
+  ]) {
+    assert.throws(() => productionDomainInventory(
+      "2026-08-29T15:00:30.000Z", { [name]: overrides },
+    ), /verified production domain/u);
+  }
 });
 
 test("binds both planned Vercel mutations to fresh owner and protected-candidate evidence", () => {
   const currentDeployment = deployment(
     "dpl_previous123",
     "https://developers-previous.vercel.app/",
+    vercelProductionAliases,
   );
   const candidateDeployment = deployment(
     "dpl_planned123",
     "https://developers-planned.vercel.app/",
   );
   const creationAuthorizedAt = "2026-08-29T15:01:00.000Z";
-  const creationPublicResolution = createVercelPublicDeploymentResolution({
-    origin: PRODUCTION_ORIGIN,
-    deployment: currentDeployment,
-    target,
-    checkedAt: "2026-08-29T15:00:30.000Z",
-  });
+  const creationProductionBinding = productionBinding(
+    currentDeployment,
+    "2026-08-29T15:00:30.000Z",
+    "2026-08-29T15:00:20.000Z",
+  );
   const creation = createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
     currentDeployment,
-    currentPublicResolution: creationPublicResolution,
+    currentProductionBinding: creationProductionBinding,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
   });
+  assert.equal(creation.schemaVersion,
+    "programmable.developers.vercel-planned-deploy-authorization.v2");
   assert.equal(creation.schemaVersion, PLANNED_DEPLOY_AUTHORIZATION_SCHEMA);
   assert.equal(creation.publicAuthorization, false);
   assert.equal(creation.publicWrites, false);
-  assert.deepEqual(creation.currentDeployment.aliases, []);
-  assert.deepEqual(parseVercelPublicDeploymentResolution(
-    creation.currentPublicResolution, {
-      deployment: currentDeployment,
-      target,
-    },
-  ), creationPublicResolution);
+  assert.deepEqual(creation.currentDeployment.aliases, vercelProductionAliases);
+  assert.deepEqual(parseVercelProductionBinding(creation.currentProductionBinding, {
+    deployment: currentDeployment,
+    target,
+  }), creationProductionBinding);
   assert.equal(parsePlannedDeployAuthorization(creation).mutation, "create-candidate");
+  const earlyLegacyCreationWithoutDigest = {
+    schemaVersion: "programmable.developers.vercel-planned-deploy-authorization.v1",
+    state: "owner-authorized-planned-deploy",
+    mutation: "create-candidate",
+    publicAuthorization: false,
+    publicWrites: false,
+    source,
+    target,
+    currentDeployment: {
+      ...currentDeployment,
+      aliases: [new URL(PRODUCTION_ORIGIN).hostname],
+    },
+    candidateDeployment: null,
+    candidateProtectionEvidence: null,
+    candidateSmokeDigest: null,
+    ownerDispatchAuthorization: creation.ownerDispatchAuthorization,
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  };
+  const earlyLegacyCreation = {
+    ...earlyLegacyCreationWithoutDigest,
+    authorizationDigest: canonicalSha256(
+      earlyLegacyCreationWithoutDigest.schemaVersion,
+      earlyLegacyCreationWithoutDigest,
+    ),
+  };
+  assert.equal(parsePlannedDeployAuthorization(earlyLegacyCreation).mutation,
+    "create-candidate");
+  const tamperedLegacyCreation = structuredClone(earlyLegacyCreation);
+  tamperedLegacyCreation.currentDeployment.aliases = [];
+  const { authorizationDigest: _legacyDigest, ...tamperedLegacyWithoutDigest } =
+    tamperedLegacyCreation;
+  tamperedLegacyCreation.authorizationDigest = canonicalSha256(
+    tamperedLegacyCreation.schemaVersion,
+    tamperedLegacyWithoutDigest,
+  );
+  assert.throws(() => parsePlannedDeployAuthorization(tamperedLegacyCreation),
+    /lacks the public production alias/u);
 
   const protection = protectionEvidence(
     candidateDeployment,
@@ -2406,18 +2617,17 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     "2026-08-29T15:03:00.000Z",
   );
   const promotionAuthorizedAt = "2026-08-29T15:04:00.000Z";
-  const promotionPublicResolution = createVercelPublicDeploymentResolution({
-    origin: PRODUCTION_ORIGIN,
-    deployment: currentDeployment,
-    target,
-    checkedAt: "2026-08-29T15:03:30.000Z",
-  });
+  const promotionProductionBinding = productionBinding(
+    currentDeployment,
+    "2026-08-29T15:03:30.000Z",
+    "2026-08-29T15:03:20.000Z",
+  );
   const promotion = createPlannedDeployAuthorization({
     mutation: "promote-candidate",
     source,
     target,
     currentDeployment,
-    currentPublicResolution: promotionPublicResolution,
+    currentProductionBinding: promotionProductionBinding,
     candidateDeployment,
     candidateProtectionEvidence: protection,
     candidateSmoke,
@@ -2425,17 +2635,65 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     workflow,
     authorizedAt: promotionAuthorizedAt,
   });
+  assert.equal(promotion.schemaVersion,
+    "programmable.developers.vercel-planned-deploy-authorization.v2");
   assert.equal(promotion.publicAuthorization, false);
   assert.equal(promotion.publicWrites, false);
   assert.equal(promotion.candidateProtectionEvidence.publicAccess, false);
   assert.equal(parsePlannedDeployAuthorization(promotion).mutation, "promote-candidate");
+  const resolvedLegacyPromotionWithoutDigest = {
+    schemaVersion: "programmable.developers.vercel-planned-deploy-authorization.v1",
+    state: "owner-authorized-planned-deploy",
+    mutation: "promote-candidate",
+    publicAuthorization: false,
+    publicWrites: false,
+    source,
+    target,
+    currentDeployment: { ...currentDeployment, aliases: [] },
+    currentPublicResolution: promotion.currentProductionBinding.publicResolution,
+    candidateDeployment: { ...promotion.candidateDeployment, aliases: [] },
+    candidateProtectionEvidence: promotion.candidateProtectionEvidence,
+    candidateSmokeDigest: promotion.candidateSmokeDigest,
+    ownerDispatchAuthorization: promotion.ownerDispatchAuthorization,
+    workflow,
+    authorizedAt: promotionAuthorizedAt,
+  };
+  const resolvedLegacyPromotion = {
+    ...resolvedLegacyPromotionWithoutDigest,
+    authorizationDigest: canonicalSha256(
+      resolvedLegacyPromotionWithoutDigest.schemaVersion,
+      resolvedLegacyPromotionWithoutDigest,
+    ),
+  };
+  assert.equal(parsePlannedDeployAuthorization(resolvedLegacyPromotion).mutation,
+    "promote-candidate");
+  const providerAliasedLegacyPromotion = structuredClone(resolvedLegacyPromotion);
+  providerAliasedLegacyPromotion.candidateDeployment.aliases = vercelProductionAliases;
+  const { authorizationDigest: _providerLegacyDigest, ...providerAliasedLegacyWithoutDigest } =
+    providerAliasedLegacyPromotion;
+  providerAliasedLegacyPromotion.authorizationDigest = canonicalSha256(
+    providerAliasedLegacyPromotion.schemaVersion,
+    providerAliasedLegacyWithoutDigest,
+  );
+  assert.equal(parsePlannedDeployAuthorization(providerAliasedLegacyPromotion).mutation,
+    "promote-candidate");
+  const familyAliasedLegacyPromotion = structuredClone(providerAliasedLegacyPromotion);
+  familyAliasedLegacyPromotion.candidateDeployment.aliases = formalProductionAliases;
+  const { authorizationDigest: _resolvedLegacyDigest, ...familyAliasedLegacyWithoutDigest } =
+    familyAliasedLegacyPromotion;
+  familyAliasedLegacyPromotion.authorizationDigest = canonicalSha256(
+    familyAliasedLegacyPromotion.schemaVersion,
+    familyAliasedLegacyWithoutDigest,
+  );
+  assert.throws(() => parsePlannedDeployAuthorization(familyAliasedLegacyPromotion),
+    /already carries the public production alias/u);
 
   assert.throws(() => createPlannedDeployAuthorization({
     mutation: "promote-candidate",
     source,
     target,
     currentDeployment,
-    currentPublicResolution: promotionPublicResolution,
+    currentProductionBinding: promotionProductionBinding,
     candidateDeployment,
     candidateProtectionEvidence: protectionEvidence(
       candidateDeployment,
@@ -2451,7 +2709,7 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     source,
     target,
     currentDeployment,
-    currentPublicResolution: creationPublicResolution,
+    currentProductionBinding: creationProductionBinding,
     candidateDeployment,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
@@ -2462,12 +2720,11 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     source,
     target,
     currentDeployment,
-    currentPublicResolution: createVercelPublicDeploymentResolution({
-      origin: PRODUCTION_ORIGIN,
-      deployment: currentDeployment,
-      target,
-      checkedAt: "2026-08-29T14:55:00.000Z",
-    }),
+    currentProductionBinding: productionBinding(
+      currentDeployment,
+      "2026-08-29T14:55:00.000Z",
+      "2026-08-29T14:54:50.000Z",
+    ),
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
@@ -2478,53 +2735,43 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     target,
     checkedAt: "2026-08-29T15:00:30.000Z",
   }), /canonical production origin/u);
-  const otherDeploymentResolution = createVercelPublicDeploymentResolution({
-    origin: PRODUCTION_ORIGIN,
-    deployment: deployment(
-      "dpl_other123",
-      "https://developers-other.vercel.app/",
-    ),
-    target,
-    checkedAt: "2026-08-29T15:00:30.000Z",
-  });
+  const otherDeployment = deployment(
+    "dpl_other123",
+    "https://developers-other.vercel.app/",
+    vercelProductionAliases,
+  );
   assert.throws(() => createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
     currentDeployment,
-    currentPublicResolution: otherDeploymentResolution,
+    currentProductionBinding: productionBinding(otherDeployment),
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
   }), /selected a different deployment/u);
-  const otherTargetResolution = createVercelPublicDeploymentResolution({
-    origin: PRODUCTION_ORIGIN,
-    deployment: currentDeployment,
-    target: releaseTarget("team_other", "prj_other"),
-    checkedAt: "2026-08-29T15:00:30.000Z",
-  });
+  const substitutedBinding = structuredClone(creationProductionBinding);
+  substitutedBinding.deploymentId = "dpl_other123";
   assert.throws(() => createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
     currentDeployment,
-    currentPublicResolution: otherTargetResolution,
+    currentProductionBinding: substitutedBinding,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
-  }), /selected a different protected project/u);
-  const substitutedResolution = structuredClone(creationPublicResolution);
-  substitutedResolution.deploymentId = "dpl_other123";
+  }), /digest is invalid|provider evidence disagrees/u);
   assert.throws(() => createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
-    currentDeployment,
-    currentPublicResolution: substitutedResolution,
+    currentDeployment: { ...currentDeployment, aliases: [] },
+    currentProductionBinding: creationProductionBinding,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
-  }), /digest is invalid/u);
+  }), /lacks the Vercel production alias/u);
 });
 
 test("separates stage, owner authorization, promotion, and exact rollback receipts", () => {
@@ -2549,6 +2796,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     stagedAt: "2026-08-29T15:00:00.000Z",
   });
   assert.equal(stage.schemaVersion, STAGE_RECEIPT_SCHEMA);
+  assert.equal(stage.schemaVersion, "programmable.developers.vercel-stage-receipt.v2");
   assert.equal(stage.publicAuthorization, false);
   assert.equal(parseStageReceipt(stage, {
     bundle: stageBundle,
@@ -2558,11 +2806,45 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       "2026-08-29T15:00:00.000Z", "stage"),
   }).state,
     "staged-not-public");
+  const legacyStage = structuredClone(stage);
+  delete legacyStage.stageReceiptDigest;
+  legacyStage.schemaVersion = "programmable.developers.vercel-stage-receipt.v1";
+  legacyStage.deployment.aliases = vercelProductionAliases;
+  legacyStage.stageReceiptDigest = canonicalSha256(
+    legacyStage.schemaVersion,
+    legacyStage,
+  );
+  assert.equal(parseStageReceipt(legacyStage, {
+    bundle: stageBundle,
+    source,
+    target,
+    deployment: legacyStage.deployment,
+    stagedSmoke: smoke("live", stageDeployment.url, stageBundle,
+      "2026-08-29T15:00:00.000Z", "stage"),
+  }).schemaVersion, "programmable.developers.vercel-stage-receipt.v1");
+  const familyAliasedLegacyStage = structuredClone(legacyStage);
+  delete familyAliasedLegacyStage.stageReceiptDigest;
+  familyAliasedLegacyStage.deployment.aliases = formalProductionAliases;
+  familyAliasedLegacyStage.stageReceiptDigest = canonicalSha256(
+    familyAliasedLegacyStage.schemaVersion,
+    familyAliasedLegacyStage,
+  );
+  assert.throws(() => parseStageReceipt(familyAliasedLegacyStage),
+    /public production alias/u);
+  const providerAliasedStageV2 = structuredClone(stage);
+  delete providerAliasedStageV2.stageReceiptDigest;
+  providerAliasedStageV2.deployment.aliases = vercelProductionAliases;
+  providerAliasedStageV2.stageReceiptDigest = canonicalSha256(
+    providerAliasedStageV2.schemaVersion,
+    providerAliasedStageV2,
+  );
+  assert.throws(() => parseStageReceipt(providerAliasedStageV2),
+    /formal production domain/u);
 
   const previousDeployment = deployment(
     "dpl_previous123",
     "https://developers-previous.vercel.app/",
-    [new URL(PRODUCTION_ORIGIN).hostname],
+    vercelProductionAliases,
   );
   const plan = createPromotionPlan({
     stageReceipt: stage,
@@ -2601,6 +2883,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     preparedAt: "2026-08-29T15:01:00.000Z",
   });
   assert.equal(plan.schemaVersion, PROMOTION_PLAN_SCHEMA);
+  assert.equal(plan.schemaVersion, "programmable.developers.vercel-promotion-plan.v2");
   assert.equal(plan.publicAuthorization, false);
   assert.equal(plan.stageBundleDigest, stage.stageBundleDigest);
   assert.equal(plan.promotionBundleDigest, bundle.promotionBundleDigest);
@@ -2620,6 +2903,42 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     target,
   }).state,
     "ready-awaiting-owner-authorization");
+  const legacyPlan = structuredClone(plan);
+  delete legacyPlan.promotionPlanDigest;
+  legacyPlan.schemaVersion = "programmable.developers.vercel-promotion-plan.v1";
+  legacyPlan.stageReceiptDigest = legacyStage.stageReceiptDigest;
+  legacyPlan.stagedDeployment.aliases = vercelProductionAliases;
+  legacyPlan.stagedProviderDeployment.aliases = vercelProductionAliases;
+  legacyPlan.promotionPlanDigest = canonicalSha256(
+    legacyPlan.schemaVersion,
+    legacyPlan,
+  );
+  assert.equal(parsePromotionPlan(legacyPlan, {
+    promotionBundle: bundle,
+    stageBundle,
+    stageReceipt: legacyStage,
+    target,
+  }).schemaVersion, "programmable.developers.vercel-promotion-plan.v1");
+  const familyAliasedLegacyPlan = structuredClone(legacyPlan);
+  delete familyAliasedLegacyPlan.promotionPlanDigest;
+  familyAliasedLegacyPlan.stagedDeployment.aliases = formalProductionAliases;
+  familyAliasedLegacyPlan.stagedProviderDeployment.aliases = formalProductionAliases;
+  familyAliasedLegacyPlan.promotionPlanDigest = canonicalSha256(
+    familyAliasedLegacyPlan.schemaVersion,
+    familyAliasedLegacyPlan,
+  );
+  assert.throws(() => parsePromotionPlan(familyAliasedLegacyPlan),
+    /public production alias/u);
+  const providerAliasedPlanV2 = structuredClone(plan);
+  delete providerAliasedPlanV2.promotionPlanDigest;
+  providerAliasedPlanV2.stagedDeployment.aliases = vercelProductionAliases;
+  providerAliasedPlanV2.stagedProviderDeployment.aliases = vercelProductionAliases;
+  providerAliasedPlanV2.promotionPlanDigest = canonicalSha256(
+    providerAliasedPlanV2.schemaVersion,
+    providerAliasedPlanV2,
+  );
+  assert.throws(() => parsePromotionPlan(providerAliasedPlanV2),
+    /formal production domain/u);
   const tamperedAuthorization = structuredClone(
     ownerDispatchAuthorization("2026-08-29T15:02:00.000Z"),
   );
@@ -2655,9 +2974,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     plan,
   }).planDigest, plan.promotionPlanDigest);
 
-  const promotedDeployment = { ...stageDeployment, aliases: [
-    new URL(PRODUCTION_ORIGIN).hostname,
-  ] };
+  const promotedDeployment = { ...stageDeployment, aliases: vercelProductionAliases };
   const promotionInput = {
     plan,
     authorization,
@@ -2667,6 +2984,11 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "promote",
       plan,
       currentDeployment: previousDeployment,
+      currentProductionBinding: productionBinding(
+        previousDeployment,
+        "2026-08-29T15:02:25.000Z",
+        "2026-08-29T15:02:15.000Z",
+      ),
       selectedDeployment: stageDeployment,
       selectedProtectionEvidence: protectionEvidence(
         stageDeployment, "2026-08-29T15:02:20.000Z",
@@ -2681,7 +3003,14 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       "live", stageDeployment.url, bundle, "2026-08-29T15:02:30.000Z",
     ),
     productionDeployment: promotedDeployment,
-    productionSmoke: smoke("live", PRODUCTION_ORIGIN, bundle),
+    productionSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:02:40.000Z",
+    ),
+    productionBinding: productionBinding(
+      promotedDeployment,
+      "2026-08-29T15:02:50.000Z",
+      "2026-08-29T15:02:45.000Z",
+    ),
     workflow,
     promotedAt: "2026-08-29T15:03:00.000Z",
   };
@@ -2692,6 +3021,11 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     operation: "promote",
     plan,
     currentDeployment: previousDeployment,
+    currentProductionBinding: productionBinding(
+      previousDeployment,
+      "2026-08-29T15:02:25.000Z",
+      "2026-08-29T15:02:15.000Z",
+    ),
     selectedDeployment: stageDeployment,
     selectedProtectionEvidence: mismatchedPreMutationProtection,
     selectedSmoke: smoke(
@@ -2700,8 +3034,43 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     selectedBundle: bundle,
     checkedAt: "2026-08-29T15:02:30.000Z",
   }), /selected deployment verification/u);
+  const legacyPreMutationState = structuredClone(promotionInput.preMutationState);
+  delete legacyPreMutationState.currentProductionBinding;
+  delete legacyPreMutationState.preMutationStateDigest;
+  legacyPreMutationState.schemaVersion =
+    "programmable.developers.vercel-pre-mutation-state.v1";
+  legacyPreMutationState.currentDeployment.aliases = formalProductionAliases;
+  legacyPreMutationState.selectedDeployment.aliases = vercelProductionAliases;
+  legacyPreMutationState.preMutationStateDigest = canonicalSha256(
+    legacyPreMutationState.schemaVersion,
+    legacyPreMutationState,
+  );
+  assert.equal(parsePreMutationState(legacyPreMutationState, {
+    operation: "promote",
+    plan,
+    selectedSmoke: promotionInput.selectedSmoke,
+    selectedBundle: bundle,
+  }).schemaVersion, "programmable.developers.vercel-pre-mutation-state.v1");
   const promotion = createPromotionReceipt(promotionInput);
   assert.equal(parsePromotionReceipt(promotion, { bundle, target }).state, "promoted-live");
+  const legacyPromotion = structuredClone(promotion);
+  delete legacyPromotion.productionBinding;
+  delete legacyPromotion.promotionReceiptDigest;
+  legacyPromotion.schemaVersion =
+    "programmable.developers.vercel-promotion-receipt.v1";
+  legacyPromotion.promotionReceiptDigest = canonicalSha256(
+    legacyPromotion.schemaVersion,
+    legacyPromotion,
+  );
+  assert.equal(parsePromotionReceipt(legacyPromotion, { bundle, target }).state,
+    "promoted-live");
+  assert.throws(() => createPromotionReceipt({
+    ...promotionInput,
+    productionSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:00:00.000Z", "promotion",
+      sha("9"),
+    ),
+  }), /public manifest differs/u);
   assert.throws(() => createPromotionReceipt({
     ...promotionInput,
     selectedSmoke: smoke(
@@ -2711,6 +3080,11 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "promote",
       plan,
       currentDeployment: previousDeployment,
+      currentProductionBinding: productionBinding(
+        previousDeployment,
+        "2026-08-29T14:57:55.000Z",
+        "2026-08-29T14:57:45.000Z",
+      ),
       selectedDeployment: stageDeployment,
       selectedProtectionEvidence: protectionEvidence(
         stageDeployment, "2026-08-29T14:57:50.000Z",
@@ -2724,7 +3098,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   }), /within five minutes/u);
 
   const rollbackPlan = createRollbackPlan({
-    promotionReceipt: promotion,
+    promotionReceipt: legacyPromotion,
     bundle,
     currentSmoke: smoke("live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:04:00.000Z"),
     currentDeployment: promotedDeployment,
@@ -2744,13 +3118,45 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     preparedAt: "2026-08-29T15:04:00.000Z",
   });
   assert.equal(rollbackPlan.schemaVersion, ROLLBACK_PLAN_SCHEMA);
+  assert.equal(rollbackPlan.schemaVersion, "programmable.developers.vercel-rollback-plan.v2");
   assert.equal(rollbackPlan.rollbackDeployment.aliases.length, 0);
   assert.equal(rollbackPlan.targetProtectionEvidence.deploymentId, previousDeployment.id);
   assert.equal(parseRollbackPlan(rollbackPlan, {
     bundle,
-    promotionReceipt: promotion,
+    promotionReceipt: legacyPromotion,
     target,
   }).rollbackTarget.deployment.id, previousDeployment.id);
+  const legacyRollbackPlan = structuredClone(rollbackPlan);
+  delete legacyRollbackPlan.rollbackPlanDigest;
+  legacyRollbackPlan.schemaVersion = "programmable.developers.vercel-rollback-plan.v1";
+  legacyRollbackPlan.rollbackDeployment.aliases = vercelProductionAliases;
+  legacyRollbackPlan.rollbackPlanDigest = canonicalSha256(
+    legacyRollbackPlan.schemaVersion,
+    legacyRollbackPlan,
+  );
+  assert.equal(parseRollbackPlan(legacyRollbackPlan, {
+    bundle,
+    promotionReceipt: legacyPromotion,
+    target,
+  }).schemaVersion, "programmable.developers.vercel-rollback-plan.v1");
+  const familyAliasedLegacyRollbackPlan = structuredClone(legacyRollbackPlan);
+  delete familyAliasedLegacyRollbackPlan.rollbackPlanDigest;
+  familyAliasedLegacyRollbackPlan.rollbackDeployment.aliases = formalProductionAliases;
+  familyAliasedLegacyRollbackPlan.rollbackPlanDigest = canonicalSha256(
+    familyAliasedLegacyRollbackPlan.schemaVersion,
+    familyAliasedLegacyRollbackPlan,
+  );
+  assert.throws(() => parseRollbackPlan(familyAliasedLegacyRollbackPlan),
+    /public production alias/u);
+  const providerAliasedRollbackPlanV2 = structuredClone(rollbackPlan);
+  delete providerAliasedRollbackPlanV2.rollbackPlanDigest;
+  providerAliasedRollbackPlanV2.rollbackDeployment.aliases = vercelProductionAliases;
+  providerAliasedRollbackPlanV2.rollbackPlanDigest = canonicalSha256(
+    providerAliasedRollbackPlanV2.schemaVersion,
+    providerAliasedRollbackPlanV2,
+  );
+  assert.throws(() => parseRollbackPlan(providerAliasedRollbackPlanV2),
+    /formal production domain/u);
   const rollbackAuthorization = createPublicAuthorization({
     operation: "rollback",
     plan: rollbackPlan,
@@ -2766,6 +3172,11 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "rollback",
       plan: rollbackPlan,
       currentDeployment: promotedDeployment,
+      currentProductionBinding: productionBinding(
+        promotedDeployment,
+        "2026-08-29T15:05:25.000Z",
+        "2026-08-29T15:05:15.000Z",
+      ),
       selectedDeployment: { ...previousDeployment, aliases: [] },
       selectedProtectionEvidence: protectionEvidence(
         { ...previousDeployment, aliases: [] }, "2026-08-29T15:05:20.000Z",
@@ -2779,12 +3190,35 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     productionDeployment: previousDeployment,
     productionSmoke: smoke("planned", PRODUCTION_ORIGIN, undefined,
       "2026-08-29T15:06:00.000Z"),
+    productionBinding: productionBinding(
+      previousDeployment,
+      "2026-08-29T15:06:10.000Z",
+      "2026-08-29T15:06:05.000Z",
+    ),
     workflow,
-    rolledBackAt: "2026-08-29T15:06:00.000Z",
+    rolledBackAt: "2026-08-29T15:06:20.000Z",
   };
   const rollback = createRollbackReceipt(rollbackInput);
   assert.equal(rollback.state, "rolled-back-verified");
   assert.equal(rollback.deployment.id, "dpl_previous123");
+  const legacyRollback = structuredClone(rollback);
+  delete legacyRollback.productionBinding;
+  delete legacyRollback.rollbackReceiptDigest;
+  legacyRollback.schemaVersion =
+    "programmable.developers.vercel-rollback-receipt.v1";
+  legacyRollback.rollbackReceiptDigest = canonicalSha256(
+    legacyRollback.schemaVersion,
+    legacyRollback,
+  );
+  assert.equal(parseRollbackReceipt(legacyRollback, { target }).state,
+    "rolled-back-verified");
+  assert.throws(() => createRollbackReceipt({
+    ...rollbackInput,
+    productionSmoke: smoke(
+      "planned", PRODUCTION_ORIGIN, undefined, "2026-08-29T15:06:00.000Z", "promotion",
+      sha("9"),
+    ),
+  }), /public manifest differs/u);
   assert.throws(() => createRollbackReceipt({
     ...rollbackInput,
     selectedSmoke: smoke("planned", previousDeployment.url, undefined,
@@ -2793,6 +3227,11 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "rollback",
       plan: rollbackPlan,
       currentDeployment: promotedDeployment,
+      currentProductionBinding: productionBinding(
+        promotedDeployment,
+        "2026-08-29T15:00:55.000Z",
+        "2026-08-29T15:00:45.000Z",
+      ),
       selectedDeployment: { ...previousDeployment, aliases: [] },
       selectedProtectionEvidence: protectionEvidence(
         { ...previousDeployment, aliases: [] }, "2026-08-29T15:00:50.000Z",
@@ -2908,6 +3347,8 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.deepEqual(document.permissions, { contents: "read", actions: "read" });
   assert.equal(document.env.ROBINHOOD_STAGE_BUNDLE_PATH, undefined);
   assert.equal(document.env.ROBINHOOD_PROMOTION_BUNDLE_PATH, undefined);
+  assert.equal(document.env.PRODUCTION_ORIGIN, PRODUCTION_ORIGIN);
+  assert.equal(document.env.VERCEL_PRODUCTION_ORIGIN, VERCEL_PRODUCTION_ORIGIN);
   assert.equal(document.env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH,
     CANONICAL_STAGE_BUNDLE_PATH);
   assert.equal(document.env.CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH,
@@ -2980,6 +3421,10 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   const plannedReadback = JSON.stringify(document.jobs["verify-planned"]);
   assert.match(plannedReadback, /--release-mode planned/u);
   assert.match(plannedReadback, /--mode planned --protection-bypass false/u);
+  assert.match(plannedReadback,
+    /VERCEL_PRODUCTION_ORIGIN[\s\S]*provider-smoke\.json[\s\S]*PRODUCTION_ORIGIN[\s\S]*smoke\.json/u);
+  assert.match(plannedReadback,
+    /provider-smoke\.json[\s\S]*manifestDigest[\s\S]*smoke\.json[\s\S]*manifestDigest/u);
   assert.doesNotMatch(plannedReadback,
     /ROBINHOOD_(?:STAGE|PROMOTION)_BUNDLE_PATH|vercel (?:deploy|promote|rollback)|--skip-domain/u,
     "planned verification must not select a phase bundle or mutate Vercel");
@@ -3061,7 +3506,16 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /promotion-authorization\.json[\s\S]*--path candidateDeployment\.id[\s\S]*vercel promote/u,
     "planned alias mutation must select the candidate from its sealed authorization");
   assert.match(plannedDeploy,
-    /PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*--mode planned --protection-bypass false[\s\S]*public-smoke\.json/u);
+    /VERCEL_PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*PRODUCTION_ORIGIN[\s\S]*--mode planned --protection-bypass false[\s\S]*public-smoke\.json/u);
+  assert.match(plannedDeploy,
+    /candidate-smoke-pre-mutation\.json[\s\S]*manifestDigest[\s\S]*public-smoke\.json[\s\S]*manifestDigest/u);
+  const providerCaptureSelectors = [...text.matchAll(
+    /capture:vercel-provider[\s\S]{0,180}?--selector "\$(PRODUCTION_ORIGIN|VERCEL_PRODUCTION_ORIGIN)"/gu,
+  )].map((match) => match[1]);
+  assert.equal(providerCaptureSelectors.length > 0, true);
+  assert.equal(providerCaptureSelectors.every((selector) =>
+    selector === "VERCEL_PRODUCTION_ORIGIN"), true,
+  "provider capture must use the formal Vercel mutation domain, never the public smoke origin");
   const sourceValidation = JSON.stringify(document.jobs["validate-source"]);
   assert.match(sourceValidation,
     /verify-planned[\s\S]*unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u,
@@ -3144,11 +3598,23 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /protectionOutput[\s\S]*createStageProtectionEvidence/u,
     "planned candidates must use the same provider protection proof as live stages");
   assert.match(providerCapture,
-    /selector === PRODUCTION_ORIGIN[\s\S]*createVercelPublicDeploymentResolution/u,
-    "public-origin resolution evidence must come only from an exact canonical-origin lookup");
+    /inspect", PRODUCTION_ORIGIN[\s\S]*createVercelPublicDeploymentResolution/u,
+    "public-origin resolution evidence must come from a direct public-domain inspection");
   assert.match(providerCapture,
-    /inspect[\s\S]*deploymentId = inspect\.id[\s\S]*\/v13\/deployments\/\$\{deploymentId\}[\s\S]*publicResolution/u,
-    "public-origin resolution must bind Vercel's resolved deployment to its provider API record");
+    /deploymentId = inspect\.id[\s\S]*\/v13\/deployments\/\$\{deploymentId\}[\s\S]*publicInspect[\s\S]*\/v9\/projects\/\$\{projectId\}\/domains[\s\S]*\/v4\/aliases\/\$\{new URL\(VERCEL_PRODUCTION_ORIGIN\)\.hostname\}[\s\S]*\/v4\/aliases\/\$\{new URL\(PRODUCTION_ORIGIN\)\.hostname\}[\s\S]*providerReread[\s\S]*createVercelProductionBinding/u,
+    "production capture must end its two-domain evidence window with a provider-domain reread");
+  for (const operation of ["promote", "rollback"]) {
+    const label = operation === "promote" ? "promotion" : "rollback";
+    const smokeIndex = text.indexOf(`Post-${label} public smoke without bypass`);
+    const recaptureIndex = text.indexOf(
+      `Reconfirm both production domains after ${label} smoke`,
+    );
+    const receiptIndex = text.indexOf(`Seal immutable ${label} receipt`);
+    assert.equal(smokeIndex >= 0 && smokeIndex < recaptureIndex && recaptureIndex < receiptIndex,
+      true, `${operation} receipt must seal a provider recapture taken after public smoke`);
+    assert.match(text.slice(recaptureIndex, receiptIndex + 1_000),
+      new RegExp(`${operation}/production-deployment-after-smoke\\.json`, "u"));
+  }
   const chainSmoke = await readFile(path.resolve("scripts/chain-4663-live-smoke.mjs"), "utf8");
   assert.doesNotMatch(chainSmoke, /planned\/public smoke may not use a Vercel protection bypass/u);
   assert.match(chainSmoke,
@@ -3189,10 +3655,10 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /external Vercel deployment and alias mutation[\s\S]*can_admins_bypass:true[\s\S]*stops the job/u,
     "runbook must distinguish external provider mutation from Robinhood write authority");
   assert.match(runbook,
-    /canonical production[\s\S]*immutable provider ID[\s\S]*creation-time `alias` array[\s\S]*empty/u,
-    "runbook must distinguish provider domain resolution from creation-time alias metadata");
+    /both formal domains[\s\S]*\/v4\/aliases[\s\S]*that exact[\s\S]*deployment ID[\s\S]*redirect:null[\s\S]*deletedAt:null/u,
+    "runbook must document the exact two-domain provider and alias binding");
   assert.match(runbook,
-    /prod_deployment_urls_and_all_previews[\s\S]*--protection-bypass true[\s\S]*public origin[\s\S]*--protection-bypass false/u,
+    /prod_deployment_urls_and_all_previews[\s\S]*--protection-bypass true[\s\S]*public[\s\S]{0,80}origin[\s\S]*--protection-bypass false/u,
     "runbook must keep generated candidates protected while public reads use no bypass");
   assert.match(await readFile(path.resolve(".gitignore"), "utf8"),
     /^\.release-evidence\/$/mu,

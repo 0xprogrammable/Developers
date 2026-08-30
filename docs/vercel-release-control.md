@@ -3,7 +3,8 @@
 Robinhood Chain publication is a two-phase release. A finalized chain deployment is necessary, but
 it is not public-write authority. The workflow never treats a successful build, dark deployment,
 postdeployment bundle, indexer deployment, HTTP response, or Vercel API call as permission to
-change `developers.programmable.family`.
+change either formal production domain: `developers.programmable.market` or
+`developers.programmable.family`.
 
 The only workflow entry point is the protected `Vercel release control` manual workflow on
 `programmablehq/Developers` `refs/heads/main`. Pull requests and pushes cannot stage, promote, or
@@ -30,10 +31,13 @@ programmableReleaseMode=planned
 ```
 
 It must not carry `programmableStageBundleDigest` or `programmablePromotionBundleDigest`. The
-workflow resolves `developers.programmable.family` through the configured Vercel project, verifies
-those source bindings, checks the public chain-4663 manifest, status, launch feed, and token list in
-`planned` mode without a protection bypass, then re-queries the alias and requires the deployment ID
-to remain unchanged. The resulting readback artifact proves only the planned/null public contract:
+workflow resolves `developers.programmable.market` through the configured Vercel project, verifies
+those source bindings, requires both formal domains on the same production deployment, and queries
+the Vercel alias records for both formal domains. Each record must bind the same exact deployment
+and project with no redirect or deletion. The workflow checks both production origins in
+`planned` mode without a protection bypass, requires equal chain-4663 manifest digests, then repeats
+the provider capture and requires the deployment ID to remain unchanged. The resulting readback
+artifact proves only the planned/null public contract:
 no public submissions, unavailable empty Robinhood feeds, null deployment roots, and
 `publicWrites:false`. It grants no Phase-A, Phase-B, deployment, alias, or write authority.
 
@@ -59,13 +63,20 @@ environment id `19441858925`, protected-main-only branch policy, and disabled ad
 Any provider response with `can_admins_bypass:true`, a different environment id, or a broader branch
 policy therefore stops the job before candidate creation.
 
-The current public deployment is selected by asking Vercel to resolve the exact canonical production
-origin, then re-reading that deployment by immutable provider ID. The capture seals the resolved ID,
-generated `.vercel.app` origin, organization, project, and observation time under a canonical digest.
-Authorization requires that fresh resolution rather than treating the deployment record's
-creation-time `alias` array as domain-routing authority; Vercel can legitimately return that array
-empty for a deployment currently selected by a project production domain. Candidate captures by ID
-do not receive public-origin resolution authority and must still prove that they are unaliased.
+Both `developers.programmable.market` and `developers.programmable.family` are verified Production
+Domains of the same locked Vercel project. Provider capture always selects
+`developers.programmable.market`, re-reads the selected deployment by immutable provider ID, requires
+that deployment record to list `developers.programmable.market`, and obtains the project's domain
+inventory. The inventory must list both formal domains exactly once as verified Production Domains,
+with `gitBranch:null` and `customEnvironmentId:null`. Vercel's deployment record does not currently
+list `.family`, so `.family` is instead resolved directly and must select the same immutable
+deployment. Separate `/v4/aliases` queries must bind both `developers.programmable.market` and
+`developers.programmable.family` to that exact deployment ID and project ID with `redirect:null`
+and `deletedAt:null`. Only after both alias queries does capture re-resolve `.market`, closing the
+evidence window against concurrent drift. The aggregate
+binding seals the generated `.vercel.app` origin, organization, project, both domain proofs, and
+observation times under canonical digests. Candidate captures by ID receive none of this
+production-domain authority and must still prove that they are unaliased.
 
 The generated candidate must remain unaliased and protected. Provider inspection must prove an
 unauthenticated 302/303/307/308 redirect to the canonical Vercel authentication service and the
@@ -73,7 +84,8 @@ project setting `prod_deployment_urls_and_all_previews`. Only the candidate smok
 dedicated scoped `VERCEL_AUTOMATION_BYPASS_SECRET`, and it uses `--protection-bypass true` against the
 provider-verified, credential-free `.vercel.app` origin. The provider inspection never receives that
 secret, the secret is never written to evidence, and the workflow never weakens or changes project
-protection. The public origin is always smoked with `--protection-bypass false`.
+protection. The public `developers.programmable.family` origin is always smoked with
+`--protection-bypass false`.
 
 Immediately before alias mutation, the workflow rechecks protected `main`, provider-requeries the
 same source-bound unaliased candidate and its protection, repeats the authenticated candidate smoke,
@@ -81,11 +93,19 @@ and requires the current public deployment ID to remain the one captured before 
 It then freshly reads and validates the same owner-dispatch and environment authority again. The
 second authorization binds the exact current source, current public deployment, candidate,
 protection evidence, and planned smoke. Only that authorization-bound candidate ID is passed to
-`vercel promote`. The public origin must then resolve to the same ID, pass the planned smoke without
-bypass, and still resolve to that ID after the smoke. The previous public deployment and all
+`vercel promote`. Both formal production domains must then bind the exact candidate, while the public
+`.family` origin must pass the planned smoke without bypass with the same manifest digest as the
+immutable candidate. A repeated provider and alias capture must still select that ID after the smoke.
+The previous public deployment and all
 candidate/public readbacks are retained as evidence for manual recovery. This path publishes
 read-only docs and planned/null API state only; it cannot activate Robinhood, enable submissions,
 introduce deployment roots, configure an indexer, or inherit Phase-A/Phase-B authority.
+
+New planned-deploy authorizations emit schema v2 and seal the aggregate two-domain production
+binding. Read-only inspection remains compatible with both historical v1 layouts: the earlier layout
+that bound the then-public `.family` alias directly, and the later layout that added a
+`currentPublicResolution`. Their original exact field sets, family-alias rule, and v1 digest namespace
+remain unchanged; neither legacy reader can emit or authorize a new v1 artifact.
 
 The release toolchain pins `vercel@59.10.0` as a development dependency and invokes only that
 checked-in lockfile resolution through `node_modules/.bin/vercel`. The package overrides are limited
@@ -146,10 +166,13 @@ publicWrites: false
 ```
 
 Phase A can create one production-target Vercel deployment only with `--skip-domain`. The deployment
-must have no production alias, must be protected by Vercel Authentication, and must pass the exact
+must have neither formal production domain, must be protected by Vercel Authentication, and must pass the exact
 chain-4663 smoke through the scoped automation bypass. The sealed stage receipt continues to carry
 `publicAuthorization:false` and `publicWrites:false`. Do not copy or overwrite the stage bundle at
-the promotion path.
+the promotion path. New stage receipts emit schema v2 and reject either formal production domain on
+the staged deployment. The reader retains the original v1 rule for digest-valid historical receipts,
+which predate the `.market` domain becoming a formal production domain and therefore rejected only
+the public `.family` domain.
 
 ## Phase B: reviewed evidence-only commit
 
@@ -195,7 +218,9 @@ configuration, dependency, or output change requires a new Phase-A stage.
 
 `operation: promote` first revalidates the tracked Phase-B bundle and Indexer evidence, the selected
 stage workflow/artifact, the current public deployment, the protected staged deployment, and a fresh
-chain-4663 smoke. The promotion plan is still non-authorizing.
+chain-4663 smoke. The promotion plan is still non-authorizing. New promotion and rollback plans emit
+schema v2 and reject both formal production domains on their staged target. Their readers preserve
+the original v1 family-only staged-domain rule solely for digest-valid historical evidence.
 
 The alias mutation runs only in the protected `production` environment after the current manual run
 is read back as an exact canonical-owner `workflow_dispatch`. Both the prepared plan and owner
@@ -207,8 +232,13 @@ workflow re-queries both Vercel deployments, re-proves generated-URL protection,
 protected stage smoke. That fresh smoke and protection proof are sealed into the pre-mutation
 state; the smoke must be no more than five minutes older than the sealed promotion receipt.
 
-After `vercel promote`, the public origin must pass the same chain-4663 smoke without a protection
-bypass. A successful alias change without that receipt and smoke is not a completed release.
+After `vercel promote`, both formal production domains must bind the selected deployment and the
+public `.family` origin must pass the same chain-4663 smoke without a protection bypass. Its manifest
+must equal the exact immutable selected-deployment smoke. The workflow then repeats the full provider
+capture and seals the post-smoke production binding into the v2 promotion receipt. Rollback uses the
+same ordering and seals the same evidence in its v2 terminal receipt. The parsers retain read support
+for historical v1 receipts, but all new terminal evidence is v2. A successful alias change without
+that receipt, alias binding, and smoke is not a completed release.
 
 ## Owner-authorized rollback
 
