@@ -1906,6 +1906,60 @@ test("retries only bounded unprotected generated-deployment responses", async ()
   assert.equal(abortedAttempts, 1);
 });
 
+test("retries only the exact Vercel deployment propagation 404", async () => {
+  const propagationHeaders = {
+    "content-type": "text/plain; charset=utf-8",
+    server: "Vercel",
+    "x-vercel-error": "DEPLOYMENT_NOT_FOUND",
+    "x-vercel-id": "fra1::iad1::retry-test",
+  };
+  const cancelled = [];
+  const responses = [
+    protectionProbeResponse(404, cancelled, propagationHeaders),
+    protectionProbeResponse(302, cancelled),
+  ];
+  let attempts = 0;
+  const protectedResponse = await probeGeneratedDeploymentProtection(
+    "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+    {
+      fetchImpl: async () => {
+        attempts += 1;
+        return responses.shift();
+      },
+      waitImpl: async () => {},
+      retryDelaysMs: [0],
+      signal: new AbortController().signal,
+    },
+  );
+  assert.equal(protectedResponse.status, 302);
+  assert.equal(attempts, 2);
+  assert.deepEqual(cancelled, [404]);
+
+  for (const malformedHeaders of [
+    {},
+    { ...propagationHeaders, "content-type": "application/problem+json" },
+    { ...propagationHeaders, server: "cloudflare" },
+    { ...propagationHeaders, "x-vercel-error": "NOT_FOUND" },
+    { ...propagationHeaders, "x-vercel-id": "?" },
+  ]) {
+    attempts = 0;
+    const malformed = await probeGeneratedDeploymentProtection(
+      "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+      {
+        fetchImpl: async () => {
+          attempts += 1;
+          return protectionProbeResponse(404, [], malformedHeaders);
+        },
+        waitImpl: async () => assert.fail("unrelated 404 responses must not be retried"),
+        retryDelaysMs: [0],
+        signal: new AbortController().signal,
+      },
+    );
+    assert.equal(malformed.status, 404);
+    assert.equal(attempts, 1);
+  }
+});
+
 test("accepts automatic provider aliases on staged candidates and rejects formal domains", () => {
   const providerAlias = "programmable-developers-aficialais-projects.vercel.app";
   const candidate = deployment(

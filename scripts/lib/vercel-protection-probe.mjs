@@ -9,12 +9,29 @@ export const PROTECTION_PROBE_RETRY_DELAYS_MS = Object.freeze([
   10_000,
 ]);
 
-function isExpectedUnprotectedPlannedResponse(response) {
-  const contentType = response.headers.get("content-type")
+function responseMediaType(response) {
+  return response.headers.get("content-type")
     ?.split(";", 1)[0].trim().toLowerCase();
-  return response.status === 503 && contentType === "application/problem+json" &&
+}
+
+function isExpectedUnprotectedPlannedResponse(response) {
+  return response.status === 503 &&
+    responseMediaType(response) === "application/problem+json" &&
     response.headers.get("x-programmable-status") === "error" &&
     response.headers.get("retry-after") === "30";
+}
+
+function isExpectedVercelDeploymentPropagationResponse(response) {
+  const vercelId = response.headers.get("x-vercel-id");
+  return response.status === 404 && responseMediaType(response) === "text/plain" &&
+    response.headers.get("server")?.toLowerCase() === "vercel" &&
+    response.headers.get("x-vercel-error") === "DEPLOYMENT_NOT_FOUND" &&
+    typeof vercelId === "string" && /^[A-Za-z0-9._:-]{1,200}$/u.test(vercelId);
+}
+
+function isExpectedTransientResponse(response) {
+  return isExpectedUnprotectedPlannedResponse(response) ||
+    isExpectedVercelDeploymentPropagationResponse(response);
 }
 
 export async function probeGeneratedDeploymentProtection(url, {
@@ -29,7 +46,7 @@ export async function probeGeneratedDeploymentProtection(url, {
       redirect: "manual",
       signal,
     });
-    if (!isExpectedUnprotectedPlannedResponse(response) ||
+    if (!isExpectedTransientResponse(response) ||
       attempt === retryDelaysMs.length) return response;
 
     await response.body?.cancel();
