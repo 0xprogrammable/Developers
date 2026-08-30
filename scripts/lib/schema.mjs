@@ -52,6 +52,13 @@ export async function createSchemaRegistry(version = "v1") {
     strict: true,
     strictRequired: true,
   });
+  for (const validator of [ajv, draft7Ajv]) {
+    validator.addKeyword({
+      keyword: "x-programmable-order",
+      schemaType: "string",
+      valid: true,
+    });
+  }
   for (const schema of schemas.values()) {
     if (schema.$schema === "http://json-schema.org/draft-07/schema#") {
       draft7Ajv.addSchema(schema);

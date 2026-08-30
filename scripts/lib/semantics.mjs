@@ -20,6 +20,10 @@ const MAX_METADATA_NODES = 4_096;
 const MAX_METADATA_CHILDREN = 256;
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 const ZERO_HASH32 = `0x${"0".repeat(64)}`;
+const EMPTY_RUNTIME_CODE_HASH =
+  "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+const EXTERNAL_DEPLOYMENT_PROVIDER_READBACK_SCHEMA =
+  "programmable.custom-launch-deployment-provider-readback.v2";
 const ROBINHOOD_CUSTOM_LAUNCH_V4_RELEASE_IDENTITY = Object.freeze({
   policySource: Object.freeze({
     schemaVersion: "programmable.custom-launch-policy-source.v1",
@@ -1198,6 +1202,7 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
       chainDeployment.externalRootDeploymentEvidence.every((evidence, index) => {
         const [contract, transactionHash, startBlock] =
           externalRootConstants[index];
+        const previousBlockNumber = (BigInt(startBlock) - 1n).toString(10);
         const root = chainBindings[contract];
         const readbacksValid = evidence.providerReadbacks.every(
           (readback, providerIndex) => {
@@ -1209,21 +1214,34 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
             return readback.providerId === expectedProvider[0] &&
               readback.trustDomain === expectedProvider[1] &&
               readback.transactionHash === transactionHash &&
+              readback.previousBlockNumber === previousBlockNumber &&
+              readback.previousBlockNumber === evidence.previousBlockNumber &&
+              readback.previousBlockHash === evidence.previousBlockHash &&
+              readback.previousBlockRuntimeCodeHash === EMPTY_RUNTIME_CODE_HASH &&
               readback.blockNumber === startBlock &&
               readback.blockHash === evidence.blockHash &&
               sameHex(readback.runtimeCodeHash, root.runtimeCodeHash) &&
               evidenceDigest === canonicalSha256(
-                "programmable.custom-launch-deployment-provider-readback.v1",
+                EXTERNAL_DEPLOYMENT_PROVIDER_READBACK_SCHEMA,
                 withoutDigest,
               );
           },
         );
+        const [primaryReadback, secondaryReadback] = evidence.providerReadbacks;
         const { evidenceDigest, ...withoutDigest } = evidence;
         return evidence.contract === contract &&
           evidence.transactionHash === transactionHash &&
+          evidence.previousBlockNumber === previousBlockNumber &&
+          evidence.previousBlockRuntimeCodeHash === EMPTY_RUNTIME_CODE_HASH &&
           evidence.startBlock === startBlock &&
           canonicalizeJson(evidence.registrySource) ===
             canonicalizeJson(uniswapRegistrySource) && readbacksValid &&
+          primaryReadback.rawTransactionDigest ===
+            secondaryReadback.rawTransactionDigest &&
+          primaryReadback.transactionDigest ===
+            secondaryReadback.transactionDigest &&
+          primaryReadback.transactionReceiptDigest ===
+            secondaryReadback.transactionReceiptDigest &&
           evidenceDigest === canonicalSha256(
             "programmable.custom-launch-deployment-evidence.v1",
             withoutDigest,
