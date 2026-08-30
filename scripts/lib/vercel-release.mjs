@@ -51,6 +51,8 @@ export const GITHUB_ARTIFACT_EVIDENCE_SCHEMA =
   "programmable.developers.github-actions-artifact-evidence.v1";
 export const GITHUB_OWNER_DISPATCH_AUTHORIZATION_SCHEMA =
   "programmable.developers.github-owner-dispatch-authorization.v1";
+export const VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA =
+  "programmable.developers.vercel-public-deployment-resolution.v1";
 export const PLANNED_DEPLOY_AUTHORIZATION_SCHEMA =
   "programmable.developers.vercel-planned-deploy-authorization.v1";
 export const SOURCE_TRANSITION_SCHEMA =
@@ -426,7 +428,9 @@ function exactInstant(value, label) {
 function exactSecondInstant(value, label) {
   assert(typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(value) &&
-    Number.isFinite(Date.parse(value)), `${label} must be a canonical UTC second`);
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value.replace(/Z$/u, ".000Z"),
+  `${label} must be a canonical UTC second`);
   return value;
 }
 
@@ -3015,14 +3019,20 @@ export function createPlannedDeployAuthorization(input) {
   const workflow = exactWorkflow(input.workflow, "planned deploy authorization workflow");
   const currentDeployment = exactDeployment(input.currentDeployment,
     "planned deploy current public deployment");
-  assert(currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
-    "planned deploy authorization current deployment lacks the public production alias");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, {
+      deployment: currentDeployment,
+      target,
+    },
+  );
   const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
     input.ownerDispatchAuthorization, { workflow, source },
   );
   exactInstant(input.authorizedAt, "planned deploy authorization authorizedAt");
   assert(ownerDispatchAuthorization.observedAt === input.authorizedAt,
     "planned deploy authorization must use the freshly observed owner dispatch");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.authorizedAt,
+    "planned deploy public-origin resolution");
 
   let candidateDeployment = null;
   let candidateProtectionEvidence = null;
@@ -3060,6 +3070,7 @@ export function createPlannedDeployAuthorization(input) {
     source,
     target,
     currentDeployment,
+    currentPublicResolution,
     candidateDeployment,
     candidateProtectionEvidence,
     candidateSmokeDigest,
@@ -3074,7 +3085,8 @@ export function createPlannedDeployAuthorization(input) {
 export function parsePlannedDeployAuthorization(value) {
   const authorization = exactKeys(value, [
     "schemaVersion", "state", "mutation", "publicAuthorization", "publicWrites",
-    "source", "target", "currentDeployment", "candidateDeployment",
+    "source", "target", "currentDeployment", "currentPublicResolution",
+    "candidateDeployment",
     "candidateProtectionEvidence", "candidateSmokeDigest", "ownerDispatchAuthorization",
     "workflow", "authorizedAt", "authorizationDigest",
   ], "planned Vercel deploy authorization");
@@ -3091,8 +3103,12 @@ export function parsePlannedDeployAuthorization(value) {
     "planned Vercel deploy authorization workflow");
   const currentDeployment = exactDeployment(authorization.currentDeployment,
     "planned Vercel deploy current public deployment");
-  assert(currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
-    "planned Vercel deploy authorization current deployment lacks the public production alias");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    authorization.currentPublicResolution, {
+      deployment: currentDeployment,
+      target,
+    },
+  );
   const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
     authorization.ownerDispatchAuthorization, { workflow, source },
   );
@@ -3100,6 +3116,8 @@ export function parsePlannedDeployAuthorization(value) {
     "planned Vercel deploy authorization authorizedAt");
   assert(ownerDispatchAuthorization.observedAt === authorization.authorizedAt,
     "planned Vercel deploy authorization differs from its owner-dispatch observation");
+  assertFreshTransition(currentPublicResolution.checkedAt, authorization.authorizedAt,
+    "planned Vercel deploy public-origin resolution");
 
   if (authorization.mutation === "create-candidate") {
     assert(authorization.candidateDeployment === null &&
@@ -3134,6 +3152,68 @@ function exactTarget(value, label = "Vercel release target") {
     target.environment === "production" && target.publicOrigin === PRODUCTION_ORIGIN,
   `${label} is invalid`);
   return target;
+}
+
+export function createVercelPublicDeploymentResolution(input) {
+  const deployment = exactDeployment(input.deployment,
+    "Vercel public-origin resolved deployment");
+  const target = exactTarget(input.target, "Vercel public-origin resolution target");
+  assert(input.origin === PRODUCTION_ORIGIN,
+    "Vercel public-origin resolution must select the canonical production origin");
+  exactInstant(input.checkedAt, "Vercel public-origin resolution checkedAt");
+  const value = {
+    schemaVersion: VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA,
+    state: "provider-resolved",
+    provider: "vercel",
+    origin: PRODUCTION_ORIGIN,
+    deploymentId: deployment.id,
+    deploymentUrl: deployment.url,
+    orgId: target.orgId,
+    projectId: target.projectId,
+    checkedAt: input.checkedAt,
+  };
+  return withDigest(VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA, value,
+    "resolutionDigest");
+}
+
+export function parseVercelPublicDeploymentResolution(value, {
+  deployment,
+  target,
+} = {}) {
+  const resolution = exactKeys(value, [
+    "schemaVersion", "state", "provider", "origin", "deploymentId", "deploymentUrl",
+    "orgId", "projectId", "checkedAt", "resolutionDigest",
+  ], "Vercel public-origin resolution");
+  assert(resolution.schemaVersion === VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA &&
+    resolution.state === "provider-resolved" && resolution.provider === "vercel" &&
+    resolution.origin === PRODUCTION_ORIGIN && VERCEL_ID.test(resolution.deploymentId),
+  "Vercel public-origin resolution is invalid");
+  const parsedUrl = new URL(resolution.deploymentUrl);
+  assert(parsedUrl.protocol === "https:" && parsedUrl.username === "" &&
+    parsedUrl.password === "" && parsedUrl.pathname === "/" &&
+    parsedUrl.search === "" && parsedUrl.hash === "" &&
+    parsedUrl.hostname.endsWith(".vercel.app") &&
+    resolution.deploymentUrl === parsedUrl.origin,
+  "Vercel public-origin resolution deployment URL is invalid");
+  exactInstant(resolution.checkedAt, "Vercel public-origin resolution checkedAt");
+  const { resolutionDigest, ...withoutDigest } = resolution;
+  assert(resolutionDigest === canonicalSha256(
+    VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA, withoutDigest,
+  ), "Vercel public-origin resolution digest is invalid");
+  if (deployment) {
+    const parsedDeployment = exactDeployment(deployment,
+      "Vercel public-origin resolution deployment");
+    assert(resolution.deploymentId === parsedDeployment.id &&
+      resolution.deploymentUrl === parsedDeployment.url,
+    "Vercel public-origin resolution selected a different deployment");
+  }
+  if (target) {
+    const parsedTarget = exactTarget(target, "Vercel public-origin resolution target");
+    assert(resolution.orgId === parsedTarget.orgId &&
+      resolution.projectId === parsedTarget.projectId,
+    "Vercel public-origin resolution selected a different protected project");
+  }
+  return resolution;
 }
 
 function exactDeployment(value, label, { staged = false } = {}) {
