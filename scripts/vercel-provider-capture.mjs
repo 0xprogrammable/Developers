@@ -9,6 +9,7 @@ import {
   PRODUCTION_ORIGIN,
   assertVercelDeploymentMetadata,
   assertVercelProjectBinding,
+  createVercelPublicDeploymentResolution,
   createStageProtectionEvidence,
   normalizeVercelDeployment,
   releaseSource,
@@ -152,7 +153,19 @@ if (releaseMode === "planned") {
     stageBundleDigest: source[2],
   });
 }
-await writeJson(output, { target, deployment });
+const publicResolution = selector === PRODUCTION_ORIGIN
+  ? createVercelPublicDeploymentResolution({
+    origin: selector,
+    deployment,
+    target,
+    checkedAt: new Date().toISOString(),
+  })
+  : undefined;
+await writeJson(output, {
+  target,
+  deployment,
+  ...(publicResolution ? { publicResolution } : {}),
+});
 
 if (protectionOutput) {
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {

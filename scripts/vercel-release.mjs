@@ -663,14 +663,16 @@ async function authorizePlannedDeployCommand(options) {
     environment: await readJson(required(options, "--environment"),
       "GitHub production environment"),
   }, { workflow, source, observedAt: authorizedAt });
-  const currentDeployment = (await readJson(
+  const currentCapture = await readJson(
     required(options, "--current-deployment"), "current public Vercel deployment",
-  )).deployment;
+  );
+  const currentDeployment = currentCapture.deployment;
   const authorization = createPlannedDeployAuthorization({
     mutation,
     source,
     target: protectedTarget(options),
     currentDeployment,
+    currentPublicResolution: currentCapture.publicResolution,
     ...(mutation === "promote-candidate" ? {
       candidateDeployment: (await readJson(candidateOptions[0],
         "planned Vercel candidate deployment")).deployment,

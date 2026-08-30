@@ -34,6 +34,7 @@ import {
   createSmokeReceipt,
   createStageProtectionEvidence,
   createStageReceipt,
+  createVercelPublicDeploymentResolution,
   createEvidenceOnlySourceTransition,
   createPlannedDeployAuthorization,
   createPreMutationState,
@@ -50,6 +51,7 @@ import {
   parsePublicAuthorization,
   parseRollbackPlan,
   parseStageReceipt,
+  parseVercelPublicDeploymentResolution,
   releaseSource,
   releaseTarget,
   releaseWorkflow,
@@ -2359,18 +2361,24 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
   const currentDeployment = deployment(
     "dpl_previous123",
     "https://developers-previous.vercel.app/",
-    [new URL(PRODUCTION_ORIGIN).hostname],
   );
   const candidateDeployment = deployment(
     "dpl_planned123",
     "https://developers-planned.vercel.app/",
   );
   const creationAuthorizedAt = "2026-08-29T15:01:00.000Z";
+  const creationPublicResolution = createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: currentDeployment,
+    target,
+    checkedAt: "2026-08-29T15:00:30.000Z",
+  });
   const creation = createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
     currentDeployment,
+    currentPublicResolution: creationPublicResolution,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
@@ -2378,6 +2386,13 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
   assert.equal(creation.schemaVersion, PLANNED_DEPLOY_AUTHORIZATION_SCHEMA);
   assert.equal(creation.publicAuthorization, false);
   assert.equal(creation.publicWrites, false);
+  assert.deepEqual(creation.currentDeployment.aliases, []);
+  assert.deepEqual(parseVercelPublicDeploymentResolution(
+    creation.currentPublicResolution, {
+      deployment: currentDeployment,
+      target,
+    },
+  ), creationPublicResolution);
   assert.equal(parsePlannedDeployAuthorization(creation).mutation, "create-candidate");
 
   const protection = protectionEvidence(
@@ -2391,11 +2406,18 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     "2026-08-29T15:03:00.000Z",
   );
   const promotionAuthorizedAt = "2026-08-29T15:04:00.000Z";
+  const promotionPublicResolution = createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: currentDeployment,
+    target,
+    checkedAt: "2026-08-29T15:03:30.000Z",
+  });
   const promotion = createPlannedDeployAuthorization({
     mutation: "promote-candidate",
     source,
     target,
     currentDeployment,
+    currentPublicResolution: promotionPublicResolution,
     candidateDeployment,
     candidateProtectionEvidence: protection,
     candidateSmoke,
@@ -2413,6 +2435,7 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     source,
     target,
     currentDeployment,
+    currentPublicResolution: promotionPublicResolution,
     candidateDeployment,
     candidateProtectionEvidence: protectionEvidence(
       candidateDeployment,
@@ -2428,11 +2451,80 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     source,
     target,
     currentDeployment,
+    currentPublicResolution: creationPublicResolution,
     candidateDeployment,
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
   }), /must not claim a candidate/u);
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    currentPublicResolution: createVercelPublicDeploymentResolution({
+      origin: PRODUCTION_ORIGIN,
+      deployment: currentDeployment,
+      target,
+      checkedAt: "2026-08-29T14:55:00.000Z",
+    }),
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  }), /must complete within five minutes/u);
+  assert.throws(() => createVercelPublicDeploymentResolution({
+    origin: "https://other.example",
+    deployment: currentDeployment,
+    target,
+    checkedAt: "2026-08-29T15:00:30.000Z",
+  }), /canonical production origin/u);
+  const otherDeploymentResolution = createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: deployment(
+      "dpl_other123",
+      "https://developers-other.vercel.app/",
+    ),
+    target,
+    checkedAt: "2026-08-29T15:00:30.000Z",
+  });
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    currentPublicResolution: otherDeploymentResolution,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  }), /selected a different deployment/u);
+  const otherTargetResolution = createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: currentDeployment,
+    target: releaseTarget("team_other", "prj_other"),
+    checkedAt: "2026-08-29T15:00:30.000Z",
+  });
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    currentPublicResolution: otherTargetResolution,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  }), /selected a different protected project/u);
+  const substitutedResolution = structuredClone(creationPublicResolution);
+  substitutedResolution.deploymentId = "dpl_other123";
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    currentPublicResolution: substitutedResolution,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  }), /digest is invalid/u);
 });
 
 test("separates stage, owner authorization, promotion, and exact rollback receipts", () => {
@@ -3051,6 +3143,12 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(providerCapture,
     /protectionOutput[\s\S]*createStageProtectionEvidence/u,
     "planned candidates must use the same provider protection proof as live stages");
+  assert.match(providerCapture,
+    /selector === PRODUCTION_ORIGIN[\s\S]*createVercelPublicDeploymentResolution/u,
+    "public-origin resolution evidence must come only from an exact canonical-origin lookup");
+  assert.match(providerCapture,
+    /inspect[\s\S]*deploymentId = inspect\.id[\s\S]*\/v13\/deployments\/\$\{deploymentId\}[\s\S]*publicResolution/u,
+    "public-origin resolution must bind Vercel's resolved deployment to its provider API record");
   const chainSmoke = await readFile(path.resolve("scripts/chain-4663-live-smoke.mjs"), "utf8");
   assert.doesNotMatch(chainSmoke, /planned\/public smoke may not use a Vercel protection bypass/u);
   assert.match(chainSmoke,
@@ -3090,6 +3188,9 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(runbook,
     /external Vercel deployment and alias mutation[\s\S]*can_admins_bypass:true[\s\S]*stops the job/u,
     "runbook must distinguish external provider mutation from Robinhood write authority");
+  assert.match(runbook,
+    /canonical production[\s\S]*immutable provider ID[\s\S]*creation-time `alias` array[\s\S]*empty/u,
+    "runbook must distinguish provider domain resolution from creation-time alias metadata");
   assert.match(runbook,
     /prod_deployment_urls_and_all_previews[\s\S]*--protection-bypass true[\s\S]*public origin[\s\S]*--protection-bypass false/u,
     "runbook must keep generated candidates protected while public reads use no bypass");

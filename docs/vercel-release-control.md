@@ -56,8 +56,16 @@ candidate with `--skip-domain` and only the three planned source metadata fields
 first provider mutation, the job freshly reads the current GitHub `workflow_dispatch` run and
 `production` environment and seals the exact canonical owner, run, attempt, source revision/tree,
 environment id `19441858925`, protected-main-only branch policy, and disabled administrator bypass.
-The currently configured `can_admins_bypass:true` therefore stops the job before candidate creation;
-the owner must separately correct the environment policy before this path can run.
+Any provider response with `can_admins_bypass:true`, a different environment id, or a broader branch
+policy therefore stops the job before candidate creation.
+
+The current public deployment is selected by asking Vercel to resolve the exact canonical production
+origin, then re-reading that deployment by immutable provider ID. The capture seals the resolved ID,
+generated `.vercel.app` origin, organization, project, and observation time under a canonical digest.
+Authorization requires that fresh resolution rather than treating the deployment record's
+creation-time `alias` array as domain-routing authority; Vercel can legitimately return that array
+empty for a deployment currently selected by a project production domain. Candidate captures by ID
+do not receive public-origin resolution authority and must still prove that they are unaliased.
 
 The generated candidate must remain unaliased and protected. Provider inspection must prove an
 unauthenticated 302/303/307/308 redirect to the canonical Vercel authentication service and the
