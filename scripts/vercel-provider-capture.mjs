@@ -7,9 +7,16 @@ import { fileURLToPath } from "node:url";
 
 import {
   PRODUCTION_ORIGIN,
+  VERCEL_PRODUCTION_ORIGIN,
   assertVercelDeploymentMetadata,
   assertVercelProjectBinding,
+  assertVercelStagedDeployment,
+  createVercelProductionBinding,
+  createVercelProductionDomainInventory,
   createVercelMutationControlEvidence,
+  createVercelProviderAliasBinding,
+  createVercelProviderDeploymentResolution,
+  createVercelPublicAliasBinding,
   createVercelPublicDeploymentResolution,
   createStageProtectionEvidence,
   normalizeVercelDeployment,
@@ -48,8 +55,8 @@ function argumentsMap(argv) {
   const selector = values.get("--selector");
   const output = values.get("--output");
   if (!selector || !output) fail("--selector and --output are required");
-  if (selector !== PRODUCTION_ORIGIN && !DEPLOYMENT_ID.test(selector)) {
-    fail("--selector must be the public origin or a Vercel deployment ID");
+  if (selector !== VERCEL_PRODUCTION_ORIGIN && !DEPLOYMENT_ID.test(selector)) {
+    fail("--selector must be the Vercel production origin or a Vercel deployment ID");
   }
   const releaseMode = values.get("--release-mode") ?? null;
   if (releaseMode !== null && releaseMode !== "planned") {
@@ -125,6 +132,9 @@ const token = process.env.VERCEL_TOKEN;
 const orgId = process.env.VERCEL_ORG_ID;
 const projectId = process.env.VERCEL_PROJECT_ID;
 if (!token || !orgId || !projectId) fail("Vercel token, organization, and project are required");
+if (protectionOutput && process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
+  fail("provider protection capture must not receive the automation bypass secret");
+}
 // Vercel reads VERCEL_TOKEN from the inherited environment. Keep the secret out
 // of the child process argument vector while retaining an explicit scope.
 const auth = ["--scope", orgId];
@@ -136,14 +146,77 @@ if (!DEPLOYMENT_ID.test(deploymentId)) fail("Vercel inspection returned an inval
 const api = vercelJson([
   "api", `/v13/deployments/${deploymentId}`, "--raw", ...auth,
 ], "Vercel deployment API query");
+const publicInspect = selector === VERCEL_PRODUCTION_ORIGIN
+  ? vercelJson([
+    "inspect", PRODUCTION_ORIGIN, "--wait", "--timeout", "10m", "--json", ...auth,
+  ], "Vercel public-origin inspection")
+  : undefined;
+const publicCheckedAt = publicInspect ? new Date().toISOString() : undefined;
+const projectDomains = selector === VERCEL_PRODUCTION_ORIGIN
+  ? vercelJson([
+    "api", `/v9/projects/${projectId}/domains?limit=100`, "--raw", ...auth,
+  ], "Vercel project domains query")
+  : undefined;
+const projectDomainsCheckedAt = projectDomains ? new Date().toISOString() : undefined;
+const providerAlias = selector === VERCEL_PRODUCTION_ORIGIN
+  ? vercelJson([
+    "api", `/v4/aliases/${new URL(VERCEL_PRODUCTION_ORIGIN).hostname}`, "--raw", ...auth,
+  ], "Vercel provider alias query")
+  : undefined;
+const providerAliasCheckedAt = providerAlias ? new Date().toISOString() : undefined;
+const publicAlias = selector === VERCEL_PRODUCTION_ORIGIN
+  ? vercelJson([
+    "api", `/v4/aliases/${new URL(PRODUCTION_ORIGIN).hostname}`, "--raw", ...auth,
+  ], "Vercel public alias query")
+  : undefined;
+const publicAliasCheckedAt = publicAlias ? new Date().toISOString() : undefined;
+const providerReread = selector === VERCEL_PRODUCTION_ORIGIN
+  ? vercelJson([
+    "inspect", selector, "--wait", "--timeout", "10m", "--json", ...auth,
+  ], "Vercel final production-origin reinspection")
+  : undefined;
+const providerCheckedAt = providerReread ? new Date().toISOString() : undefined;
 const link = await boundedJson(path.join(ROOT, ".vercel", "project.json"),
   "Vercel project link");
 const target = releaseTarget(orgId, projectId);
 assertVercelProjectBinding(api, link, target);
-const deployment = normalizeVercelDeployment({ inspectOutput: inspect, apiOutput: api });
+const deployment = normalizeVercelDeployment({
+  inspectOutput: inspect,
+  apiOutput: api,
+  ...(providerReread ? {
+    providerOrigin: VERCEL_PRODUCTION_ORIGIN,
+    providerRereadOutput: providerReread,
+  } : {}),
+});
+const publicDeployment = publicInspect
+  ? normalizeVercelDeployment({ inspectOutput: publicInspect, apiOutput: api })
+  : undefined;
+const productionDomainInventory = projectDomains
+  ? createVercelProductionDomainInventory({
+    domainsOutput: projectDomains,
+    projectId,
+    checkedAt: projectDomainsCheckedAt,
+  })
+  : undefined;
+const providerAliasBinding = providerReread
+  ? createVercelProviderAliasBinding({
+    aliasOutput: providerAlias,
+    deployment,
+    projectId,
+    checkedAt: providerAliasCheckedAt,
+  })
+  : undefined;
+const publicAliasBinding = providerReread
+  ? createVercelPublicAliasBinding({
+    aliasOutput: publicAlias,
+    deployment,
+    projectId,
+    checkedAt: publicAliasCheckedAt,
+  })
+  : undefined;
 if (releaseMode === "planned") {
-  if (DEPLOYMENT_ID.test(selector) && deployment.aliases.length !== 0) {
-    fail("planned candidate must remain unaliased until its public smoke succeeds");
+  if (DEPLOYMENT_ID.test(selector)) {
+    assertVercelStagedDeployment(deployment, "planned candidate");
   }
   assertVercelDeploymentMetadata(api, {
     source: releaseSource(source[0], source[1]),
@@ -155,18 +228,42 @@ if (releaseMode === "planned") {
     stageBundleDigest: source[2],
   });
 }
-const publicResolution = selector === PRODUCTION_ORIGIN
+const publicResolution = selector === VERCEL_PRODUCTION_ORIGIN
   ? createVercelPublicDeploymentResolution({
-    origin: selector,
+    origin: PRODUCTION_ORIGIN,
+    deployment: publicDeployment,
+    target,
+    checkedAt: publicCheckedAt,
+  })
+  : undefined;
+const providerResolution = selector === VERCEL_PRODUCTION_ORIGIN
+  ? createVercelProviderDeploymentResolution({
+    origin: VERCEL_PRODUCTION_ORIGIN,
     deployment,
     target,
-    checkedAt: new Date().toISOString(),
+    checkedAt: providerCheckedAt,
+  })
+  : undefined;
+const productionBinding = selector === VERCEL_PRODUCTION_ORIGIN
+  ? createVercelProductionBinding({
+    deployment,
+    target,
+    providerResolution,
+    providerAliasBinding,
+    publicResolution,
+    publicAliasBinding,
+    productionDomainInventory,
   })
   : undefined;
 await writeJson(output, {
   target,
   deployment,
+  ...(providerResolution ? { providerResolution } : {}),
+  ...(providerAliasBinding ? { providerAliasBinding } : {}),
   ...(publicResolution ? { publicResolution } : {}),
+  ...(publicAliasBinding ? { publicAliasBinding } : {}),
+  ...(productionDomainInventory ? { productionDomainInventory } : {}),
+  ...(productionBinding ? { productionBinding } : {}),
 });
 
 let projectState;
@@ -178,9 +275,6 @@ function projectQuery() {
 }
 
 if (protectionOutput) {
-  if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
-    fail("provider protection capture must not receive the automation bypass secret");
-  }
   const projectProtection = projectQuery();
   const response = await fetch(`${deployment.url}/api/v2/status?chainId=4663`, {
     headers: { accept: "application/json" },

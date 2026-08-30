@@ -31,6 +31,7 @@ env:
   NPM_CONFIG_AUDIT: "false"
   NPM_CONFIG_FUND: "false"
   PRODUCTION_ORIGIN: https://developers.programmable.family
+  VERCEL_PRODUCTION_ORIGIN: https://developers.programmable.market
 
 jobs:
   recover:
@@ -241,7 +242,7 @@ jobs:
           target_mode="$(npm run --silent release:vercel -- field \
             --file "$root/public-mutation-intent.json" --path targetMode)"
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/recovery/current-attempt.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
             --selector "$target_id" \
@@ -403,7 +404,7 @@ jobs:
             > .release-evidence/recovery/final-production-environment.raw.json
           authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/recovery/current-readiness.json \
             --mutation-control-output .release-evidence/recovery/mutation-control.json
           confirmed_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
@@ -446,7 +447,7 @@ jobs:
           esac
           unset github_token vercel_token
 
-      - name: Provider-requery exact recovered public deployment
+      - name: Initial provider-requery of recovered public deployment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -454,7 +455,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/recovery/production-deployment.json
           target_id="$(npm run --silent release:vercel -- field \
             --file .release-evidence/recovery/original/public-mutation-intent.json \
@@ -483,6 +484,24 @@ jobs:
           fi
           PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- "${args[@]}"
 
+      - name: Provider-requery recovered production binding after smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/recovery/production-deployment-after-smoke.json
+          target_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/recovery/original/public-mutation-intent.json \
+            --path targetDeployment.id)"
+          public_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/recovery/production-deployment-after-smoke.json \
+            --path deployment.id)"
+          test "$target_id" = "$public_id"
+
       - name: Seal verified recovery completion receipt
         env:
           OPERATION: ${{ inputs.operation }}
@@ -496,7 +515,8 @@ jobs:
                 --intent "$root/public-mutation-intent.json" \
                 --recovery-attempt .release-evidence/recovery/recovery-attempt.json \
                 --recovery-readiness .release-evidence/recovery/recovery-readiness.json \
-                --production-deployment .release-evidence/recovery/production-deployment.json \
+                --production-deployment \
+                  .release-evidence/recovery/production-deployment-after-smoke.json \
                 --production-smoke .release-evidence/recovery/production-smoke.json \
                 --completed-at "$completed_at" \
                 --output .release-evidence/recovery/planned-deploy-receipt.json
@@ -511,7 +531,8 @@ jobs:
                 --bundle "$root/promotion-bundle.json" \
                 --recovery-attempt .release-evidence/recovery/recovery-attempt.json \
                 --recovery-readiness .release-evidence/recovery/recovery-readiness.json \
-                --production-deployment .release-evidence/recovery/production-deployment.json \
+                --production-deployment \
+                  .release-evidence/recovery/production-deployment-after-smoke.json \
                 --production-smoke .release-evidence/recovery/production-smoke.json \
                 --promoted-at "$completed_at" \
                 --output .release-evidence/recovery/promotion-receipt.json
@@ -531,7 +552,8 @@ jobs:
                 --intent-selected-smoke "$root/target-smoke-fresh.json"
                 --recovery-attempt .release-evidence/recovery/recovery-attempt.json
                 --recovery-readiness .release-evidence/recovery/recovery-readiness.json
-                --production-deployment .release-evidence/recovery/production-deployment.json
+                --production-deployment \
+                  .release-evidence/recovery/production-deployment-after-smoke.json
                 --production-smoke .release-evidence/recovery/production-smoke.json
                 --rolled-back-at "$completed_at"
                 --output .release-evidence/recovery/rollback-receipt.json

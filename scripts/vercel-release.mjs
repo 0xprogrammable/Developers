@@ -414,7 +414,7 @@ async function normalizeDeploymentCommand(options) {
 async function stageReceiptCommand(options) {
   assertOnly(options, [
     "--repository-root", "--bundle", "--manifest", "--ethereum-manifest", "--deployment",
-    "--current-public-deployment", "--protection-evidence", "--staged-smoke",
+    "--current-production-deployment", "--protection-evidence", "--staged-smoke",
     "--build-root",
     "--source-revision", "--source-tree", "--org-id", "--project-id", "--staged-at", "--output",
     ...workflowFlags(),
@@ -427,9 +427,9 @@ async function stageReceiptCommand(options) {
   await validateManifest(manifest);
   const normalized = await readJson(required(options, "--deployment"),
     "normalized Vercel deployment");
-  const currentPublicCapture = await readJson(
-    required(options, "--current-public-deployment"),
-    "current public Vercel deployment",
+  const currentProductionCapture = await readJson(
+    required(options, "--current-production-deployment"),
+    "current production Vercel binding",
   );
   const build = await hashBuildOutput(required(options, "--build-root"));
   const receipt = createStageReceipt({
@@ -437,7 +437,7 @@ async function stageReceiptCommand(options) {
     manifest,
     ethereumManifest,
     deployment: normalized.deployment,
-    currentPublicResolution: currentPublicCapture.publicResolution,
+    currentProductionBinding: currentProductionCapture.productionBinding,
     protectionEvidence: await readJson(required(options, "--protection-evidence"),
       "Vercel stage protection evidence"),
     stagedSmoke: await readJson(required(options, "--staged-smoke"),
@@ -633,7 +633,7 @@ async function promotionPlanCommand(options) {
     previousSmoke: await readJson(required(options, "--previous-smoke"),
       "previous production smoke receipt"),
     previousDeployment: previousCapture.deployment,
-    previousPublicResolution: previousCapture.publicResolution,
+    previousProductionBinding: previousCapture.productionBinding,
     source,
     target: protectedTarget(options),
     workflow: workflowIdentity(options),
@@ -732,7 +732,7 @@ async function authorizePlannedDeployCommand(options) {
     source,
     target: protectedTarget(options),
     currentDeployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     ...(mutation === "promote-candidate" ? {
       candidateDeployment: (await readJson(candidateOptions[0],
         "planned Vercel candidate deployment")).deployment,
@@ -772,7 +772,7 @@ async function promotionReceiptCommand(options) {
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected promotion smoke receipt"),
     productionDeployment: productionCapture.deployment,
-    publicResolution: productionCapture.publicResolution,
+    productionBinding: productionCapture.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "production smoke receipt"),
     workflow: workflowIdentity(options),
@@ -815,7 +815,7 @@ async function rollbackPlanCommand(options) {
     currentSmoke: await readJson(required(options, "--current-smoke"),
       "current production smoke receipt"),
     currentDeployment: currentCapture.deployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     targetSmoke: await readJson(required(options, "--target-smoke"),
       "rollback target smoke receipt"),
     targetDeployment: (await readJson(required(options, "--target-deployment"),
@@ -861,7 +861,7 @@ async function rollbackReceiptCommand(options) {
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected rollback smoke receipt"),
     productionDeployment: productionCapture.deployment,
-    publicResolution: productionCapture.publicResolution,
+    productionBinding: productionCapture.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "post-rollback smoke receipt"),
     workflow: workflowIdentity(options),
@@ -895,7 +895,7 @@ async function preMutationStateCommand(options) {
     operation,
     plan,
     currentDeployment: currentCapture.deployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     selectedDeployment: (await readJson(required(options, "--selected-deployment"),
       "fresh selected deployment")).deployment,
     selectedProtectionEvidence: await readJson(
@@ -954,7 +954,7 @@ async function preMutationReadinessCommand(options) {
       ? { selectedBundle: await readJson(selectedBundlePath, "selected promotion bundle") }
       : {}),
     currentDeployment: currentCapture.deployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     mutationControl: await readJson(required(options, "--mutation-control"),
       "Vercel mutation control"),
     confirmedAt: required(options, "--confirmed-at"),
@@ -981,7 +981,7 @@ async function plannedMutationReadinessCommand(options) {
     candidateSmoke: await readJson(required(options, "--candidate-smoke"),
       "final planned candidate smoke"),
     currentDeployment: currentCapture.deployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     mutationControl: await readJson(required(options, "--mutation-control"),
       "Vercel mutation control"),
     confirmedAt: required(options, "--confirmed-at"),
@@ -1087,7 +1087,7 @@ async function recoveryInputs(options) {
     workflow,
     ownerDispatchAuthorization,
     currentDeployment: currentCapture.deployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     targetDeployment: (await readJson(required(options, "--target-deployment"),
       "recovery target deployment")).deployment,
     targetProtectionEvidence: await readJson(
@@ -1194,7 +1194,7 @@ async function plannedDeployReceiptCommand(options) {
         "planned mutation readiness"),
     }),
     productionDeployment: production.deployment,
-    publicResolution: production.publicResolution,
+    productionBinding: production.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "planned production smoke"),
     completedAt: required(options, "--completed-at"),
@@ -1224,7 +1224,7 @@ async function recoveredPromotionReceiptCommand(options) {
     recoveryReadiness: await readJson(required(options, "--recovery-readiness"),
       "promotion recovery readiness"),
     productionDeployment: production.deployment,
-    publicResolution: production.publicResolution,
+    productionBinding: production.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "recovered promotion production smoke"),
     promotedAt: required(options, "--promoted-at"),
@@ -1263,7 +1263,7 @@ async function recoveredRollbackReceiptCommand(options) {
     recoveryReadiness: await readJson(required(options, "--recovery-readiness"),
       "rollback recovery readiness"),
     productionDeployment: production.deployment,
-    publicResolution: production.publicResolution,
+    productionBinding: production.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "recovered rollback production smoke"),
     rolledBackAt: required(options, "--rolled-back-at"),

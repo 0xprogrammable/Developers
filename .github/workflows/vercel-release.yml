@@ -49,6 +49,7 @@ env:
   NPM_CONFIG_AUDIT: "false"
   NPM_CONFIG_FUND: "false"
   PRODUCTION_ORIGIN: https://developers.programmable.family
+  VERCEL_PRODUCTION_ORIGIN: https://developers.programmable.market
   CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH: release/robinhood-chain-4663/programmable-stage-bundle.json
   CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH: release/robinhood-chain-4663/programmable-promotion-bundle.json
   INDEXER_RELEASE_IDENTITY_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-release-identity.json
@@ -265,7 +266,7 @@ jobs:
           set -euo pipefail
           mkdir -p .release-evidence/planned
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --source-revision "$GITHUB_SHA" \
             --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
             --release-mode planned \
@@ -274,6 +275,9 @@ jobs:
       - name: Smoke planned public endpoints without bypass
         run: |
           set -euo pipefail
+          PROGRAMMABLE_API_BASE="$VERCEL_PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+            --mode planned --protection-bypass false \
+            --output .release-evidence/planned/provider-smoke.json
           PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
             --mode planned --protection-bypass false \
             --output .release-evidence/planned/smoke.json
@@ -286,7 +290,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --source-revision "$GITHUB_SHA" \
             --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
             --release-mode planned \
@@ -296,6 +300,11 @@ jobs:
           after_id="$(npm run --silent release:vercel -- field \
             --file .release-evidence/planned/deployment-after.json --path deployment.id)"
           test "$before_id" = "$after_id"
+          provider_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned/provider-smoke.json --path manifestDigest)"
+          public_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned/smoke.json --path manifestDigest)"
+          test "$provider_manifest" = "$public_manifest"
 
       - name: Upload immutable planned readback
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -400,7 +409,7 @@ jobs:
           set -euo pipefail
           mkdir -p .release-evidence/planned-deploy
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/planned-deploy/previous-deployment.json
 
       - name: Reconfirm current protected main before planned candidate creation
@@ -451,10 +460,11 @@ jobs:
           rm .release-evidence/planned-deploy/candidate-owner-dispatch-run.raw.json \
             .release-evidence/planned-deploy/candidate-production-environment.raw.json
 
-      - name: Create unaliased source-bound planned candidate
+      - name: Create source-bound planned candidate without formal domains
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
           ./node_modules/.bin/vercel deploy --prebuilt --target=production \
@@ -464,7 +474,7 @@ jobs:
             --meta "programmableReleaseMode=planned" \
             > .release-evidence/planned-deploy/candidate-create.json
 
-      - name: Bind exact unaliased candidate to planned source
+      - name: Bind exact candidate without formal domains to planned source
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -472,7 +482,7 @@ jobs:
         run: |
           set -euo pipefail
           candidate_id="$(npm run --silent release:vercel -- field \
-            --file .release-evidence/planned-deploy/candidate-create.json --path deployment.id)"
+            --file .release-evidence/planned-deploy/candidate-create.json --path id)"
           npm run capture:vercel-provider -- \
             --selector "$candidate_id" \
             --source-revision "$GITHUB_SHA" \
@@ -510,7 +520,7 @@ jobs:
             --protection-output \
               .release-evidence/planned-deploy/candidate-protection-pre-mutation.json
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/planned-deploy/previous-deployment-pre-mutation.json
           previous_id="$(npm run --silent release:vercel -- field \
             --file .release-evidence/planned-deploy/previous-deployment.json \
@@ -628,7 +638,7 @@ jobs:
             --file .release-evidence/planned-deploy/promotion-authorization.json \
             --path candidateDeployment.id)"
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/planned-deploy/previous-deployment-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
             --selector "$candidate_id" \
@@ -680,7 +690,7 @@ jobs:
             --authorized-at "$authorized_at" \
             --output .release-evidence/planned-deploy/promotion-authorization-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/planned-deploy/previous-deployment-readiness.json \
             --mutation-control-output \
               .release-evidence/planned-deploy/mutation-control.json
@@ -714,7 +724,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --source-revision "$GITHUB_SHA" \
             --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
             --release-mode planned \
@@ -741,7 +751,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --source-revision "$GITHUB_SHA" \
             --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
             --release-mode planned \
@@ -753,6 +763,12 @@ jobs:
             --file .release-evidence/planned-deploy/public-deployment-after-smoke.json \
             --path deployment.id)"
           test "$candidate_id" = "$public_id"
+          candidate_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate-smoke-pre-mutation.json \
+            --path manifestDigest)"
+          public_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/public-smoke.json --path manifestDigest)"
+          test "$candidate_manifest" = "$public_manifest"
           rm .release-evidence/planned-deploy/candidate-create.json
 
       - name: Seal verified planned deployment receipt
@@ -793,7 +809,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   stage:
-    name: Stage protected unaliased deployment
+    name: Stage protected deployment without formal domains
     if: >-
       inputs.operation == 'stage' &&
       github.repository == 'programmablehq/Developers' &&
@@ -864,10 +880,11 @@ jobs:
           test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
           test -z "$(git status --porcelain)"
 
-      - name: Create unaliased production-target deployment
+      - name: Create production-target deployment without formal domains
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
           mkdir -p .release-evidence/stage
@@ -886,7 +903,7 @@ jobs:
         run: |
           set -euo pipefail
           deployment_id="$(npm run --silent release:vercel -- field \
-            --file .release-evidence/stage/deploy.json --path deployment.id)"
+            --file .release-evidence/stage/deploy.json --path id)"
           npm run capture:vercel-provider -- \
             --selector "$deployment_id" \
             --source-revision "$GITHUB_SHA" \
@@ -909,7 +926,7 @@ jobs:
             --protection-bypass true \
             --output .release-evidence/stage/staged-smoke.json
 
-      - name: Resolve current public origin before sealing dark stage
+      - name: Resolve both production domains before sealing dark stage
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -917,8 +934,8 @@ jobs:
         run: |
           set -euo pipefail
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
-            --output .release-evidence/stage/current-public-deployment.json
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/stage/current-production-deployment.json
 
       - name: Seal non-public stage receipt
         env:
@@ -934,7 +951,8 @@ jobs:
             --manifest deployments/robinhood-v2.json \
             --ethereum-manifest deployments/ethereum-v2.json \
             --deployment .release-evidence/stage/deployment.json \
-            --current-public-deployment .release-evidence/stage/current-public-deployment.json \
+            --current-production-deployment \
+              .release-evidence/stage/current-production-deployment.json \
             --protection-evidence .release-evidence/stage/protection-evidence.json \
             --staged-smoke .release-evidence/stage/staged-smoke.json \
             --build-root .vercel/output \
@@ -1139,7 +1157,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/plan/current-deployment.json
+        run: npm run capture:vercel-provider -- --selector "$VERCEL_PRODUCTION_ORIGIN" --output .release-evidence/plan/current-deployment.json
 
       - name: Smoke current public mode without bypass
         env:
@@ -1344,7 +1362,7 @@ jobs:
           plan=.release-evidence/promote/promotion-plan.json
           selected_id="$(npm run --silent release:vercel -- field --file "$plan" --path stagedDeployment.id)"
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/promote/current-deployment.json
           npm run capture:vercel-provider -- \
             --selector "$selected_id" \
@@ -1427,7 +1445,7 @@ jobs:
           selected_id="$(npm run --silent release:vercel -- field \
             --file .release-evidence/promote/promotion-plan.json --path stagedDeployment.id)"
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/promote/current-deployment-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
             --selector "$selected_id" \
@@ -1478,7 +1496,7 @@ jobs:
             --authorized-at "$authorized_at" \
             --output .release-evidence/promote/authorization-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/promote/current-deployment-readiness.json \
             --mutation-control-output .release-evidence/promote/mutation-control.json
           confirmed_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
@@ -1507,7 +1525,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/promote/production-deployment.json
+        run: npm run capture:vercel-provider -- --selector "$VERCEL_PRODUCTION_ORIGIN" --output .release-evidence/promote/production-deployment.json
 
       - name: Post-promotion public smoke without bypass
         run: |
@@ -1516,6 +1534,13 @@ jobs:
             --bundle .release-evidence/promote/promotion-bundle.json \
             --protection-bypass false \
             --output .release-evidence/promote/production-smoke.json
+
+      - name: Reconfirm both production domains after promotion smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npm run capture:vercel-provider -- --selector "$VERCEL_PRODUCTION_ORIGIN" --output .release-evidence/promote/production-deployment-after-smoke.json
 
       - name: Seal immutable promotion receipt
         run: |
@@ -1528,7 +1553,7 @@ jobs:
             --mutation-readiness .release-evidence/promote/mutation-readiness.json \
             --selected-smoke .release-evidence/promote/selected-smoke-final.json \
             --bundle .release-evidence/promote/promotion-bundle.json \
-            --production-deployment .release-evidence/promote/production-deployment.json \
+            --production-deployment .release-evidence/promote/production-deployment-after-smoke.json \
             --production-smoke .release-evidence/promote/production-smoke.json \
             --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
@@ -1649,7 +1674,7 @@ jobs:
             --file .release-evidence/rollback/validated-promotion.json \
             --path previousRelease.deployment.id)"
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/rollback/current-deployment.json
           npm run capture:vercel-provider -- \
             --selector "$target_id" \
@@ -1842,7 +1867,7 @@ jobs:
           plan=.release-evidence/rollback/rollback-plan.json
           target_id="$(npm run --silent release:vercel -- field --file "$plan" --path rollbackDeployment.id)"
           npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/rollback/current-deployment.json
           npm run capture:vercel-provider -- \
             --selector "$target_id" \
@@ -1944,7 +1969,7 @@ jobs:
           target_id="$(npm run --silent release:vercel -- field \
             --file .release-evidence/rollback/rollback-plan.json --path rollbackDeployment.id)"
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/rollback/current-deployment-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
             --selector "$target_id" \
@@ -2004,7 +2029,7 @@ jobs:
             --authorized-at "$authorized_at" \
             --output .release-evidence/rollback/authorization-final.json
           VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
-            --selector "$PRODUCTION_ORIGIN" \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
             --output .release-evidence/rollback/current-deployment-readiness.json \
             --mutation-control-output .release-evidence/rollback/mutation-control.json
           confirmed_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
@@ -2039,7 +2064,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npm run capture:vercel-provider -- --selector "$PRODUCTION_ORIGIN" --output .release-evidence/rollback/production-deployment.json
+        run: npm run capture:vercel-provider -- --selector "$VERCEL_PRODUCTION_ORIGIN" --output .release-evidence/rollback/production-deployment.json
 
       - name: Post-rollback public smoke without bypass
         run: |
@@ -2054,6 +2079,13 @@ jobs:
           fi
           PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- "${args[@]}"
 
+      - name: Reconfirm both production domains after rollback smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npm run capture:vercel-provider -- --selector "$VERCEL_PRODUCTION_ORIGIN" --output .release-evidence/rollback/production-deployment-after-smoke.json
+
       - name: Seal immutable rollback receipt
         run: |
           set -euo pipefail
@@ -2067,7 +2099,7 @@ jobs:
             --intent .release-evidence/rollback/public-mutation-intent.json
             --mutation-readiness .release-evidence/rollback/mutation-readiness.json
             --selected-smoke .release-evidence/rollback/target-smoke-final.json
-            --production-deployment .release-evidence/rollback/production-deployment.json
+            --production-deployment .release-evidence/rollback/production-deployment-after-smoke.json
             --production-smoke .release-evidence/rollback/production-smoke.json
             --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF"
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
