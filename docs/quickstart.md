@@ -1,6 +1,6 @@
 # Minimal API integration
 
-This guide fetches the current deployment manifest and the normalized launch feed. It is read-only and requires no SDK or API key.
+This guide fetches a chain-qualified deployment manifest and normalized launch feed. It is read-only and requires no SDK or API key. Ethereum Mainnet (`chainId: 1`) is live; Robinhood Chain Mainnet (`chainId: 4663`) is discoverable as a planned lane only.
 
 ## 1. Discover the API
 
@@ -28,11 +28,62 @@ Check status before a backfill or realtime ingestion run. Use the reported lifec
 curl -fsSL https://developers.programmable.family/api/v2/manifest
 ```
 
+The legacy route above is the Ethereum chain-1 alias. Resolve a selected chain
+through its chain-qualified route:
+
+```bash
+curl -fsSL https://developers.programmable.family/api/v2/manifests/4663
+```
+
 The manifest is the integration source for active deployments, start blocks, categories, Custom Registry state, platform fee disclosure, API routes, and compatibility information. Read its arrays at runtime. Do not copy an individual contract address into permanent client code.
 
-Active v2 Classic discovery is intentionally limited to the historical V3 release and the current V4 release. Classic V1 and V2 remain inactive history and Stock is excluded from active v2 discovery. Custom remains a separate source lane. The Router supplies provenance and transport evidence; it is not a third public category. Refreshing the manifest is sufficient for a generic Router-first integration to discover V4 without a client code or address update.
+On Ethereum, active v2 Classic discovery is intentionally limited to the historical V3 release and the current V4 release. Classic V1 and V2 remain inactive history and Stock is excluded from active v2 discovery. Custom remains a separate source lane. The Router supplies provenance and transport evidence; it is not a third public category. Refreshing the manifest is sufficient for a generic Router-first integration to discover Ethereum Classic V4 without a client code or address update.
 
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. The Website endpoint at `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror with its own schema; it must not override the Developer manifest. If the two disagree, retain the last trusted Developer manifest, stop accepting new deployment identities, and alert an operator.
+
+The Robinhood response currently has the following selected planned fields
+(this excerpt is not the complete manifest):
+
+```json
+{
+  "chainId": 4663,
+  "caip2": "eip155:4663",
+  "deployments": [],
+  "customRegistry": {
+    "status": "planned",
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null
+  },
+  "launchStampRouter": {
+    "status": "planned",
+    "address": null,
+    "startBlock": null,
+    "runtimeCodeHash": null,
+    "deploymentEvidence": null,
+    "canaryEvidence": null
+  },
+  "customLaunchV4": {
+    "status": "planned",
+    "profile": null,
+    "finalityPolicy": null
+  },
+  "extensions": {
+    "programmable/read-model-v1": {
+      "status": "planned",
+      "absenceAuthoritative": false
+    }
+  }
+}
+```
+
+Do not replace these null public roots with prepared addresses. The planned
+[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json),
+[V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json),
+and
+[Developer source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
+support client preparation; they do not activate public writes or prove a
+deployment, finality, exact source match, indexing, visibility, or release.
 
 ## 4. Fetch launches
 
@@ -78,6 +129,15 @@ The snapshot's top-level block is the highest represented chain boundary, so an 
 The hosted Classic baseline is read from the canonical paginated `https://programmable.market/api/explore` catalog and accepted only when its schema, scope, evidence and identity commitments are internally consistent. The current evidence reports Envio deployment `production-6157d22`, but legitimate deployment revisions do not require code changes. The retired legacy token source returns HTTP `410` and is not used. Consumers should still integrate through the Developer discovery and launch-feed URLs above rather than binding directly to that internal upstream.
 
 If canonical event-log coverage is incomplete, launch-list and token-list return the recognized bounded subset with `status: "degraded"` or `"unavailable"`. Process present records, but do not interpret absence as deletion or complete history.
+
+For the planned Robinhood lane, request the chain explicitly:
+
+```bash
+curl -fsSL 'https://developers.programmable.family/api/v2/launches?chainId=4663'
+```
+
+The current empty `status: "unavailable"` response is non-authoritative. It
+means the chain read model is not released, not that the chain has no launches.
 
 ## 5. Consume the feed in JavaScript
 
@@ -251,6 +311,8 @@ Before shipping:
 - Keep unsupported Registry generations and provider paths inactive when their deployment evidence is absent. Legacy Registry and GitHub submission intake are closed; Custom Launch API V1 POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 - Treat Custom Launch API V2 as historical read-only: require `status: "read-only"`, `publiclyRoutable: false`, `productionLaunchAuthorized: false`, and authenticated POST `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions.
 - Partition checkpoints by API major version, chain, and filter scope.
+- Require a chain's manifest and feed quality to be promoted independently. A live Ethereum refresh cannot promote Robinhood, and an empty planned Robinhood feed is never an authoritative absence check.
+- Track finality, exact source verification, indexing completeness, and public feed visibility as independent evidence. Do not infer one from another or infer trading support from any of them.
 - Display `Programmable Verified` only from an effective structured review bound to the deployed revision.
 - Keep partner attribution independent from fee state. A partner-attributed project without a verified fee path uses `no-qualifying-market` and zero shares; an active partnership-template fee path uses 20 bps split 15/5 with no extra Native Custom 10 bps.
 

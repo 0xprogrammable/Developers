@@ -8,6 +8,9 @@ Schemas: https://github.com/programmablehq/Developers/tree/main/schemas/v2
 Custom Launch API base: https://api.programmable.market
 Custom Launch API guide: https://programmable.market/docs/developers/custom-launch
 Custom Launch V3 OpenAPI: https://programmable.market/openapi/custom-launch-v3.json
+Planned Robinhood Custom Launch V4 OpenAPI: https://programmable.market/openapi/custom-launch-v4.json
+Custom Launch V4 source-verification status contract: https://programmable.market/schemas/custom-launch/v4/source-verification-status.json
+Developer V4 source-verification projection schema: https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json
 Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
 Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
 API key management: https://programmable.market/developers/api-keys
@@ -21,13 +24,15 @@ Terminals, scanners, wallets, explorers, indexers, bots, games, and apps use one
 
 The universal guarantee is discovery through a stable core envelope. Charting, quotes, simulation, and execution are separate market features. They are available only when a verified adapter declares support. The v2 API never returns transaction payloads, calldata, approvals, or submission actions, and a support state never authorizes an action.
 
-The separately hosted Custom Launch API uses bearer API credentials for fresh V3 profile `3.3.0` Ethereum Mainnet submissions. Existing wallet keys remain compatible. Approved partner roots and bounded one-level subkeys use the same V3 routes, scopes, server admission, and Router simulation. Root history aggregates attributed root and child launches; child history is stable-lineage only, rotation preserves lineage, and a distinct child starts an isolated lineage. Partner metadata policy matches wallet-key policy. Wallet keys bind the controller to the key wallet; partner requests select the controller in the exact request. Partner roots require the authenticated Website BFF and server allowlist; clients cannot self-authorize. The controller wallet reviews and signs an authorized exact transaction separately; no API credential grants signing, broadcast, security bypass, or approval bypass authority. V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Canonical launch create, resource, and status schemas remain in the Custom Launch OpenAPI contracts; this read/discovery repository publishes only the standalone V3 preflight response schema needed for capability discovery.
+The separately hosted Custom Launch API uses bearer API credentials for fresh V3 profile `3.3.0` Ethereum Mainnet submissions. Existing wallet keys remain compatible. Approved partner roots and bounded one-level subkeys use the same V3 routes, scopes, server admission, and Router simulation. Root history aggregates attributed root and child launches; child history is stable-lineage only, rotation preserves lineage, and a distinct child starts an isolated lineage. Partner metadata policy matches wallet-key policy. Wallet keys bind the controller to the key wallet; partner requests select the controller in the exact request. Partner roots require the authenticated Website BFF and server allowlist; clients cannot self-authorize. The controller wallet reviews and signs an authorized exact transaction separately; no API credential grants signing, broadcast, security bypass, or approval bypass authority. V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. These are Ethereum chain-1 states. Robinhood Chain `4663` has a separate planned V4 contract with no public writes or released read model. Canonical launch create, resource, and status schemas remain in the Custom Launch OpenAPI contracts; this read/discovery repository publishes only the standalone V3 preflight response schema needed for capability discovery.
 
 Resolve the active write entry from discovery `extensions["programmable.custom-launch-api"].currentCreate` or status `currentCustomLaunchCreate`, then read live V3 capabilities, OpenAPI, and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned Programmable Launch Policy commit or release may provide authored source; an unversioned repository branch does not select the live API or decide a request. Local CLI checks, LLM output, and client reports are preparatory. The API server alone makes the operational decision after the exact static admission baseline and pinned Router simulation. Under active profile `3.3.0`, missing, not-configured, or unavailable runtime behavior evidence leaves behavior, trading, liquidity, and fee claims unverified and does not itself block handoff; an authenticated executed negative blocks with `BEHAVIOR_EVIDENCE_NOT_VERIFIED`. A worker-private exact permit may exist only for the pinned simulation; public `simulating` and `failed` output keeps permit and wallet-transaction fields null. Do not treat stale prose, an API key, or client output as policy override or wallet authority. This boundary does not make arbitrary hooks safe or universally fee-enforced.
 
 ## Current truth
 
 - Network: Ethereum mainnet, chain ID 1.
+- Robinhood Chain Mainnet, chain ID `4663` / `eip155:4663`, is advertised as `planned`, not live. Its public Router address, start block, runtime identity, deployment evidence, profile, and finality policy remain null; `deployments` is empty and `customRegistry.publicSubmissionsEnabled` is false.
+- Robinhood V4 public writes, API readiness, deployment publication, exact source verification, indexing, public visibility, trading, and release are not claimed. Its empty `unavailable` launch and token feeds have non-authoritative absence until promotion.
 - Classic launch discovery: live for historical V3 and current V4 only. Classic V1 and V2 remain inactive manifest history and are not scanned. Generic manifest- and Router-first consumers receive V4 through a normal manifest refresh without a client code or address change.
 - Hosted Classic baseline: the canonical paginated `https://programmable.market/api/explore` catalog, validated through schema, scope, evidence and identity commitments. It currently reports Envio deployment `production-6157d22`; legitimate deployment revisions do not require code changes. The retired legacy source returns HTTP 410 and is no longer used.
 - Legacy Registry and GitHub submission intake: closed.
@@ -52,7 +57,7 @@ Resolve the active write entry from discovery `extensions["programmable.custom-l
 - The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
 - The separate operator console at `https://claimhazard.vercel.app` applies its own read-only claim policy to reviewed Classic and finalized standard Custom Registry V1 fee sources. The public discovery policy at `https://claimhazard.vercel.app/claim-discovery.json` does not expand the Developer API into a transaction API.
 - Stock-Paired records are excluded from active v2 discovery. Their immutable v1 compatibility records remain readable without reactivating Stock scanning.
-- Ethereum Mainnet is the only chain currently advertised by the canonical discovery document.
+- Ethereum Mainnet is the only live chain. The canonical discovery contract additionally advertises Robinhood Chain Mainnet as planned; listed does not mean active.
 - No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is verified by the public v2 manifest.
 - Public categories: exactly `classic` and `custom`.
 - Future Custom fixtures: examples only, never live launch evidence.
@@ -64,6 +69,7 @@ Always fetch current status and manifest before making a current-state claim:
 
 - GET https://developers.programmable.family/api/v2/status
 - GET https://developers.programmable.family/api/v2/manifest
+- GET https://developers.programmable.family/api/v2/manifests/4663
 
 ## Stable bootstrap
 
@@ -87,6 +93,9 @@ Reports service state and the independent lifecycle of Classic, Custom, and the 
 
 ### GET /api/v2/manifest
 
+This route remains the Ethereum chain-1 alias for compatibility. Resolve other
+advertised chains through `GET /api/v2/manifests/{chainId}`.
+
 Root fields:
 
 - schemaVersion
@@ -109,6 +118,52 @@ Root fields:
 The manifest supplies deployment IDs, categories, model IDs and versions, origins, public-submission state, lifecycle, discovery state, start and end blocks, and contract addresses. Active Classic discovery uses only the enabled V3 and V4 entries. V1 and V2 remain inactive history for compatibility and are not scanned; Stock is excluded. Generic manifest- and Router-first consumers discover V4 by refreshing this manifest rather than changing client code or hard-coding an address.
 
 The hosted Classic baseline is the complete paginated `https://programmable.market/api/explore` catalog, validated through schema, scope, evidence and identity commitments. Its current evidence reports Envio deployment `production-6157d22`; that transient release id is not an availability pin. The retired legacy source returns HTTP 410 and is not queried.
+
+### GET /api/v2/manifests/{chainId}
+
+The returned root must match the requested numeric chain and CAIP-2 identity.
+Chain `1` is live Ethereum. Chain `4663` is planned Robinhood. Selected planned
+Robinhood fields are:
+
+```json
+{
+  "chainId": 4663,
+  "caip2": "eip155:4663",
+  "deployments": [],
+  "customRegistry": {
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null
+  },
+  "launchStampRouter": {
+    "status": "planned",
+    "address": null,
+    "startBlock": null,
+    "runtimeCodeHash": null,
+    "deploymentEvidence": null
+  },
+  "customLaunchV4": {
+    "status": "planned",
+    "profile": null,
+    "finalityPolicy": null
+  },
+  "extensions": {
+    "programmable/read-model-v1": {
+      "status": "planned",
+      "absenceAuthoritative": false
+    }
+  }
+}
+```
+
+This is a selected-field example, not the complete manifest. The planned
+[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json),
+[API source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json),
+and
+[Developer source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
+support validation and preparation only. They do not activate a write route or
+prove deployment, finality, exact source verification, indexing, public
+visibility, trading, or release.
 
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational presentation mirror with a different schema and must never override or supplement the Developer manifest. A conflict pauses trust advancement and requires operator review.
 
@@ -524,6 +579,13 @@ Do not claim software will never change. The correct claim is: no mandatory clie
 
 ## Finality and reorgs
 
+Finality, exact source verification, indexing completeness, and public feed
+visibility are independent, chain-qualified evidence axes. A finalized
+transaction can remain unverified or unindexed. An exact source match does not
+establish finality or publication. A public record does not establish trading,
+liquidity, fee behavior, or safety. Robinhood currently claims none of these
+axes live.
+
 Finality values:
 
 - observed: seen onchain, non-final
@@ -688,6 +750,7 @@ Error responses follow the public problem schema and contain a stable code, huma
 - Status unavailable: keep last data, mark freshness unknown, pause advancement if required.
 - Manifest unavailable: use last trusted manifest for read-only display, mark stale, accept no new deployment.
 - Feed unavailable: retry without losing durable resume cursor.
+- Planned-chain feed unavailable with `absenceAuthoritative: false`: keep the chain visible, disable chain-dependent features, and treat an empty result as unknown rather than deletion or complete absence.
 - Event-log coverage incomplete: ingest recognized bounded records from HTTP 200, preserve degraded or unavailable quality, and do not interpret absence as deletion.
 - Enrichment degraded: ingest recognized launches and preserve partial, unavailable, and null identity, supply, timestamp, and provenance fields.
 - Unknown schema major: stop automatic ingestion and require migration.
@@ -709,6 +772,7 @@ Allowed:
 - Direct Native Hook Graph Profile V1 is a retained gated preview; its candidate route mapping authorizes neither wallet signature nor a launch. Fresh V3 clients use active Profile Revision 3; Revision 2 remains historical-read/exact-retry only.
 - Router V1 is live on Ethereum from the manifest-listed start block. Its finalized onchain canaries cover both CustomGraph and Classic, and the exact Classic V4 evidence is published separately in the manifest. Router remains provenance and transport, not a category.
 - Active v2 Classic discovery covers historical V3 and current V4; V1 and V2 are inactive history. Stock-Paired records are excluded from active v2 discovery while their immutable v1 compatibility records remain readable.
+- Robinhood Chain `4663` is advertised as planned with null public deployment roots, public submissions disabled, and non-authoritative unavailable feeds. This does not claim a live V4 API, deployment, source verification, index, public record, trading path, or release.
 - Every registered launch is discoverable.
 - Charts, quotes, simulation, and execution are available only when declared by a verified adapter.
 - New compatible deployments appear through the manifest without mandatory v2 client changes.

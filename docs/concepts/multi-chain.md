@@ -9,10 +9,22 @@ Ethereum Mainnet is the only `live` chain. Robinhood Chain Mainnet is listed as
 `/api/v2/manifests/4663` document. Its Programmable Router address, start block,
 runtime hash, deployment evidence and canary remain null, and its launch and
 token feeds return an explicit empty `unavailable` projection. That absence is
-not authoritative. Base, BNB Chain, Arbitrum, and other EVM networks are not
-published through this API.
+not authoritative. `customRegistry.publicSubmissionsEnabled` is `false`, and
+the V4 API, CLI, public write path, and read model remain planned. Prepared
+addresses and bindings do not replace the null public deployment roots. Base,
+BNB Chain, Arbitrum, and other EVM networks are not published through this API.
 
 Architecture readiness is not production support. Do not preconfigure a planned chain as live.
+
+The planned V4 machine contracts are available for review and client
+preparation:
+
+- [Custom Launch V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json)
+- [Custom Launch V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
+- [Developer V4 source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
+
+Their availability does not establish a live endpoint, deployment, exact
+source match, indexer, public launch record, trading path, or release.
 
 ## Identity
 
@@ -41,6 +53,42 @@ Do not reuse a cursor across API versions, chains, or filter scopes.
 The shared launch and token-list endpoints accept `chainId`. Omitting it keeps
 the existing Ethereum behavior. Supplying a planned chain never falls back to
 Ethereum, and supplying an unpublished chain returns `CHAIN_NOT_SUPPORTED`.
+
+Selected fields from the current planned Robinhood manifest look like this:
+
+```json
+{
+  "chainId": 4663,
+  "caip2": "eip155:4663",
+  "deployments": [],
+  "customRegistry": {
+    "publicSubmissionsEnabled": false,
+    "address": null,
+    "startBlock": null
+  },
+  "launchStampRouter": {
+    "status": "planned",
+    "address": null,
+    "startBlock": null,
+    "runtimeCodeHash": null,
+    "deploymentEvidence": null
+  },
+  "customLaunchV4": {
+    "status": "planned",
+    "profile": null,
+    "finalityPolicy": null
+  },
+  "extensions": {
+    "programmable/read-model-v1": {
+      "status": "planned",
+      "absenceAuthoritative": false
+    }
+  }
+}
+```
+
+This is a selected-field example, not a substitute for fetching and validating
+the complete manifest.
 
 ## Per-chain registry generations
 
@@ -86,6 +134,22 @@ descriptor digest, profile digest, finalized start block, complete deployment
 receipt, and canary object remain unresolved. Until a reviewed release pins
 every one of those values in code, changing a manifest to a syntactically
 valid `live` shape cannot activate the source and performs no backend read.
+
+## Independent evidence axes
+
+Treat these outcomes independently for each chain:
+
+| Axis | Required evidence |
+| --- | --- |
+| Finality | The chain-specific policy and canonical checkpoint; Robinhood V4 additionally requires its bound L2 checkpoint and Ethereum-finality evidence |
+| Exact source verification | The versioned component status; only durable Sourcify V2 exact evidence can produce Robinhood V4 `exact_match` |
+| Indexing | A complete cursor traversal with current `ready` quality for the exact chain and deployment binding |
+| Public visibility | A record actually published by the public chain-qualified feed |
+
+A finalized transaction can remain pending source verification and absent from
+an incomplete index. An exact source match does not prove finality, indexing,
+or publication. Publication does not prove trading, liquidity, fee behavior,
+or safety. While Robinhood remains planned, none of these axes is claimed live.
 
 ## Safe client behavior
 
