@@ -23,6 +23,8 @@ const CHAIN_DEPLOYMENT_SCHEMA =
   "programmable.custom-launch-chain-deployment.v1";
 const DEPLOYMENT_EVIDENCE_SCHEMA =
   "programmable.custom-launch-deployment-evidence.v1";
+const EXTERNAL_DEPLOYMENT_PROVIDER_READBACK_SCHEMA =
+  "programmable.custom-launch-deployment-provider-readback.v2";
 const ATOMIC_DEPLOYMENT_EVIDENCE_SCHEMA =
   "programmable.robinhood-atomic-root-deployment-evidence.v1";
 const ATOMIC_ROOT_TRANSITION_READBACK_SCHEMA =
@@ -51,6 +53,8 @@ const CACHE_MS = 15_000;
 const TRUSTED_FINALIZED_V4_RECORD = Symbol("trusted-finalized-v4-record");
 const ROBINHOOD_FOUNDATION_SOURCE_COMMITMENT =
   "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730";
+const EMPTY_RUNTIME_CODE_HASH =
+  "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 const SAFE_SOURCE_SUBJECT = Object.freeze({
   schemaVersion: "programmable.safe-source-commitment.v1",
   repository: "safe-global/safe-deployments",
@@ -1107,12 +1111,19 @@ function validExternalRootProviderReadback(
   trustDomain,
   expected,
 ) {
+  const expectedPreviousBlockNumber = (BigInt(expected.startBlock) - 1n).toString(10);
   if (!exactKeys(value, [
-    "blockHash", "blockNumber", "evidenceDigest", "providerId",
-    "runtimeCodeHash", "transactionHash", "transactionReceiptDigest",
-    "trustDomain",
+    "blockHash", "blockNumber", "evidenceDigest", "previousBlockHash",
+    "previousBlockNumber", "previousBlockRuntimeCodeHash", "providerId",
+    "rawTransactionDigest", "runtimeCodeHash", "transactionDigest",
+    "transactionHash", "transactionReceiptDigest", "trustDomain",
   ]) || value.providerId !== providerId || value.trustDomain !== trustDomain ||
     !sameHex(value.transactionHash, expected.transactionHash) ||
+    !SHA256.test(value.rawTransactionDigest ?? "") ||
+    !SHA256.test(value.transactionDigest ?? "") ||
+    value.previousBlockNumber !== expectedPreviousBlockNumber ||
+    !/^0x(?!0{64}$)[0-9a-f]{64}$/u.test(value.previousBlockHash ?? "") ||
+    value.previousBlockRuntimeCodeHash !== EMPTY_RUNTIME_CODE_HASH ||
     value.blockNumber !== expected.startBlock ||
     !/^0x(?!0{64}$)[0-9a-f]{64}$/u.test(value.blockHash ?? "") ||
     value.runtimeCodeHash !== expected.runtimeCodeHash ||
@@ -1120,7 +1131,7 @@ function validExternalRootProviderReadback(
     !SHA256.test(value.evidenceDigest ?? "")) return false;
   const { evidenceDigest, ...withoutDigest } = value;
   return canonicalSha256(
-    "programmable.custom-launch-deployment-provider-readback.v1",
+    EXTERNAL_DEPLOYMENT_PROVIDER_READBACK_SCHEMA,
     withoutDigest,
   ) === evidenceDigest;
 }
@@ -1131,8 +1142,10 @@ function validExternalRootDeploymentEvidence(value, contracts) {
   for (let index = 0; index < value.length; index += 1) {
     const evidence = value[index];
     const expected = ROBINHOOD_UNISWAP_EXTERNAL_ROOTS[index];
+    const expectedPreviousBlockNumber = (BigInt(expected.startBlock) - 1n).toString(10);
     if (!exactKeys(evidence, [
       "address", "blockHash", "contract", "evidenceDigest", "kind",
+      "previousBlockHash", "previousBlockNumber", "previousBlockRuntimeCodeHash",
       "providerReadbacks", "registrySource", "runtimeCodeHash", "schemaVersion",
       "startBlock", "transactionHash",
     ]) || evidence.schemaVersion !== DEPLOYMENT_EVIDENCE_SCHEMA ||
@@ -1141,6 +1154,9 @@ function validExternalRootDeploymentEvidence(value, contracts) {
       !sameHex(evidence.address, expected.address) ||
       evidence.runtimeCodeHash !== expected.runtimeCodeHash ||
       evidence.transactionHash !== expected.transactionHash ||
+      evidence.previousBlockNumber !== expectedPreviousBlockNumber ||
+      !/^0x(?!0{64}$)[0-9a-f]{64}$/u.test(evidence.previousBlockHash ?? "") ||
+      evidence.previousBlockRuntimeCodeHash !== EMPTY_RUNTIME_CODE_HASH ||
       evidence.startBlock !== expected.startBlock ||
       !sameHex(evidence.address, contracts[evidence.contract]?.address) ||
       !sameHex(
@@ -1156,7 +1172,15 @@ function validExternalRootDeploymentEvidence(value, contracts) {
       ) || !validExternalRootProviderReadback(
         evidence.providerReadbacks[1], "alchemy", "alchemy.com", expected,
       ) || evidence.providerReadbacks.some((readback) =>
+        readback.previousBlockNumber !== evidence.previousBlockNumber ||
+        readback.previousBlockHash !== evidence.previousBlockHash ||
         readback.blockHash !== evidence.blockHash) ||
+      evidence.providerReadbacks[0].rawTransactionDigest !==
+        evidence.providerReadbacks[1].rawTransactionDigest ||
+      evidence.providerReadbacks[0].transactionDigest !==
+        evidence.providerReadbacks[1].transactionDigest ||
+      evidence.providerReadbacks[0].transactionReceiptDigest !==
+        evidence.providerReadbacks[1].transactionReceiptDigest ||
       !SHA256.test(evidence.evidenceDigest ?? "")) {
       return false;
     }

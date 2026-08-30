@@ -113,4 +113,45 @@ describe("Custom Launch V4 public machine contracts", () => {
       });
     }
   });
+
+  test("keeps Developer V2 external-root evidence in structural parity with the public V4 wire", async () => {
+    const [{ document: developer }, { document: exactWallet }] = await Promise.all([
+      strictDocument("schemas/v2/custom-launch-chain-deployment-v4.schema.json"),
+      strictDocument("schemas/custom-launch/v4/exact-wallet-transaction.json"),
+    ]);
+    const canonicalRoot = exactWallet.properties.chainDeployment.properties
+      .externalRootDeploymentEvidence.prefixItems[0];
+    const developerRoot = developer.$defs.externalRoot;
+    assert.deepEqual(developerRoot.required, canonicalRoot.required);
+    assert.equal(developerRoot.additionalProperties, false);
+    assert.equal(
+      developerRoot["x-programmable-order"],
+      canonicalRoot["x-programmable-order"],
+    );
+
+    const canonicalReadback = canonicalRoot.properties.providerReadbacks.prefixItems[0];
+    const developerReadback = developer.$defs.externalRootProviderReadback;
+    assert.deepEqual(developerReadback.required, canonicalReadback.required);
+    assert.equal(developerReadback.additionalProperties, false);
+    assert.deepEqual(
+      Object.keys(developerReadback.properties).sort(),
+      Object.keys(canonicalReadback.properties).sort(),
+    );
+    assert.equal(
+      developerRoot.properties.previousBlockRuntimeCodeHash.const,
+      canonicalRoot.properties.previousBlockRuntimeCodeHash.const,
+    );
+    assert.equal(
+      developerReadback.properties.previousBlockRuntimeCodeHash.const,
+      canonicalReadback.properties.previousBlockRuntimeCodeHash.const,
+    );
+    const canonicalRoots = exactWallet.properties.chainDeployment.properties
+      .externalRootDeploymentEvidence.prefixItems;
+    const developerRoots = developer.$defs.externalRootDeploymentEvidence
+      .prefixItems;
+    assert.deepEqual(
+      developerRoots.map((root) => root.allOf[1].properties.previousBlockNumber),
+      canonicalRoots.map((root) => root.properties.previousBlockNumber),
+    );
+  });
 });

@@ -417,11 +417,19 @@ function chainDeploymentFor(manifest) {
     },
   ];
   const externalEvidence = ({ contract: contractName, transactionHash, startBlock }) => {
+    const previousBlockNumber = (BigInt(startBlock) - 1n).toString(10);
+    const previousBlockHash = HASH_D;
     const providerReadback = (providerId, trustDomain) => {
       const withoutDigest = {
         providerId,
         trustDomain,
         transactionHash,
+        rawTransactionDigest: SHA_1,
+        transactionDigest: SHA_2,
+        previousBlockNumber,
+        previousBlockHash,
+        previousBlockRuntimeCodeHash:
+          "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
         blockNumber: startBlock,
         blockHash: HASH_E,
         runtimeCodeHash: contracts[contractName].runtimeCodeHash,
@@ -430,7 +438,7 @@ function chainDeploymentFor(manifest) {
       return {
         ...withoutDigest,
         evidenceDigest: canonicalSha256(
-          "programmable.custom-launch-deployment-provider-readback.v1",
+          "programmable.custom-launch-deployment-provider-readback.v2",
           withoutDigest,
         ),
       };
@@ -442,6 +450,10 @@ function chainDeploymentFor(manifest) {
       address: contracts[contractName].address,
       runtimeCodeHash: contracts[contractName].runtimeCodeHash,
       transactionHash,
+      previousBlockNumber,
+      previousBlockHash,
+      previousBlockRuntimeCodeHash:
+        "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
       startBlock,
       blockHash: HASH_E,
       registrySource: structuredClone(registrySource),
@@ -660,6 +672,21 @@ function chainDeploymentFor(manifest) {
     externalRootDeploymentEvidence: externalRoots.map(externalEvidence),
     contracts,
   };
+}
+
+function resealExternalRootEvidence(evidence) {
+  for (const readback of evidence.providerReadbacks) {
+    const { evidenceDigest: _evidenceDigest, ...withoutDigest } = readback;
+    readback.evidenceDigest = canonicalSha256(
+      "programmable.custom-launch-deployment-provider-readback.v2",
+      withoutDigest,
+    );
+  }
+  const { evidenceDigest: _evidenceDigest, ...withoutDigest } = evidence;
+  evidence.evidenceDigest = canonicalSha256(
+    "programmable.custom-launch-deployment-evidence.v1",
+    withoutDigest,
+  );
 }
 
 function promotionAnchorFor(manifest) {
@@ -1126,6 +1153,39 @@ describe("Router-backed finalized V4 feed", () => {
         deployment.externalRootDeploymentEvidence[0].startBlock = "0";
       },
       (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0].previousBlockNumber;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0].previousBlockHash;
+      },
+      (deployment) => {
+        deployment.externalRootDeploymentEvidence[0].previousBlockRuntimeCodeHash = HASH_F;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].rawTransactionDigest;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].transactionDigest;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].previousBlockNumber;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].previousBlockHash;
+      },
+      (deployment) => {
+        delete deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].previousBlockRuntimeCodeHash;
+      },
+      (deployment) => {
+        deployment.externalRootDeploymentEvidence[0]
+          .providerReadbacks[0].previousBlockHash = `0x${"0".repeat(64)}`;
+      },
+      (deployment) => {
         deployment.externalRootDeploymentEvidence[0].contract =
           "positionManager";
       },
@@ -1188,6 +1248,40 @@ describe("Router-backed finalized V4 feed", () => {
     ]) {
       const page = pageFor(manifest);
       mutate(page.launches[0].chainDeployment);
+      page.launches[0].onchain.chainDeployment =
+        structuredClone(page.launches[0].chainDeployment);
+      assert.equal(validateDeployment(page.launches[0].chainDeployment), true);
+      const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
+        force: true,
+        loadPage: async () => page,
+      });
+      assert.equal(result.status, "unavailable");
+      assert.deepEqual(result.records, []);
+    }
+
+    for (const mutate of [
+      (evidence) => {
+        evidence.providerReadbacks[1].rawTransactionDigest = SHA_6;
+      },
+      (evidence) => {
+        evidence.providerReadbacks[1].transactionDigest = SHA_6;
+      },
+      (evidence) => {
+        evidence.providerReadbacks[1].transactionReceiptDigest = SHA_6;
+      },
+      (evidence) => {
+        evidence.providerReadbacks[1].previousBlockHash = HASH_F;
+      },
+      (evidence) => {
+        evidence.providerReadbacks[1].previousBlockNumber =
+          evidence.startBlock;
+      },
+    ]) {
+      const page = pageFor(manifest);
+      const evidence = page.launches[0].chainDeployment
+        .externalRootDeploymentEvidence[0];
+      mutate(evidence);
+      resealExternalRootEvidence(evidence);
       page.launches[0].onchain.chainDeployment =
         structuredClone(page.launches[0].chainDeployment);
       assert.equal(validateDeployment(page.launches[0].chainDeployment), true);

@@ -224,11 +224,20 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
     },
   ];
   const externalEvidence = ({ contract, transactionHash, startBlock }) => {
+    const previousBlockNumber = (BigInt(startBlock) - 1n).toString(10);
+    const previousBlockHash = hash("b");
+    const previousBlockRuntimeCodeHash =
+      "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
     const providerReadback = (providerId, trustDomain) => {
       const withoutDigest = {
         providerId,
         trustDomain,
         transactionHash,
+        rawTransactionDigest: sha("b"),
+        transactionDigest: sha("c"),
+        previousBlockNumber,
+        previousBlockHash,
+        previousBlockRuntimeCodeHash,
         blockNumber: startBlock,
         blockHash: hash("a"),
         runtimeCodeHash: contractBindings[contract].runtimeCodeHash,
@@ -237,7 +246,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
       return {
         ...withoutDigest,
         evidenceDigest: canonicalSha256(
-          "programmable.custom-launch-deployment-provider-readback.v1",
+          "programmable.custom-launch-deployment-provider-readback.v2",
           withoutDigest,
         ),
       };
@@ -249,6 +258,9 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
       address: contractBindings[contract].address,
       runtimeCodeHash: contractBindings[contract].runtimeCodeHash,
       transactionHash,
+      previousBlockNumber,
+      previousBlockHash,
+      previousBlockRuntimeCodeHash,
       startBlock,
       blockHash: hash("a"),
       registrySource: structuredClone(registrySource),
@@ -746,6 +758,37 @@ describe("chain-bound Developer read model", () => {
     );
     assert.equal(
       validateManifestSemantics(semanticSubstitution).some((finding) =>
+        finding.code === "ROBINHOOD_CUSTOM_LAUNCH_FINALIZED_BINDING"),
+      true,
+    );
+
+    const externalReadbackSubstitution = structuredClone(liveRobinhood);
+    const externalEvidence = externalReadbackSubstitution
+      .robinhoodCustomLaunchBinding.chainDeployment
+      .externalRootDeploymentEvidence[0];
+    externalEvidence.providerReadbacks[1].rawTransactionDigest =
+      `sha256:${"d".repeat(64)}`;
+    for (const readback of externalEvidence.providerReadbacks) {
+      const { evidenceDigest: _digest, ...withoutDigest } = readback;
+      readback.evidenceDigest = canonicalSha256(
+        "programmable.custom-launch-deployment-provider-readback.v2",
+        withoutDigest,
+      );
+    }
+    {
+      const { evidenceDigest: _digest, ...withoutDigest } = externalEvidence;
+      externalEvidence.evidenceDigest = canonicalSha256(
+        externalEvidence.schemaVersion,
+        withoutDigest,
+      );
+    }
+    assertValid(
+      validate,
+      externalReadbackSubstitution,
+      "structurally valid external-root provider disagreement",
+    );
+    assert.equal(
+      validateManifestSemantics(externalReadbackSubstitution).some((finding) =>
         finding.code === "ROBINHOOD_CUSTOM_LAUNCH_FINALIZED_BINDING"),
       true,
     );
