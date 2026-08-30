@@ -27,13 +27,18 @@ function options(argv) {
     values.set(key, value);
   }
   const allowed = ["--run-id", "--run-attempt", "--artifact-name", "--run-output",
-    "--artifact-output"];
+    "--artifact-output", "--producer"];
   for (const key of values.keys()) {
     if (!allowed.includes(key)) fail(`unsupported GitHub evidence option ${key}`);
   }
-  const result = Object.fromEntries(allowed.map((key) => [key.slice(2), values.get(key)]));
-  if (Object.values(result).some((value) => !value) || !RUN_ID.test(result["run-id"]) ||
-    !RUN_ID.test(result["run-attempt"])) fail("all GitHub evidence options are required");
+  const required = allowed.filter((key) => key !== "--producer");
+  const result = Object.fromEntries(required.map((key) => [key.slice(2), values.get(key)]));
+  result.producer = values.get("--producer") ?? "release";
+  if (required.some((key) => !values.get(key)) || !RUN_ID.test(result["run-id"]) ||
+    !RUN_ID.test(result["run-attempt"]) ||
+    !["release", "release-or-recovery"].includes(result.producer)) {
+    fail("all GitHub evidence options and an exact producer mode are required");
+  }
   return result;
 }
 
@@ -71,10 +76,16 @@ const input = options(process.argv.slice(2));
 const token = process.env.GITHUB_TOKEN;
 if (!token) fail("GITHUB_TOKEN is required for read-only Actions evidence");
 const base = `https://api.github.com/repos/${REPOSITORY}/actions/runs/${input["run-id"]}`;
-const runRaw = await githubJson(base, token);
+const runRaw = await githubJson(`${base}/attempts/${input["run-attempt"]}`, token);
 const run = validateGitHubRunEvidence(runRaw, {
   runId: input["run-id"],
   runAttempt: input["run-attempt"],
+  workflowRefs: input.producer === "release-or-recovery"
+    ? [
+      "programmablehq/Developers/.github/workflows/vercel-release.yml@refs/heads/main",
+      "programmablehq/Developers/.github/workflows/vercel-release-recovery.yml@refs/heads/main",
+    ]
+    : ["programmablehq/Developers/.github/workflows/vercel-release.yml@refs/heads/main"],
 });
 const artifactsRaw = await githubJson(`${base}/artifacts?per_page=100`, token);
 const artifact = validateGitHubArtifactEvidence(artifactsRaw, {

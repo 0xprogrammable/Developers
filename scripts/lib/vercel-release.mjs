@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { inflateRawSync } from "node:zlib";
 
 import { canonicalSha256, canonicalizeJson } from "../../server/canonical.js";
 import { keccak256 } from "../../server/keccak.js";
@@ -59,6 +60,28 @@ export const SOURCE_TRANSITION_SCHEMA =
   "programmable.developers.evidence-only-source-transition.v1";
 export const PRE_MUTATION_STATE_SCHEMA =
   "programmable.developers.vercel-pre-mutation-state.v2";
+export const PUBLIC_MUTATION_INTENT_SCHEMA =
+  "programmable.developers.vercel-public-mutation-intent.v1";
+export const PUBLIC_MUTATION_INTENT_PROVENANCE_SCHEMA =
+  "programmable.developers.vercel-public-mutation-intent-provenance.v1";
+export const PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA =
+  "programmable.developers.vercel-public-mutation-recovery-attempt-provenance.v1";
+export const PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA =
+  "programmable.developers.vercel-public-mutation-recovery-attempt.v1";
+export const PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA =
+  "programmable.developers.vercel-public-mutation-recovery-readiness.v1";
+export const RECOVERED_PROMOTION_RECEIPT_SCHEMA =
+  "programmable.developers.vercel-recovered-promotion-receipt.v1";
+export const RECOVERED_ROLLBACK_RECEIPT_SCHEMA =
+  "programmable.developers.vercel-recovered-rollback-receipt.v1";
+export const PLANNED_DEPLOY_RECEIPT_SCHEMA =
+  "programmable.developers.vercel-planned-deploy-receipt.v1";
+export const PLANNED_PUBLIC_MUTATION_READINESS_SCHEMA =
+  "programmable.developers.vercel-planned-public-mutation-readiness.v1";
+export const PUBLIC_MUTATION_READINESS_SCHEMA =
+  "programmable.developers.vercel-public-mutation-readiness.v1";
+export const VERCEL_MUTATION_CONTROL_SCHEMA =
+  "programmable.developers.vercel-mutation-control.v1";
 
 export const CANONICAL_STAGE_BUNDLE_PATH =
   "release/robinhood-chain-4663/programmable-stage-bundle.json";
@@ -179,6 +202,10 @@ const MAX_INDEXER_OWNER_PROTECTION_SNAPSHOT_AGE_MILLISECONDS = 24 * 60 * 60 * 10
 const DEVELOPERS_RELEASE_WORKFLOW_PATH = ".github/workflows/vercel-release.yml";
 const DEVELOPERS_RELEASE_WORKFLOW_REF =
   `programmablehq/Developers/${DEVELOPERS_RELEASE_WORKFLOW_PATH}@refs/heads/main`;
+const DEVELOPERS_RECOVERY_WORKFLOW_PATH =
+  ".github/workflows/vercel-release-recovery.yml";
+const DEVELOPERS_RECOVERY_WORKFLOW_REF =
+  `programmablehq/Developers/${DEVELOPERS_RECOVERY_WORKFLOW_PATH}@refs/heads/main`;
 const DEVELOPERS_REPOSITORY = "programmablehq/Developers";
 const DEVELOPERS_PRODUCTION_ENVIRONMENT = "production";
 const DEVELOPERS_PRODUCTION_ENVIRONMENT_ID = "19441858925";
@@ -480,6 +507,110 @@ function sha256Bytes(bytes) {
 
 function canonicalArtifactBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function exactZipEntry(archiveInput, entryPath) {
+  const archive = Buffer.from(archiveInput);
+  assert(archive.byteLength > 0 && archive.byteLength <= 128 * 1024 * 1024,
+    "GitHub artifact archive must be between one byte and 128 MiB");
+  assert(typeof entryPath === "string" &&
+    /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(entryPath) &&
+    !entryPath.includes("..") && !entryPath.startsWith("/") && !entryPath.endsWith("/"),
+  "GitHub artifact archive entry path is invalid");
+  const minimumEocd = 22;
+  let eocd = -1;
+  const lowerBound = Math.max(0, archive.byteLength - minimumEocd - 65_535);
+  for (let offset = archive.byteLength - minimumEocd; offset >= lowerBound; offset -= 1) {
+    if (archive.readUInt32LE(offset) === 0x06054b50) {
+      eocd = offset;
+      break;
+    }
+  }
+  assert(eocd >= 0 && eocd + minimumEocd <= archive.byteLength,
+    "GitHub artifact archive has no valid ZIP directory");
+  const disk = archive.readUInt16LE(eocd + 4);
+  const centralDisk = archive.readUInt16LE(eocd + 6);
+  const entriesOnDisk = archive.readUInt16LE(eocd + 8);
+  const entryCount = archive.readUInt16LE(eocd + 10);
+  const centralSize = archive.readUInt32LE(eocd + 12);
+  const centralOffset = archive.readUInt32LE(eocd + 16);
+  const commentLength = archive.readUInt16LE(eocd + 20);
+  assert(disk === 0 && centralDisk === 0 && entriesOnDisk === entryCount &&
+    entryCount > 0 && entryCount < 65_535 && centralSize < 0xffffffff &&
+    centralOffset < 0xffffffff && eocd + minimumEocd + commentLength === archive.byteLength &&
+    centralOffset + centralSize === eocd,
+  "GitHub artifact archive ZIP directory is unsupported or inconsistent");
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let cursor = centralOffset;
+  let selected = null;
+  for (let index = 0; index < entryCount; index += 1) {
+    assert(cursor + 46 <= eocd && archive.readUInt32LE(cursor) === 0x02014b50,
+      "GitHub artifact archive central entry is invalid");
+    const flags = archive.readUInt16LE(cursor + 8);
+    const method = archive.readUInt16LE(cursor + 10);
+    const compressedSize = archive.readUInt32LE(cursor + 20);
+    const uncompressedSize = archive.readUInt32LE(cursor + 24);
+    const nameLength = archive.readUInt16LE(cursor + 28);
+    const extraLength = archive.readUInt16LE(cursor + 30);
+    const entryCommentLength = archive.readUInt16LE(cursor + 32);
+    const startDisk = archive.readUInt16LE(cursor + 34);
+    const localOffset = archive.readUInt32LE(cursor + 42);
+    const next = cursor + 46 + nameLength + extraLength + entryCommentLength;
+    assert(next <= eocd && startDisk === 0 && compressedSize < 0xffffffff &&
+      uncompressedSize < 0xffffffff && localOffset < 0xffffffff && (flags & 0x1) === 0,
+    "GitHub artifact archive entry is unsupported or inconsistent");
+    const name = decoder.decode(archive.subarray(cursor + 46, cursor + 46 + nameLength));
+    if (name === entryPath) {
+      assert(selected === null, "GitHub artifact archive contains a duplicate bound entry");
+      selected = { method, compressedSize, uncompressedSize, localOffset, name };
+    }
+    cursor = next;
+  }
+  assert(cursor === eocd && selected !== null,
+    "GitHub artifact archive does not contain the exact bound entry");
+  const local = selected.localOffset;
+  assert(local + 30 <= centralOffset && archive.readUInt32LE(local) === 0x04034b50,
+    "GitHub artifact archive local entry is invalid");
+  const localNameLength = archive.readUInt16LE(local + 26);
+  const localExtraLength = archive.readUInt16LE(local + 28);
+  const dataStart = local + 30 + localNameLength + localExtraLength;
+  const dataEnd = dataStart + selected.compressedSize;
+  assert(dataEnd <= centralOffset &&
+    decoder.decode(archive.subarray(local + 30, local + 30 + localNameLength)) === selected.name,
+  "GitHub artifact archive local entry differs from its directory");
+  const compressed = archive.subarray(dataStart, dataEnd);
+  let bytes;
+  if (selected.method === 0) bytes = Buffer.from(compressed);
+  else if (selected.method === 8) {
+    try {
+      bytes = inflateRawSync(compressed, { maxOutputLength: 32 * 1024 * 1024 });
+    } catch {
+      throw new TypeError("GitHub artifact archive bound entry cannot be decompressed safely");
+    }
+  } else {
+    throw new TypeError("GitHub artifact archive bound entry uses an unsupported compression");
+  }
+  assert(bytes.byteLength === selected.uncompressedSize &&
+    bytes.byteLength <= 32 * 1024 * 1024,
+  "GitHub artifact archive bound entry size is invalid");
+  return bytes;
+}
+
+export function verifyGitHubArtifactArchiveEntry(archive, {
+  artifactDigest, entryPath, expectedBytes,
+}) {
+  exactSha256(artifactDigest, "GitHub artifact archive digest");
+  assert(sha256Bytes(archive) === artifactDigest,
+    "downloaded GitHub artifact archive differs from provider metadata");
+  const bytes = exactZipEntry(archive, entryPath);
+  const expected = Buffer.from(expectedBytes);
+  assert(bytes.equals(expected),
+    "GitHub artifact archive entry differs from the exact local evidence bytes");
+  return {
+    artifactArchiveDigest: artifactDigest,
+    artifactEntryPath: entryPath,
+    artifactEntrySha256: sha256Bytes(bytes),
+  };
 }
 
 function canonicalEqual(left, right) {
@@ -2771,22 +2902,59 @@ function exactWorkflow(value, label = "release workflow") {
   return workflow;
 }
 
+function exactRecoveryWorkflow(value, label = "release recovery workflow") {
+  const workflow = exactKeys(value, [
+    "repository", "workflowRef", "runId", "runAttempt", "actor", "actorId",
+  ], label);
+  assert(workflow.repository === DEVELOPERS_REPOSITORY &&
+    workflow.workflowRef === DEVELOPERS_RECOVERY_WORKFLOW_REF &&
+    RUN_ID.test(workflow.runId) && RUN_ID.test(workflow.runAttempt) &&
+    workflow.actor === DEVELOPERS_CANONICAL_OWNER.login &&
+    workflow.actorId === DEVELOPERS_CANONICAL_OWNER.id,
+  `${label} is not the canonical owner-dispatched recovery workflow`);
+  return workflow;
+}
+
+function exactOwnerWorkflow(value, label = "owner-dispatched workflow") {
+  if (value?.workflowRef === DEVELOPERS_RECOVERY_WORKFLOW_REF) {
+    return exactRecoveryWorkflow(value, label);
+  }
+  return exactWorkflow(value, label);
+}
+
 export function validateGitHubRunEvidence(value, expected) {
   const run = plainObject(value, "GitHub stage workflow run");
   const repository = plainObject(run.repository, "GitHub stage workflow repository");
   const actor = plainObject(run.actor, "GitHub stage workflow actor");
+  const triggeringActor = plainObject(run.triggering_actor,
+    "GitHub stage workflow triggering actor");
   const headCommit = plainObject(run.head_commit, "GitHub stage workflow head commit");
+  const producer = [
+    {
+      workflowRef: DEVELOPERS_RELEASE_WORKFLOW_REF,
+      path: DEVELOPERS_RELEASE_WORKFLOW_PATH,
+      name: "Vercel release control",
+    },
+    {
+      workflowRef: DEVELOPERS_RECOVERY_WORKFLOW_REF,
+      path: DEVELOPERS_RECOVERY_WORKFLOW_PATH,
+      name: "Vercel release recovery",
+    },
+  ].find(({ path: workflowPath, name }) => run.path === workflowPath && run.name === name);
+  const allowedWorkflowRefs = expected.workflowRefs ?? [DEVELOPERS_RELEASE_WORKFLOW_REF];
   assert(String(run.id) === expected.runId && String(run.run_attempt) === expected.runAttempt &&
     run.event === "workflow_dispatch" && run.status === "completed" &&
     run.conclusion === "success" &&
     (expected.sourceRevision === undefined || run.head_sha === expected.sourceRevision) &&
-    run.head_branch === "main" && run.path === DEVELOPERS_RELEASE_WORKFLOW_PATH &&
-    run.name === "Vercel release control" &&
+    run.head_branch === "main" && producer !== undefined &&
+    allowedWorkflowRefs.includes(producer.workflowRef) &&
     repository.full_name === DEVELOPERS_REPOSITORY &&
     headCommit.id === run.head_sha && COMMIT.test(run.head_sha) &&
     COMMIT.test(headCommit.tree_id) &&
     actor.login === DEVELOPERS_CANONICAL_OWNER.login &&
     String(actor.id) === DEVELOPERS_CANONICAL_OWNER.id &&
+    triggeringActor.login === DEVELOPERS_CANONICAL_OWNER.login &&
+    String(triggeringActor.id) === DEVELOPERS_CANONICAL_OWNER.id &&
     typeof run.html_url === "string" &&
     run.html_url.startsWith(`https://github.com/${repository.full_name}/actions/runs/${run.id}`),
   "selected GitHub stage workflow run is not the exact successful protected release run");
@@ -2794,7 +2962,7 @@ export function validateGitHubRunEvidence(value, expected) {
     schemaVersion: GITHUB_RUN_EVIDENCE_SCHEMA,
     state: "successful-protected-main-run",
     repository: repository.full_name,
-    workflowRef: DEVELOPERS_RELEASE_WORKFLOW_REF,
+    workflowRef: producer.workflowRef,
     runId: String(run.id),
     runAttempt: String(run.run_attempt),
     actor: actor.login,
@@ -2813,12 +2981,21 @@ export function parseGitHubRunEvidence(value) {
   assert(evidence.schemaVersion === GITHUB_RUN_EVIDENCE_SCHEMA &&
     evidence.state === "successful-protected-main-run" &&
     evidence.repository === DEVELOPERS_REPOSITORY &&
-    evidence.workflowRef === DEVELOPERS_RELEASE_WORKFLOW_REF &&
+    [DEVELOPERS_RELEASE_WORKFLOW_REF, DEVELOPERS_RECOVERY_WORKFLOW_REF]
+      .includes(evidence.workflowRef) &&
     RUN_ID.test(evidence.runId) && RUN_ID.test(evidence.runAttempt) &&
     typeof evidence.actor === "string" && evidence.actor.length > 0 &&
     RUN_ID.test(evidence.actorId) && COMMIT.test(evidence.sourceRevision) &&
     COMMIT.test(evidence.sourceTree),
   "GitHub workflow run evidence is invalid");
+  exactOwnerWorkflow({
+    repository: evidence.repository,
+    workflowRef: evidence.workflowRef,
+    runId: evidence.runId,
+    runAttempt: evidence.runAttempt,
+    actor: evidence.actor,
+    actorId: evidence.actorId,
+  }, "GitHub workflow run evidence workflow");
   const { runEvidenceDigest, ...withoutDigest } = evidence;
   assert(runEvidenceDigest === canonicalSha256(GITHUB_RUN_EVIDENCE_SCHEMA, withoutDigest),
     "GitHub workflow run evidence digest is invalid");
@@ -2878,6 +3055,171 @@ export function parseGitHubArtifactEvidence(value) {
   return evidence;
 }
 
+const INTERRUPTED_RELEASE_CONCLUSIONS = Object.freeze([
+  "failure", "cancelled", "timed_out",
+]);
+
+export function validatePublicMutationIntentProvenance(value, expected) {
+  const provider = exactKeys(value, ["workflowRun", "artifacts"],
+    "public mutation intent provider provenance");
+  const run = plainObject(provider.workflowRun,
+    "public mutation intent workflow run");
+  const repository = plainObject(run.repository,
+    "public mutation intent workflow repository");
+  const actor = plainObject(run.actor, "public mutation intent workflow actor");
+  const triggeringActor = plainObject(run.triggering_actor,
+    "public mutation intent triggering actor");
+  const headCommit = plainObject(run.head_commit,
+    "public mutation intent workflow head commit");
+  assert(RUN_ID.test(expected.runId) && RUN_ID.test(expected.runAttempt),
+    "public mutation intent expected run identity is invalid");
+  const workflow = exactWorkflow({
+    repository: DEVELOPERS_REPOSITORY,
+    workflowRef: DEVELOPERS_RELEASE_WORKFLOW_REF,
+    runId: expected.runId,
+    runAttempt: expected.runAttempt,
+    actor: DEVELOPERS_CANONICAL_OWNER.login,
+    actorId: DEVELOPERS_CANONICAL_OWNER.id,
+  }, "public mutation intent producer workflow");
+  assert(String(run.id) === workflow.runId &&
+    String(run.run_attempt) === workflow.runAttempt &&
+    run.event === "workflow_dispatch" && run.status === "completed" &&
+    INTERRUPTED_RELEASE_CONCLUSIONS.includes(run.conclusion) &&
+    run.head_branch === "main" && run.path === DEVELOPERS_RELEASE_WORKFLOW_PATH &&
+    run.name === "Vercel release control" &&
+    repository.full_name === DEVELOPERS_REPOSITORY &&
+    headCommit.id === run.head_sha && COMMIT.test(run.head_sha) &&
+    COMMIT.test(headCommit.tree_id) &&
+    actor.login === DEVELOPERS_CANONICAL_OWNER.login &&
+    String(actor.id) === DEVELOPERS_CANONICAL_OWNER.id &&
+    triggeringActor.login === DEVELOPERS_CANONICAL_OWNER.login &&
+    String(triggeringActor.id) === DEVELOPERS_CANONICAL_OWNER.id &&
+    typeof run.html_url === "string" &&
+    run.html_url.startsWith(
+      `https://github.com/${DEVELOPERS_REPOSITORY}/actions/runs/${workflow.runId}`,
+    ), "public mutation intent is not from an interrupted canonical release run");
+  exactSecondInstant(run.created_at, "public mutation intent run created_at");
+  exactSecondInstant(run.run_started_at, "public mutation intent run run_started_at");
+  exactSecondInstant(run.updated_at, "public mutation intent run updated_at");
+  const artifactName =
+    `developers-vercel-mutation-intent-${workflow.runId}-${workflow.runAttempt}`;
+  const artifact = validateGitHubArtifactEvidence(provider.artifacts, {
+    name: artifactName,
+    runId: workflow.runId,
+    runAttempt: workflow.runAttempt,
+    sourceRevision: run.head_sha,
+  });
+  const rawArtifacts = plainObject(provider.artifacts,
+    "public mutation intent artifact listing").artifacts;
+  const rawArtifact = rawArtifacts.find(({ id }) => String(id) === artifact.artifactId);
+  exactSecondInstant(rawArtifact.created_at,
+    "public mutation intent artifact created_at");
+  exactSecondInstant(rawArtifact.updated_at,
+    "public mutation intent artifact updated_at");
+  exactSecondInstant(rawArtifact.expires_at,
+    "public mutation intent artifact expires_at");
+  assert(Date.parse(run.run_started_at) >= Date.parse(run.created_at) &&
+    Date.parse(rawArtifact.created_at) >= Date.parse(run.run_started_at) &&
+    Date.parse(rawArtifact.updated_at) >= Date.parse(rawArtifact.created_at) &&
+    Date.parse(run.updated_at) >= Date.parse(rawArtifact.updated_at) &&
+    Date.parse(rawArtifact.expires_at) > Date.parse(run.updated_at),
+  "public mutation intent producer timestamps are invalid");
+  const source = exactSource({
+    repository: DEVELOPERS_REPOSITORY,
+    revision: run.head_sha,
+    tree: headCommit.tree_id,
+  }, "public mutation intent producer source");
+  const intent = parsePublicMutationIntent(expected.intent);
+  const archiveBinding = verifyGitHubArtifactArchiveEntry(expected.artifactArchive, {
+    artifactDigest: artifact.artifactDigest,
+    entryPath: "public-mutation-intent.json",
+    expectedBytes: canonicalArtifactBytes(intent),
+  });
+  assert(canonicalEqual(intent.source, source) &&
+    canonicalEqual(intent.workflow, workflow) &&
+    Date.parse(intent.createdAt) >= Date.parse(run.run_started_at) &&
+    Date.parse(intent.createdAt) <= Date.parse(rawArtifact.created_at) + 999 &&
+    Date.parse(intent.createdAt) <= Date.parse(run.updated_at) + 999,
+  "public mutation intent differs from its authenticated producer");
+  const normalized = {
+    schemaVersion: PUBLIC_MUTATION_INTENT_PROVENANCE_SCHEMA,
+    state: "interrupted-release-intent-artifact",
+    source,
+    workflow,
+    conclusion: run.conclusion,
+    artifact,
+    ...archiveBinding,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    runCreatedAt: run.created_at,
+    runStartedAt: run.run_started_at,
+    artifactCreatedAt: rawArtifact.created_at,
+    artifactUpdatedAt: rawArtifact.updated_at,
+    completedAt: run.updated_at,
+    artifactExpiresAt: rawArtifact.expires_at,
+  };
+  return withDigest(PUBLIC_MUTATION_INTENT_PROVENANCE_SCHEMA, normalized,
+    "intentProvenanceDigest");
+}
+
+export function parsePublicMutationIntentProvenance(value, { intent } = {}) {
+  const provenance = exactKeys(value, [
+    "schemaVersion", "state", "source", "workflow", "conclusion", "artifact",
+    "artifactArchiveDigest", "artifactEntryPath", "artifactEntrySha256",
+    "mutationIntentDigest",
+    "runCreatedAt", "runStartedAt", "artifactCreatedAt", "artifactUpdatedAt",
+    "completedAt", "artifactExpiresAt", "intentProvenanceDigest",
+  ], "public mutation intent provenance");
+  assert(provenance.schemaVersion === PUBLIC_MUTATION_INTENT_PROVENANCE_SCHEMA &&
+    provenance.state === "interrupted-release-intent-artifact" &&
+    INTERRUPTED_RELEASE_CONCLUSIONS.includes(provenance.conclusion),
+  "public mutation intent provenance is invalid");
+  const source = exactSource(provenance.source,
+    "public mutation intent provenance source");
+  const workflow = exactWorkflow(provenance.workflow,
+    "public mutation intent provenance workflow");
+  const artifact = parseGitHubArtifactEvidence(provenance.artifact);
+  exactSha256(provenance.artifactArchiveDigest,
+    "public mutation intent provenance artifactArchiveDigest");
+  exactSha256(provenance.artifactEntrySha256,
+    "public mutation intent provenance artifactEntrySha256");
+  exactSha256(provenance.mutationIntentDigest,
+    "public mutation intent provenance mutationIntentDigest");
+  for (const key of [
+    "runCreatedAt", "runStartedAt", "artifactCreatedAt", "artifactUpdatedAt",
+    "completedAt", "artifactExpiresAt",
+  ]) exactSecondInstant(provenance[key], `public mutation intent provenance ${key}`);
+  assert(artifact.runId === workflow.runId &&
+    artifact.runAttempt === workflow.runAttempt &&
+    artifact.sourceRevision === source.revision &&
+    provenance.artifactArchiveDigest === artifact.artifactDigest &&
+    provenance.artifactEntryPath === "public-mutation-intent.json" &&
+    artifact.artifactName ===
+      `developers-vercel-mutation-intent-${workflow.runId}-${workflow.runAttempt}` &&
+    Date.parse(provenance.runStartedAt) >= Date.parse(provenance.runCreatedAt) &&
+    Date.parse(provenance.artifactCreatedAt) >= Date.parse(provenance.runStartedAt) &&
+    Date.parse(provenance.artifactUpdatedAt) >= Date.parse(provenance.artifactCreatedAt) &&
+    Date.parse(provenance.completedAt) >= Date.parse(provenance.artifactUpdatedAt) &&
+    Date.parse(provenance.artifactExpiresAt) > Date.parse(provenance.completedAt),
+  "public mutation intent provenance bindings are invalid");
+  const { intentProvenanceDigest, ...withoutDigest } = provenance;
+  assert(intentProvenanceDigest === canonicalSha256(
+    PUBLIC_MUTATION_INTENT_PROVENANCE_SCHEMA, withoutDigest,
+  ), "public mutation intent provenance digest is invalid");
+  if (intent) {
+    const parsedIntent = parsePublicMutationIntent(intent);
+    assert(provenance.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      provenance.artifactEntrySha256 ===
+        sha256Bytes(canonicalArtifactBytes(parsedIntent)) &&
+      canonicalEqual(source, parsedIntent.source) &&
+      canonicalEqual(workflow, parsedIntent.workflow) &&
+      Date.parse(parsedIntent.createdAt) >= Date.parse(provenance.runStartedAt) &&
+      Date.parse(parsedIntent.createdAt) <= Date.parse(provenance.artifactCreatedAt) + 999 &&
+      Date.parse(parsedIntent.createdAt) <= Date.parse(provenance.completedAt) + 999,
+    "public mutation intent differs from its authenticated producer provenance");
+  }
+  return provenance;
+}
+
 export function validateGitHubOwnerDispatchAuthorization(value, expected) {
   const provider = exactKeys(value, ["workflowRun", "environment"],
     "GitHub owner-dispatch provider readback");
@@ -2896,8 +3238,15 @@ export function validateGitHubOwnerDispatchAuthorization(value, expected) {
   assert(Array.isArray(environment.protection_rules) &&
     environment.protection_rules.every((rule) => rule?.type !== "required_reviewers"),
   "GitHub production environment must not invent a second-party reviewer gate");
-  const workflow = exactWorkflow(expected.workflow,
+  const workflow = exactOwnerWorkflow(expected.workflow,
     "GitHub owner-dispatch authorization workflow");
+  const recovery = workflow.workflowRef === DEVELOPERS_RECOVERY_WORKFLOW_REF;
+  const expectedWorkflowPath = recovery
+    ? DEVELOPERS_RECOVERY_WORKFLOW_PATH
+    : DEVELOPERS_RELEASE_WORKFLOW_PATH;
+  const expectedWorkflowName = recovery
+    ? "Vercel release recovery"
+    : "Vercel release control";
   const source = exactSource(expected.source,
     "GitHub owner-dispatch authorization source");
   exactInstant(expected.observedAt, "GitHub owner-dispatch observedAt");
@@ -2905,8 +3254,8 @@ export function validateGitHubOwnerDispatchAuthorization(value, expected) {
     String(run.run_attempt) === workflow.runAttempt &&
     run.event === "workflow_dispatch" && run.status === "in_progress" &&
     run.conclusion === null && run.head_sha === source.revision &&
-    run.head_branch === "main" && run.path === DEVELOPERS_RELEASE_WORKFLOW_PATH &&
-    run.name === "Vercel release control" &&
+    run.head_branch === "main" && run.path === expectedWorkflowPath &&
+    run.name === expectedWorkflowName &&
     repository.full_name === DEVELOPERS_REPOSITORY &&
     headCommit.id === source.revision && headCommit.tree_id === source.tree &&
     actor.login === DEVELOPERS_CANONICAL_OWNER.login &&
@@ -2979,7 +3328,8 @@ export function parseGitHubOwnerDispatchAuthorization(value, { workflow, source 
     owner.login === DEVELOPERS_CANONICAL_OWNER.login &&
     owner.id === DEVELOPERS_CANONICAL_OWNER.id &&
     workflowRun.repository === DEVELOPERS_REPOSITORY &&
-    workflowRun.workflowRef === DEVELOPERS_RELEASE_WORKFLOW_REF &&
+    [DEVELOPERS_RELEASE_WORKFLOW_REF, DEVELOPERS_RECOVERY_WORKFLOW_REF]
+      .includes(workflowRun.workflowRef) &&
     RUN_ID.test(workflowRun.runId) && RUN_ID.test(workflowRun.runAttempt) &&
     COMMIT.test(workflowRun.sourceRevision) && COMMIT.test(workflowRun.sourceTree) &&
     workflowRun.event === "workflow_dispatch",
@@ -2990,7 +3340,7 @@ export function parseGitHubOwnerDispatchAuthorization(value, { workflow, source 
   assert(Date.parse(environment.updatedAt) >= Date.parse(environment.createdAt),
     "GitHub owner-dispatch environment timestamps disagree");
   if (workflow) {
-    const parsed = exactWorkflow(workflow, "authorized workflow");
+    const parsed = exactOwnerWorkflow(workflow, "authorized workflow");
     assert(workflowRun.repository === parsed.repository &&
       workflowRun.workflowRef === parsed.workflowRef &&
       workflowRun.runId === parsed.runId && workflowRun.runAttempt === parsed.runAttempt &&
@@ -3174,6 +3524,92 @@ export function createVercelPublicDeploymentResolution(input) {
   };
   return withDigest(VERCEL_PUBLIC_DEPLOYMENT_RESOLUTION_SCHEMA, value,
     "resolutionDigest");
+}
+
+export function createVercelMutationControlEvidence(input) {
+  const project = plainObject(input.project, "Vercel mutation-control project");
+  const target = exactTarget(input.target, "Vercel mutation-control target");
+  assert(project.id === target.projectId,
+    "Vercel mutation-control evidence is for a different project");
+  assert(project.rollingRelease === undefined || project.rollingRelease === null ||
+    project.rollingRelease === false,
+    "Vercel mutation control requires Rolling Releases to be disabled");
+  let lastAliasRequest = null;
+  if (project.lastAliasRequest !== undefined && project.lastAliasRequest !== null) {
+    const raw = plainObject(project.lastAliasRequest,
+      "Vercel mutation-control last alias request");
+    assert(["pending", "in-progress", "succeeded", "failed", "skipped"]
+      .includes(raw.jobStatus) &&
+      Number.isSafeInteger(raw.requestedAt) && raw.requestedAt > 0 &&
+      VERCEL_ID.test(raw.toDeploymentId) &&
+      ["promote", "rollback"].includes(raw.type),
+    "Vercel mutation-control alias request is invalid or unknown");
+    lastAliasRequest = {
+      jobStatus: raw.jobStatus,
+      requestedAt: new Date(raw.requestedAt).toISOString(),
+      toDeploymentId: raw.toDeploymentId,
+      type: raw.type,
+    };
+  }
+  exactInstant(input.checkedAt, "Vercel mutation-control checkedAt");
+  assert(lastAliasRequest === null ||
+    Date.parse(lastAliasRequest.requestedAt) <= Date.parse(input.checkedAt),
+  "Vercel mutation-control alias request cannot be future-dated");
+  return withDigest(VERCEL_MUTATION_CONTROL_SCHEMA, {
+    schemaVersion: VERCEL_MUTATION_CONTROL_SCHEMA,
+    state: "provider-mutation-control",
+    provider: "vercel",
+    projectId: target.projectId,
+    rollingReleaseEnabled: false,
+    lastAliasRequest,
+    mutationAvailable: lastAliasRequest === null ||
+      !["pending", "in-progress"].includes(lastAliasRequest.jobStatus),
+    checkedAt: input.checkedAt,
+  }, "mutationControlDigest");
+}
+
+export function parseVercelMutationControlEvidence(value, { target } = {}) {
+  const evidence = exactKeys(value, [
+    "schemaVersion", "state", "provider", "projectId", "rollingReleaseEnabled",
+    "lastAliasRequest", "mutationAvailable", "checkedAt", "mutationControlDigest",
+  ], "Vercel mutation-control evidence");
+  assert(evidence.schemaVersion === VERCEL_MUTATION_CONTROL_SCHEMA &&
+    evidence.state === "provider-mutation-control" && evidence.provider === "vercel" &&
+    evidence.rollingReleaseEnabled === false,
+  "Vercel mutation-control evidence is invalid");
+  let available = true;
+  if (evidence.lastAliasRequest !== null) {
+    const request = exactKeys(evidence.lastAliasRequest, [
+      "jobStatus", "requestedAt", "toDeploymentId", "type",
+    ], "Vercel mutation-control last alias request");
+    assert(["pending", "in-progress", "succeeded", "failed", "skipped"]
+      .includes(request.jobStatus) && VERCEL_ID.test(request.toDeploymentId) &&
+      ["promote", "rollback"].includes(request.type),
+    "Vercel mutation-control alias request is invalid or unknown");
+    exactInstant(request.requestedAt,
+      "Vercel mutation-control alias request requestedAt");
+    available = !["pending", "in-progress"].includes(request.jobStatus);
+  }
+  assert(evidence.mutationAvailable === available,
+    "Vercel mutation-control availability differs from its alias request");
+  exactInstant(evidence.checkedAt, "Vercel mutation-control checkedAt");
+  assert(evidence.lastAliasRequest === null ||
+    Date.parse(evidence.lastAliasRequest.requestedAt) <= Date.parse(evidence.checkedAt),
+  "Vercel mutation-control alias request cannot be future-dated");
+  if (target) assert(evidence.projectId === exactTarget(target).projectId,
+    "Vercel mutation-control evidence differs from the protected project");
+  const { mutationControlDigest, ...withoutDigest } = evidence;
+  assert(mutationControlDigest === canonicalSha256(
+    VERCEL_MUTATION_CONTROL_SCHEMA, withoutDigest,
+  ), "Vercel mutation-control digest is invalid");
+  return evidence;
+}
+
+function assertMutationControlResolutionConsistency(mutationControl, resolution) {
+  const request = mutationControl.lastAliasRequest;
+  if (request?.jobStatus !== "succeeded") return;
+  assert(request.toDeploymentId === resolution.deploymentId,
+    "successful Vercel alias request differs from the resolved public deployment");
 }
 
 export function parseVercelPublicDeploymentResolution(value, {
@@ -3668,9 +4104,13 @@ export function parseSmokeReceipt(value, { expectedMode, expectedBundlePhase, bu
     Number.isSafeInteger(smoke.tokenCount) && smoke.tokenCount >= 0,
   "chain-4663 smoke counts are invalid");
   if (expectedMode === "live") {
-    const parsedBundle = parseBundleForPhase(bundle, expectedBundlePhase);
+    assert(expectedBundlePhase === "stage" || expectedBundlePhase === "promotion",
+      "chain-4663 live smoke requires an exact bundle phase");
+    const expectedBundleDigest = bundle === undefined
+      ? exactSha256(smoke.bundleDigest, "chain-4663 live smoke bundleDigest")
+      : parseBundleForPhase(bundle, expectedBundlePhase).bundleDigest;
     assert(smoke.bundlePhase === expectedBundlePhase &&
-      smoke.bundleDigest === parsedBundle.bundleDigest &&
+      smoke.bundleDigest === expectedBundleDigest &&
       smoke.manifestStatus === "live" && smoke.service === "operational" &&
       smoke.launchFeedStatus === "ready" && smoke.tokenListStatus === "ready",
     "chain-4663 live smoke did not prove a ready finalized read model");
@@ -3726,15 +4166,19 @@ export function createSmokeReceipt(input) {
 
 function exactPreviousRelease(value, label) {
   const previous = exactKeys(value,
-    ["mode", "promotionBundleDigest", "promotionReceiptDigest", "deployment", "smokeDigest"],
+    ["mode", "promotionBundleDigest", "promotionReceiptDigest", "source", "workflow",
+      "deployment", "smokeDigest"],
     label);
   assert(["planned", "live"].includes(previous.mode), `${label}.mode is invalid`);
   if (previous.mode === "planned") {
-    assert(previous.promotionBundleDigest === null && previous.promotionReceiptDigest === null,
+    assert(previous.promotionBundleDigest === null && previous.promotionReceiptDigest === null &&
+      previous.source === null && previous.workflow === null,
       `${label} planned promotion digests must be null`);
   } else {
     exactSha256(previous.promotionBundleDigest, `${label}.promotionBundleDigest`);
     exactSha256(previous.promotionReceiptDigest, `${label}.promotionReceiptDigest`);
+    exactSource(previous.source, `${label}.source`);
+    exactOwnerWorkflow(previous.workflow, `${label}.workflow`);
   }
   exactDeployment(previous.deployment, `${label}.deployment`);
   exactSha256(previous.smokeDigest, `${label}.smokeDigest`);
@@ -3818,8 +4262,26 @@ export function createPromotionPlan(input) {
   const previousPromotionArtifact = previousPromotion
     ? parseGitHubArtifactEvidence(input.previousPromotionArtifact)
     : null;
+  const previousPromotionArtifactBinding = previousPromotion
+    ? verifyGitHubArtifactArchiveEntry(input.previousPromotionArtifactArchive, {
+      artifactDigest: previousPromotionArtifact.artifactDigest,
+      entryPath: "promotion-receipt.json",
+      expectedBytes: canonicalArtifactBytes(previousPromotion),
+    })
+    : null;
+  const previousPromotionRun = previousPromotion
+    ? parseGitHubRunEvidence(input.previousPromotionRun)
+    : null;
   if (previousPromotion) {
-    assert(previousPromotionArtifact.runId === previousPromotion.workflow.runId &&
+    assert(previousPromotionRun.runId === previousPromotion.workflow.runId &&
+      previousPromotionRun.runAttempt === previousPromotion.workflow.runAttempt &&
+      previousPromotionRun.workflowRef === previousPromotion.workflow.workflowRef &&
+      previousPromotionRun.actor === previousPromotion.workflow.actor &&
+      previousPromotionRun.actorId === previousPromotion.workflow.actorId &&
+      previousPromotionRun.sourceRevision === previousPromotion.source.revision &&
+      previousPromotionRun.sourceTree === previousPromotion.source.tree &&
+      previousPromotionArtifact.runId === previousPromotionRun.runId &&
+      previousPromotionArtifact.runAttempt === previousPromotionRun.runAttempt &&
       previousPromotionArtifact.runAttempt === previousPromotion.workflow.runAttempt &&
       previousPromotionArtifact.sourceRevision === previousPromotion.source.revision &&
       previousPromotionArtifact.artifactName ===
@@ -3832,6 +4294,8 @@ export function createPromotionPlan(input) {
       ? parsePromotionBundle(input.previousBundle).promotionBundleDigest
       : null,
     promotionReceiptDigest: previousPromotion?.promotionReceiptDigest ?? null,
+    source: previousPromotion?.source ?? null,
+    workflow: previousPromotion?.workflow ?? null,
     deployment: previousDeployment,
     smokeDigest: previousSmoke.smokeDigest,
   }, "promotion plan previous release");
@@ -3880,7 +4344,15 @@ export function createPromotionPlan(input) {
     indexerEvidence,
     previousRelease: previous,
     previousPublicResolution,
+    previousPromotionReceipt: previousPromotion ?? null,
+    previousPromotionRun,
     previousPromotionArtifact,
+    previousPromotionArtifactArchiveDigest:
+      previousPromotionArtifactBinding?.artifactArchiveDigest ?? null,
+    previousPromotionArtifactEntryPath:
+      previousPromotionArtifactBinding?.artifactEntryPath ?? null,
+    previousPromotionArtifactEntrySha256:
+      previousPromotionArtifactBinding?.artifactEntrySha256 ?? null,
     workflow: exactWorkflow(input.workflow),
     preparedAt: input.preparedAt,
   };
@@ -3897,7 +4369,9 @@ export function parsePromotionPlan(value, {
     "sourceTransition", "target", "stagedDeployment", "stagedProviderDeployment",
     "buildOutputDigest", "stagedSmokeDigest", "stageProtectionEvidence", "stageRunEvidence",
     "stageArtifact", "indexerEvidence", "previousRelease",
-    "previousPublicResolution", "previousPromotionArtifact", "workflow",
+    "previousPublicResolution", "previousPromotionReceipt", "previousPromotionRun",
+    "previousPromotionArtifact", "previousPromotionArtifactArchiveDigest",
+    "previousPromotionArtifactEntryPath", "previousPromotionArtifactEntrySha256", "workflow",
     "preparedAt", "promotionPlanDigest",
   ], "Vercel promotion plan");
   assert(plan.schemaVersion === PROMOTION_PLAN_SCHEMA &&
@@ -3950,12 +4424,41 @@ export function parsePromotionPlan(value, {
     previousPublicResolution.deploymentUrl !== plan.stagedDeployment.url,
   "Vercel promotion plan public origin selects the staged deployment");
   if (plan.previousRelease.mode === "planned") {
-    assert(plan.previousPromotionArtifact === null,
+    assert(plan.previousPromotionReceipt === null &&
+      plan.previousPromotionRun === null && plan.previousPromotionArtifact === null &&
+      plan.previousPromotionArtifactArchiveDigest === null &&
+      plan.previousPromotionArtifactEntryPath === null &&
+      plan.previousPromotionArtifactEntrySha256 === null,
       "planned previous release must not claim a promotion artifact");
   } else {
+    const previousPromotion = parsePromotionReceipt(plan.previousPromotionReceipt, {
+      target: plan.target,
+    });
+    const previousRun = parseGitHubRunEvidence(plan.previousPromotionRun);
     const previousArtifact = parseGitHubArtifactEvidence(plan.previousPromotionArtifact);
-    assert(previousArtifact.sourceRevision !== "" &&
-      plan.previousRelease.promotionReceiptDigest !== null,
+    exactSha256(plan.previousPromotionArtifactArchiveDigest,
+      "Vercel promotion plan previousPromotionArtifactArchiveDigest");
+    exactSha256(plan.previousPromotionArtifactEntrySha256,
+      "Vercel promotion plan previousPromotionArtifactEntrySha256");
+    assert(previousRun.runId === previousArtifact.runId &&
+      previousRun.runAttempt === previousArtifact.runAttempt &&
+      previousArtifact.sourceRevision === previousRun.sourceRevision &&
+      previousRun.sourceRevision === plan.previousRelease.source.revision &&
+      previousRun.sourceTree === plan.previousRelease.source.tree &&
+      previousRun.workflowRef === plan.previousRelease.workflow.workflowRef &&
+      previousRun.runId === plan.previousRelease.workflow.runId &&
+      previousRun.runAttempt === plan.previousRelease.workflow.runAttempt &&
+      previousRun.actor === plan.previousRelease.workflow.actor &&
+      previousRun.actorId === plan.previousRelease.workflow.actorId &&
+      plan.previousRelease.promotionReceiptDigest === previousPromotion.promotionReceiptDigest &&
+      plan.previousPromotionArtifactArchiveDigest === previousArtifact.artifactDigest &&
+      plan.previousPromotionArtifactEntryPath === "promotion-receipt.json" &&
+      plan.previousPromotionArtifactEntrySha256 ===
+        sha256Bytes(canonicalArtifactBytes(previousPromotion)) &&
+      canonicalEqual(previousPromotion.source, plan.previousRelease.source) &&
+      canonicalEqual(previousPromotion.workflow, plan.previousRelease.workflow) &&
+      sameImmutableDeployment(previousPromotion.deployment,
+        plan.previousRelease.deployment),
     "live previous release is missing its promotion evidence");
   }
   exactWorkflow(plan.workflow, "Vercel promotion plan workflow");
@@ -4269,6 +4772,1290 @@ export function parsePreMutationState(value, {
   return state;
 }
 
+function samePublicResolutionIdentity(left, right) {
+  return left.provider === right.provider && left.origin === right.origin &&
+    left.deploymentId === right.deploymentId &&
+    left.deploymentUrl === right.deploymentUrl && left.orgId === right.orgId &&
+    left.projectId === right.projectId;
+}
+
+export function validatePreMutationReadiness(input) {
+  const operation = input.operation;
+  assert(["promote", "rollback"].includes(operation),
+    "pre-mutation readiness operation is invalid");
+  const plan = operation === "promote"
+    ? parsePromotionPlan(input.plan)
+    : parseRollbackPlan(input.plan);
+  const authorization = parsePublicAuthorization(input.authorization, { operation, plan });
+  const intent = parsePublicMutationIntent(input.intent, {
+    operation,
+    plan,
+    authorization: input.intentAuthorization ?? input.authorization,
+    preMutationState: input.intentPreMutationState ?? input.preMutationState,
+    selectedSmoke: input.intentSelectedSmoke ?? input.selectedSmoke,
+    selectedBundle: input.selectedBundle,
+  });
+  assert(canonicalEqual(authorization.source, intent.source) &&
+    canonicalEqual(authorization.target, intent.target) &&
+    canonicalEqual(authorization.workflow, intent.workflow),
+  "fresh public authorization differs from the immutable mutation intent");
+  const state = parsePreMutationState(input.preMutationState, {
+    operation,
+    plan,
+    selectedSmoke: input.selectedSmoke,
+    selectedBundle: input.selectedBundle,
+  });
+  const current = exactDeployment(input.currentDeployment,
+    "final pre-mutation current production deployment");
+  assert(sameImmutableDeployment(current, state.currentDeployment),
+    "final pre-mutation provider re-query found public routing drift");
+  assert(sameImmutableDeployment(current, intent.currentDeployment) &&
+    sameImmutableDeployment(state.selectedDeployment, intent.targetDeployment),
+  "final public mutation readiness differs from the immutable mutation intent");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, { deployment: current, target: plan.target },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(input.mutationControl, {
+    target: plan.target,
+  });
+  assert(mutationControl.mutationAvailable,
+    "Vercel has a pending or in-progress alias mutation");
+  assertMutationControlResolutionConsistency(mutationControl, currentPublicResolution);
+  assert(samePublicResolutionIdentity(
+    currentPublicResolution, state.currentPublicResolution,
+  ), "final pre-mutation public-origin resolution differs from the sealed state");
+  exactInstant(input.confirmedAt, "pre-mutation readiness confirmedAt");
+  assertFreshTransition(state.checkedAt, authorization.authorizedAt,
+    "final target evidence and owner authorization");
+  assertFreshTransition(authorization.authorizedAt, currentPublicResolution.checkedAt,
+    "owner authorization and final public-origin provider re-query");
+  assertFreshTransition(state.checkedAt, currentPublicResolution.checkedAt,
+    "sealed state and final public-origin provider re-query");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.confirmedAt,
+    "final public-origin provider re-query and mutation readiness");
+  assertFreshTransition(currentPublicResolution.checkedAt, mutationControl.checkedAt,
+    "final public-origin resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, input.confirmedAt,
+    "Vercel mutation control and mutation readiness");
+  assertFreshTransition(state.checkedAt, input.confirmedAt,
+    "sealed pre-mutation state readiness");
+  assertFreshTransition(state.selectedProtectionEvidence.checkedAt, input.confirmedAt,
+    "selected deployment protection and mutation readiness");
+  const authorizationAge = Date.parse(input.confirmedAt) -
+    Date.parse(authorization.authorizedAt);
+  assert(authorizationAge >= 0 && authorizationAge <= 30 * 60_000,
+    "public mutation authorization must remain fresh at the mutation boundary");
+  return withDigest(PUBLIC_MUTATION_READINESS_SCHEMA, {
+    schemaVersion: PUBLIC_MUTATION_READINESS_SCHEMA,
+    state: "fresh-public-mutation-boundary",
+    operation,
+    planDigest: operation === "promote"
+      ? plan.promotionPlanDigest
+      : plan.rollbackPlanDigest,
+    source: intent.source,
+    target: intent.target,
+    workflow: intent.workflow,
+    authorization,
+    authorizationDigest: authorization.authorizationDigest,
+    preMutationState: state,
+    preMutationStateDigest: state.preMutationStateDigest,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    currentPublicResolution,
+    mutationControl,
+    mutationControlDigest: mutationControl.mutationControlDigest,
+    selectedDeployment: state.selectedDeployment,
+    confirmedAt: input.confirmedAt,
+  }, "mutationReadinessDigest");
+}
+
+export function parsePublicMutationReadiness(value, {
+  operation, plan, intent, authorization, preMutationState, selectedSmoke, selectedBundle,
+} = {}) {
+  const readiness = exactKeys(value, [
+    "schemaVersion", "state", "operation", "planDigest", "source", "target",
+    "workflow", "authorization", "authorizationDigest", "preMutationState",
+    "preMutationStateDigest", "mutationIntentDigest", "currentPublicResolution",
+    "mutationControl", "mutationControlDigest", "selectedDeployment", "confirmedAt",
+    "mutationReadinessDigest",
+  ], "public mutation readiness");
+  assert(readiness.schemaVersion === PUBLIC_MUTATION_READINESS_SCHEMA &&
+    readiness.state === "fresh-public-mutation-boundary" &&
+    ["promote", "rollback"].includes(readiness.operation),
+  "public mutation readiness is invalid");
+  if (operation) assert(readiness.operation === operation,
+    "public mutation readiness operation differs");
+  const parsedPlan = readiness.operation === "promote"
+    ? parsePromotionPlan(plan)
+    : parseRollbackPlan(plan);
+  const expectedPlanDigest = readiness.operation === "promote"
+    ? parsedPlan.promotionPlanDigest
+    : parsedPlan.rollbackPlanDigest;
+  assert(readiness.planDigest === expectedPlanDigest,
+    "public mutation readiness plan differs");
+  const source = exactSource(readiness.source, "public mutation readiness source");
+  const target = exactTarget(readiness.target, "public mutation readiness target");
+  const workflow = exactWorkflow(readiness.workflow,
+    "public mutation readiness workflow");
+  const parsedAuthorization = parsePublicAuthorization(readiness.authorization, {
+    operation: readiness.operation, plan: parsedPlan,
+  });
+  const parsedState = parsePreMutationState(readiness.preMutationState, {
+    operation: readiness.operation,
+    plan: parsedPlan,
+    selectedSmoke,
+    selectedBundle,
+  });
+  assert(parsedAuthorization.authorizationDigest === readiness.authorizationDigest &&
+    parsedState.preMutationStateDigest === readiness.preMutationStateDigest &&
+    canonicalEqual(parsedAuthorization.source, source) &&
+    canonicalEqual(parsedAuthorization.target, target) &&
+    canonicalEqual(parsedAuthorization.workflow, workflow) &&
+    canonicalEqual(parsedState.selectedDeployment, readiness.selectedDeployment),
+  "public mutation readiness evidence differs");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    readiness.currentPublicResolution, {
+      deployment: parsedState.currentDeployment,
+      target,
+    },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(readiness.mutationControl, {
+    target,
+  });
+  assert(mutationControl.mutationAvailable &&
+    mutationControl.mutationControlDigest === readiness.mutationControlDigest,
+  "public mutation readiness has unavailable Vercel mutation control");
+  assertMutationControlResolutionConsistency(mutationControl, currentPublicResolution);
+  assert(samePublicResolutionIdentity(
+    currentPublicResolution, parsedState.currentPublicResolution,
+  ), "public mutation readiness resolution differs from its sealed state");
+  exactInstant(readiness.confirmedAt, "public mutation readiness confirmedAt");
+  assertFreshTransition(parsedState.checkedAt, parsedAuthorization.authorizedAt,
+    "parsed final target evidence and owner authorization");
+  assertFreshTransition(parsedAuthorization.authorizedAt,
+    currentPublicResolution.checkedAt,
+    "parsed owner authorization and public-origin provider re-query");
+  assertFreshTransition(currentPublicResolution.checkedAt, readiness.confirmedAt,
+    "parsed public-origin provider re-query and mutation readiness");
+  assertFreshTransition(currentPublicResolution.checkedAt, mutationControl.checkedAt,
+    "parsed public-origin resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, readiness.confirmedAt,
+    "parsed Vercel mutation control and mutation readiness");
+  assertFreshTransition(parsedState.selectedProtectionEvidence.checkedAt,
+    readiness.confirmedAt,
+    "parsed selected protection and mutation readiness");
+  for (const key of [
+    "planDigest", "authorizationDigest", "preMutationStateDigest",
+    "mutationIntentDigest", "mutationControlDigest",
+  ]) exactSha256(readiness[key], `public mutation readiness ${key}`);
+  const { mutationReadinessDigest, ...withoutDigest } = readiness;
+  assert(mutationReadinessDigest === canonicalSha256(
+    PUBLIC_MUTATION_READINESS_SCHEMA, withoutDigest,
+  ), "public mutation readiness digest is invalid");
+  if (intent) {
+    const parsedIntent = parsePublicMutationIntent(intent);
+    assert(readiness.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      canonicalEqual(source, parsedIntent.source) &&
+      canonicalEqual(target, parsedIntent.target) &&
+      canonicalEqual(workflow, parsedIntent.workflow),
+    "public mutation readiness differs from its immutable intent");
+  }
+  if (authorization) assert(readiness.authorizationDigest ===
+    parsePublicAuthorization(authorization, {
+      operation: readiness.operation, plan: parsedPlan,
+    }).authorizationDigest,
+  "public mutation readiness differs from its final authorization");
+  if (preMutationState) assert(readiness.preMutationStateDigest ===
+    parsePreMutationState(preMutationState, {
+      operation: readiness.operation, plan: parsedPlan, selectedSmoke, selectedBundle,
+    }).preMutationStateDigest,
+  "public mutation readiness differs from its final state");
+  return readiness;
+}
+
+export function validatePlannedPublicMutationReadiness(input) {
+  const authorization = parsePlannedDeployAuthorization(input.authorization);
+  assert(authorization.mutation === "promote-candidate",
+    "planned public mutation requires a promote-candidate authorization");
+  const intent = parsePublicMutationIntent(input.intent, {
+    operation: "deploy-planned",
+    authorization: input.intentAuthorization ?? input.authorization,
+    selectedSmoke: input.intentSelectedSmoke,
+  });
+  assert(canonicalEqual(authorization.source, intent.source) &&
+    canonicalEqual(authorization.target, intent.target) &&
+    canonicalEqual(authorization.workflow, intent.workflow),
+  "fresh planned authorization differs from the immutable mutation intent");
+  const current = exactDeployment(input.currentDeployment,
+    "final planned pre-mutation current production deployment");
+  assert(sameImmutableDeployment(current, authorization.currentDeployment),
+    "final planned pre-mutation provider re-query found public routing drift");
+  assert(sameImmutableDeployment(current, intent.currentDeployment) &&
+    sameImmutableDeployment(authorization.candidateDeployment, intent.targetDeployment),
+  "final planned mutation readiness differs from the immutable mutation intent");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, {
+      deployment: current,
+      target: authorization.target,
+    },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(input.mutationControl, {
+    target: authorization.target,
+  });
+  assert(mutationControl.mutationAvailable,
+    "Vercel has a pending or in-progress alias mutation");
+  assertMutationControlResolutionConsistency(mutationControl, currentPublicResolution);
+  assert(samePublicResolutionIdentity(
+    currentPublicResolution, authorization.currentPublicResolution,
+  ), "final planned public-origin resolution differs from the authorization");
+  assert(!sameImmutableDeployment(current, authorization.candidateDeployment),
+    "planned public origin already selects the authorized candidate");
+  const candidateProtection = parseStageProtectionEvidence(
+    authorization.candidateProtectionEvidence, {
+      deployment: authorization.candidateDeployment,
+    },
+  );
+  const candidateSmoke = parseSmokeReceipt(input.candidateSmoke, {
+    expectedMode: "planned",
+  });
+  assert(candidateProtection.projectProtection.projectId === authorization.target.projectId &&
+    candidateSmoke.origin === authorization.candidateDeployment.url &&
+    candidateSmoke.smokeDigest === authorization.candidateSmokeDigest,
+  "planned mutation readiness candidate evidence differs from the authorization");
+  exactInstant(input.confirmedAt, "planned mutation readiness confirmedAt");
+  assertFreshTransition(candidateProtection.checkedAt, candidateSmoke.checkedAt,
+    "planned candidate protection and smoke verification");
+  assertFreshTransition(candidateSmoke.checkedAt, authorization.authorizedAt,
+    "planned candidate smoke and owner authorization");
+  assertFreshTransition(authorization.authorizedAt, currentPublicResolution.checkedAt,
+    "planned authorization and final public-origin provider re-query");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.confirmedAt,
+    "final planned public-origin provider re-query and mutation readiness");
+  assertFreshTransition(currentPublicResolution.checkedAt, mutationControl.checkedAt,
+    "planned public-origin resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, input.confirmedAt,
+    "planned Vercel mutation control and mutation readiness");
+  assertFreshTransition(authorization.authorizedAt, input.confirmedAt,
+    "planned public mutation authorization readiness");
+  assertFreshTransition(candidateProtection.checkedAt, input.confirmedAt,
+    "planned candidate protection and mutation readiness");
+  assertFreshTransition(candidateSmoke.checkedAt, input.confirmedAt,
+    "planned candidate smoke and mutation readiness");
+  return withDigest(PLANNED_PUBLIC_MUTATION_READINESS_SCHEMA, {
+    schemaVersion: PLANNED_PUBLIC_MUTATION_READINESS_SCHEMA,
+    state: "fresh-planned-mutation-boundary",
+    source: intent.source,
+    target: intent.target,
+    workflow: intent.workflow,
+    currentDeployment: current,
+    authorization,
+    authorizationDigest: authorization.authorizationDigest,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    currentPublicResolution,
+    mutationControl,
+    mutationControlDigest: mutationControl.mutationControlDigest,
+    candidateDeployment: authorization.candidateDeployment,
+    candidateProtectionEvidence: candidateProtection,
+    candidateSmoke,
+    confirmedAt: input.confirmedAt,
+  }, "mutationReadinessDigest");
+}
+
+export function parsePlannedPublicMutationReadiness(value, {
+  intent, authorization,
+} = {}) {
+  const readiness = exactKeys(value, [
+    "schemaVersion", "state", "source", "target", "workflow", "currentDeployment",
+    "authorization", "authorizationDigest", "mutationIntentDigest",
+    "currentPublicResolution", "mutationControl", "mutationControlDigest",
+    "candidateDeployment", "candidateProtectionEvidence", "candidateSmoke", "confirmedAt",
+    "mutationReadinessDigest",
+  ], "planned public mutation readiness");
+  assert(readiness.schemaVersion === PLANNED_PUBLIC_MUTATION_READINESS_SCHEMA &&
+    readiness.state === "fresh-planned-mutation-boundary",
+  "planned public mutation readiness is invalid");
+  exactSha256(readiness.authorizationDigest,
+    "planned public mutation readiness authorizationDigest");
+  exactSha256(readiness.mutationIntentDigest,
+    "planned public mutation readiness mutationIntentDigest");
+  const source = exactSource(readiness.source, "planned public mutation readiness source");
+  const target = exactTarget(readiness.target, "planned public mutation readiness target");
+  const workflow = exactWorkflow(readiness.workflow,
+    "planned public mutation readiness workflow");
+  const current = exactDeployment(readiness.currentDeployment,
+    "planned public mutation readiness current deployment");
+  const parsedAuthorization = parsePlannedDeployAuthorization(readiness.authorization);
+  assert(parsedAuthorization.mutation === "promote-candidate" &&
+    parsedAuthorization.authorizationDigest === readiness.authorizationDigest &&
+    canonicalEqual(parsedAuthorization.source, source) &&
+    canonicalEqual(parsedAuthorization.target, target) &&
+    canonicalEqual(parsedAuthorization.workflow, workflow) &&
+    sameImmutableDeployment(parsedAuthorization.currentDeployment, current),
+  "planned public mutation readiness authorization differs");
+  const candidate = exactDeployment(readiness.candidateDeployment,
+    "planned public mutation readiness candidate");
+  assert(sameImmutableDeployment(candidate, parsedAuthorization.candidateDeployment),
+    "planned public mutation readiness candidate differs from its authorization");
+  const protection = parseStageProtectionEvidence(readiness.candidateProtectionEvidence, {
+    deployment: candidate,
+  });
+  const smoke = parseSmokeReceipt(readiness.candidateSmoke, { expectedMode: "planned" });
+  assert(protection.projectProtection.projectId === target.projectId &&
+    smoke.origin === candidate.url &&
+    smoke.smokeDigest === parsedAuthorization.candidateSmokeDigest,
+  "planned public mutation readiness candidate evidence differs");
+  const resolution = parseVercelPublicDeploymentResolution(readiness.currentPublicResolution, {
+    deployment: current,
+    target,
+  });
+  const mutationControl = parseVercelMutationControlEvidence(readiness.mutationControl, {
+    target,
+  });
+  exactSha256(readiness.mutationControlDigest,
+    "planned public mutation readiness mutationControlDigest");
+  assert(mutationControl.mutationAvailable &&
+    mutationControl.mutationControlDigest === readiness.mutationControlDigest,
+  "planned public mutation readiness has unavailable Vercel mutation control");
+  assertMutationControlResolutionConsistency(mutationControl, resolution);
+  assert(samePublicResolutionIdentity(
+    resolution, parsedAuthorization.currentPublicResolution,
+  ), "planned public mutation readiness resolution differs from its authorization");
+  exactInstant(readiness.confirmedAt,
+    "planned public mutation readiness confirmedAt");
+  assertFreshTransition(protection.checkedAt, smoke.checkedAt,
+    "parsed planned candidate protection and smoke");
+  assertFreshTransition(smoke.checkedAt, parsedAuthorization.authorizedAt,
+    "parsed planned candidate smoke and authorization");
+  assertFreshTransition(parsedAuthorization.authorizedAt, resolution.checkedAt,
+    "parsed planned authorization and public-origin provider re-query");
+  assertFreshTransition(resolution.checkedAt, readiness.confirmedAt,
+    "parsed planned public-origin provider re-query and readiness");
+  assertFreshTransition(resolution.checkedAt, mutationControl.checkedAt,
+    "parsed planned public-origin resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, readiness.confirmedAt,
+    "parsed planned Vercel mutation control and readiness");
+  assertFreshTransition(protection.checkedAt, readiness.confirmedAt,
+    "parsed planned candidate protection and readiness");
+  assertFreshTransition(smoke.checkedAt, readiness.confirmedAt,
+    "parsed planned candidate smoke and readiness");
+  const { mutationReadinessDigest, ...withoutDigest } = readiness;
+  assert(mutationReadinessDigest === canonicalSha256(
+    PLANNED_PUBLIC_MUTATION_READINESS_SCHEMA, withoutDigest,
+  ), "planned public mutation readiness digest is invalid");
+  if (intent && authorization) {
+    const parsedIntent = parsePublicMutationIntent(intent);
+    const contextualAuthorization = parsePlannedDeployAuthorization(authorization);
+    assert(contextualAuthorization.mutation === "promote-candidate" &&
+      readiness.authorizationDigest === contextualAuthorization.authorizationDigest &&
+      readiness.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      sameImmutableDeployment(candidate, parsedIntent.targetDeployment) &&
+      canonicalEqual(contextualAuthorization.source, parsedIntent.source) &&
+      canonicalEqual(contextualAuthorization.target, parsedIntent.target) &&
+      canonicalEqual(contextualAuthorization.workflow, parsedIntent.workflow),
+    "planned public mutation readiness differs from its intent or authorization");
+  }
+  return readiness;
+}
+
+function mutationIntentParts(input) {
+  const operation = input.operation;
+  assert(["deploy-planned", "promote", "rollback"].includes(operation),
+    "public mutation intent operation is invalid");
+  if (operation === "deploy-planned") {
+    const authorization = parsePlannedDeployAuthorization(input.authorization);
+    assert(authorization.mutation === "promote-candidate",
+      "planned public mutation intent requires candidate-promotion authorization");
+    const selectedSmoke = parseSmokeReceipt(input.selectedSmoke, {
+      expectedMode: "planned",
+    });
+    assert(selectedSmoke.origin === authorization.candidateDeployment.url &&
+      selectedSmoke.smokeDigest === authorization.candidateSmokeDigest,
+    "planned public mutation intent candidate smoke differs from its authorization");
+    return {
+      source: authorization.source,
+      target: authorization.target,
+      workflow: authorization.workflow,
+      currentDeployment: authorization.currentDeployment,
+      currentPublicResolution: authorization.currentPublicResolution,
+      targetDeployment: authorization.candidateDeployment,
+      targetProtectionEvidence: authorization.candidateProtectionEvidence,
+      targetSmokeDigest: selectedSmoke.smokeDigest,
+      targetMode: "planned",
+      planDigest: null,
+      authorizationDigest: authorization.authorizationDigest,
+      preMutationStateDigest: null,
+      selectedBundleDigest: null,
+      evidenceCheckedAt: selectedSmoke.checkedAt,
+    };
+  }
+  const plan = operation === "promote"
+    ? parsePromotionPlan(input.plan)
+    : parseRollbackPlan(input.plan);
+  const authorization = parsePublicAuthorization(input.authorization, { operation, plan });
+  const state = parsePreMutationState(input.preMutationState, {
+    operation,
+    plan,
+    selectedSmoke: input.selectedSmoke,
+    selectedBundle: input.selectedBundle,
+  });
+  const selectedSmoke = parseSmokeReceipt(input.selectedSmoke, operation === "promote"
+    ? { expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.selectedBundle }
+    : {
+      expectedMode: plan.rollbackTarget.mode,
+      ...(plan.rollbackTarget.mode === "live"
+        ? { expectedBundlePhase: "promotion", bundle: input.selectedBundle }
+        : {}),
+    });
+  return {
+    source: plan.source,
+    target: plan.target,
+    workflow: authorization.workflow,
+    currentDeployment: state.currentDeployment,
+    currentPublicResolution: state.currentPublicResolution,
+    targetDeployment: state.selectedDeployment,
+    targetProtectionEvidence: state.selectedProtectionEvidence,
+    targetSmokeDigest: selectedSmoke.smokeDigest,
+    targetMode: operation === "promote" ? "live" : plan.rollbackTarget.mode,
+    planDigest: operation === "promote" ? plan.promotionPlanDigest : plan.rollbackPlanDigest,
+    authorizationDigest: authorization.authorizationDigest,
+    preMutationStateDigest: state.preMutationStateDigest,
+    selectedBundleDigest: operation === "promote"
+      ? plan.promotionBundleDigest
+      : plan.rollbackTarget.promotionBundleDigest,
+    evidenceCheckedAt: state.checkedAt,
+  };
+}
+
+export function createPublicMutationIntent(input) {
+  const parts = mutationIntentParts(input);
+  exactInstant(input.createdAt, "public mutation intent createdAt");
+  assertFreshTransition(parts.evidenceCheckedAt, input.createdAt,
+    "public mutation intent evidence sealing");
+  const value = {
+    schemaVersion: PUBLIC_MUTATION_INTENT_SCHEMA,
+    state: "sealed-before-public-mutation",
+    operation: input.operation,
+    productionOrigin: PRODUCTION_ORIGIN,
+    source: parts.source,
+    target: parts.target,
+    currentDeployment: parts.currentDeployment,
+    currentPublicResolution: parts.currentPublicResolution,
+    targetDeployment: parts.targetDeployment,
+    targetProtectionEvidence: parts.targetProtectionEvidence,
+    targetSmokeDigest: parts.targetSmokeDigest,
+    evidenceCheckedAt: parts.evidenceCheckedAt,
+    targetMode: parts.targetMode,
+    planDigest: parts.planDigest,
+    authorizationDigest: parts.authorizationDigest,
+    preMutationStateDigest: parts.preMutationStateDigest,
+    selectedBundleDigest: parts.selectedBundleDigest,
+    workflow: parts.workflow,
+    createdAt: input.createdAt,
+  };
+  return withDigest(PUBLIC_MUTATION_INTENT_SCHEMA, value, "mutationIntentDigest");
+}
+
+export function parsePublicMutationIntent(value, validation = {}) {
+  const intent = exactKeys(value, [
+    "schemaVersion", "state", "operation", "productionOrigin", "source", "target",
+    "currentDeployment", "currentPublicResolution", "targetDeployment",
+    "targetProtectionEvidence", "targetSmokeDigest", "evidenceCheckedAt", "targetMode", "planDigest",
+    "authorizationDigest", "preMutationStateDigest", "selectedBundleDigest", "workflow",
+    "createdAt", "mutationIntentDigest",
+  ], "public mutation intent");
+  assert(intent.schemaVersion === PUBLIC_MUTATION_INTENT_SCHEMA &&
+    intent.state === "sealed-before-public-mutation" &&
+    ["deploy-planned", "promote", "rollback"].includes(intent.operation) &&
+    intent.productionOrigin === PRODUCTION_ORIGIN &&
+    ["planned", "live"].includes(intent.targetMode),
+  "public mutation intent is invalid");
+  exactSource(intent.source, "public mutation intent source");
+  exactTarget(intent.target, "public mutation intent target");
+  exactDeployment(intent.currentDeployment, "public mutation intent current deployment");
+  const currentResolution = parseVercelPublicDeploymentResolution(
+    intent.currentPublicResolution, {
+      deployment: intent.currentDeployment,
+      target: intent.target,
+    },
+  );
+  exactDeployment(intent.targetDeployment, "public mutation intent target deployment");
+  assert(!sameImmutableDeployment(intent.currentDeployment, intent.targetDeployment),
+    "public mutation intent source and target deployments must differ");
+  const protection = parseStageProtectionEvidence(
+    intent.targetProtectionEvidence, { deployment: intent.targetDeployment },
+  );
+  assert(protection.projectProtection.projectId === intent.target.projectId,
+    "public mutation intent target protection differs from the protected project");
+  exactSha256(intent.targetSmokeDigest, "public mutation intent targetSmokeDigest");
+  exactInstant(intent.evidenceCheckedAt, "public mutation intent evidenceCheckedAt");
+  assertFreshTransition(currentResolution.checkedAt, intent.evidenceCheckedAt,
+    "public mutation intent current public resolution");
+  assertFreshTransition(protection.checkedAt, intent.evidenceCheckedAt,
+    "public mutation intent target protection");
+  exactSha256(intent.authorizationDigest, "public mutation intent authorizationDigest");
+  if (intent.operation === "deploy-planned") {
+    assert(intent.targetMode === "planned" && intent.planDigest === null &&
+      intent.preMutationStateDigest === null && intent.selectedBundleDigest === null,
+    "planned public mutation intent contains live-release evidence");
+  } else {
+    exactSha256(intent.planDigest, "public mutation intent planDigest");
+    exactSha256(intent.preMutationStateDigest,
+      "public mutation intent preMutationStateDigest");
+    if (intent.targetMode === "live") {
+      exactSha256(intent.selectedBundleDigest,
+        "public mutation intent selectedBundleDigest");
+    } else {
+      assert(intent.selectedBundleDigest === null,
+        "planned rollback intent must not contain a promotion bundle digest");
+    }
+  }
+  exactWorkflow(intent.workflow, "public mutation intent workflow");
+  exactInstant(intent.createdAt, "public mutation intent createdAt");
+  assertFreshTransition(intent.evidenceCheckedAt, intent.createdAt,
+    "public mutation intent evidence sealing");
+  const { mutationIntentDigest, ...withoutDigest } = intent;
+  assert(mutationIntentDigest === canonicalSha256(PUBLIC_MUTATION_INTENT_SCHEMA, withoutDigest),
+    "public mutation intent digest is invalid");
+  if (validation.operation) {
+    assert(intent.operation === validation.operation,
+      "recovery artifact operation substitution detected");
+    const recreated = createPublicMutationIntent({
+      ...validation,
+      operation: validation.operation,
+      createdAt: intent.createdAt,
+    });
+    assert(recreated.mutationIntentDigest === intent.mutationIntentDigest,
+      "recovery artifact substitution differs from the sealed mutation intent");
+  }
+  return intent;
+}
+
+function classifyRecoveryDeployment(current, intent) {
+  if (sameImmutableDeployment(current, intent.currentDeployment)) return "old";
+  if (sameImmutableDeployment(current, intent.targetDeployment)) return "target";
+  throw new Error("public recovery found a third deployment state");
+}
+
+function parseRecoveryTargetEvidence(input, intent) {
+  const targetDeployment = exactDeployment(input.targetDeployment,
+    "recovery target deployment");
+  assert(sameImmutableDeployment(targetDeployment, intent.targetDeployment),
+    "recovery target provider readback differs from the immutable intent");
+  const protection = parseStageProtectionEvidence(input.targetProtectionEvidence, {
+    deployment: targetDeployment,
+  });
+  assert(protection.projectProtection.projectId === intent.target.projectId,
+    "recovery target protection differs from the protected project");
+  const selectedSmoke = parseSmokeReceipt(input.targetSmoke,
+    intent.targetMode === "live"
+      ? { expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.selectedBundle }
+      : { expectedMode: "planned" });
+  assert(selectedSmoke.origin === targetDeployment.url,
+    "recovery smoke did not target the exact intended deployment");
+  if (intent.targetMode === "live") {
+    assert(selectedSmoke.bundleDigest === intent.selectedBundleDigest,
+      "recovery smoke differs from the immutable intended bundle");
+  }
+  return { targetDeployment, protection, selectedSmoke };
+}
+
+function parseRecoverySmokeEvidence(value, {
+  intent, targetDeployment, selectedBundle,
+} = {}) {
+  const expectedMode = intent?.targetMode ?? value?.mode;
+  assert(["planned", "live"].includes(expectedMode),
+    "public mutation recovery smoke mode is invalid");
+  const smoke = parseSmokeReceipt(value, expectedMode === "live"
+    ? {
+      expectedMode: "live",
+      expectedBundlePhase: "promotion",
+      ...(selectedBundle === undefined ? {} : { bundle: selectedBundle }),
+    }
+    : { expectedMode: "planned" });
+  if (targetDeployment) assert(smoke.origin === targetDeployment.url,
+    "public mutation recovery smoke differs from its target deployment");
+  if (intent) {
+    assert(smoke.mode === intent.targetMode &&
+      (intent.targetMode === "live"
+        ? smoke.bundleDigest === intent.selectedBundleDigest
+        : smoke.bundleDigest === null),
+    "public mutation recovery smoke differs from its immutable intent");
+  }
+  return smoke;
+}
+
+export function createPublicMutationRecoveryAttempt(input) {
+  const intent = parsePublicMutationIntent(input.intent);
+  const intentProvenance = parsePublicMutationIntentProvenance(
+    input.intentProvenance, { intent },
+  );
+  const source = exactSource(input.source, "recovery workflow source");
+  const workflow = exactRecoveryWorkflow(input.workflow);
+  const owner = parseGitHubOwnerDispatchAuthorization(input.ownerDispatchAuthorization, {
+    workflow,
+    source,
+  });
+  const current = exactDeployment(input.currentDeployment,
+    "recovery current public deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, { deployment: current, target: intent.target },
+  );
+  const classification = classifyRecoveryDeployment(current, intent);
+  const targetEvidence = parseRecoveryTargetEvidence(input, intent);
+  exactInstant(input.authorizedAt, "recovery attempt authorizedAt");
+  assert(Date.parse(intentProvenance.completedAt) <= Date.parse(input.authorizedAt) &&
+    Date.parse(input.authorizedAt) < Date.parse(intentProvenance.artifactExpiresAt),
+  "recovery attempt is outside the authenticated intent artifact lifetime");
+  assert(owner.observedAt === input.authorizedAt,
+    "recovery attempt must use the freshly observed owner dispatch");
+  assertFreshTransition(currentPublicResolution.checkedAt,
+    targetEvidence.protection.checkedAt, "recovery public and target provider readbacks");
+  assertFreshTransition(targetEvidence.protection.checkedAt,
+    targetEvidence.selectedSmoke.checkedAt, "recovery target protection and smoke");
+  assertFreshTransition(targetEvidence.selectedSmoke.checkedAt, input.authorizedAt,
+    "recovery target smoke and owner authorization");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.authorizedAt,
+    "recovery attempt total freshness");
+  const value = {
+    schemaVersion: PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA,
+    state: "owner-authorized-recovery-attempt",
+    operation: intent.operation,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    intentProvenance,
+    intentProvenanceDigest: intentProvenance.intentProvenanceDigest,
+    classification,
+    publicMutationRequired: classification === "old",
+    source,
+    target: intent.target,
+    currentDeployment: current,
+    currentPublicResolution,
+    targetDeployment: targetEvidence.targetDeployment,
+    targetProtectionEvidence: targetEvidence.protection,
+    targetSmoke: targetEvidence.selectedSmoke,
+    ownerDispatchAuthorization: owner,
+    workflow,
+    authorizedAt: input.authorizedAt,
+  };
+  return withDigest(PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA, value,
+    "recoveryAttemptDigest");
+}
+
+export function parsePublicMutationRecoveryAttempt(value, { intent } = {}) {
+  const attempt = exactKeys(value, [
+    "schemaVersion", "state", "operation", "mutationIntentDigest", "classification",
+    "intentProvenance", "intentProvenanceDigest", "publicMutationRequired",
+    "source", "target", "currentDeployment",
+    "currentPublicResolution", "targetDeployment", "targetProtectionEvidence",
+    "targetSmoke", "ownerDispatchAuthorization", "workflow", "authorizedAt",
+    "recoveryAttemptDigest",
+  ], "public mutation recovery attempt");
+  assert(attempt.schemaVersion === PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA &&
+    attempt.state === "owner-authorized-recovery-attempt" &&
+    ["deploy-planned", "promote", "rollback"].includes(attempt.operation) &&
+    ["old", "target"].includes(attempt.classification) &&
+    attempt.publicMutationRequired === (attempt.classification === "old"),
+  "public mutation recovery attempt is invalid");
+  exactSha256(attempt.mutationIntentDigest,
+    "public mutation recovery attempt mutationIntentDigest");
+  exactSha256(attempt.intentProvenanceDigest,
+    "public mutation recovery attempt intentProvenanceDigest");
+  const provenance = parsePublicMutationIntentProvenance(
+    attempt.intentProvenance, intent ? { intent } : {},
+  );
+  assert(attempt.intentProvenanceDigest === provenance.intentProvenanceDigest,
+    "public mutation recovery attempt provenance digest differs");
+  exactSource(attempt.source, "public mutation recovery attempt source");
+  exactTarget(attempt.target, "public mutation recovery attempt target");
+  exactDeployment(attempt.currentDeployment,
+    "public mutation recovery attempt current deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    attempt.currentPublicResolution, {
+      deployment: attempt.currentDeployment,
+      target: attempt.target,
+    },
+  );
+  exactDeployment(attempt.targetDeployment,
+    "public mutation recovery attempt target deployment");
+  const protection = parseStageProtectionEvidence(attempt.targetProtectionEvidence, {
+    deployment: attempt.targetDeployment,
+  });
+  assert(protection.projectProtection.projectId === attempt.target.projectId,
+    "public mutation recovery attempt protection differs from its target");
+  const targetSmoke = parseRecoverySmokeEvidence(attempt.targetSmoke, {
+    intent,
+    targetDeployment: attempt.targetDeployment,
+  });
+  const workflow = exactRecoveryWorkflow(attempt.workflow);
+  const owner = parseGitHubOwnerDispatchAuthorization(
+    attempt.ownerDispatchAuthorization, { workflow, source: attempt.source },
+  );
+  exactInstant(attempt.authorizedAt, "public mutation recovery attempt authorizedAt");
+  assert(Date.parse(provenance.completedAt) <= Date.parse(attempt.authorizedAt) &&
+    Date.parse(attempt.authorizedAt) < Date.parse(provenance.artifactExpiresAt),
+  "public mutation recovery attempt is outside its intent artifact lifetime");
+  assert(owner.observedAt === attempt.authorizedAt,
+    "public mutation recovery attempt differs from its owner authorization");
+  assertFreshTransition(publicResolution.checkedAt, protection.checkedAt,
+    "public mutation recovery attempt provider readbacks");
+  assertFreshTransition(protection.checkedAt, targetSmoke.checkedAt,
+    "public mutation recovery attempt target smoke");
+  assertFreshTransition(targetSmoke.checkedAt, attempt.authorizedAt,
+    "public mutation recovery attempt authorization");
+  assertFreshTransition(publicResolution.checkedAt, attempt.authorizedAt,
+    "public mutation recovery attempt total freshness");
+  const { recoveryAttemptDigest, ...withoutDigest } = attempt;
+  assert(recoveryAttemptDigest === canonicalSha256(
+    PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA, withoutDigest,
+  ), "public mutation recovery attempt digest is invalid");
+  if (intent) {
+    const parsedIntent = parsePublicMutationIntent(intent);
+    assert(attempt.operation === parsedIntent.operation &&
+      attempt.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      attempt.intentProvenanceDigest === provenance.intentProvenanceDigest &&
+      canonicalEqual(attempt.target, parsedIntent.target) &&
+      sameImmutableDeployment(attempt.targetDeployment, parsedIntent.targetDeployment) &&
+      attempt.classification === classifyRecoveryDeployment(
+        attempt.currentDeployment, parsedIntent,
+      ),
+    "public mutation recovery attempt differs from the immutable intent");
+  }
+  return attempt;
+}
+
+export function validatePublicMutationRecoveryAttemptProvenance(value, {
+  attempt, source, workflow, artifactArchive,
+}) {
+  const parsedAttempt = parsePublicMutationRecoveryAttempt(attempt);
+  const parsedSource = exactSource(source,
+    "public mutation recovery attempt artifact source");
+  const parsedWorkflow = exactRecoveryWorkflow(workflow,
+    "public mutation recovery attempt artifact workflow");
+  assert(canonicalEqual(parsedAttempt.source, parsedSource) &&
+    canonicalEqual(parsedAttempt.workflow, parsedWorkflow),
+  "public mutation recovery attempt artifact differs from its producer");
+  const artifactName =
+    `developers-vercel-recovery-attempt-${parsedWorkflow.runId}-${parsedWorkflow.runAttempt}`;
+  const artifact = validateGitHubArtifactEvidence(value, {
+    name: artifactName,
+    runId: parsedWorkflow.runId,
+    runAttempt: parsedWorkflow.runAttempt,
+    sourceRevision: parsedSource.revision,
+  });
+  const listing = plainObject(value,
+    "public mutation recovery attempt artifact listing").artifacts;
+  const rawArtifact = listing.find(({ id }) => String(id) === artifact.artifactId);
+  exactSecondInstant(rawArtifact.created_at,
+    "public mutation recovery attempt artifact created_at");
+  exactSecondInstant(rawArtifact.updated_at,
+    "public mutation recovery attempt artifact updated_at");
+  exactSecondInstant(rawArtifact.expires_at,
+    "public mutation recovery attempt artifact expires_at");
+  assert(Date.parse(parsedAttempt.authorizedAt) <=
+    Date.parse(rawArtifact.created_at) + 999 &&
+    Date.parse(rawArtifact.updated_at) >= Date.parse(rawArtifact.created_at) &&
+    Date.parse(rawArtifact.expires_at) > Date.parse(rawArtifact.updated_at),
+  "public mutation recovery attempt artifact timestamps are invalid");
+  const archiveBinding = verifyGitHubArtifactArchiveEntry(artifactArchive, {
+    artifactDigest: artifact.artifactDigest,
+    entryPath: "recovery-attempt.json",
+    expectedBytes: canonicalArtifactBytes(parsedAttempt),
+  });
+  return withDigest(PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA, {
+    schemaVersion: PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA,
+    state: "durable-recovery-attempt-artifact",
+    source: parsedSource,
+    workflow: parsedWorkflow,
+    artifact,
+    ...archiveBinding,
+    recoveryAttemptDigest: parsedAttempt.recoveryAttemptDigest,
+    artifactCreatedAt: rawArtifact.created_at,
+    artifactUpdatedAt: rawArtifact.updated_at,
+    artifactExpiresAt: rawArtifact.expires_at,
+  }, "recoveryAttemptProvenanceDigest");
+}
+
+export function parsePublicMutationRecoveryAttemptProvenance(value, { attempt } = {}) {
+  const provenance = exactKeys(value, [
+    "schemaVersion", "state", "source", "workflow", "artifact",
+    "artifactArchiveDigest", "artifactEntryPath", "artifactEntrySha256",
+    "recoveryAttemptDigest", "artifactCreatedAt", "artifactUpdatedAt",
+    "artifactExpiresAt", "recoveryAttemptProvenanceDigest",
+  ], "public mutation recovery attempt provenance");
+  assert(provenance.schemaVersion ===
+    PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA &&
+    provenance.state === "durable-recovery-attempt-artifact",
+  "public mutation recovery attempt provenance is invalid");
+  const source = exactSource(provenance.source,
+    "public mutation recovery attempt provenance source");
+  const workflow = exactRecoveryWorkflow(provenance.workflow,
+    "public mutation recovery attempt provenance workflow");
+  const artifact = parseGitHubArtifactEvidence(provenance.artifact);
+  for (const key of [
+    "artifactArchiveDigest", "artifactEntrySha256", "recoveryAttemptDigest",
+  ]) exactSha256(provenance[key], `public mutation recovery attempt provenance ${key}`);
+  for (const key of ["artifactCreatedAt", "artifactUpdatedAt", "artifactExpiresAt"]) {
+    exactSecondInstant(provenance[key],
+      `public mutation recovery attempt provenance ${key}`);
+  }
+  assert(artifact.runId === workflow.runId &&
+    artifact.runAttempt === workflow.runAttempt &&
+    artifact.sourceRevision === source.revision &&
+    artifact.artifactName ===
+      `developers-vercel-recovery-attempt-${workflow.runId}-${workflow.runAttempt}` &&
+    provenance.artifactArchiveDigest === artifact.artifactDigest &&
+    provenance.artifactEntryPath === "recovery-attempt.json" &&
+    Date.parse(provenance.artifactUpdatedAt) >=
+      Date.parse(provenance.artifactCreatedAt) &&
+    Date.parse(provenance.artifactExpiresAt) > Date.parse(provenance.artifactUpdatedAt),
+  "public mutation recovery attempt provenance bindings are invalid");
+  const { recoveryAttemptProvenanceDigest, ...withoutDigest } = provenance;
+  assert(recoveryAttemptProvenanceDigest === canonicalSha256(
+    PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA, withoutDigest,
+  ), "public mutation recovery attempt provenance digest is invalid");
+  if (attempt) {
+    const parsedAttempt = parsePublicMutationRecoveryAttempt(attempt);
+    assert(provenance.recoveryAttemptDigest === parsedAttempt.recoveryAttemptDigest &&
+      provenance.artifactEntrySha256 ===
+        sha256Bytes(canonicalArtifactBytes(parsedAttempt)) &&
+      canonicalEqual(source, parsedAttempt.source) &&
+      canonicalEqual(workflow, parsedAttempt.workflow) &&
+      Date.parse(parsedAttempt.authorizedAt) <=
+        Date.parse(provenance.artifactCreatedAt) + 999,
+    "public mutation recovery attempt provenance differs from its exact attempt");
+  }
+  return provenance;
+}
+
+export function createPublicMutationRecoveryReadiness(input) {
+  const intent = parsePublicMutationIntent(input.intent);
+  const attempt = parsePublicMutationRecoveryAttempt(input.attempt, { intent });
+  const attemptProvenance = parsePublicMutationRecoveryAttemptProvenance(
+    input.attemptProvenance, { attempt },
+  );
+  const intentProvenance = parsePublicMutationIntentProvenance(
+    input.intentProvenance, { intent },
+  );
+  assert(intentProvenance.intentProvenanceDigest === attempt.intentProvenanceDigest,
+    "final recovery readiness changed the intent producer provenance");
+  const source = exactSource(input.source, "recovery readiness workflow source");
+  const workflow = exactRecoveryWorkflow(input.workflow);
+  assert(canonicalEqual(source, attempt.source) &&
+    canonicalEqual(workflow, attempt.workflow) &&
+    canonicalEqual(source, attemptProvenance.source) &&
+    canonicalEqual(workflow, attemptProvenance.workflow),
+  "final recovery readiness differs from the durable recovery workflow");
+  const owner = parseGitHubOwnerDispatchAuthorization(input.ownerDispatchAuthorization, {
+    workflow,
+    source,
+  });
+  const targetEvidence = parseRecoveryTargetEvidence(input, intent);
+  const current = exactDeployment(input.currentDeployment,
+    "recovery readiness current public deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, { deployment: current, target: intent.target },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(input.mutationControl, {
+    target: intent.target,
+  });
+  assert(mutationControl.mutationAvailable,
+    "recovery found a pending or in-progress Vercel alias mutation");
+  assertMutationControlResolutionConsistency(mutationControl, currentPublicResolution);
+  const classification = classifyRecoveryDeployment(current, intent);
+  assert(!(attempt.classification === "target" && classification === "old"),
+    "recovery public state reversed from target to old after durable sealing");
+  exactInstant(input.authorizedAt, "public mutation recovery readiness authorizedAt");
+  assert(owner.observedAt === input.authorizedAt,
+    "public mutation recovery readiness must use the freshly observed owner dispatch");
+  exactInstant(input.confirmedAt, "public mutation recovery readiness confirmedAt");
+  assert(Date.parse(input.authorizedAt) < Date.parse(intentProvenance.artifactExpiresAt) &&
+    Date.parse(input.confirmedAt) < Date.parse(intentProvenance.artifactExpiresAt) &&
+    Date.parse(attemptProvenance.artifactUpdatedAt) <=
+      Date.parse(input.authorizedAt) + 999 &&
+    Date.parse(input.confirmedAt) < Date.parse(attemptProvenance.artifactExpiresAt),
+  "public mutation recovery readiness is outside its intent artifact lifetime");
+  assertFreshTransition(targetEvidence.protection.checkedAt,
+    targetEvidence.selectedSmoke.checkedAt,
+    "public mutation recovery readiness target protection and smoke");
+  assertFreshTransition(targetEvidence.selectedSmoke.checkedAt, input.authorizedAt,
+    "public mutation recovery readiness owner authorization");
+  assertFreshTransition(input.authorizedAt, currentPublicResolution.checkedAt,
+    "public mutation recovery readiness final public-origin provider re-query");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.confirmedAt,
+    "public mutation recovery readiness confirmation");
+  assertFreshTransition(currentPublicResolution.checkedAt, mutationControl.checkedAt,
+    "public mutation recovery resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, input.confirmedAt,
+    "public mutation recovery Vercel mutation control and confirmation");
+  assertFreshTransition(targetEvidence.protection.checkedAt, input.confirmedAt,
+    "public mutation recovery readiness total freshness");
+  assertFreshTransition(input.authorizedAt, input.confirmedAt,
+    "public mutation recovery authorization freshness");
+  assertFreshTransition(attempt.authorizedAt, targetEvidence.protection.checkedAt,
+    "durable recovery attempt and final target provider re-query");
+  assertFreshTransition(attempt.authorizedAt, input.confirmedAt,
+    "durable recovery attempt and final readiness");
+  const value = {
+    schemaVersion: PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA,
+    state: "fresh-recovery-boundary",
+    operation: intent.operation,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    intentProvenanceDigest: intentProvenance.intentProvenanceDigest,
+    recoveryAttemptDigest: attempt.recoveryAttemptDigest,
+    attemptProvenance,
+    recoveryAttemptProvenanceDigest:
+      attemptProvenance.recoveryAttemptProvenanceDigest,
+    classification,
+    publicMutationRequired: classification === "old",
+    source,
+    target: intent.target,
+    currentDeployment: current,
+    currentPublicResolution,
+    mutationControl,
+    mutationControlDigest: mutationControl.mutationControlDigest,
+    targetDeployment: targetEvidence.targetDeployment,
+    targetProtectionEvidence: targetEvidence.protection,
+    targetSmoke: targetEvidence.selectedSmoke,
+    ownerDispatchAuthorization: owner,
+    ownerDispatchAuthorizationDigest: owner.ownerDispatchAuthorizationDigest,
+    workflow,
+    authorizedAt: input.authorizedAt,
+    confirmedAt: input.confirmedAt,
+  };
+  return withDigest(PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA, value,
+    "recoveryReadinessDigest");
+}
+
+export function parsePublicMutationRecoveryReadiness(value, { intent, attempt } = {}) {
+  const readiness = exactKeys(value, [
+    "schemaVersion", "state", "operation", "mutationIntentDigest",
+    "intentProvenanceDigest", "recoveryAttemptDigest", "classification",
+    "attemptProvenance", "recoveryAttemptProvenanceDigest", "publicMutationRequired",
+    "source", "target", "currentDeployment", "currentPublicResolution", "targetDeployment",
+    "mutationControl", "mutationControlDigest", "targetProtectionEvidence", "targetSmoke",
+    "ownerDispatchAuthorization", "ownerDispatchAuthorizationDigest",
+    "workflow", "authorizedAt", "confirmedAt", "recoveryReadinessDigest",
+  ], "public mutation recovery readiness");
+  assert(readiness.schemaVersion === PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA &&
+    readiness.state === "fresh-recovery-boundary" &&
+    ["deploy-planned", "promote", "rollback"].includes(readiness.operation) &&
+    ["old", "target"].includes(readiness.classification) &&
+    readiness.publicMutationRequired === (readiness.classification === "old"),
+  "public mutation recovery readiness is invalid");
+  for (const key of [
+    "mutationIntentDigest", "intentProvenanceDigest", "recoveryAttemptDigest",
+    "recoveryAttemptProvenanceDigest", "mutationControlDigest",
+    "ownerDispatchAuthorizationDigest",
+  ]) exactSha256(readiness[key], `public mutation recovery readiness ${key}`);
+  exactSource(readiness.source,
+    "public mutation recovery readiness source");
+  const target = exactTarget(readiness.target,
+    "public mutation recovery readiness target");
+  exactDeployment(readiness.currentDeployment,
+    "public mutation recovery readiness current deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    readiness.currentPublicResolution, {
+      deployment: readiness.currentDeployment,
+      target,
+    },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(readiness.mutationControl, {
+    target,
+  });
+  assert(mutationControl.mutationAvailable &&
+    mutationControl.mutationControlDigest === readiness.mutationControlDigest,
+  "public mutation recovery readiness has unavailable Vercel mutation control");
+  assertMutationControlResolutionConsistency(mutationControl, publicResolution);
+  exactDeployment(readiness.targetDeployment,
+    "public mutation recovery readiness target deployment");
+  const protection = parseStageProtectionEvidence(readiness.targetProtectionEvidence, {
+    deployment: readiness.targetDeployment,
+  });
+  assert(protection.projectProtection.projectId === target.projectId,
+    "public mutation recovery readiness protection differs from its target");
+  const targetSmoke = parseRecoverySmokeEvidence(readiness.targetSmoke, {
+    intent,
+    targetDeployment: readiness.targetDeployment,
+  });
+  const workflow = exactRecoveryWorkflow(readiness.workflow);
+  const attemptProvenance = parsePublicMutationRecoveryAttemptProvenance(
+    readiness.attemptProvenance, attempt ? { attempt } : {},
+  );
+  assert(attemptProvenance.recoveryAttemptProvenanceDigest ===
+    readiness.recoveryAttemptProvenanceDigest &&
+    attemptProvenance.recoveryAttemptDigest === readiness.recoveryAttemptDigest &&
+    canonicalEqual(attemptProvenance.source, readiness.source) &&
+    canonicalEqual(attemptProvenance.workflow, workflow),
+  "public mutation recovery readiness attempt provenance differs");
+  const owner = parseGitHubOwnerDispatchAuthorization(
+    readiness.ownerDispatchAuthorization, { workflow, source: readiness.source },
+  );
+  exactInstant(readiness.authorizedAt,
+    "public mutation recovery readiness authorizedAt");
+  exactInstant(readiness.confirmedAt,
+    "public mutation recovery readiness confirmedAt");
+  assert(owner.observedAt === readiness.authorizedAt &&
+    owner.ownerDispatchAuthorizationDigest === readiness.ownerDispatchAuthorizationDigest &&
+    Date.parse(attemptProvenance.artifactUpdatedAt) <=
+      Date.parse(readiness.authorizedAt) + 999 &&
+    Date.parse(readiness.confirmedAt) <
+      Date.parse(attemptProvenance.artifactExpiresAt),
+  "public mutation recovery readiness owner authorization differs");
+  assertFreshTransition(protection.checkedAt,
+    targetSmoke.checkedAt,
+    "public mutation recovery readiness target smoke");
+  assertFreshTransition(targetSmoke.checkedAt, readiness.authorizedAt,
+    "public mutation recovery readiness authorization");
+  assertFreshTransition(readiness.authorizedAt, publicResolution.checkedAt,
+    "public mutation recovery readiness public-origin provider re-query");
+  assertFreshTransition(publicResolution.checkedAt, readiness.confirmedAt,
+    "public mutation recovery readiness confirmation");
+  assertFreshTransition(publicResolution.checkedAt, mutationControl.checkedAt,
+    "public mutation recovery readiness resolution and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, readiness.confirmedAt,
+    "public mutation recovery readiness Vercel mutation control and confirmation");
+  assertFreshTransition(protection.checkedAt, readiness.confirmedAt,
+    "public mutation recovery readiness total freshness");
+  assertFreshTransition(readiness.authorizedAt, readiness.confirmedAt,
+    "public mutation recovery authorization freshness");
+  const { recoveryReadinessDigest, ...withoutDigest } = readiness;
+  assert(recoveryReadinessDigest === canonicalSha256(
+    PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA, withoutDigest,
+  ), "public mutation recovery readiness digest is invalid");
+  if (intent) {
+    const parsedIntent = parsePublicMutationIntent(intent);
+    assert(readiness.operation === parsedIntent.operation &&
+      readiness.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      canonicalEqual(readiness.target, parsedIntent.target) &&
+      sameImmutableDeployment(readiness.targetDeployment, parsedIntent.targetDeployment) &&
+      readiness.classification === classifyRecoveryDeployment(
+        readiness.currentDeployment, parsedIntent,
+      ),
+    "public mutation recovery readiness differs from the immutable intent");
+  }
+  if (attempt) {
+    const parsedAttempt = parsePublicMutationRecoveryAttempt(attempt, { intent });
+    assert(Date.parse(readiness.authorizedAt) <
+      Date.parse(parsedAttempt.intentProvenance.artifactExpiresAt) &&
+      Date.parse(readiness.confirmedAt) <
+      Date.parse(parsedAttempt.intentProvenance.artifactExpiresAt),
+    "parsed public mutation recovery readiness is outside its intent artifact lifetime");
+    assertFreshTransition(parsedAttempt.authorizedAt, protection.checkedAt,
+      "durable recovery attempt and parsed target provider re-query");
+    assertFreshTransition(parsedAttempt.authorizedAt, readiness.confirmedAt,
+      "durable recovery attempt and parsed readiness");
+    assert(readiness.recoveryAttemptDigest === parsedAttempt.recoveryAttemptDigest &&
+      readiness.intentProvenanceDigest === parsedAttempt.intentProvenanceDigest &&
+      canonicalEqual(readiness.source, parsedAttempt.source) &&
+      canonicalEqual(readiness.workflow, parsedAttempt.workflow) &&
+      !(parsedAttempt.classification === "target" && readiness.classification === "old"),
+    "public mutation recovery readiness differs from its durable recovery attempt");
+  }
+  return readiness;
+}
+
+export function createPlannedDeployReceipt(input) {
+  const intent = parsePublicMutationIntent(input.intent, input.intentValidation);
+  assert(intent.operation === "deploy-planned",
+    "planned deploy receipt requires a planned mutation intent");
+  const deployment = exactDeployment(input.productionDeployment,
+    "planned deploy receipt production deployment");
+  assert(sameImmutableDeployment(deployment, intent.targetDeployment),
+    "planned deploy receipt did not select the exact intended candidate");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    input.publicResolution, { deployment, target: intent.target },
+  );
+  const smoke = parseSmokeReceipt(input.productionSmoke, { expectedMode: "planned" });
+  assert(smoke.origin === PRODUCTION_ORIGIN,
+    "planned deploy receipt smoke did not target the public origin");
+  const execution = input.recoveryReadiness ? "recovery" : "normal";
+  const intentAuthorizationDigest = intent.authorizationDigest;
+  let authorizationDigest;
+  let mutationReadinessDigest = null;
+  let recoveryAttemptDigest = null;
+  let recoveryReadinessDigest = null;
+  let intentProvenanceDigest = null;
+  let startingClassification = "old";
+  let publicMutationPerformed = true;
+  let workflow;
+  let readinessConfirmedAt;
+  let recoveryIntent = null;
+  let recoveryAttempt = null;
+  let recoveryReadiness = null;
+  if (execution === "recovery") {
+    recoveryAttempt = parsePublicMutationRecoveryAttempt(input.recoveryAttempt, { intent });
+    const readiness = parsePublicMutationRecoveryReadiness(input.recoveryReadiness, {
+      intent, attempt: recoveryAttempt,
+    });
+    assert(readiness.operation === "deploy-planned",
+      "planned deploy recovery readiness operation differs");
+    authorizationDigest = readiness.ownerDispatchAuthorizationDigest;
+    recoveryAttemptDigest = readiness.recoveryAttemptDigest;
+    recoveryReadinessDigest = readiness.recoveryReadinessDigest;
+    intentProvenanceDigest = readiness.intentProvenanceDigest;
+    startingClassification = readiness.classification;
+    publicMutationPerformed = readiness.publicMutationRequired;
+    workflow = readiness.workflow;
+    readinessConfirmedAt = readiness.confirmedAt;
+    recoveryIntent = intent;
+    recoveryReadiness = readiness;
+  } else {
+    const authorization = parsePlannedDeployAuthorization(input.authorization);
+    const readiness = parsePlannedPublicMutationReadiness(input.mutationReadiness, {
+      intent,
+      authorization,
+    });
+    assert(authorization.mutation === "promote-candidate",
+      "planned deploy receipt requires final candidate-promotion authorization");
+    authorizationDigest = authorization.authorizationDigest;
+    mutationReadinessDigest = readiness.mutationReadinessDigest;
+    workflow = authorization.workflow;
+    readinessConfirmedAt = readiness.confirmedAt;
+  }
+  exactInstant(input.completedAt, "planned deploy receipt completedAt");
+  const earliest = readinessConfirmedAt;
+  assertFreshTransition(earliest, publicResolution.checkedAt,
+    "planned deployment public provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, smoke.checkedAt,
+    "planned deployment public resolution and smoke");
+  assertFreshTransition(smoke.checkedAt, input.completedAt,
+    "planned deployment receipt sealing");
+  assertFreshTransition(earliest, input.completedAt,
+    "planned deployment total completion freshness");
+  const value = {
+    schemaVersion: PLANNED_DEPLOY_RECEIPT_SCHEMA,
+    state: "planned-public-verified",
+    publicAuthorization: false,
+    publicWrites: false,
+    source: intent.source,
+    target: intent.target,
+    deployment,
+    publicResolution,
+    previousDeployment: intent.currentDeployment,
+    previousPublicResolution: intent.currentPublicResolution,
+    productionSmokeDigest: smoke.smokeDigest,
+    productionSmoke: smoke,
+    intentAuthorizationDigest,
+    authorizationDigest,
+    mutationReadinessDigest,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    intentProvenanceDigest,
+    execution,
+    recoveryAttemptDigest,
+    recoveryReadinessDigest,
+    recoveryIntent,
+    recoveryAttempt,
+    recoveryReadiness,
+    startingClassification,
+    publicMutationPerformed,
+    workflow,
+    completedAt: input.completedAt,
+  };
+  return withDigest(PLANNED_DEPLOY_RECEIPT_SCHEMA, value,
+    "plannedDeployReceiptDigest");
+}
+
+export function parsePlannedDeployReceipt(value) {
+  const receipt = exactKeys(value, [
+    "schemaVersion", "state", "publicAuthorization", "publicWrites", "source", "target",
+    "deployment", "publicResolution", "previousDeployment", "previousPublicResolution",
+    "productionSmokeDigest", "productionSmoke", "intentAuthorizationDigest", "authorizationDigest",
+    "mutationReadinessDigest", "mutationIntentDigest", "intentProvenanceDigest",
+    "execution", "recoveryAttemptDigest",
+    "recoveryReadinessDigest", "recoveryIntent", "recoveryAttempt", "recoveryReadiness",
+    "startingClassification",
+    "publicMutationPerformed", "workflow", "completedAt", "plannedDeployReceiptDigest",
+  ], "planned deploy receipt");
+  assert(receipt.schemaVersion === PLANNED_DEPLOY_RECEIPT_SCHEMA &&
+    receipt.state === "planned-public-verified" &&
+    receipt.publicAuthorization === false && receipt.publicWrites === false &&
+    ["normal", "recovery"].includes(receipt.execution) &&
+    ["old", "target"].includes(receipt.startingClassification) &&
+    receipt.publicMutationPerformed === (receipt.startingClassification === "old"),
+  "planned deploy receipt is invalid");
+  exactSource(receipt.source, "planned deploy receipt source");
+  exactTarget(receipt.target, "planned deploy receipt target");
+  exactDeployment(receipt.deployment, "planned deploy receipt deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(receipt.publicResolution, {
+    deployment: receipt.deployment,
+    target: receipt.target,
+  });
+  const productionSmoke = parseSmokeReceipt(receipt.productionSmoke, {
+    expectedMode: "planned",
+  });
+  assert(productionSmoke.origin === PRODUCTION_ORIGIN &&
+    productionSmoke.smokeDigest === receipt.productionSmokeDigest,
+  "planned deploy receipt production smoke differs");
+  exactDeployment(receipt.previousDeployment,
+    "planned deploy receipt previous deployment");
+  parseVercelPublicDeploymentResolution(receipt.previousPublicResolution, {
+    deployment: receipt.previousDeployment,
+    target: receipt.target,
+  });
+  for (const key of [
+    "productionSmokeDigest", "intentAuthorizationDigest", "authorizationDigest",
+    "mutationIntentDigest",
+  ]) exactSha256(receipt[key], `planned deploy receipt ${key}`);
+  if (receipt.execution === "recovery") {
+    assert(receipt.mutationReadinessDigest === null,
+      "planned recovery receipt contains normal mutation readiness");
+    exactSha256(receipt.intentProvenanceDigest,
+      "planned deploy receipt intentProvenanceDigest");
+    exactSha256(receipt.recoveryAttemptDigest,
+      "planned deploy receipt recoveryAttemptDigest");
+    exactSha256(receipt.recoveryReadinessDigest,
+      "planned deploy receipt recoveryReadinessDigest");
+    exactRecoveryWorkflow(receipt.workflow);
+    const intent = parsePublicMutationIntent(receipt.recoveryIntent);
+    const attempt = parsePublicMutationRecoveryAttempt(receipt.recoveryAttempt, { intent });
+    const readiness = parsePublicMutationRecoveryReadiness(
+      receipt.recoveryReadiness, { intent, attempt },
+    );
+    assert(intent.operation === "deploy-planned" &&
+      receipt.mutationIntentDigest === intent.mutationIntentDigest &&
+      receipt.intentAuthorizationDigest === intent.authorizationDigest &&
+      receipt.intentProvenanceDigest === attempt.intentProvenanceDigest &&
+      receipt.recoveryAttemptDigest === attempt.recoveryAttemptDigest &&
+      receipt.recoveryReadinessDigest === readiness.recoveryReadinessDigest &&
+      receipt.authorizationDigest === readiness.ownerDispatchAuthorizationDigest &&
+      receipt.startingClassification === readiness.classification &&
+      receipt.publicMutationPerformed === readiness.publicMutationRequired &&
+      canonicalEqual(receipt.source, intent.source) &&
+      canonicalEqual(receipt.target, intent.target) &&
+      canonicalEqual(receipt.workflow, readiness.workflow) &&
+      sameImmutableDeployment(receipt.deployment, intent.targetDeployment) &&
+      sameImmutableDeployment(receipt.previousDeployment, intent.currentDeployment),
+    "planned recovery receipt differs from its exact recovery lineage");
+    assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+      "planned recovery readiness and public provider resolution");
+    assertFreshTransition(readiness.confirmedAt, receipt.completedAt,
+      "planned recovery total completion freshness");
+  } else {
+    exactSha256(receipt.mutationReadinessDigest,
+      "planned deploy receipt mutationReadinessDigest");
+    assert(receipt.intentProvenanceDigest === null &&
+      receipt.recoveryAttemptDigest === null &&
+      receipt.recoveryReadinessDigest === null &&
+      receipt.recoveryIntent === null &&
+      receipt.recoveryAttempt === null &&
+      receipt.recoveryReadiness === null &&
+      receipt.startingClassification === "old" &&
+      receipt.publicMutationPerformed === true,
+    "normal planned deploy receipt contains recovery evidence");
+    exactWorkflow(receipt.workflow);
+  }
+  exactInstant(receipt.completedAt, "planned deploy receipt completedAt");
+  assertFreshTransition(publicResolution.checkedAt, receipt.completedAt,
+    "planned deploy receipt public-origin resolution");
+  assertFreshTransition(publicResolution.checkedAt, productionSmoke.checkedAt,
+    "planned deploy receipt public-origin resolution and smoke");
+  assertFreshTransition(productionSmoke.checkedAt, receipt.completedAt,
+    "planned deploy receipt production smoke and sealing");
+  const { plannedDeployReceiptDigest, ...withoutDigest } = receipt;
+  assert(plannedDeployReceiptDigest === canonicalSha256(
+    PLANNED_DEPLOY_RECEIPT_SCHEMA, withoutDigest,
+  ), "planned deploy receipt digest is invalid");
+  return receipt;
+}
+
 export function createPromotionReceipt(input) {
   const plan = parsePromotionPlan(input.plan, input.context);
   const authorization = parsePublicAuthorization(input.authorization, {
@@ -4288,12 +6075,23 @@ export function createPromotionReceipt(input) {
     operation: "promote", plan, selectedSmoke: input.selectedSmoke,
     selectedBundle: input.bundle,
   });
+  const readiness = parsePublicMutationReadiness(input.mutationReadiness, {
+    operation: "promote",
+    plan,
+    intent: input.intent,
+    authorization: input.authorization,
+    preMutationState: input.preMutationState,
+    selectedSmoke: input.selectedSmoke,
+    selectedBundle: input.bundle,
+  });
   const smoke = parseSmokeReceipt(input.productionSmoke, {
     expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.bundle,
   });
   assert(smoke.origin === PRODUCTION_ORIGIN,
     "post-promotion smoke did not target the public origin");
   exactInstant(input.promotedAt, "promotion receipt promotedAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "Vercel promotion readiness and public provider resolution");
   assertFreshTransition(preMutationState.checkedAt, input.promotedAt,
     "Vercel public promotion");
   assertFreshTransition(preMutationState.checkedAt, publicResolution.checkedAt,
@@ -4302,8 +6100,8 @@ export function createPromotionReceipt(input) {
     "Vercel post-promotion public-origin resolution and smoke");
   assertFreshTransition(smoke.checkedAt, input.promotedAt,
     "Vercel post-promotion public smoke");
-  const authorizationAge = Date.parse(preMutationState.checkedAt) -
-    Date.parse(authorization.authorizedAt);
+  const authorizationAge = Date.parse(authorization.authorizedAt) -
+    Date.parse(preMutationState.checkedAt);
   assert(authorizationAge >= 0 && authorizationAge <= 30 * 60_000,
     "Vercel public promotion must re-query within 30 minutes of owner authorization");
   const value = {
@@ -4320,6 +6118,8 @@ export function createPromotionReceipt(input) {
     stageReceiptDigest: plan.stageReceiptDigest,
     authorizationDigest: authorization.authorizationDigest,
     preMutationStateDigest: preMutationState.preMutationStateDigest,
+    mutationIntentDigest: readiness.mutationIntentDigest,
+    mutationReadinessDigest: readiness.mutationReadinessDigest,
     indexerEvidence: plan.indexerEvidence,
     stagedSource: plan.stagedSource,
     source: plan.source,
@@ -4338,12 +6138,13 @@ export function createPromotionReceipt(input) {
   return withDigest(PROMOTION_RECEIPT_SCHEMA, value, "promotionReceiptDigest");
 }
 
-export function parsePromotionReceipt(value, { bundle, target } = {}) {
+function parseStandardPromotionReceipt(value, { bundle, target } = {}) {
   const receipt = exactKeys(value, [
     "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest", "promotionPlanDigest",
     "stageReceiptDigest",
-    "authorizationDigest", "preMutationStateDigest", "indexerEvidence", "stagedSource", "source", "sourceTransition",
+    "authorizationDigest", "preMutationStateDigest", "mutationIntentDigest",
+    "mutationReadinessDigest", "indexerEvidence", "stagedSource", "source", "sourceTransition",
     "target", "deployment", "publicResolution", "buildOutputDigest", "stageArtifact",
     "previousRelease", "previousPublicResolution", "productionSmokeDigest", "workflow",
     "promotedAt", "promotionReceiptDigest",
@@ -4360,6 +6161,8 @@ export function parsePromotionReceipt(value, { bundle, target } = {}) {
     ["stageReceiptDigest", "stageReceiptDigest"],
     ["authorizationDigest", "authorizationDigest"],
     ["preMutationStateDigest", "preMutationStateDigest"],
+    ["mutationIntentDigest", "mutationIntentDigest"],
+    ["mutationReadinessDigest", "mutationReadinessDigest"],
     ["productionSmokeDigest", "productionSmokeDigest"],
   ]) exactSha256(receipt[key], `Vercel promotion receipt ${label}`);
   const indexerEvidence = parseIndexerPromotionEvidenceBinding(receipt.indexerEvidence);
@@ -4405,6 +6208,210 @@ export function parsePromotionReceipt(value, { bundle, target } = {}) {
   return receipt;
 }
 
+export function createRecoveredPromotionReceipt(input) {
+  const intent = parsePublicMutationIntent(input.intent, {
+    operation: "promote",
+    plan: input.plan,
+    authorization: input.intentAuthorization,
+    preMutationState: input.intentPreMutationState,
+    selectedSmoke: input.intentSelectedSmoke,
+    selectedBundle: input.bundle,
+  });
+  const plan = parsePromotionPlan(input.plan);
+  const attempt = parsePublicMutationRecoveryAttempt(input.recoveryAttempt, { intent });
+  const readiness = parsePublicMutationRecoveryReadiness(input.recoveryReadiness, {
+    intent,
+    attempt,
+  });
+  assert(readiness.operation === "promote",
+    "recovered promotion readiness operation differs");
+  const deployment = exactDeployment(input.productionDeployment,
+    "recovered promoted Vercel deployment");
+  assert(sameImmutableDeployment(deployment, plan.stagedDeployment) &&
+    sameImmutableDeployment(deployment, intent.targetDeployment),
+  "recovered promotion did not select the exact staged deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    input.publicResolution, { deployment, target: plan.target },
+  );
+  const smoke = parseSmokeReceipt(input.productionSmoke, {
+    expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.bundle,
+  });
+  assert(smoke.origin === PRODUCTION_ORIGIN,
+    "recovered promotion smoke did not target the public origin");
+  exactInstant(input.promotedAt, "recovered promotion receipt promotedAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "recovered promotion provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, smoke.checkedAt,
+    "recovered promotion public resolution and smoke");
+  assertFreshTransition(smoke.checkedAt, input.promotedAt,
+    "recovered promotion receipt sealing");
+  assertFreshTransition(readiness.confirmedAt, input.promotedAt,
+    "recovered promotion total completion freshness");
+  const value = {
+    schemaVersion: RECOVERED_PROMOTION_RECEIPT_SCHEMA,
+    state: "promoted-live",
+    publicAuthorization: true,
+    publicWrites: true,
+    chainId: CHAIN_ID,
+    caip2: CAIP2,
+    chainDeploymentId: CHAIN_DEPLOYMENT_ID,
+    stageBundleDigest: plan.stageBundleDigest,
+    promotionBundleDigest: plan.promotionBundleDigest,
+    promotionPlanDigest: plan.promotionPlanDigest,
+    stageReceiptDigest: plan.stageReceiptDigest,
+    authorizationDigest: readiness.ownerDispatchAuthorizationDigest,
+    preMutationStateDigest: intent.preMutationStateDigest,
+    indexerEvidence: plan.indexerEvidence,
+    stagedSource: plan.stagedSource,
+    source: attempt.source,
+    deploymentSource: plan.source,
+    recoverySource: attempt.source,
+    sourceTransition: plan.sourceTransition,
+    target: plan.target,
+    deployment,
+    publicResolution,
+    buildOutputDigest: plan.buildOutputDigest,
+    stageArtifact: plan.stageArtifact,
+    previousRelease: plan.previousRelease,
+    previousPublicResolution: plan.previousPublicResolution,
+    productionSmokeDigest: smoke.smokeDigest,
+    productionSmoke: smoke,
+    originalWorkflow: intent.workflow,
+    workflow: readiness.workflow,
+    recoveryIntent: intent,
+    recoveryAttempt: attempt,
+    recoveryReadiness: readiness,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    intentProvenanceDigest: readiness.intentProvenanceDigest,
+    recoveryAttemptDigest: attempt.recoveryAttemptDigest,
+    recoveryReadinessDigest: readiness.recoveryReadinessDigest,
+    recoveryClassification: readiness.classification,
+    publicMutationPerformed: readiness.publicMutationRequired,
+    promotedAt: input.promotedAt,
+  };
+  return withDigest(RECOVERED_PROMOTION_RECEIPT_SCHEMA, value,
+    "promotionReceiptDigest");
+}
+
+function parseRecoveredPromotionReceipt(value, { bundle, target } = {}) {
+  const receipt = exactKeys(value, [
+    "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
+    "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest",
+    "promotionPlanDigest", "stageReceiptDigest", "authorizationDigest",
+    "preMutationStateDigest", "indexerEvidence", "stagedSource", "source",
+    "deploymentSource", "recoverySource", "sourceTransition", "target", "deployment", "publicResolution",
+    "buildOutputDigest", "stageArtifact", "previousRelease", "previousPublicResolution",
+    "productionSmokeDigest", "productionSmoke", "originalWorkflow", "workflow",
+    "recoveryIntent", "recoveryAttempt", "recoveryReadiness", "mutationIntentDigest",
+    "intentProvenanceDigest", "recoveryAttemptDigest", "recoveryReadinessDigest",
+    "recoveryClassification",
+    "publicMutationPerformed", "promotedAt", "promotionReceiptDigest",
+  ], "recovered Vercel promotion receipt");
+  assert(receipt.schemaVersion === RECOVERED_PROMOTION_RECEIPT_SCHEMA &&
+    receipt.state === "promoted-live" && receipt.publicAuthorization === true &&
+    receipt.publicWrites === true && receipt.chainId === CHAIN_ID &&
+    receipt.caip2 === CAIP2 && receipt.chainDeploymentId === CHAIN_DEPLOYMENT_ID &&
+    ["old", "target"].includes(receipt.recoveryClassification) &&
+    receipt.publicMutationPerformed === (receipt.recoveryClassification === "old"),
+  "recovered Vercel promotion receipt is invalid");
+  for (const key of [
+    "stageBundleDigest", "promotionBundleDigest", "promotionPlanDigest",
+    "stageReceiptDigest", "authorizationDigest", "preMutationStateDigest",
+    "buildOutputDigest", "productionSmokeDigest", "mutationIntentDigest",
+    "intentProvenanceDigest", "recoveryAttemptDigest", "recoveryReadinessDigest",
+  ]) exactSha256(receipt[key], `recovered Vercel promotion receipt ${key}`);
+  const indexerEvidence = parseIndexerPromotionEvidenceBinding(receipt.indexerEvidence);
+  assert(indexerEvidence.promotionBundleDigest === receipt.promotionBundleDigest,
+    "recovered promotion receipt Indexer evidence differs from its bundle");
+  exactSource(receipt.stagedSource, "recovered promotion staged source");
+  exactSource(receipt.source, "recovered promotion receipt source");
+  exactSource(receipt.deploymentSource, "recovered promotion deployment source");
+  exactSource(receipt.recoverySource, "recovered promotion recovery source");
+  assert(canonicalEqual(receipt.source, receipt.recoverySource),
+    "recovered promotion receipt source differs from its recovery source");
+  const transition = parseEvidenceOnlySourceTransition(receipt.sourceTransition);
+  assert(canonicalEqual(transition.stagedSource, receipt.stagedSource) &&
+    canonicalEqual(transition.promotionSource, receipt.deploymentSource) &&
+    transition.buildOutputDigest === receipt.buildOutputDigest,
+  "recovered promotion receipt source transition differs");
+  exactTarget(receipt.target, "recovered promotion target");
+  exactDeployment(receipt.deployment, "recovered promotion deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(receipt.publicResolution, {
+    deployment: receipt.deployment,
+    target: receipt.target,
+  });
+  const productionSmoke = parseSmokeReceipt(receipt.productionSmoke, {
+    expectedMode: "live", expectedBundlePhase: "promotion",
+    ...(bundle ? { bundle } : {}),
+  });
+  assert(productionSmoke.origin === PRODUCTION_ORIGIN &&
+    productionSmoke.smokeDigest === receipt.productionSmokeDigest,
+  "recovered promotion receipt production smoke differs");
+  const stageArtifact = parseGitHubArtifactEvidence(receipt.stageArtifact);
+  assert(stageArtifact.sourceRevision === receipt.stagedSource.revision,
+    "recovered promotion receipt stage artifact differs from its staged source");
+  exactPreviousRelease(receipt.previousRelease,
+    "recovered promotion previous release");
+  parseVercelPublicDeploymentResolution(receipt.previousPublicResolution, {
+    deployment: receipt.previousRelease.deployment,
+    target: receipt.target,
+  });
+  exactWorkflow(receipt.originalWorkflow, "recovered promotion original workflow");
+  exactRecoveryWorkflow(receipt.workflow, "recovered promotion workflow");
+  const intent = parsePublicMutationIntent(receipt.recoveryIntent);
+  const attempt = parsePublicMutationRecoveryAttempt(receipt.recoveryAttempt, { intent });
+  const readiness = parsePublicMutationRecoveryReadiness(
+    receipt.recoveryReadiness, { intent, attempt },
+  );
+  assert(intent.operation === "promote" &&
+    intent.planDigest === receipt.promotionPlanDigest &&
+    intent.preMutationStateDigest === receipt.preMutationStateDigest &&
+    intent.selectedBundleDigest === receipt.promotionBundleDigest &&
+    receipt.mutationIntentDigest === intent.mutationIntentDigest &&
+    receipt.intentProvenanceDigest === attempt.intentProvenanceDigest &&
+    receipt.recoveryAttemptDigest === attempt.recoveryAttemptDigest &&
+    receipt.recoveryReadinessDigest === readiness.recoveryReadinessDigest &&
+    receipt.authorizationDigest === readiness.ownerDispatchAuthorizationDigest &&
+    receipt.recoveryClassification === readiness.classification &&
+    receipt.publicMutationPerformed === readiness.publicMutationRequired &&
+    canonicalEqual(receipt.deploymentSource, intent.source) &&
+    canonicalEqual(receipt.source, attempt.source) &&
+    canonicalEqual(receipt.recoverySource, attempt.source) &&
+    canonicalEqual(receipt.target, intent.target) &&
+    canonicalEqual(receipt.originalWorkflow, intent.workflow) &&
+    canonicalEqual(receipt.workflow, readiness.workflow) &&
+    sameImmutableDeployment(receipt.deployment, intent.targetDeployment),
+  "recovered promotion receipt differs from its exact recovery lineage");
+  exactInstant(receipt.promotedAt, "recovered promotion promotedAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "recovered promotion readiness and public provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, productionSmoke.checkedAt,
+    "recovered promotion public resolution and smoke");
+  assertFreshTransition(productionSmoke.checkedAt, receipt.promotedAt,
+    "recovered promotion smoke and receipt sealing");
+  assertFreshTransition(readiness.confirmedAt, receipt.promotedAt,
+    "recovered promotion total completion freshness");
+  assertFreshTransition(publicResolution.checkedAt, receipt.promotedAt,
+    "recovered promotion receipt public-origin resolution");
+  const { promotionReceiptDigest, ...withoutDigest } = receipt;
+  assert(promotionReceiptDigest === canonicalSha256(
+    RECOVERED_PROMOTION_RECEIPT_SCHEMA, withoutDigest,
+  ), "recovered Vercel promotion receipt digest is invalid");
+  if (bundle) assert(receipt.promotionBundleDigest ===
+    parsePromotionBundle(bundle).promotionBundleDigest,
+  "recovered Vercel promotion receipt differs from its bundle");
+  if (target) assert(canonicalEqual(receipt.target, exactTarget(target)),
+    "recovered Vercel promotion receipt differs from the protected target");
+  return receipt;
+}
+
+export function parsePromotionReceipt(value, options = {}) {
+  if (value?.schemaVersion === RECOVERED_PROMOTION_RECEIPT_SCHEMA) {
+    return parseRecoveredPromotionReceipt(value, options);
+  }
+  return parseStandardPromotionReceipt(value, options);
+}
+
 export function createRollbackPlan(input) {
   const promotion = parsePromotionReceipt(input.promotionReceipt, {
     bundle: input.bundle, target: input.target,
@@ -4424,9 +6431,26 @@ export function createRollbackPlan(input) {
     sameImmutableDeployment(currentDeployment, promotion.deployment),
   "rollback plan current production differs from the promotion receipt");
   const promotionArtifact = parseGitHubArtifactEvidence(input.promotionArtifact);
-  assert(promotionArtifact.runId === promotion.workflow.runId &&
+  const promotionArtifactBinding = verifyGitHubArtifactArchiveEntry(
+    input.promotionArtifactArchive, {
+      artifactDigest: promotionArtifact.artifactDigest,
+      entryPath: "promotion-receipt.json",
+      expectedBytes: canonicalArtifactBytes(promotion),
+    },
+  );
+  const promotionRun = parseGitHubRunEvidence(input.promotionRun);
+  const promotionArtifactSource = promotion.source;
+  assert(promotionRun.runId === promotion.workflow.runId &&
+    promotionRun.runAttempt === promotion.workflow.runAttempt &&
+    promotionRun.workflowRef === promotion.workflow.workflowRef &&
+    promotionRun.actor === promotion.workflow.actor &&
+    promotionRun.actorId === promotion.workflow.actorId &&
+    promotionRun.sourceRevision === promotionArtifactSource.revision &&
+    promotionRun.sourceTree === promotionArtifactSource.tree &&
+    promotionArtifact.runId === promotionRun.runId &&
+    promotionArtifact.runAttempt === promotionRun.runAttempt &&
     promotionArtifact.runAttempt === promotion.workflow.runAttempt &&
-    promotionArtifact.sourceRevision === promotion.source.revision &&
+    promotionArtifact.sourceRevision === promotionArtifactSource.revision &&
     promotionArtifact.artifactName ===
       `developers-vercel-promotion-${promotion.workflow.runId}-${promotion.workflow.runAttempt}`,
   "rollback plan promotion artifact differs from the promotion receipt workflow");
@@ -4474,7 +6498,12 @@ export function createRollbackPlan(input) {
     stageBundleDigest: promotion.stageBundleDigest,
     promotionBundleDigest: promotion.promotionBundleDigest,
     promotionReceiptDigest: promotion.promotionReceiptDigest,
+    promotionReceipt: promotion,
+    promotionRun,
     promotionArtifact,
+    promotionArtifactArchiveDigest: promotionArtifactBinding.artifactArchiveDigest,
+    promotionArtifactEntryPath: promotionArtifactBinding.artifactEntryPath,
+    promotionArtifactEntrySha256: promotionArtifactBinding.artifactEntrySha256,
     indexerEvidence: promotion.indexerEvidence,
     source: promotion.source,
     target: promotion.target,
@@ -4495,7 +6524,9 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
   const plan = exactKeys(value, [
     "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest",
-    "promotionReceiptDigest", "promotionArtifact",
+    "promotionReceiptDigest", "promotionReceipt", "promotionRun", "promotionArtifact",
+    "promotionArtifactArchiveDigest", "promotionArtifactEntryPath",
+    "promotionArtifactEntrySha256",
     "indexerEvidence",
     "source", "target", "currentDeployment", "currentPublicResolution",
     "currentSmokeDigest", "rollbackTarget", "rollbackDeployment", "targetSmokeDigest",
@@ -4511,13 +6542,33 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
   exactSha256(plan.stageBundleDigest, "Vercel rollback plan stageBundleDigest");
   exactSha256(plan.promotionBundleDigest, "Vercel rollback plan promotionBundleDigest");
   exactSha256(plan.promotionReceiptDigest, "Vercel rollback plan promotionReceiptDigest");
+  exactSha256(plan.promotionArtifactArchiveDigest,
+    "Vercel rollback plan promotionArtifactArchiveDigest");
+  exactSha256(plan.promotionArtifactEntrySha256,
+    "Vercel rollback plan promotionArtifactEntrySha256");
+  const promotionRun = parseGitHubRunEvidence(plan.promotionRun);
   const promotionArtifact = parseGitHubArtifactEvidence(plan.promotionArtifact);
+  const promotion = parsePromotionReceipt(plan.promotionReceipt, {
+    ...(bundle ? { bundle } : {}),
+    target: plan.target,
+  });
   const indexerEvidence = parseIndexerPromotionEvidenceBinding(plan.indexerEvidence);
   assert(indexerEvidence.promotionBundleDigest === plan.promotionBundleDigest,
     "Vercel rollback plan Indexer evidence differs from the promotion bundle");
   exactSource(plan.source, "Vercel rollback plan source");
-  assert(promotionArtifact.sourceRevision === plan.source.revision,
-    "Vercel rollback plan promotion artifact differs from its source");
+  assert(promotionRun.runId === promotionArtifact.runId &&
+    promotionRun.runAttempt === promotionArtifact.runAttempt &&
+    promotionRun.sourceRevision === promotionArtifact.sourceRevision &&
+    promotionRun.sourceRevision === plan.source.revision &&
+    promotionRun.sourceTree === plan.source.tree &&
+    plan.promotionReceiptDigest === promotion.promotionReceiptDigest &&
+    plan.promotionArtifactArchiveDigest === promotionArtifact.artifactDigest &&
+    plan.promotionArtifactEntryPath === "promotion-receipt.json" &&
+    plan.promotionArtifactEntrySha256 ===
+      sha256Bytes(canonicalArtifactBytes(promotion)) &&
+    canonicalEqual(promotion.source, plan.source) &&
+    canonicalEqual(promotion.target, plan.target),
+  "Vercel rollback plan promotion evidence differs from its source");
   exactTarget(plan.target, "Vercel rollback plan target");
   exactDeployment(plan.currentDeployment, "Vercel rollback plan currentDeployment");
   const currentPublicResolution = parseVercelPublicDeploymentResolution(
@@ -4553,8 +6604,8 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
   if (bundle) assert(plan.promotionBundleDigest ===
     parsePromotionBundle(bundle).promotionBundleDigest,
   "Vercel rollback plan differs from the current finalized promotion bundle");
-  if (promotionReceipt) assert(plan.promotionReceiptDigest ===
-    parsePromotionReceipt(promotionReceipt, { bundle, target }).promotionReceiptDigest,
+  if (promotionReceipt) assert(canonicalEqual(plan.promotionReceipt,
+    parsePromotionReceipt(promotionReceipt, { bundle, target })),
   "Vercel rollback plan differs from the promotion receipt");
   if (target) assert(canonicalEqual(plan.target, exactTarget(target)),
     "Vercel rollback plan differs from the protected target");
@@ -4580,6 +6631,15 @@ export function createRollbackReceipt(input) {
     operation: "rollback", plan, selectedSmoke: input.selectedSmoke,
     selectedBundle: input.previousBundle,
   });
+  const readiness = parsePublicMutationReadiness(input.mutationReadiness, {
+    operation: "rollback",
+    plan,
+    intent: input.intent,
+    authorization: input.authorization,
+    preMutationState: input.preMutationState,
+    selectedSmoke: input.selectedSmoke,
+    selectedBundle: input.previousBundle,
+  });
   const smoke = parseSmokeReceipt(input.productionSmoke, {
     expectedMode: plan.rollbackTarget.mode,
     ...(plan.rollbackTarget.mode === "live"
@@ -4589,6 +6649,8 @@ export function createRollbackReceipt(input) {
   assert(smoke.origin === PRODUCTION_ORIGIN,
     "post-rollback smoke did not target the public origin");
   exactInstant(input.rolledBackAt, "rollback receipt rolledBackAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "Vercel rollback readiness and public provider resolution");
   assertFreshTransition(preMutationState.checkedAt, input.rolledBackAt,
     "Vercel public rollback");
   assertFreshTransition(preMutationState.checkedAt, publicResolution.checkedAt,
@@ -4597,8 +6659,8 @@ export function createRollbackReceipt(input) {
     "Vercel post-rollback public-origin resolution and smoke");
   assertFreshTransition(smoke.checkedAt, input.rolledBackAt,
     "Vercel post-rollback public smoke");
-  const authorizationAge = Date.parse(preMutationState.checkedAt) -
-    Date.parse(authorization.authorizedAt);
+  const authorizationAge = Date.parse(authorization.authorizedAt) -
+    Date.parse(preMutationState.checkedAt);
   assert(authorizationAge >= 0 && authorizationAge <= 30 * 60_000,
     "Vercel public rollback must re-query within 30 minutes of owner authorization");
   const value = {
@@ -4615,6 +6677,8 @@ export function createRollbackReceipt(input) {
     rollbackPlanDigest: plan.rollbackPlanDigest,
     authorizationDigest: authorization.authorizationDigest,
     preMutationStateDigest: preMutationState.preMutationStateDigest,
+    mutationIntentDigest: readiness.mutationIntentDigest,
+    mutationReadinessDigest: readiness.mutationReadinessDigest,
     promotionArtifact: plan.promotionArtifact,
     indexerEvidence: plan.indexerEvidence,
     source: plan.source,
@@ -4630,11 +6694,12 @@ export function createRollbackReceipt(input) {
   return withDigest(ROLLBACK_RECEIPT_SCHEMA, value, "rollbackReceiptDigest");
 }
 
-export function parseRollbackReceipt(value, { target } = {}) {
+function parseStandardRollbackReceipt(value, { target } = {}) {
   const receipt = exactKeys(value, [
     "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest", "promotionReceiptDigest",
     "rollbackPlanDigest", "authorizationDigest", "preMutationStateDigest",
+    "mutationIntentDigest", "mutationReadinessDigest",
     "promotionArtifact", "indexerEvidence",
     "source", "target", "deployment", "publicResolution", "restoredMode",
     "restoredPromotionBundleDigest", "productionSmokeDigest", "workflow", "rolledBackAt",
@@ -4648,7 +6713,8 @@ export function parseRollbackReceipt(value, { target } = {}) {
   "Vercel rollback receipt is invalid");
   for (const key of [
     "stageBundleDigest", "promotionBundleDigest", "promotionReceiptDigest", "rollbackPlanDigest",
-    "authorizationDigest", "preMutationStateDigest", "productionSmokeDigest",
+    "authorizationDigest", "preMutationStateDigest", "mutationIntentDigest",
+    "mutationReadinessDigest", "productionSmokeDigest",
   ]) exactSha256(receipt[key], `Vercel rollback receipt ${key}`);
   if (receipt.restoredMode === "planned") {
     assert(receipt.restoredPromotionBundleDigest === null,
@@ -4683,6 +6749,203 @@ export function parseRollbackReceipt(value, { target } = {}) {
   return receipt;
 }
 
+export function createRecoveredRollbackReceipt(input) {
+  const plan = parseRollbackPlan(input.plan);
+  const intent = parsePublicMutationIntent(input.intent, {
+    operation: "rollback",
+    plan,
+    authorization: input.intentAuthorization,
+    preMutationState: input.intentPreMutationState,
+    selectedSmoke: input.intentSelectedSmoke,
+    selectedBundle: input.previousBundle,
+  });
+  const attempt = parsePublicMutationRecoveryAttempt(input.recoveryAttempt, { intent });
+  const readiness = parsePublicMutationRecoveryReadiness(input.recoveryReadiness, {
+    intent,
+    attempt,
+  });
+  assert(readiness.operation === "rollback",
+    "recovered rollback readiness operation differs");
+  const deployment = exactDeployment(input.productionDeployment,
+    "recovered rollback production deployment");
+  assert(sameImmutableDeployment(deployment, plan.rollbackDeployment) &&
+    sameImmutableDeployment(deployment, intent.targetDeployment),
+  "recovered rollback did not select the exact prior deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    input.publicResolution, { deployment, target: plan.target },
+  );
+  const smoke = parseSmokeReceipt(input.productionSmoke, {
+    expectedMode: plan.rollbackTarget.mode,
+    ...(plan.rollbackTarget.mode === "live"
+      ? { expectedBundlePhase: "promotion", bundle: input.previousBundle }
+      : {}),
+  });
+  assert(smoke.origin === PRODUCTION_ORIGIN,
+    "recovered rollback smoke did not target the public origin");
+  exactInstant(input.rolledBackAt, "recovered rollback receipt rolledBackAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "recovered rollback provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, smoke.checkedAt,
+    "recovered rollback public resolution and smoke");
+  assertFreshTransition(smoke.checkedAt, input.rolledBackAt,
+    "recovered rollback receipt sealing");
+  assertFreshTransition(readiness.confirmedAt, input.rolledBackAt,
+    "recovered rollback total completion freshness");
+  const value = {
+    schemaVersion: RECOVERED_ROLLBACK_RECEIPT_SCHEMA,
+    state: "rolled-back-verified",
+    publicAuthorization: true,
+    publicWrites: true,
+    chainId: CHAIN_ID,
+    caip2: CAIP2,
+    chainDeploymentId: CHAIN_DEPLOYMENT_ID,
+    stageBundleDigest: plan.stageBundleDigest,
+    promotionBundleDigest: plan.promotionBundleDigest,
+    promotionReceiptDigest: plan.promotionReceiptDigest,
+    rollbackPlanDigest: plan.rollbackPlanDigest,
+    authorizationDigest: readiness.ownerDispatchAuthorizationDigest,
+    preMutationStateDigest: intent.preMutationStateDigest,
+    promotionArtifact: plan.promotionArtifact,
+    indexerEvidence: plan.indexerEvidence,
+    source: plan.source,
+    recoverySource: attempt.source,
+    target: plan.target,
+    deployment,
+    publicResolution,
+    restoredMode: plan.rollbackTarget.mode,
+    restoredPromotionBundleDigest: plan.rollbackTarget.promotionBundleDigest,
+    productionSmokeDigest: smoke.smokeDigest,
+    productionSmoke: smoke,
+    originalWorkflow: intent.workflow,
+    workflow: readiness.workflow,
+    recoveryIntent: intent,
+    recoveryAttempt: attempt,
+    recoveryReadiness: readiness,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    intentProvenanceDigest: readiness.intentProvenanceDigest,
+    recoveryAttemptDigest: attempt.recoveryAttemptDigest,
+    recoveryReadinessDigest: readiness.recoveryReadinessDigest,
+    recoveryClassification: readiness.classification,
+    publicMutationPerformed: readiness.publicMutationRequired,
+    rolledBackAt: input.rolledBackAt,
+  };
+  return withDigest(RECOVERED_ROLLBACK_RECEIPT_SCHEMA, value,
+    "rollbackReceiptDigest");
+}
+
+function parseRecoveredRollbackReceipt(value, { target, previousBundle } = {}) {
+  const receipt = exactKeys(value, [
+    "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
+    "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest",
+    "promotionReceiptDigest", "rollbackPlanDigest", "authorizationDigest",
+    "preMutationStateDigest", "promotionArtifact", "indexerEvidence", "source",
+    "recoverySource", "target", "deployment", "publicResolution", "restoredMode",
+    "restoredPromotionBundleDigest", "productionSmokeDigest", "productionSmoke",
+    "originalWorkflow", "workflow", "recoveryIntent", "recoveryAttempt",
+    "recoveryReadiness", "mutationIntentDigest", "intentProvenanceDigest",
+    "recoveryAttemptDigest", "recoveryReadinessDigest", "recoveryClassification",
+    "publicMutationPerformed",
+    "rolledBackAt", "rollbackReceiptDigest",
+  ], "recovered Vercel rollback receipt");
+  assert(receipt.schemaVersion === RECOVERED_ROLLBACK_RECEIPT_SCHEMA &&
+    receipt.state === "rolled-back-verified" && receipt.publicAuthorization === true &&
+    receipt.publicWrites === true && receipt.chainId === CHAIN_ID &&
+    receipt.caip2 === CAIP2 && receipt.chainDeploymentId === CHAIN_DEPLOYMENT_ID &&
+    ["planned", "live"].includes(receipt.restoredMode) &&
+    ["old", "target"].includes(receipt.recoveryClassification) &&
+    receipt.publicMutationPerformed === (receipt.recoveryClassification === "old"),
+  "recovered Vercel rollback receipt is invalid");
+  for (const key of [
+    "stageBundleDigest", "promotionBundleDigest", "promotionReceiptDigest",
+    "rollbackPlanDigest", "authorizationDigest", "preMutationStateDigest",
+    "productionSmokeDigest", "mutationIntentDigest", "intentProvenanceDigest",
+    "recoveryAttemptDigest", "recoveryReadinessDigest",
+  ]) exactSha256(receipt[key], `recovered Vercel rollback receipt ${key}`);
+  if (receipt.restoredMode === "planned") {
+    assert(receipt.restoredPromotionBundleDigest === null,
+      "recovered planned rollback receipt must not claim a promotion bundle");
+  } else {
+    exactSha256(receipt.restoredPromotionBundleDigest,
+      "recovered rollback restoredPromotionBundleDigest");
+  }
+  const promotionArtifact = parseGitHubArtifactEvidence(receipt.promotionArtifact);
+  const indexerEvidence = parseIndexerPromotionEvidenceBinding(receipt.indexerEvidence);
+  exactSource(receipt.source, "recovered rollback source");
+  exactSource(receipt.recoverySource, "recovered rollback recovery source");
+  assert(promotionArtifact.sourceRevision === receipt.source.revision &&
+    indexerEvidence.promotionBundleDigest === receipt.promotionBundleDigest,
+  "recovered rollback receipt evidence differs from its promoted release");
+  exactTarget(receipt.target, "recovered rollback target");
+  exactDeployment(receipt.deployment, "recovered rollback deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(receipt.publicResolution, {
+    deployment: receipt.deployment,
+    target: receipt.target,
+  });
+  const productionSmoke = parseSmokeReceipt(receipt.productionSmoke, {
+    expectedMode: receipt.restoredMode,
+    ...(receipt.restoredMode === "live" && previousBundle
+      ? {
+        expectedBundlePhase: "promotion",
+        bundle: previousBundle,
+      }
+      : receipt.restoredMode === "live"
+        ? { expectedBundlePhase: "promotion" }
+        : {}),
+  });
+  assert(productionSmoke.origin === PRODUCTION_ORIGIN &&
+    productionSmoke.smokeDigest === receipt.productionSmokeDigest,
+  "recovered rollback receipt production smoke differs");
+  exactWorkflow(receipt.originalWorkflow, "recovered rollback original workflow");
+  exactRecoveryWorkflow(receipt.workflow, "recovered rollback workflow");
+  const intent = parsePublicMutationIntent(receipt.recoveryIntent);
+  const attempt = parsePublicMutationRecoveryAttempt(receipt.recoveryAttempt, { intent });
+  const readiness = parsePublicMutationRecoveryReadiness(
+    receipt.recoveryReadiness, { intent, attempt },
+  );
+  assert(intent.operation === "rollback" &&
+    intent.planDigest === receipt.rollbackPlanDigest &&
+    intent.preMutationStateDigest === receipt.preMutationStateDigest &&
+    intent.selectedBundleDigest === receipt.restoredPromotionBundleDigest &&
+    receipt.mutationIntentDigest === intent.mutationIntentDigest &&
+    receipt.intentProvenanceDigest === attempt.intentProvenanceDigest &&
+    receipt.recoveryAttemptDigest === attempt.recoveryAttemptDigest &&
+    receipt.recoveryReadinessDigest === readiness.recoveryReadinessDigest &&
+    receipt.authorizationDigest === readiness.ownerDispatchAuthorizationDigest &&
+    receipt.recoveryClassification === readiness.classification &&
+    receipt.publicMutationPerformed === readiness.publicMutationRequired &&
+    canonicalEqual(receipt.recoverySource, attempt.source) &&
+    canonicalEqual(receipt.target, intent.target) &&
+    canonicalEqual(receipt.originalWorkflow, intent.workflow) &&
+    canonicalEqual(receipt.workflow, readiness.workflow) &&
+    sameImmutableDeployment(receipt.deployment, intent.targetDeployment),
+  "recovered rollback receipt differs from its exact recovery lineage");
+  exactInstant(receipt.rolledBackAt, "recovered rollback rolledBackAt");
+  assertFreshTransition(readiness.confirmedAt, publicResolution.checkedAt,
+    "recovered rollback readiness and public provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, productionSmoke.checkedAt,
+    "recovered rollback public resolution and smoke");
+  assertFreshTransition(productionSmoke.checkedAt, receipt.rolledBackAt,
+    "recovered rollback smoke and receipt sealing");
+  assertFreshTransition(readiness.confirmedAt, receipt.rolledBackAt,
+    "recovered rollback total completion freshness");
+  assertFreshTransition(publicResolution.checkedAt, receipt.rolledBackAt,
+    "recovered rollback receipt public-origin resolution");
+  const { rollbackReceiptDigest, ...withoutDigest } = receipt;
+  assert(rollbackReceiptDigest === canonicalSha256(
+    RECOVERED_ROLLBACK_RECEIPT_SCHEMA, withoutDigest,
+  ), "recovered Vercel rollback receipt digest is invalid");
+  if (target) assert(canonicalEqual(receipt.target, exactTarget(target)),
+    "recovered Vercel rollback receipt differs from the protected target");
+  return receipt;
+}
+
+export function parseRollbackReceipt(value, options = {}) {
+  if (value?.schemaVersion === RECOVERED_ROLLBACK_RECEIPT_SCHEMA) {
+    return parseRecoveredRollbackReceipt(value, options);
+  }
+  return parseStandardRollbackReceipt(value, options);
+}
+
 export function releaseTarget(orgId, projectId) {
   return exactTarget({
     provider: "vercel", orgId, projectId, environment: "production",
@@ -4696,6 +6959,10 @@ export function releaseSource(revision, tree) {
 
 export function releaseWorkflow(value) {
   return exactWorkflow(value);
+}
+
+export function releaseRecoveryWorkflow(value) {
+  return exactRecoveryWorkflow(value);
 }
 
 export const RELEASE_CONSTANTS = Object.freeze({

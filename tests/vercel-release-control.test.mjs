@@ -18,8 +18,16 @@ import {
   PROMOTION_BUNDLE_SCHEMA,
   PROMOTION_PLAN_SCHEMA,
   PLANNED_DEPLOY_AUTHORIZATION_SCHEMA,
+  PLANNED_DEPLOY_RECEIPT_SCHEMA,
+  PLANNED_SMOKE_SCHEMA,
   PRODUCTION_ORIGIN,
   PUBLIC_AUTHORIZATION_SCHEMA,
+  PUBLIC_MUTATION_INTENT_SCHEMA,
+  PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA,
+  PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA,
+  PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA,
+  RECOVERED_PROMOTION_RECEIPT_SCHEMA,
+  RECOVERED_ROLLBACK_RECEIPT_SCHEMA,
   RELEASE_CONSTANTS,
   ROLLBACK_PLAN_SCHEMA,
   STAGE_RECEIPT_SCHEMA,
@@ -34,10 +42,17 @@ import {
   createSmokeReceipt,
   createStageProtectionEvidence,
   createStageReceipt,
+  createVercelMutationControlEvidence,
   createVercelPublicDeploymentResolution,
   createEvidenceOnlySourceTransition,
   createPlannedDeployAuthorization,
+  createPlannedDeployReceipt,
   createPreMutationState,
+  createPublicMutationIntent,
+  createPublicMutationRecoveryAttempt,
+  createPublicMutationRecoveryReadiness,
+  createRecoveredPromotionReceipt,
+  createRecoveredRollbackReceipt,
   frozenEthereumV3Identity,
   hashBuildOutput,
   normalizeVercelDeployment,
@@ -48,17 +63,29 @@ import {
   parsePromotionReceipt,
   parseGitHubOwnerDispatchAuthorization,
   parsePlannedDeployAuthorization,
+  parsePlannedDeployReceipt,
+  parsePublicMutationIntent,
+  parsePublicMutationIntentProvenance,
+  parsePublicMutationRecoveryAttempt,
+  parsePublicMutationRecoveryAttemptProvenance,
+  parsePublicMutationRecoveryReadiness,
   parsePublicAuthorization,
   parseRollbackPlan,
+  parseRollbackReceipt,
   parseStageReceipt,
   parseVercelPublicDeploymentResolution,
   releaseSource,
   releaseTarget,
   releaseWorkflow,
+  releaseRecoveryWorkflow,
   validateLiveRobinhoodManifest,
   validateGitHubArtifactEvidence,
   validateGitHubOwnerDispatchAuthorization,
   validateGitHubRunEvidence,
+  validatePublicMutationIntentProvenance,
+  validatePublicMutationRecoveryAttemptProvenance,
+  validatePlannedPublicMutationReadiness,
+  validatePreMutationReadiness,
   validatePlannedRobinhoodManifest,
 } from "../scripts/lib/vercel-release.mjs";
 
@@ -81,6 +108,16 @@ const workflow = releaseWorkflow({
   actor: "hazarxyz",
   actorId: "258789013",
 });
+const recoverySource = releaseSource("e".repeat(40), "f".repeat(40));
+const recoveryWorkflow = releaseRecoveryWorkflow({
+  repository: "programmablehq/Developers",
+  workflowRef:
+    "programmablehq/Developers/.github/workflows/vercel-release-recovery.yml@refs/heads/main",
+  runId: "67890",
+  runAttempt: "1",
+  actor: "hazarxyz",
+  actorId: "258789013",
+});
 
 function actionsRunEvidence(runSource = source) {
   return validateGitHubRunEvidence({
@@ -96,17 +133,48 @@ function actionsRunEvidence(runSource = source) {
     html_url: `https://github.com/programmablehq/Developers/actions/runs/${workflow.runId}`,
     repository: { full_name: "programmablehq/Developers" },
     actor: { login: workflow.actor, id: Number(workflow.actorId) },
+    triggering_actor: { login: workflow.actor, id: Number(workflow.actorId) },
     head_commit: { id: runSource.revision, tree_id: runSource.tree },
   }, { runId: workflow.runId, runAttempt: workflow.runAttempt });
 }
 
-function actionsArtifact(name, artifactSource = source, id = 101) {
+function recoveryActionsRunEvidence(runSource = recoverySource) {
+  return validateGitHubRunEvidence({
+    id: Number(recoveryWorkflow.runId),
+    run_attempt: Number(recoveryWorkflow.runAttempt),
+    event: "workflow_dispatch",
+    status: "completed",
+    conclusion: "success",
+    head_sha: runSource.revision,
+    head_branch: "main",
+    path: ".github/workflows/vercel-release-recovery.yml",
+    name: "Vercel release recovery",
+    html_url:
+      `https://github.com/programmablehq/Developers/actions/runs/${recoveryWorkflow.runId}`,
+    repository: { full_name: "programmablehq/Developers" },
+    actor: { login: recoveryWorkflow.actor, id: Number(recoveryWorkflow.actorId) },
+    triggering_actor: {
+      login: recoveryWorkflow.actor,
+      id: Number(recoveryWorkflow.actorId),
+    },
+    head_commit: { id: runSource.revision, tree_id: runSource.tree },
+  }, {
+    runId: recoveryWorkflow.runId,
+    runAttempt: recoveryWorkflow.runAttempt,
+    workflowRefs: [
+      workflow.workflowRef,
+      recoveryWorkflow.workflowRef,
+    ],
+  });
+}
+
+function actionsArtifact(name, artifactSource = source, id = 101, archive = null) {
   return validateGitHubArtifactEvidence({
     artifacts: [{
       id,
       name,
-      digest: sha256Bytes(Buffer.from(name, "utf8")),
-      size_in_bytes: 4096,
+      digest: sha256Bytes(archive ?? Buffer.from(name, "utf8")),
+      size_in_bytes: archive?.byteLength ?? 4096,
       expired: false,
       workflow_run: {
         id: Number(workflow.runId),
@@ -119,6 +187,154 @@ function actionsArtifact(name, artifactSource = source, id = 101) {
     runId: workflow.runId,
     runAttempt: workflow.runAttempt,
     sourceRevision: artifactSource.revision,
+  });
+}
+
+function recoveryActionsArtifact(
+  name, artifactSource = recoverySource, id = 201, archive = null,
+) {
+  return validateGitHubArtifactEvidence({
+    artifacts: [{
+      id,
+      name,
+      digest: sha256Bytes(archive ?? Buffer.from(name, "utf8")),
+      size_in_bytes: archive?.byteLength ?? 4096,
+      expired: false,
+      workflow_run: {
+        id: Number(recoveryWorkflow.runId),
+        head_branch: "main",
+        head_sha: artifactSource.revision,
+      },
+    }],
+  }, {
+    name,
+    runId: recoveryWorkflow.runId,
+    runAttempt: recoveryWorkflow.runAttempt,
+    sourceRevision: artifactSource.revision,
+  });
+}
+
+function storedZipEntry(entryName, bytesInput) {
+  const name = Buffer.from(entryName, "utf8");
+  const bytes = Buffer.from(bytesInput);
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(0x0800, 6);
+  local.writeUInt16LE(0, 8);
+  local.writeUInt32LE(bytes.byteLength, 18);
+  local.writeUInt32LE(bytes.byteLength, 22);
+  local.writeUInt16LE(name.byteLength, 26);
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(0x0800, 8);
+  central.writeUInt16LE(0, 10);
+  central.writeUInt32LE(bytes.byteLength, 20);
+  central.writeUInt32LE(bytes.byteLength, 24);
+  central.writeUInt16LE(name.byteLength, 28);
+  const centralOffset = local.byteLength + name.byteLength + bytes.byteLength;
+  const centralSize = central.byteLength + name.byteLength;
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(centralSize, 12);
+  eocd.writeUInt32LE(centralOffset, 16);
+  return Buffer.concat([local, name, bytes, central, name, eocd]);
+}
+
+function mutationIntentProvenance(intent, archivedIntent = intent) {
+  const intentCreated = Date.parse(intent.createdAt);
+  const second = (value) => new Date(value).toISOString().replace(".000Z", "Z");
+  const artifactName =
+    `developers-vercel-mutation-intent-${intent.workflow.runId}-${intent.workflow.runAttempt}`;
+  const archive = storedZipEntry(
+    "public-mutation-intent.json",
+    Buffer.from(`${JSON.stringify(archivedIntent, null, 2)}\n`, "utf8"),
+  );
+  return validatePublicMutationIntentProvenance({
+    workflowRun: {
+      id: Number(intent.workflow.runId),
+      run_attempt: Number(intent.workflow.runAttempt),
+      event: "workflow_dispatch",
+      status: "completed",
+      conclusion: "failure",
+      head_sha: intent.source.revision,
+      head_branch: "main",
+      path: ".github/workflows/vercel-release.yml",
+      name: "Vercel release control",
+      html_url:
+        `https://github.com/programmablehq/Developers/actions/runs/${intent.workflow.runId}`,
+      repository: { full_name: "programmablehq/Developers" },
+      actor: { login: intent.workflow.actor, id: Number(intent.workflow.actorId) },
+      triggering_actor: {
+        login: intent.workflow.actor,
+        id: Number(intent.workflow.actorId),
+      },
+      head_commit: { id: intent.source.revision, tree_id: intent.source.tree },
+      created_at: second(intentCreated - 120_000),
+      run_started_at: second(intentCreated - 90_000),
+      updated_at: second(intentCreated + 2_000),
+    },
+    artifacts: {
+      artifacts: [{
+        id: 301,
+        name: artifactName,
+        digest: sha256Bytes(archive),
+        size_in_bytes: archive.byteLength,
+        expired: false,
+        created_at: second(intentCreated),
+        updated_at: second(intentCreated + 1_000),
+        expires_at: second(intentCreated + 90 * 24 * 60 * 60_000),
+        workflow_run: {
+          id: Number(intent.workflow.runId),
+          head_branch: "main",
+          head_sha: intent.source.revision,
+        },
+      }],
+    },
+  }, {
+    runId: intent.workflow.runId,
+    runAttempt: intent.workflow.runAttempt,
+    intent,
+    artifactArchive: archive,
+  });
+}
+
+function recoveryAttemptProvenance(attempt, {
+  archivedAttempt = attempt,
+  createdAt = new Date(Date.parse(attempt.authorizedAt)).toISOString().replace(".000Z", "Z"),
+} = {}) {
+  const archive = storedZipEntry(
+    "recovery-attempt.json",
+    Buffer.from(`${JSON.stringify(archivedAttempt, null, 2)}\n`, "utf8"),
+  );
+  const artifactName =
+    `developers-vercel-recovery-attempt-${recoveryWorkflow.runId}-${recoveryWorkflow.runAttempt}`;
+  return validatePublicMutationRecoveryAttemptProvenance({
+    artifacts: [{
+      id: 401,
+      name: artifactName,
+      digest: sha256Bytes(archive),
+      size_in_bytes: archive.byteLength,
+      expired: false,
+      created_at: createdAt,
+      updated_at: new Date(Date.parse(createdAt) + 1_000).toISOString().replace(".000Z", "Z"),
+      expires_at: new Date(Date.parse(createdAt) + 90 * 24 * 60 * 60_000)
+        .toISOString().replace(".000Z", "Z"),
+      workflow_run: {
+        id: Number(recoveryWorkflow.runId),
+        head_branch: "main",
+        head_sha: recoverySource.revision,
+      },
+    }],
+  }, {
+    attempt,
+    source: recoverySource,
+    workflow: recoveryWorkflow,
+    artifactArchive: archive,
   });
 }
 
@@ -160,6 +376,47 @@ function ownerDispatchAuthorization(observedAt, {
   }, { workflow, source: runSource, observedAt });
 }
 
+function recoveryOwnerDispatchAuthorization(observedAt, {
+  runOverrides = {}, environmentOverrides = {}, source: runSource = recoverySource,
+} = {}) {
+  return validateGitHubOwnerDispatchAuthorization({
+    workflowRun: {
+      id: Number(recoveryWorkflow.runId),
+      run_attempt: Number(recoveryWorkflow.runAttempt),
+      event: "workflow_dispatch",
+      status: "in_progress",
+      conclusion: null,
+      head_sha: runSource.revision,
+      head_branch: "main",
+      path: ".github/workflows/vercel-release-recovery.yml",
+      name: "Vercel release recovery",
+      repository: { full_name: "programmablehq/Developers" },
+      actor: { login: recoveryWorkflow.actor, id: Number(recoveryWorkflow.actorId) },
+      triggering_actor: {
+        login: recoveryWorkflow.actor,
+        id: Number(recoveryWorkflow.actorId),
+      },
+      head_commit: { id: runSource.revision, tree_id: runSource.tree },
+      created_at: "2026-08-29T15:00:00Z",
+      run_started_at: "2026-08-29T15:00:01Z",
+      ...runOverrides,
+    },
+    environment: {
+      id: 19441858925,
+      name: "production",
+      created_at: "2026-08-27T00:00:00Z",
+      updated_at: "2026-08-27T00:05:00Z",
+      can_admins_bypass: false,
+      protection_rules: [{ type: "branch_policy" }],
+      deployment_branch_policy: {
+        protected_branches: true,
+        custom_branch_policies: false,
+      },
+      ...environmentOverrides,
+    },
+  }, { workflow: recoveryWorkflow, source: runSource, observedAt });
+}
+
 function sha256Bytes(bytes) {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
@@ -181,6 +438,12 @@ function binaryArtifact(artifactPath, bytes) {
     byteLength: String(bytes.byteLength),
     bytesBase64: bytes.toString("base64"),
   };
+}
+
+function reseal(value, schema, digestKey) {
+  const { [digestKey]: _digest, ...withoutDigest } = value;
+  value[digestKey] = canonicalSha256(schema, withoutDigest);
+  return value;
 }
 
 function sourceVerification() {
@@ -1744,6 +2007,22 @@ function publicResolution(
   });
 }
 
+function mutationControl(
+  checkedAt = "2026-08-29T15:00:01.000Z",
+  projectOverrides = {},
+) {
+  return createVercelMutationControlEvidence({
+    project: {
+      id: target.projectId,
+      rollingRelease: false,
+      lastAliasRequest: null,
+      ...projectOverrides,
+    },
+    target,
+    checkedAt,
+  });
+}
+
 function protectionEvidence(
   value,
   checkedAt = "2026-08-29T14:59:00.000Z",
@@ -2541,6 +2820,425 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
   }), /digest is invalid/u);
 });
 
+test("recovers immutable public intent only from exact old or target state", () => {
+  const oldDeployment = deployment(
+    "dpl_recoveryold123",
+    "https://developers-recovery-old.vercel.app/",
+  );
+  const candidateDeployment = deployment(
+    "dpl_recoverytarget123",
+    "https://developers-recovery-target.vercel.app/",
+  );
+  const candidateProtection = protectionEvidence(
+    candidateDeployment,
+    "2026-08-29T15:01:00.000Z",
+  );
+  const candidateSmoke = smoke(
+    "planned",
+    candidateDeployment.url,
+    undefined,
+    "2026-08-29T15:02:00.000Z",
+  );
+  const authorization = createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment,
+      "2026-08-29T15:00:30.000Z",
+    ),
+    candidateDeployment,
+    candidateProtectionEvidence: candidateProtection,
+    candidateSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(
+      "2026-08-29T15:03:00.000Z",
+      { source },
+    ),
+    workflow,
+    authorizedAt: "2026-08-29T15:03:00.000Z",
+  });
+  const intent = createPublicMutationIntent({
+    operation: "deploy-planned",
+    authorization,
+    selectedSmoke: candidateSmoke,
+    createdAt: "2026-08-29T15:03:30.000Z",
+  });
+  const archiveSubstitutedIntent = createPublicMutationIntent({
+    operation: "deploy-planned",
+    authorization,
+    selectedSmoke: candidateSmoke,
+    createdAt: "2026-08-29T15:03:31.000Z",
+  });
+  assert.throws(() => mutationIntentProvenance(archiveSubstitutedIntent, intent),
+    /archive entry differs/u,
+  "artifact metadata and archive for intent A cannot authenticate intent B");
+  assert.equal(intent.schemaVersion, PUBLIC_MUTATION_INTENT_SCHEMA);
+  assert.equal(parsePublicMutationIntent(intent, {
+    operation: "deploy-planned",
+    authorization,
+    selectedSmoke: candidateSmoke,
+  }).mutationIntentDigest, intent.mutationIntentDigest);
+  const finalCandidateSmoke = smoke(
+    "planned",
+    candidateDeployment.url,
+    undefined,
+    "2026-08-29T15:03:50.000Z",
+  );
+  const finalAuthorization = createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment,
+      "2026-08-29T15:03:40.000Z",
+    ),
+    candidateDeployment,
+    candidateProtectionEvidence: protectionEvidence(
+      candidateDeployment,
+      "2026-08-29T15:03:45.000Z",
+    ),
+    candidateSmoke: finalCandidateSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(
+      "2026-08-29T15:04:00.000Z",
+      { source },
+    ),
+    workflow,
+    authorizedAt: "2026-08-29T15:04:00.000Z",
+  });
+  const plannedReadinessInput = {
+    intent,
+    intentAuthorization: authorization,
+    intentSelectedSmoke: candidateSmoke,
+    authorization: finalAuthorization,
+    candidateSmoke: finalCandidateSmoke,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment,
+      "2026-08-29T15:04:10.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:04:15.000Z"),
+    confirmedAt: "2026-08-29T15:04:20.000Z",
+  };
+  assert.equal(validatePlannedPublicMutationReadiness(plannedReadinessInput)
+    .mutationIntentDigest, intent.mutationIntentDigest);
+  assert.throws(() => createVercelMutationControlEvidence({
+    project: { id: target.projectId, rollingRelease: { state: "ACTIVE" } },
+    target,
+    checkedAt: "2026-08-29T15:04:15.000Z",
+  }), /Rolling Releases to be disabled/u);
+  const pendingMutationControl = mutationControl("2026-08-29T15:04:15.000Z", {
+    lastAliasRequest: {
+      jobStatus: "pending",
+      requestedAt: Date.parse("2026-08-29T15:04:14.000Z"),
+      toDeploymentId: candidateDeployment.id,
+      type: "promote",
+    },
+  });
+  assert.equal(pendingMutationControl.mutationAvailable, false);
+  assert.throws(() => validatePlannedPublicMutationReadiness({
+    ...plannedReadinessInput,
+    mutationControl: pendingMutationControl,
+  }), /pending or in-progress/u,
+  "the final boundary must reject a queued Vercel alias mutation");
+  const delayedSuccessfulMutation = mutationControl("2026-08-29T15:04:15.000Z", {
+    lastAliasRequest: {
+      jobStatus: "succeeded",
+      requestedAt: Date.parse("2026-08-29T14:54:14.000Z"),
+      toDeploymentId: candidateDeployment.id,
+      type: "promote",
+    },
+  });
+  assert.throws(() => validatePlannedPublicMutationReadiness({
+    ...plannedReadinessInput,
+    mutationControl: delayedSuccessfulMutation,
+  }), /successful Vercel alias request differs/u,
+  "an old request that completed late may not be replayed while public resolution still reads old");
+  assert.throws(() => mutationControl("2026-08-29T15:04:15.000Z", {
+    lastAliasRequest: {
+      jobStatus: "succeeded",
+      requestedAt: Date.parse("2026-08-29T15:04:16.000Z"),
+      toDeploymentId: candidateDeployment.id,
+      type: "promote",
+    },
+  }), /future-dated/u);
+  const staleProtectionAuthorization = createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment, "2026-08-29T15:03:40.000Z",
+    ),
+    candidateDeployment,
+    candidateProtectionEvidence: protectionEvidence(
+      candidateDeployment, "2026-08-29T14:59:10.000Z",
+    ),
+    candidateSmoke: finalCandidateSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(
+      "2026-08-29T15:04:00.000Z", { source },
+    ),
+    workflow,
+    authorizedAt: "2026-08-29T15:04:00.000Z",
+  });
+  assert.throws(() => validatePlannedPublicMutationReadiness({
+    intent,
+    intentAuthorization: authorization,
+    intentSelectedSmoke: candidateSmoke,
+    authorization: staleProtectionAuthorization,
+    candidateSmoke: finalCandidateSmoke,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment, "2026-08-29T15:04:10.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:04:15.000Z"),
+    confirmedAt: "2026-08-29T15:04:20.000Z",
+  }), /candidate protection and mutation readiness/u,
+  "planned readiness must reject pairwise-fresh but total-stale target protection");
+
+  function recoveryInput(currentDeployment, {
+    currentAt = "2026-08-29T16:00:00.000Z",
+    protectionAt = "2026-08-29T16:00:30.000Z",
+    smokeAt = "2026-08-29T16:01:00.000Z",
+    authorizedAt = "2026-08-29T16:01:30.000Z",
+    mutationControlAt = new Date(Date.parse(currentAt) + 5_000).toISOString(),
+  } = {}) {
+    return {
+      intent,
+      intentProvenance: mutationIntentProvenance(intent),
+      source: recoverySource,
+      workflow: recoveryWorkflow,
+      ownerDispatchAuthorization: recoveryOwnerDispatchAuthorization(authorizedAt),
+      currentDeployment,
+      currentPublicResolution: publicResolution(currentDeployment, currentAt),
+      mutationControl: mutationControl(mutationControlAt),
+      targetDeployment: candidateDeployment,
+      targetProtectionEvidence: protectionEvidence(candidateDeployment, protectionAt),
+      targetSmoke: smoke("planned", candidateDeployment.url, undefined, smokeAt),
+      authorizedAt,
+    };
+  }
+
+  const oldAttempt = createPublicMutationRecoveryAttempt(recoveryInput(oldDeployment));
+  const oldAttemptProvenance = recoveryAttemptProvenance(oldAttempt);
+  assert.equal(oldAttemptProvenance.schemaVersion,
+    PUBLIC_MUTATION_RECOVERY_ATTEMPT_PROVENANCE_SCHEMA);
+  assert.equal(parsePublicMutationRecoveryAttemptProvenance(
+    oldAttemptProvenance, { attempt: oldAttempt },
+  ).recoveryAttemptDigest, oldAttempt.recoveryAttemptDigest);
+  const substitutedAttempt = structuredClone(oldAttempt);
+  substitutedAttempt.classification = "target";
+  substitutedAttempt.publicMutationRequired = false;
+  {
+    const { recoveryAttemptDigest: _digest, ...withoutDigest } = substitutedAttempt;
+    substitutedAttempt.recoveryAttemptDigest = canonicalSha256(
+      PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA, withoutDigest,
+    );
+  }
+  assert.throws(() => recoveryAttemptProvenance(substitutedAttempt, {
+    archivedAttempt: oldAttempt,
+  }), /archive entry differs/u,
+  "the uploaded attempt artifact must contain the exact readiness-bound attempt");
+  assert.equal(oldAttempt.schemaVersion, PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA);
+  assert.equal(oldAttempt.classification, "old");
+  assert.equal(oldAttempt.publicMutationRequired, true);
+  assert.equal(parsePublicMutationRecoveryAttempt(oldAttempt, { intent }).classification, "old");
+  const wrongOriginAttempt = structuredClone(oldAttempt);
+  wrongOriginAttempt.targetSmoke.origin = "https://wrong-recovery-target.vercel.app";
+  {
+    const { smokeDigest: _smokeDigest, ...smokeWithoutDigest } =
+      wrongOriginAttempt.targetSmoke;
+    wrongOriginAttempt.targetSmoke.smokeDigest = canonicalSha256(
+      PLANNED_SMOKE_SCHEMA, smokeWithoutDigest,
+    );
+    const { recoveryAttemptDigest: _attemptDigest, ...attemptWithoutDigest } =
+      wrongOriginAttempt;
+    wrongOriginAttempt.recoveryAttemptDigest = canonicalSha256(
+      PUBLIC_MUTATION_RECOVERY_ATTEMPT_SCHEMA, attemptWithoutDigest,
+    );
+  }
+  assert.throws(() => parsePublicMutationRecoveryAttempt(
+    wrongOriginAttempt, { intent },
+  ), /smoke differs from its target deployment/u,
+  "recovery attempt parsing must bind the full smoke receipt to the target");
+
+  const oldReadinessInput = recoveryInput(oldDeployment, {
+    protectionAt: "2026-08-29T16:02:30.000Z",
+    smokeAt: "2026-08-29T16:03:00.000Z",
+    authorizedAt: "2026-08-29T16:03:30.000Z",
+    currentAt: "2026-08-29T16:03:40.000Z",
+  });
+  const oldReadiness = createPublicMutationRecoveryReadiness({
+    ...oldReadinessInput,
+    attempt: oldAttempt,
+    attemptProvenance: oldAttemptProvenance,
+    confirmedAt: "2026-08-29T16:03:50.000Z",
+  });
+  assert.equal(oldReadiness.schemaVersion, PUBLIC_MUTATION_RECOVERY_READINESS_SCHEMA);
+  assert.equal(oldReadiness.classification, "old");
+  assert.equal(oldReadiness.publicMutationRequired, true);
+  assert.throws(() => createPublicMutationRecoveryReadiness({
+    ...oldReadinessInput,
+    currentPublicResolution: publicResolution(
+      oldDeployment,
+      "2026-08-29T16:03:29.999Z",
+    ),
+    attempt: oldAttempt,
+    attemptProvenance: oldAttemptProvenance,
+    confirmedAt: "2026-08-29T16:03:50.000Z",
+  }), /final public-origin provider re-query/u,
+  "recovery must re-query the public origin after its fresh authorization");
+  assert.throws(() => createPublicMutationRecoveryReadiness({
+    ...oldReadinessInput,
+    mutationControl: mutationControl("2026-08-29T16:03:45.000Z", {
+      lastAliasRequest: {
+        jobStatus: "succeeded",
+        requestedAt: Date.parse("2026-08-29T15:53:45.000Z"),
+        toDeploymentId: candidateDeployment.id,
+        type: "promote",
+      },
+    }),
+    attempt: oldAttempt,
+    attemptProvenance: oldAttemptProvenance,
+    confirmedAt: "2026-08-29T16:03:50.000Z",
+  }), /successful Vercel alias request differs/u,
+  "recovery must reject an old request that completed after the public-origin read");
+
+  const thirdDeployment = deployment(
+    "dpl_recoverythird123",
+    "https://developers-recovery-third.vercel.app/",
+  );
+  const thirdReadinessInput = recoveryInput(thirdDeployment, {
+    protectionAt: "2026-08-29T16:02:30.000Z",
+    smokeAt: "2026-08-29T16:03:00.000Z",
+    authorizedAt: "2026-08-29T16:03:30.000Z",
+    currentAt: "2026-08-29T16:03:40.000Z",
+  });
+  assert.throws(() => createPublicMutationRecoveryReadiness({
+    ...thirdReadinessInput,
+    attempt: oldAttempt,
+    attemptProvenance: oldAttemptProvenance,
+    confirmedAt: "2026-08-29T16:03:50.000Z",
+  }), /third deployment state/u,
+  "out-of-band old-to-third drift after durable sealing must stop recovery");
+
+  const targetReadinessInput = recoveryInput(candidateDeployment, {
+    protectionAt: "2026-08-29T16:02:30.000Z",
+    smokeAt: "2026-08-29T16:03:00.000Z",
+    authorizedAt: "2026-08-29T16:03:30.000Z",
+    currentAt: "2026-08-29T16:03:40.000Z",
+  });
+  const targetReadiness = createPublicMutationRecoveryReadiness({
+    ...targetReadinessInput,
+    attempt: oldAttempt,
+    attemptProvenance: oldAttemptProvenance,
+    confirmedAt: "2026-08-29T16:03:50.000Z",
+  });
+  assert.equal(targetReadiness.classification, "target");
+  assert.equal(targetReadiness.publicMutationRequired, false,
+    "exact target recovery must never perform a second mutation");
+  assert.equal(parsePublicMutationRecoveryReadiness(targetReadiness, {
+    intent,
+    attempt: oldAttempt,
+  }).classification, "target");
+
+  const receipt = createPlannedDeployReceipt({
+    intent,
+    recoveryAttempt: oldAttempt,
+    recoveryReadiness: targetReadiness,
+    productionDeployment: candidateDeployment,
+    publicResolution: publicResolution(
+      candidateDeployment,
+      "2026-08-29T16:04:00.000Z",
+    ),
+    productionSmoke: smoke(
+      "planned",
+      PRODUCTION_ORIGIN,
+      undefined,
+      "2026-08-29T16:04:10.000Z",
+    ),
+    completedAt: "2026-08-29T16:04:20.000Z",
+  });
+  assert.equal(receipt.schemaVersion, PLANNED_DEPLOY_RECEIPT_SCHEMA);
+  assert.equal(receipt.publicMutationPerformed, false);
+  assert.equal(parsePlannedDeployReceipt(receipt).state, "planned-public-verified");
+  const mismatchedPlannedLineage = structuredClone(receipt);
+  mismatchedPlannedLineage.recoveryAttemptDigest = sha("9");
+  reseal(mismatchedPlannedLineage, PLANNED_DEPLOY_RECEIPT_SCHEMA,
+    "plannedDeployReceiptDigest");
+  assert.throws(() => parsePlannedDeployReceipt(mismatchedPlannedLineage),
+    /exact recovery lineage/u,
+  "planned recovery receipt parsing must revalidate its embedded lineage");
+
+  assert.throws(() => createPublicMutationRecoveryAttempt(recoveryInput(
+    thirdDeployment,
+  )), /third deployment state/u,
+  "an initially observed third state must stop recovery");
+  assert.throws(() => createPublicMutationRecoveryAttempt(recoveryInput(oldDeployment, {
+    currentAt: "2026-08-29T16:00:00.000Z",
+    protectionAt: "2026-08-29T16:00:30.000Z",
+    smokeAt: "2026-08-29T16:05:30.001Z",
+    authorizedAt: "2026-08-29T16:05:40.000Z",
+  })), /within five minutes/u,
+  "recovery must reject evidence older than five minutes");
+  assert.throws(() => createPublicMutationRecoveryAttempt(recoveryInput(oldDeployment, {
+    currentAt: "2026-08-29T16:01:00.000Z",
+    protectionAt: "2026-08-29T16:00:30.000Z",
+    smokeAt: "2026-08-29T16:01:30.000Z",
+    authorizedAt: "2026-08-29T16:02:00.000Z",
+  })), /provider readbacks/u,
+  "recovery must reject reversed provider chronology");
+
+  const otherCandidate = deployment(
+    "dpl_recoveryother123",
+    "https://developers-recovery-other.vercel.app/",
+  );
+  const otherSmoke = smoke(
+    "planned",
+    otherCandidate.url,
+    undefined,
+    "2026-08-29T15:02:00.000Z",
+  );
+  const otherAuthorization = createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment: oldDeployment,
+    currentPublicResolution: publicResolution(
+      oldDeployment,
+      "2026-08-29T15:00:30.000Z",
+    ),
+    candidateDeployment: otherCandidate,
+    candidateProtectionEvidence: protectionEvidence(
+      otherCandidate,
+      "2026-08-29T15:01:00.000Z",
+    ),
+    candidateSmoke: otherSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(
+      "2026-08-29T15:03:00.000Z",
+      { source },
+    ),
+    workflow,
+    authorizedAt: "2026-08-29T15:03:00.000Z",
+  });
+  const substitutedIntent = createPublicMutationIntent({
+    operation: "deploy-planned",
+    authorization: otherAuthorization,
+    selectedSmoke: otherSmoke,
+    createdAt: "2026-08-29T15:03:30.000Z",
+  });
+  assert.throws(() => parsePublicMutationIntent(substitutedIntent, {
+    operation: "deploy-planned",
+    authorization,
+    selectedSmoke: candidateSmoke,
+  }), /artifact substitution/u);
+  assert.throws(() => parsePublicMutationIntentProvenance(
+    mutationIntentProvenance(intent), { intent: substitutedIntent },
+  ), /differs from its authenticated producer provenance/u,
+  "artifact provenance must bind the exact mutation intent digest");
+});
+
 test("separates stage, owner authorization, promotion, and exact rollback receipts", () => {
   const stageBundle = stageFixture();
   const bundle = promotionFixture();
@@ -2708,6 +3406,87 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     workflow,
     promotedAt: "2026-08-29T15:03:00.000Z",
   };
+  const promotionIntent = createPublicMutationIntent({
+    operation: "promote",
+    plan,
+    authorization,
+    preMutationState: promotionInput.preMutationState,
+    selectedSmoke: promotionInput.selectedSmoke,
+    selectedBundle: bundle,
+    createdAt: "2026-08-29T15:02:31.000Z",
+  });
+  const finalPromotionAuthorization = createPublicAuthorization({
+    operation: "promote",
+    plan,
+    workflow,
+    ownerDispatchAuthorization:
+      ownerDispatchAuthorization("2026-08-29T15:02:35.000Z"),
+    authorizedAt: "2026-08-29T15:02:35.000Z",
+  });
+  const finalPromotionReadinessInput = {
+    operation: "promote",
+    intent: promotionIntent,
+    intentAuthorization: authorization,
+    intentPreMutationState: promotionInput.preMutationState,
+    intentSelectedSmoke: promotionInput.selectedSmoke,
+    plan,
+    authorization: finalPromotionAuthorization,
+    preMutationState: promotionInput.preMutationState,
+    selectedSmoke: promotionInput.selectedSmoke,
+    selectedBundle: bundle,
+    currentDeployment: previousDeployment,
+    currentPublicResolution: publicResolution(
+      previousDeployment,
+      "2026-08-29T15:02:40.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:02:42.000Z"),
+    confirmedAt: "2026-08-29T15:02:45.000Z",
+  };
+  const finalPromotionReadiness = validatePreMutationReadiness(
+    finalPromotionReadinessInput,
+  );
+  assert.equal(finalPromotionReadiness.mutationIntentDigest,
+    promotionIntent.mutationIntentDigest);
+  assert.throws(() => validatePreMutationReadiness({
+    ...finalPromotionReadinessInput,
+    currentPublicResolution: publicResolution(
+      previousDeployment,
+      "2026-08-29T15:02:34.999Z",
+    ),
+  }), /owner authorization and final public-origin provider re-query/u,
+  "the mutation boundary must re-query the public origin after authorization");
+  assert.throws(() => validatePreMutationReadiness({
+    ...finalPromotionReadinessInput,
+    mutationControl: mutationControl("2026-08-29T15:02:42.000Z", {
+      lastAliasRequest: {
+        jobStatus: "succeeded",
+        requestedAt: Date.parse("2026-08-29T14:52:42.000Z"),
+        toDeploymentId: stageDeployment.id,
+        type: "promote",
+      },
+    }),
+  }), /successful Vercel alias request differs/u,
+  "live readiness must reject an old request that completed after the public-origin read");
+  const totalStalePromotionState = createPreMutationState({
+    operation: "promote",
+    plan,
+    currentDeployment: previousDeployment,
+    currentPublicResolution: publicResolution(
+      previousDeployment, "2026-08-29T15:02:10.000Z",
+    ),
+    selectedDeployment: stageDeployment,
+    selectedProtectionEvidence: protectionEvidence(
+      stageDeployment, "2026-08-29T14:57:35.000Z",
+    ),
+    selectedSmoke: promotionInput.selectedSmoke,
+    selectedBundle: bundle,
+    checkedAt: "2026-08-29T15:02:30.000Z",
+  });
+  assert.throws(() => validatePreMutationReadiness({
+    ...finalPromotionReadinessInput,
+    preMutationState: totalStalePromotionState,
+  }), /selected deployment protection and mutation readiness/u,
+  "live readiness must reject pairwise-fresh but total-stale target protection");
   const mismatchedPreMutationProtection = protectionEvidence(
     stageDeployment, "2026-08-29T14:57:29.999Z",
   );
@@ -2743,6 +3522,17 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     selectedBundle: bundle,
     checkedAt: "2026-08-29T15:02:30.000Z",
   }), /selected a different deployment/u);
+  Object.assign(promotionInput, {
+    authorization: finalPromotionAuthorization,
+    intent: promotionIntent,
+    mutationReadiness: finalPromotionReadiness,
+    publicResolution: publicResolution(
+      promotedDeployment, "2026-08-29T15:02:50.000Z",
+    ),
+    productionSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:02:55.000Z",
+    ),
+  });
   const promotion = createPromotionReceipt(promotionInput);
   assert.equal(parsePromotionReceipt(promotion, { bundle, target }).state, "promoted-live");
   assert.equal(promotion.publicResolution.deploymentId, promotedDeployment.id);
@@ -2757,7 +3547,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     publicResolution: publicResolution(
       promotedDeployment, "2026-08-29T15:02:20.000Z",
     ),
-  }), /public promotion provider resolution/u);
+  }), /promotion readiness and public provider resolution/u);
   assert.throws(() => createPromotionReceipt({
     ...promotionInput,
     selectedSmoke: smoke(
@@ -2780,10 +3570,157 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       selectedBundle: bundle,
       checkedAt: "2026-08-29T14:57:59.999Z",
     }),
-  }), /within five minutes/u);
+  }), /fresh selected deployment smoke time/u);
 
+  const recoveredAttemptInput = {
+    intent: promotionIntent,
+    intentProvenance: mutationIntentProvenance(promotionIntent),
+    source: recoverySource,
+    workflow: recoveryWorkflow,
+    ownerDispatchAuthorization: recoveryOwnerDispatchAuthorization(
+      "2026-08-29T15:03:40.000Z",
+    ),
+    currentDeployment: promotedDeployment,
+    currentPublicResolution: publicResolution(
+      promotedDeployment,
+      "2026-08-29T15:03:10.000Z",
+    ),
+    targetDeployment: stageDeployment,
+    targetProtectionEvidence: protectionEvidence(
+      stageDeployment,
+      "2026-08-29T15:03:20.000Z",
+    ),
+    targetSmoke: smoke(
+      "live", stageDeployment.url, bundle, "2026-08-29T15:03:30.000Z",
+    ),
+    selectedBundle: bundle,
+    authorizedAt: "2026-08-29T15:03:40.000Z",
+  };
+  const recoveredAttempt = createPublicMutationRecoveryAttempt(recoveredAttemptInput);
+  assert.equal(recoveredAttempt.classification, "target");
+  const recoveredReadinessInput = {
+    ...recoveredAttemptInput,
+    ownerDispatchAuthorization: recoveryOwnerDispatchAuthorization(
+      "2026-08-29T15:04:30.000Z",
+    ),
+    currentPublicResolution: publicResolution(
+      promotedDeployment,
+      "2026-08-29T15:04:40.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:04:45.000Z"),
+    targetProtectionEvidence: protectionEvidence(
+      stageDeployment,
+      "2026-08-29T15:04:10.000Z",
+    ),
+    targetSmoke: smoke(
+      "live", stageDeployment.url, bundle, "2026-08-29T15:04:20.000Z",
+    ),
+    authorizedAt: "2026-08-29T15:04:30.000Z",
+  };
+  const recoveredReadiness = createPublicMutationRecoveryReadiness({
+    ...recoveredReadinessInput,
+    attempt: recoveredAttempt,
+    attemptProvenance: recoveryAttemptProvenance(recoveredAttempt),
+    confirmedAt: "2026-08-29T15:04:50.000Z",
+  });
+  const recoveredPromotion = createRecoveredPromotionReceipt({
+    intent: promotionIntent,
+    plan,
+    intentAuthorization: authorization,
+    intentPreMutationState: promotionInput.preMutationState,
+    intentSelectedSmoke: promotionInput.selectedSmoke,
+    bundle,
+    recoveryAttempt: recoveredAttempt,
+    recoveryReadiness: recoveredReadiness,
+    productionDeployment: promotedDeployment,
+    publicResolution: publicResolution(
+      promotedDeployment,
+      "2026-08-29T15:05:00.000Z",
+    ),
+    productionSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:05:10.000Z",
+    ),
+    promotedAt: "2026-08-29T15:05:20.000Z",
+  });
+  assert.equal(recoveredPromotion.schemaVersion, RECOVERED_PROMOTION_RECEIPT_SCHEMA);
+  assert.equal(recoveredPromotion.publicMutationPerformed, false);
+  assert.deepEqual(recoveredPromotion.source, recoverySource);
+  assert.deepEqual(recoveredPromotion.deploymentSource, promotionSource);
+  const mismatchedPromotionLineage = structuredClone(recoveredPromotion);
+  mismatchedPromotionLineage.recoveryClassification = "old";
+  mismatchedPromotionLineage.publicMutationPerformed = true;
+  reseal(mismatchedPromotionLineage, RECOVERED_PROMOTION_RECEIPT_SCHEMA,
+    "promotionReceiptDigest");
+  assert.throws(() => parsePromotionReceipt(mismatchedPromotionLineage, {
+    bundle, target,
+  }), /exact recovery lineage/u,
+  "recovered promotion parsing must reject a resealed classification substitution");
+  const staleRecoveredPromotion = structuredClone(recoveredPromotion);
+  staleRecoveredPromotion.publicResolution = publicResolution(
+    promotedDeployment, "2026-08-29T15:10:00.000Z",
+  );
+  staleRecoveredPromotion.productionSmoke = smoke(
+    "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:10:10.000Z",
+  );
+  staleRecoveredPromotion.productionSmokeDigest =
+    staleRecoveredPromotion.productionSmoke.smokeDigest;
+  staleRecoveredPromotion.promotedAt = "2026-08-29T15:10:20.000Z";
+  reseal(staleRecoveredPromotion, RECOVERED_PROMOTION_RECEIPT_SCHEMA,
+    "promotionReceiptDigest");
+  assert.throws(() => parsePromotionReceipt(staleRecoveredPromotion, {
+    bundle, target,
+  }), /within five minutes/u,
+  "recovered promotion parsing must enforce readiness-to-seal total freshness");
+  const recoveredPromotionArchive = storedZipEntry(
+    "promotion-receipt.json",
+    Buffer.from(`${JSON.stringify(recoveredPromotion, null, 2)}\n`, "utf8"),
+  );
+  const rollbackFromRecovery = createRollbackPlan({
+    promotionReceipt: recoveredPromotion,
+    promotionRun: recoveryActionsRunEvidence(),
+    bundle,
+    currentSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:05:20.000Z",
+    ),
+    currentDeployment: promotedDeployment,
+    currentPublicResolution: publicResolution(
+      promotedDeployment,
+      "2026-08-29T15:05:10.000Z",
+    ),
+    promotionArtifact: recoveryActionsArtifact(
+      `developers-vercel-promotion-${recoveryWorkflow.runId}-${recoveryWorkflow.runAttempt}`,
+      recoverySource,
+      201,
+      recoveredPromotionArchive,
+    ),
+    promotionArtifactArchive: recoveredPromotionArchive,
+    targetSmoke: smoke(
+      "planned", previousDeployment.url, undefined, "2026-08-29T15:05:30.000Z",
+    ),
+    targetDeployment: previousDeployment,
+    targetProtectionEvidence: protectionEvidence(
+      previousDeployment,
+      "2026-08-29T15:05:25.000Z",
+    ),
+    target,
+    workflow,
+    preparedAt: "2026-08-29T15:05:40.000Z",
+  });
+  assert.deepEqual(rollbackFromRecovery.source, recoverySource,
+    "recovered promotion artifact source must remain authorizable by rollback");
+  assert.equal(parseRollbackPlan(rollbackFromRecovery, {
+    bundle,
+    promotionReceipt: recoveredPromotion,
+    target,
+  }).promotionReceiptDigest, recoveredPromotion.promotionReceiptDigest);
+
+  const standardPromotionArchive = storedZipEntry(
+    "promotion-receipt.json",
+    Buffer.from(`${JSON.stringify(promotion, null, 2)}\n`, "utf8"),
+  );
   const rollbackPlan = createRollbackPlan({
     promotionReceipt: promotion,
+    promotionRun: actionsRunEvidence(promotionSource),
     bundle,
     currentSmoke: smoke("live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:04:00.000Z"),
     currentDeployment: promotedDeployment,
@@ -2794,7 +3731,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       `developers-vercel-promotion-${workflow.runId}-${workflow.runAttempt}`,
       promotionSource,
       102,
+      standardPromotionArchive,
     ),
+    promotionArtifactArchive: standardPromotionArchive,
     targetSmoke: smoke("planned", previousDeployment.url, undefined,
       "2026-08-29T15:04:00.000Z"),
     targetDeployment: { ...previousDeployment, aliases: [] },
@@ -2851,16 +3790,133 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     workflow,
     rolledBackAt: "2026-08-29T15:06:00.000Z",
   };
+  const rollbackIntent = createPublicMutationIntent({
+    operation: "rollback",
+    plan: rollbackPlan,
+    authorization: rollbackAuthorization,
+    preMutationState: rollbackInput.preMutationState,
+    selectedSmoke: rollbackInput.selectedSmoke,
+    createdAt: "2026-08-29T15:05:40.000Z",
+  });
+  const finalRollbackAuthorization = createPublicAuthorization({
+    operation: "rollback",
+    plan: rollbackPlan,
+    workflow,
+    ownerDispatchAuthorization:
+      ownerDispatchAuthorization("2026-08-29T15:05:35.000Z"),
+    authorizedAt: "2026-08-29T15:05:35.000Z",
+  });
+  const finalRollbackReadiness = validatePreMutationReadiness({
+    operation: "rollback",
+    intent: rollbackIntent,
+    intentAuthorization: rollbackAuthorization,
+    intentPreMutationState: rollbackInput.preMutationState,
+    intentSelectedSmoke: rollbackInput.selectedSmoke,
+    plan: rollbackPlan,
+    authorization: finalRollbackAuthorization,
+    preMutationState: rollbackInput.preMutationState,
+    selectedSmoke: rollbackInput.selectedSmoke,
+    currentDeployment: promotedDeployment,
+    currentPublicResolution: publicResolution(
+      promotedDeployment, "2026-08-29T15:05:40.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:05:42.000Z"),
+    confirmedAt: "2026-08-29T15:05:45.000Z",
+  });
+  Object.assign(rollbackInput, {
+    authorization: finalRollbackAuthorization,
+    intent: rollbackIntent,
+    mutationReadiness: finalRollbackReadiness,
+  });
   const rollback = createRollbackReceipt(rollbackInput);
   assert.equal(rollback.state, "rolled-back-verified");
   assert.equal(rollback.deployment.id, "dpl_previous123");
   assert.equal(rollback.publicResolution.deploymentId, previousDeployment.id);
+  const rollbackRecoveryAttemptInput = {
+    intent: rollbackIntent,
+    intentProvenance: mutationIntentProvenance(rollbackIntent),
+    source: recoverySource,
+    workflow: recoveryWorkflow,
+    ownerDispatchAuthorization: recoveryOwnerDispatchAuthorization(
+      "2026-08-29T15:06:30.000Z",
+    ),
+    currentDeployment: previousDeployment,
+    currentPublicResolution: publicResolution(
+      previousDeployment,
+      "2026-08-29T15:06:00.000Z",
+    ),
+    targetDeployment: previousDeployment,
+    targetProtectionEvidence: protectionEvidence(
+      previousDeployment,
+      "2026-08-29T15:06:10.000Z",
+    ),
+    targetSmoke: smoke(
+      "planned", previousDeployment.url, undefined, "2026-08-29T15:06:20.000Z",
+    ),
+    authorizedAt: "2026-08-29T15:06:30.000Z",
+  };
+  const rollbackRecoveryAttempt = createPublicMutationRecoveryAttempt(
+    rollbackRecoveryAttemptInput,
+  );
+  const rollbackRecoveryReadinessInput = {
+    ...rollbackRecoveryAttemptInput,
+    ownerDispatchAuthorization: recoveryOwnerDispatchAuthorization(
+      "2026-08-29T15:07:30.000Z",
+    ),
+    currentPublicResolution: publicResolution(
+      previousDeployment,
+      "2026-08-29T15:07:40.000Z",
+    ),
+    mutationControl: mutationControl("2026-08-29T15:07:45.000Z"),
+    targetProtectionEvidence: protectionEvidence(
+      previousDeployment,
+      "2026-08-29T15:07:10.000Z",
+    ),
+    targetSmoke: smoke(
+      "planned", previousDeployment.url, undefined, "2026-08-29T15:07:20.000Z",
+    ),
+    authorizedAt: "2026-08-29T15:07:30.000Z",
+  };
+  const rollbackRecoveryReadiness = createPublicMutationRecoveryReadiness({
+    ...rollbackRecoveryReadinessInput,
+    attempt: rollbackRecoveryAttempt,
+    attemptProvenance: recoveryAttemptProvenance(rollbackRecoveryAttempt),
+    confirmedAt: "2026-08-29T15:07:50.000Z",
+  });
+  const recoveredRollback = createRecoveredRollbackReceipt({
+    intent: rollbackIntent,
+    plan: rollbackPlan,
+    intentAuthorization: rollbackAuthorization,
+    intentPreMutationState: rollbackInput.preMutationState,
+    intentSelectedSmoke: rollbackInput.selectedSmoke,
+    recoveryAttempt: rollbackRecoveryAttempt,
+    recoveryReadiness: rollbackRecoveryReadiness,
+    productionDeployment: previousDeployment,
+    publicResolution: publicResolution(
+      previousDeployment,
+      "2026-08-29T15:08:00.000Z",
+    ),
+    productionSmoke: smoke(
+      "planned", PRODUCTION_ORIGIN, undefined, "2026-08-29T15:08:10.000Z",
+    ),
+    rolledBackAt: "2026-08-29T15:08:20.000Z",
+  });
+  assert.equal(recoveredRollback.schemaVersion, RECOVERED_ROLLBACK_RECEIPT_SCHEMA);
+  assert.equal(recoveredRollback.publicMutationPerformed, false);
+  assert.equal(parseRollbackReceipt(recoveredRollback).state, "rolled-back-verified");
+  const mismatchedRollbackLineage = structuredClone(recoveredRollback);
+  mismatchedRollbackLineage.authorizationDigest = sha("8");
+  reseal(mismatchedRollbackLineage, RECOVERED_ROLLBACK_RECEIPT_SCHEMA,
+    "rollbackReceiptDigest");
+  assert.throws(() => parseRollbackReceipt(mismatchedRollbackLineage),
+    /exact recovery lineage/u,
+  "recovered rollback parsing must revalidate its embedded owner authorization");
   assert.throws(() => createRollbackReceipt({
     ...rollbackInput,
     publicResolution: publicResolution(
       previousDeployment, "2026-08-29T15:05:20.000Z",
     ),
-  }), /public rollback provider resolution/u);
+  }), /rollback readiness and public provider resolution/u);
   assert.throws(() => createRollbackReceipt({
     ...rollbackInput,
     selectedSmoke: smoke("planned", previousDeployment.url, undefined,
@@ -2880,7 +3936,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
         "2026-08-29T15:00:59.999Z"),
       checkedAt: "2026-08-29T15:00:59.999Z",
     }),
-  }), /within five minutes/u);
+  }), /fresh selected deployment smoke time/u);
 });
 
 test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", () => {
@@ -2897,6 +3953,7 @@ test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", 
     html_url: "https://github.com/programmablehq/Developers/actions/runs/12345",
     repository: { full_name: "programmablehq/Developers" },
     actor: { login: "hazarxyz", id: 258789013 },
+    triggering_actor: { login: "hazarxyz", id: 258789013 },
     head_commit: { id: source.revision, tree_id: source.tree },
   };
   const run = validateGitHubRunEvidence(runRaw, { runId: "12345", runAttempt: "1" });
@@ -3095,6 +4152,21 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     assert.match(step.run, /candidate[^\n]*[\s\S]*--mode planned --protection-bypass true/u);
     assert.doesNotMatch(step.run, /PRODUCTION_ORIGIN/u);
   }
+  const finalPlannedBoundary = plannedDeployJob.steps.find((step) =>
+    step.name === "Promote only the verified planned candidate");
+  assert.equal(finalPlannedBoundary.env.VERCEL_AUTOMATION_BYPASS_SECRET, undefined);
+  assert.equal(finalPlannedBoundary.env.RELEASE_SMOKE_BYPASS_SECRET,
+    "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}");
+  assert.match(finalPlannedBoundary.run,
+    /PRODUCTION_ORIGIN[\s\S]*candidate-final\.json[\s\S]*--protection-bypass true/u);
+  assert.match(finalPlannedBoundary.run,
+    /VERCEL_AUTOMATION_BYPASS_SECRET="\$smoke_bypass_secret"[\s\S]*smoke:chain-4663/u);
+  assert.match(finalPlannedBoundary.run,
+    /unset RELEASE_GITHUB_TOKEN RELEASE_VERCEL_TOKEN RELEASE_SMOKE_BYPASS_SECRET/u);
+  assert.match(finalPlannedBoundary.run,
+    /actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production/u);
+  assert.match(finalPlannedBoundary.run,
+    /validate-planned-mutation-readiness[\s\S]*vercel promote/u);
   for (const step of plannedDeployJob.steps.filter((candidate) =>
     !protectedCandidateSmokeSteps.includes(candidate))) {
     assert.equal(step.env?.VERCEL_AUTOMATION_BYPASS_SECRET, undefined,
@@ -3130,6 +4202,8 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.equal(plannedStepNames.indexOf("Reconfirm current protected main before Vercel mutation") <
     plannedStepNames.indexOf("Reauthorize protected planned alias mutation"), true);
   assert.equal(plannedStepNames.indexOf("Reauthorize protected planned alias mutation") <
+    plannedStepNames.indexOf("Promote only the verified planned candidate"), true);
+  assert.equal(plannedStepNames.indexOf("Upload immutable planned intent before public mutation") <
     plannedStepNames.indexOf("Promote only the verified planned candidate"), true);
   assert.match(plannedDeploy,
     /previous-deployment-pre-mutation\.json[\s\S]*test [^\n]*previous_id[^\n]*current_id/u,
@@ -3171,10 +4245,45 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /--staged-deployment \.release-evidence\/plan\/stage-deployment\.json/u);
   assert.match(text,
     /--target-protection-evidence \.release-evidence\/rollback\/target-protection\.json/u);
-  assert.equal((text.match(/--selected-protection-evidence/gmu) ?? []).length, 2,
-    "both public mutations must bind a fresh provider protection proof");
-  assert.equal((text.match(/--path checkedAt/gmu) ?? []).length, 2,
-    "both pre-mutation states must use the provider protection timestamp");
+  assert.match(text,
+    /promotion-artifact-evidence\.json[\s\S]*actions\/artifacts\/\$artifact_id\/zip[\s\S]*--promotion-artifact-archive/u,
+    "rollback planning must bind the exact downloaded promotion receipt archive bytes");
+  assert.match(text,
+    /prior-artifact-evidence\.json[\s\S]*actions\/artifacts\/\$artifact_id\/zip[\s\S]*--previous-promotion-artifact-archive/u,
+    "a live prior promotion must bind the exact downloaded receipt archive bytes");
+  assert.equal((text.match(/--selected-protection-evidence/gmu) ?? []).length, 4,
+    "both public mutations must bind initial and immediate provider protection proofs");
+  assert.equal((text.match(/--path checkedAt/gmu) ?? []).length, 4,
+    "both public mutations must bind initial and immediate smoke timestamps");
+  assert.equal((text.match(/developers-vercel-mutation-intent-/gmu) ?? []).length, 3,
+    "all three public routing operations must upload immutable intent before mutation");
+  for (const [jobName, mutationStepName] of [
+    ["deploy-planned", "Promote only the verified planned candidate"],
+    ["promote", "Promote only authorization-bound deployment"],
+    ["rollback", "Roll back only to authorization-bound deployment"],
+  ]) {
+    const step = document.jobs[jobName].steps.find(({ name }) => name === mutationStepName);
+    assert.match(step.run, /actions\/runs\/\$GITHUB_RUN_ID/u);
+    assert.match(step.run, /environments\/production/u);
+    assert.match(step.run, /--selector "\$PRODUCTION_ORIGIN"/u);
+    assert.match(step.run, /--protection-output/u);
+    assert.match(step.run, /--protection-bypass true/u);
+    assert.match(step.run, /vercel promote/u);
+    assert.equal(step.env.RELEASE_CONTROL_ENVIRONMENT, "production");
+    assert.equal(step.env.VERCEL_AUTOMATION_BYPASS_SECRET, undefined,
+      `${step.name} must not export the bypass secret to provider capture`);
+    assert.equal(step.env.RELEASE_SMOKE_BYPASS_SECRET,
+      "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}");
+    assert.match(step.run,
+      /VERCEL_AUTOMATION_BYPASS_SECRET="\$smoke_bypass_secret"[\s\S]*smoke:chain-4663/u);
+    assert.match(step.run,
+      /unset RELEASE_GITHUB_TOKEN RELEASE_VERCEL_TOKEN RELEASE_SMOKE_BYPASS_SECRET/u);
+    assert.match(step.run, /Authorization: Bearer \$github_token/u);
+    assert.match(step.run, /VERCEL_TOKEN="\$vercel_token" npm run capture:vercel-provider/u);
+    assert.match(step.run,
+      /authorized_at[\s\S]*--selector "\$PRODUCTION_ORIGIN"[\s\S]*--mutation-control-output[\s\S]*--mutation-control[\s\S]*vercel promote/u,
+      `${step.name} must bind post-authorization provider mutation control before its one mutation`);
+  }
   assert.match(text, /owner-dispatch-run\.raw\.json/u);
   assert.match(text, /production-environment\.raw\.json/u);
   assert.match(text, /indexerEvidence\.auditDigest/u);
@@ -3279,9 +4388,101 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(runbook,
     /prod_deployment_urls_and_all_previews[\s\S]*--protection-bypass true[\s\S]*public origin[\s\S]*--protection-bypass false/u,
     "runbook must keep generated candidates protected while public reads use no bypass");
+  assert.match(runbook,
+    /not an atomic Vercel compare-and-swap[\s\S]*external Vercel writes remain an explicit[\s\S]*operator boundary/u,
+    "runbook must scope at-most-once to the workflow rather than claim global ABA safety");
   assert.match(await readFile(path.resolve(".gitignore"), "utf8"),
     /^\.release-evidence\/$/mu,
     "runtime evidence must stay untracked without weakening canonical evidence paths");
+});
+
+test("pins recovery to immutable intent and exact old-target-third classification", async () => {
+  const workflowPath = path.resolve(".github/workflows/vercel-release-recovery.yml");
+  const text = await readFile(workflowPath, "utf8");
+  const document = parseYaml(text);
+  assert.equal(document.name, "Vercel release recovery");
+  assert.deepEqual(Object.keys(document.jobs), ["recover"]);
+  assert.deepEqual(document.permissions, { contents: "read", actions: "read" });
+  assert.equal(document.concurrency.group, "developers-vercel-release-control");
+  assert.equal(document.concurrency["cancel-in-progress"], false);
+  assert.deepEqual(document.on.workflow_dispatch.inputs.operation.options,
+    ["deploy-planned", "promote", "rollback"]);
+  const job = document.jobs.recover;
+  assert.equal(job.environment, "production");
+  for (const required of [
+    "github.repository == 'programmablehq/Developers'",
+    "github.ref == 'refs/heads/main'",
+    "github.ref_protected == true",
+    "github.actor == 'hazarxyz'",
+    "github.actor_id == '258789013'",
+    "github.triggering_actor == 'hazarxyz'",
+  ]) assert.equal(job.if.includes(required), true);
+  assert.equal(job.env, undefined);
+  const actionRefs = [...text.matchAll(/uses:\s+[^@\s]+@([^\s#]+)/gu)]
+    .map((match) => match[1]);
+  assert.equal(actionRefs.length > 0, true);
+  assert.equal(actionRefs.every((reference) => /^[0-9a-f]{40}$/u.test(reference)), true);
+  assert.doesNotMatch(text, /\bnpx\b|npm exec|--package=|--token\b/u);
+  assert.doesNotMatch(text, /vercel deploy/u,
+    "recovery may never create a replacement candidate");
+  const names = job.steps.map(({ name }) => name);
+  assert.equal(names.indexOf("Download exact immutable mutation intent artifact") <
+    names.indexOf("Reject operation or artifact substitution"), true);
+  assert.equal(names.indexOf("Prepare fresh owner-authorized recovery attempt") <
+    names.indexOf("Upload immutable recovery attempt before any public mutation"), true);
+  assert.equal(names.indexOf("Upload immutable recovery attempt before any public mutation") <
+    names.indexOf("Recover exact old state or verify exact target without a second mutation"),
+  true);
+  const substitution = job.steps.find(({ name }) =>
+    name === "Reject operation or artifact substitution");
+  assert.match(substitution.run,
+    /--artifact-archive[\s\S]*workflow\.runId[\s\S]*workflow\.runAttempt[\s\S]*create-public-mutation-intent[\s\S]*cmp --silent/u);
+  assert.doesNotMatch(substitution.run, /marker=/u,
+    "an intent marker must not become a crash-stranding retry lock");
+  const attempt = job.steps.find(({ name }) =>
+    name === "Prepare fresh owner-authorized recovery attempt");
+  assert.equal(attempt.env.VERCEL_AUTOMATION_BYPASS_SECRET, undefined);
+  assert.equal(attempt.env.RELEASE_SMOKE_BYPASS_SECRET,
+    "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}");
+  assert.match(attempt.run,
+    /--selector "\$PRODUCTION_ORIGIN"[\s\S]*--protection-output[\s\S]*--protection-bypass true/u);
+  assert.match(attempt.run,
+    /VERCEL_AUTOMATION_BYPASS_SECRET="\$smoke_bypass_secret"[\s\S]*smoke:chain-4663/u);
+  assert.match(attempt.run,
+    /actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production[\s\S]*create-recovery-attempt/u);
+  const boundary = job.steps.find(({ name }) =>
+    name === "Recover exact old state or verify exact target without a second mutation");
+  assert.equal(boundary.env.RELEASE_CONTROL_ENVIRONMENT, "production");
+  assert.equal(boundary.env.VERCEL_AUTOMATION_BYPASS_SECRET, undefined);
+  assert.equal(boundary.env.RELEASE_SMOKE_BYPASS_SECRET,
+    "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}");
+  assert.match(boundary.run,
+    /--selector "\$target_id"[\s\S]*--protection-output[\s\S]*--protection-bypass true/u);
+  assert.match(boundary.run,
+    /VERCEL_AUTOMATION_BYPASS_SECRET="\$smoke_bypass_secret"[\s\S]*smoke:chain-4663/u);
+  for (const scoped of [attempt, boundary]) {
+    assert.match(scoped.run,
+      /unset RELEASE_GITHUB_TOKEN RELEASE_VERCEL_TOKEN RELEASE_SMOKE_BYPASS_SECRET/u);
+    assert.match(scoped.run, /VERCEL_TOKEN="\$vercel_token" npm run capture:vercel-provider/u);
+    assert.match(scoped.run, /Authorization: Bearer \$github_token/u);
+  }
+  assert.match(boundary.run,
+    /actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production[\s\S]*authorized_at[\s\S]*--selector "\$PRODUCTION_ORIGIN"[\s\S]*--mutation-control-output[\s\S]*create-recovery-readiness[\s\S]*--mutation-control/u);
+  assert.match(boundary.run,
+    /attempt-artifacts\.raw\.json[\s\S]*attempt-artifact\.zip[\s\S]*create-recovery-attempt-provenance[\s\S]*--attempt-provenance/u,
+    "recovery readiness must bind the provider-authenticated uploaded attempt bytes");
+  assert.match(boundary.run,
+    /create-recovery-attempt-provenance[\s\S]*actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production[\s\S]*authorized_at[\s\S]*--selector "\$PRODUCTION_ORIGIN"/u,
+    "final owner/environment observations must follow archive verification and immediately precede provider readiness");
+  assert.match(boundary.run,
+    /case "\$classification"[\s\S]*old\)[\s\S]*vercel promote[\s\S]*target\)[\s\S]*no second Vercel mutation/u);
+  assert.equal((boundary.run.match(/vercel promote/gmu) ?? []).length, 1,
+    "recovery may perform at most one exact target mutation");
+  assert.match(text,
+    /create-recovered-promotion-receipt[\s\S]*developers-vercel-promotion-\$\{\{ github\.run_id \}\}/u,
+    "recovered promotion must yield the canonical artifact consumed by rollback");
+  assert.match(text,
+    /create-planned-deploy-receipt[\s\S]*create-recovered-promotion-receipt[\s\S]*create-recovered-rollback-receipt/u);
 });
 
 test("hashes build output deterministically and rejects symlinks", async () => {

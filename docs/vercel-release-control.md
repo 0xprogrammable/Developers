@@ -5,9 +5,11 @@ it is not public-write authority. The workflow never treats a successful build, 
 postdeployment bundle, indexer deployment, HTTP response, or Vercel API call as permission to
 change `developers.programmable.family`.
 
-The only workflow entry point is the protected `Vercel release control` manual workflow on
-`programmablehq/Developers` `refs/heads/main`. Pull requests and pushes cannot stage, promote, or
-roll back. Repository-owned `vercel.json` sets `git.deploymentEnabled:false`, so merging either
+The normal workflow entry point is the protected `Vercel release control` manual workflow on
+`programmablehq/Developers` `refs/heads/main`. A separate protected `Vercel release recovery`
+manual workflow can only complete or verify one immutable intent artifact from an interrupted
+normal run; it cannot stage or create a candidate. Pull requests and pushes cannot stage, promote,
+roll back, or recover. Repository-owned `vercel.json` sets `git.deploymentEnabled:false`, so merging either
 evidence phase cannot cause Vercel for Git to build or alias the commit outside this control plane.
 All Vercel mutations use the repository-locked CLI version and the configured project;
 no workflow accepts a caller-selected project, scope, evidence path, artifact name, or deployment
@@ -78,12 +80,25 @@ protection. The public origin is always smoked with `--protection-bypass false`.
 Immediately before alias mutation, the workflow rechecks protected `main`, provider-requeries the
 same source-bound unaliased candidate and its protection, repeats the authenticated candidate smoke,
 and requires the current public deployment ID to remain the one captured before candidate creation.
-It then freshly reads and validates the same owner-dispatch and environment authority again. The
+Before this final boundary it seals and uploads an immutable
+`programmable.developers.vercel-public-mutation-intent.v1` artifact that binds the exact old and
+target deployment IDs, public-origin resolution, source, project, owner authorization, candidate
+protection, and smoke. In the same shell step as `vercel promote`, it then freshly reads and validates
+the raw GitHub run and production environment again, freshly resolves the canonical public origin,
+re-queries the target and protection, repeats the smoke, and enforces the five-minute chronology. The
 second authorization binds the exact current source, current public deployment, candidate,
 protection evidence, and planned smoke. Only that authorization-bound candidate ID is passed to
-`vercel promote`. The public origin must then resolve to the same ID, pass the planned smoke without
+`vercel promote`. A durable planned-readiness object binds the final candidate protection and smoke,
+fresh authorization, post-authorization production-origin resolution, immutable intent, and
+confirmation time. That same provider capture also reads the protected project after authorization,
+requires Rolling Releases to be disabled, and rejects any `lastAliasRequest` whose state is
+`pending` or `in-progress`; any `succeeded` request must target the same deployment that the fresh
+public-origin resolution returned. Its timestamp and digest are sealed into readiness before the CLI call.
+The planned receipt binds that readiness digest. The public origin must then
+resolve to the same ID, pass the planned smoke without
 bypass, and still resolve to that ID after the smoke. The previous public deployment and all
-candidate/public readbacks are retained as evidence for manual recovery. This path publishes
+candidate/public readbacks plus a `programmable.developers.vercel-planned-deploy-receipt.v1` are
+retained as evidence for manual recovery. This path publishes
 read-only docs and planned/null API state only; it cannot activate Robinhood, enable submissions,
 introduce deployment roots, configure an indexer, or inherit Phase-A/Phase-B authority.
 
@@ -110,7 +125,9 @@ used by the release jobs. Before the workflow is usable, an owner must configure
 protected branches only, with custom branch policies off and administrator bypass disabled. It must not add a
 required-reviewer rule unless repository governance first establishes a distinct canonical reviewer.
 The workflow reads the environment back from GitHub before every `deploy-planned` Vercel mutation
-and immediately before promotion or rollback. It rejects any other id, branch policy, admin-bypass
+and immediately before promotion, rollback, or a recovery boundary. The raw provider readback and
+canonical production-origin resolution occur again inside the same shell step as every public
+routing mutation. It rejects any other id, branch policy, admin-bypass
 state, or an invented required-reviewer gate.
 
 `production` must make `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and
@@ -118,6 +135,10 @@ state, or an invented required-reviewer gate.
 environment variables. The Vercel token must belong to the pinned organization/project, and the
 bypass value must be the dedicated `automation-bypass` entry that the provider proof observes;
 neither value may appear in an artifact, command argument, or committed file.
+The combined final-boundary steps copy the GitHub token, Vercel token, and bypass secret into
+non-exported shell variables and immediately unset their exported aliases. Each credential is then
+scoped only to the command that needs it: GitHub bearer headers, Vercel provider/CLI calls, or the
+protected candidate smoke respectively.
 
 Every job pins both the original workflow actor and any re-run triggering actor to
 `@hazarxyz`/`258789013`. The authorization step reads back the current `workflow_dispatch` run and
@@ -212,6 +233,20 @@ state together with a fresh provider resolution proving that the public origin s
 approved current deployment and not the target. The smoke and resolution must be no more than five
 minutes older than the sealed promotion receipt.
 
+Before `vercel promote`, the normal run also uploads its exact plan, authorization, pre-mutation
+state, target evidence, bundle, and `programmable.developers.vercel-public-mutation-intent.v1` as an
+immutable Actions artifact. The final mutation step does not trust those timestamps alone: it
+re-reads raw `workflow_dispatch` and `production` environment state, resolves the public origin,
+re-queries target protection, repeats target smoke, creates a new authorization and pre-mutation
+state, and validates their old/target identities and chronology against the immutable intent before
+the CLI is invoked. It also seals the complete final authorization, pre-mutation state,
+post-authorization public-origin resolution, and confirmation time as
+`programmable.developers.vercel-public-mutation-readiness.v1`; the promotion receipt binds both that
+readiness digest and the immutable intent digest. The post-authorization provider capture also
+requires Rolling Releases to be disabled and no pending or in-progress `lastAliasRequest`; the
+provider mutation-control object is timestamped, digested, and bound into readiness. A succeeded
+last request must resolve to the same public deployment regardless of when it was requested.
+
 After `vercel promote`, the public origin must pass the same chain-4663 smoke without a protection
 bypass. The promotion receipt binds a second fresh public-origin resolution to the exact selected
 deployment; creation-time alias arrays cannot satisfy either check. A successful alias change
@@ -224,15 +259,81 @@ current promotion receipt and artifact, current deployment, prior deployment, pr
 promotion bundle when the target was live. The exact owner dispatch grants one fresh
 mutation only. The workflow re-queries current and target deployments, re-proves protection and
 smokes the exact target, seals both observations plus the current public-origin resolution into the
-pre-mutation state, promotes that target deployment, and smokes the public origin again without
+pre-mutation state, durably uploads the immutable rollback intent, then repeats the raw owner,
+environment, public-origin, target-protection, and target-smoke reads in the same shell step as the
+mutation. It promotes that target deployment only after the immediate readiness validator succeeds,
+and smokes the public origin again without
 bypass. The rollback receipt then binds a fresh post-mutation public-origin resolution to the exact
-restored deployment. No rollback decision interprets a deployment record's alias array as current
-routing authority.
+restored deployment together with the immutable intent and final mutation-readiness digests. No
+rollback decision interprets a deployment record's alias array as current routing authority.
 
 A rollback to the planned release must restore the planned/null chain-4663 behavior: unavailable
 feeds, zero public items, no public submissions, and no live metadata. A rollback to an older live
 release must use that release's own immutable Phase-B bundle. Evidence from the failed release is
 never reinterpreted as authority for the rollback target.
+
+## Recovery-only completion
+
+The `Vercel release recovery` workflow accepts only `deploy-planned`, `promote`, or `rollback`, plus
+the exact normal run ID and attempt that uploaded
+`developers-vercel-mutation-intent-<run>-<attempt>`. It downloads that exact immutable artifact,
+authenticates the interrupted canonical producer run/attempt and the unique, unexpired artifact
+metadata, downloads the raw Actions ZIP by its unique artifact ID, verifies the ZIP SHA-256 against
+GitHub's artifact digest, and requires its exact `public-mutation-intent.json` bytes to match the
+canonical intent. That provenance binds the exact intent digest, requires the embedded workflow run and
+attempt to match the dispatch, and recreates the intent from all
+of its authorization, plan, pre-mutation, bundle, protection, and smoke inputs, and requires a
+byte-identical result. A valid intent from another operation, target, or artifact therefore cannot
+be substituted.
+
+Recovery first reads the canonical public origin and classifies it against the intent as exactly
+`old`, exactly `target`, or a third state. It re-queries the exact target, protection, and smoke and
+freshly validates the raw recovery `workflow_dispatch`, protected `main`, canonical owner, production
+environment id, protected-branches-only policy, and `can_admins_bypass:false`. It then uploads an
+immutable `programmable.developers.vercel-public-mutation-recovery-attempt.v1` artifact before any
+possible routing mutation. At the final boundary it queries that exact recovery-run artifact,
+verifies its unique ID, provider digest, raw ZIP digest, exact `recovery-attempt.json` bytes, and
+provider creation/update/expiry timestamps, then binds
+`programmable.developers.vercel-public-mutation-recovery-attempt-provenance.v1` into final readiness.
+At the final boundary, the workflow repeats every provider and owner
+read. It re-proves target protection and target smoke, freshly authorizes the raw recovery run and
+environment, and only then resolves the canonical public origin again. The readiness contract binds
+that post-authorization public resolution, the same post-authorization project query proving Rolling
+Releases disabled and no pending or in-progress `lastAliasRequest`; any succeeded request must target
+the same deployment as the public resolution. It enforces the complete five-minute
+chronology, seals
+`programmable.developers.vercel-public-mutation-recovery-readiness.v1`, and applies this closed state
+machine:
+
+```text
+exact old state    -> one exact-target `vercel promote`, then verified receipt
+exact target state -> no Vercel mutation, only verified completion and receipt
+any third state    -> hard stop
+```
+
+Within one recovery execution, an `old` classification permits at most one exact-target CLI
+mutation and a `target` classification permits none; every rerun reclassifies from a fresh provider
+resolution. This is not an atomic Vercel compare-and-swap: a write by another Vercel actor after the
+last resolution and before the CLI call cannot be excluded by repository code. The shared workflow
+concurrency group prevents sibling release jobs, while external Vercel writes remain an explicit
+operator boundary. Target-to-old reversal, old-to-third drift, evidence older than five minutes,
+reversed chronology, a substituted artifact, or an unprotected/foreign owner run stops closed.
+Recovery never deploys a replacement candidate, guesses an alias, or intentionally mutates a
+classified third state. Recovered planned publication yields the same planned
+receipt contract; recovered rollback yields a dedicated recovery receipt; recovered promotion
+yields `programmable.developers.vercel-recovered-promotion-receipt.v1` under the canonical
+`developers-vercel-promotion-<recovery-run>-<attempt>` artifact name, so a later rollback can select
+and validate it exactly like a normal promotion artifact while preserving the distinct recovery
+source identity. Every recovered planned, promotion, and rollback receipt embeds its exact intent,
+authenticated attempt, final readiness, and full production smoke. Its parser revalidates that
+lineage, owner authorization, old/target classification, post-readiness provider resolution, smoke,
+and five-minute readiness-to-seal chronology rather than accepting digest-shaped fields alone.
+The next normal promotion and rollback paths accept either the canonical release workflow or the
+canonical recovery workflow as the producer of a prior promotion artifact, and bind the exact run,
+attempt, actor, source revision/tree, workflow reference, receipt, and artifact before continuing.
+Rollback preparation also downloads the raw promotion artifact by its provider ID, verifies its ZIP
+digest against GitHub metadata, and binds the exact `promotion-receipt.json` bytes into the rollback
+plan, which embeds and independently reparses that receipt.
 
 ## Operator boundary
 

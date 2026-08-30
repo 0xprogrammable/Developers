@@ -17,10 +17,16 @@ import {
   assertVercelProjectBinding,
   createEvidenceOnlySourceTransition,
   createPlannedDeployAuthorization,
+  createPlannedDeployReceipt,
   createPreMutationState,
   createPromotionPlan,
   createPromotionReceipt,
   createPublicAuthorization,
+  createPublicMutationIntent,
+  createPublicMutationRecoveryAttempt,
+  createPublicMutationRecoveryReadiness,
+  createRecoveredPromotionReceipt,
+  createRecoveredRollbackReceipt,
   createRollbackPlan,
   createRollbackReceipt,
   createStageReceipt,
@@ -29,10 +35,16 @@ import {
   normalizeVercelDeployment,
   parseIndexerPromotionEvidence,
   parsePlannedDeployAuthorization,
+  parsePlannedDeployReceipt,
+  parsePlannedPublicMutationReadiness,
   parsePromotionBundle,
   parsePromotionPlan,
   parsePromotionReceipt,
   parsePublicAuthorization,
+  parsePublicMutationIntent,
+  parsePublicMutationIntentProvenance,
+  parsePublicMutationRecoveryAttempt,
+  parsePublicMutationRecoveryReadiness,
   parseGitHubArtifactEvidence,
   parseGitHubRunEvidence,
   parseRollbackPlan,
@@ -44,10 +56,15 @@ import {
   releaseSource,
   releaseTarget,
   releaseWorkflow,
+  releaseRecoveryWorkflow,
   validateLiveRobinhoodManifest,
   validateGitHubRunEvidence,
   validateGitHubArtifactEvidence,
   validateGitHubOwnerDispatchAuthorization,
+  validatePublicMutationIntentProvenance,
+  validatePublicMutationRecoveryAttemptProvenance,
+  validatePlannedPublicMutationReadiness,
+  validatePreMutationReadiness,
   validatePlannedRobinhoodManifest,
 } from "./lib/vercel-release.mjs";
 import { assertValid, createSchemaRegistry } from "./lib/schema.mjs";
@@ -59,6 +76,7 @@ const REPOSITORY_ROOT = path.resolve(
   "..",
 );
 const MAX_JSON_BYTES = 32 * 1024 * 1024;
+const MAX_ARTIFACT_ARCHIVE_BYTES = 128 * 1024 * 1024;
 
 function fail(message) {
   throw new TypeError(message);
@@ -109,6 +127,16 @@ async function readJson(file, label = "JSON input") {
     fail(`${label} is not strict JSON`);
   }
   return value;
+}
+
+async function readArtifactArchive(file, label = "GitHub artifact archive") {
+  const absolute = path.resolve(file);
+  const metadata = await lstat(absolute);
+  if (!metadata.isFile() || metadata.size < 1 ||
+    metadata.size > MAX_ARTIFACT_ARCHIVE_BYTES) {
+    fail(`${label} must be a regular ZIP file no larger than ${MAX_ARTIFACT_ARCHIVE_BYTES} bytes`);
+  }
+  return readFile(absolute);
 }
 
 async function writeJson(file, value) {
@@ -190,6 +218,17 @@ function protectedTarget(options) {
 
 function workflowIdentity(options) {
   return releaseWorkflow({
+    repository: required(options, "--repository"),
+    workflowRef: required(options, "--workflow-ref"),
+    runId: required(options, "--run-id"),
+    runAttempt: required(options, "--run-attempt"),
+    actor: required(options, "--actor"),
+    actorId: required(options, "--actor-id"),
+  });
+}
+
+function recoveryWorkflowIdentity(options) {
+  return releaseRecoveryWorkflow({
     repository: required(options, "--repository"),
     workflowRef: required(options, "--workflow-ref"),
     runId: required(options, "--run-id"),
@@ -509,7 +548,9 @@ async function promotionPlanCommand(options) {
     "--stage-artifact-smoke", "--stage-protection-evidence",
     "--previous-mode", "--previous-bundle",
     "--previous-smoke", "--previous-deployment", "--previous-promotion-receipt",
-    "--previous-promotion-artifact-evidence", "--source-revision", "--source-tree",
+    "--previous-promotion-run-evidence", "--previous-promotion-artifact-evidence",
+    "--previous-promotion-artifact-archive",
+    "--source-revision", "--source-tree",
     "--stage-run-evidence", "--stage-artifact-evidence", "--staged-deployment", "--build-root",
     "--repository-root", "--indexer-release-identity", "--indexer-deployment-receipt",
     "--indexer-release-audit", "--org-id", "--project-id", "--prepared-at", "--output",
@@ -523,8 +564,12 @@ async function promotionPlanCommand(options) {
   }
   if ((previousMode === "live") !== Boolean(optional(options, "--previous-promotion-receipt")) ||
     (previousMode === "live") !==
-      Boolean(optional(options, "--previous-promotion-artifact-evidence"))) {
-    fail("previous promotion receipt and artifact are required exactly for a live prior release");
+      Boolean(optional(options, "--previous-promotion-run-evidence")) ||
+    (previousMode === "live") !==
+      Boolean(optional(options, "--previous-promotion-artifact-evidence")) ||
+    (previousMode === "live") !==
+      Boolean(optional(options, "--previous-promotion-artifact-archive"))) {
+    fail("previous promotion receipt, run, artifact, and archive are required exactly for a live prior release");
   }
   const stageBundle = await exactTrackedStageBundle(options, "--stage-bundle");
   const promotionBundle = await exactTrackedPromotionBundle(options, "--promotion-bundle");
@@ -569,10 +614,18 @@ async function promotionPlanCommand(options) {
       previousPromotionReceipt: await readJson(
         required(options, "--previous-promotion-receipt"), "previous promotion receipt",
       ),
+      previousPromotionRun: parseGitHubRunEvidence(await readJson(
+        required(options, "--previous-promotion-run-evidence"),
+        "previous promotion workflow run evidence",
+      )),
       previousPromotionArtifact: parseGitHubArtifactEvidence(await readJson(
         required(options, "--previous-promotion-artifact-evidence"),
         "previous promotion artifact evidence",
       )),
+      previousPromotionArtifactArchive: await readArtifactArchive(
+        required(options, "--previous-promotion-artifact-archive"),
+        "previous promotion artifact archive",
+      ),
     } : {}),
     ...(previousBundlePath
       ? { previousBundle: await readJson(previousBundlePath, "previous promotion bundle") }
@@ -698,7 +751,8 @@ async function authorizePlannedDeployCommand(options) {
 async function promotionReceiptCommand(options) {
   assertOnly(options, [
     "--plan", "--authorization", "--bundle", "--production-deployment", "--production-smoke",
-    "--selected-smoke", "--pre-mutation-state", "--promoted-at", "--output",
+    "--selected-smoke", "--pre-mutation-state", "--intent", "--mutation-readiness",
+    "--promoted-at", "--output",
     ...workflowFlags(),
   ]);
   const bundle = await readJson(required(options, "--bundle"), "promotion bundle");
@@ -712,6 +766,9 @@ async function promotionReceiptCommand(options) {
     context: { bundle },
     preMutationState: await readJson(required(options, "--pre-mutation-state"),
       "promotion pre-mutation state"),
+    intent: await readJson(required(options, "--intent"), "promotion mutation intent"),
+    mutationReadiness: await readJson(required(options, "--mutation-readiness"),
+      "promotion mutation readiness"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected promotion smoke receipt"),
     productionDeployment: productionCapture.deployment,
@@ -729,7 +786,9 @@ async function rollbackPlanCommand(options) {
     "--promotion-receipt", "--bundle", "--previous-bundle", "--current-smoke",
     "--current-deployment", "--target-smoke", "--target-deployment",
     "--target-protection-evidence", "--org-id", "--project-id",
-    "--promotion-artifact-evidence", "--prepared-at", "--output", ...workflowFlags(),
+    "--promotion-run-evidence", "--promotion-artifact-evidence",
+    "--promotion-artifact-archive", "--prepared-at",
+    "--output", ...workflowFlags(),
   ]);
   const promotionReceipt = await readJson(required(options, "--promotion-receipt"),
     "promotion receipt");
@@ -739,9 +798,16 @@ async function rollbackPlanCommand(options) {
     "current production deployment");
   const input = {
     promotionReceipt,
+    promotionRun: parseGitHubRunEvidence(await readJson(
+      required(options, "--promotion-run-evidence"), "promotion workflow run evidence",
+    )),
     promotionArtifact: parseGitHubArtifactEvidence(await readJson(
       required(options, "--promotion-artifact-evidence"), "promotion artifact evidence",
     )),
+    promotionArtifactArchive: await readArtifactArchive(
+      required(options, "--promotion-artifact-archive"),
+      "promotion artifact archive",
+    ),
     bundle,
     ...(previousBundlePath
       ? { previousBundle: await readJson(previousBundlePath, "previous promotion bundle") }
@@ -769,7 +835,7 @@ async function rollbackReceiptCommand(options) {
   assertOnly(options, [
     "--plan", "--authorization", "--previous-bundle", "--production-deployment",
     "--production-smoke", "--selected-smoke", "--pre-mutation-state", "--rolled-back-at",
-    "--output",
+    "--intent", "--mutation-readiness", "--output",
     ...workflowFlags(),
   ]);
   const plan = await readJson(required(options, "--plan"), "rollback plan");
@@ -789,6 +855,9 @@ async function rollbackReceiptCommand(options) {
       : {}),
     preMutationState: await readJson(required(options, "--pre-mutation-state"),
       "rollback pre-mutation state"),
+    intent: await readJson(required(options, "--intent"), "rollback mutation intent"),
+    mutationReadiness: await readJson(required(options, "--mutation-readiness"),
+      "rollback mutation readiness"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected rollback smoke receipt"),
     productionDeployment: productionCapture.deployment,
@@ -843,6 +912,364 @@ async function preMutationStateCommand(options) {
   await writeJson(required(options, "--output"), state);
 }
 
+async function preMutationReadinessCommand(options) {
+  assertOnly(options, [
+    "--operation", "--plan", "--authorization", "--pre-mutation-state",
+    "--selected-smoke", "--selected-bundle", "--current-deployment", "--confirmed-at",
+    "--intent", "--intent-authorization", "--intent-pre-mutation-state",
+    "--intent-selected-smoke", "--mutation-control", "--output",
+  ]);
+  const operation = required(options, "--operation");
+  if (!["promote", "rollback"].includes(operation)) {
+    fail("--operation must be promote or rollback");
+  }
+  const plan = await readJson(required(options, "--plan"), "release plan");
+  const parsedPlan = operation === "promote"
+    ? parsePromotionPlan(plan)
+    : parseRollbackPlan(plan);
+  const selectedBundlePath = optional(options, "--selected-bundle");
+  const requiresBundle = operation === "promote" || parsedPlan.rollbackTarget.mode === "live";
+  if (requiresBundle !== Boolean(selectedBundlePath)) {
+    fail("--selected-bundle is required exactly for a live selected deployment");
+  }
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "final current production deployment");
+  const readiness = validatePreMutationReadiness({
+    operation,
+    plan,
+    authorization: await readJson(required(options, "--authorization"),
+      "public authorization"),
+    intent: await readJson(required(options, "--intent"), "public mutation intent"),
+    intentAuthorization: await readJson(required(options, "--intent-authorization"),
+      "intent public authorization"),
+    intentPreMutationState: await readJson(required(options, "--intent-pre-mutation-state"),
+      "intent pre-mutation state"),
+    intentSelectedSmoke: await readJson(required(options, "--intent-selected-smoke"),
+      "intent selected deployment smoke"),
+    preMutationState: await readJson(required(options, "--pre-mutation-state"),
+      "pre-mutation state"),
+    selectedSmoke: await readJson(required(options, "--selected-smoke"),
+      "selected deployment smoke receipt"),
+    ...(selectedBundlePath
+      ? { selectedBundle: await readJson(selectedBundlePath, "selected promotion bundle") }
+      : {}),
+    currentDeployment: currentCapture.deployment,
+    currentPublicResolution: currentCapture.publicResolution,
+    mutationControl: await readJson(required(options, "--mutation-control"),
+      "Vercel mutation control"),
+    confirmedAt: required(options, "--confirmed-at"),
+  });
+  await writeJson(required(options, "--output"), readiness);
+}
+
+async function plannedMutationReadinessCommand(options) {
+  assertOnly(options, [
+    "--authorization", "--current-deployment", "--confirmed-at", "--intent",
+    "--intent-authorization", "--intent-selected-smoke", "--candidate-smoke",
+    "--mutation-control", "--output",
+  ]);
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "final planned current production deployment");
+  const readiness = validatePlannedPublicMutationReadiness({
+    authorization: await readJson(required(options, "--authorization"),
+      "planned public mutation authorization"),
+    intent: await readJson(required(options, "--intent"), "planned public mutation intent"),
+    intentAuthorization: await readJson(required(options, "--intent-authorization"),
+      "intent planned authorization"),
+    intentSelectedSmoke: await readJson(required(options, "--intent-selected-smoke"),
+      "intent planned candidate smoke"),
+    candidateSmoke: await readJson(required(options, "--candidate-smoke"),
+      "final planned candidate smoke"),
+    currentDeployment: currentCapture.deployment,
+    currentPublicResolution: currentCapture.publicResolution,
+    mutationControl: await readJson(required(options, "--mutation-control"),
+      "Vercel mutation control"),
+    confirmedAt: required(options, "--confirmed-at"),
+  });
+  await writeJson(required(options, "--output"), readiness);
+}
+
+async function publicMutationIntentCommand(options) {
+  assertOnly(options, [
+    "--operation", "--plan", "--authorization", "--pre-mutation-state",
+    "--selected-smoke", "--selected-bundle", "--created-at", "--output",
+  ]);
+  const operation = required(options, "--operation");
+  if (!["deploy-planned", "promote", "rollback"].includes(operation)) {
+    fail("--operation must be deploy-planned, promote, or rollback");
+  }
+  const live = operation !== "deploy-planned";
+  const planPath = optional(options, "--plan");
+  const statePath = optional(options, "--pre-mutation-state");
+  const bundlePath = optional(options, "--selected-bundle");
+  if (live !== Boolean(planPath) || live !== Boolean(statePath)) {
+    fail("--plan and --pre-mutation-state are required exactly for promote or rollback");
+  }
+  const plan = planPath ? await readJson(planPath, "public mutation plan") : undefined;
+  const bundleRequired = operation === "promote" ||
+    (operation === "rollback" && parseRollbackPlan(plan).rollbackTarget.mode === "live");
+  if (bundleRequired !== Boolean(bundlePath)) {
+    fail("--selected-bundle is required exactly for a live mutation target");
+  }
+  const intent = createPublicMutationIntent({
+    operation,
+    ...(plan ? { plan } : {}),
+    authorization: await readJson(required(options, "--authorization"),
+      "public mutation authorization"),
+    ...(statePath ? {
+      preMutationState: await readJson(statePath, "public mutation pre-mutation state"),
+    } : {}),
+    selectedSmoke: await readJson(required(options, "--selected-smoke"),
+      "public mutation selected smoke"),
+    ...(bundlePath ? {
+      selectedBundle: await readJson(bundlePath, "public mutation selected bundle"),
+    } : {}),
+    createdAt: required(options, "--created-at"),
+  });
+  await writeJson(required(options, "--output"), intent);
+}
+
+async function mutationIntentProvenanceCommand(options) {
+  assertOnly(options, [
+    "--workflow-run", "--artifacts", "--artifact-archive", "--intent", "--run-id",
+    "--run-attempt", "--output",
+  ]);
+  const provenance = validatePublicMutationIntentProvenance({
+    workflowRun: await readJson(required(options, "--workflow-run"),
+      "public mutation intent producer run"),
+    artifacts: await readJson(required(options, "--artifacts"),
+      "public mutation intent artifact listing"),
+  }, {
+    runId: required(options, "--run-id"),
+    runAttempt: required(options, "--run-attempt"),
+    intent: await readJson(required(options, "--intent"), "public mutation intent"),
+    artifactArchive: await readArtifactArchive(required(options, "--artifact-archive")),
+  });
+  await writeJson(required(options, "--output"), provenance);
+}
+
+async function validateMutationIntentProvenanceCommand(options) {
+  assertOnly(options, ["--provenance", "--intent"]);
+  parsePublicMutationIntentProvenance(
+    await readJson(required(options, "--provenance"),
+      "public mutation intent provenance"),
+    { intent: await readJson(required(options, "--intent"), "public mutation intent") },
+  );
+}
+
+function requireRecoveryEnvironment() {
+  if (process.env.GITHUB_ACTIONS !== "true" ||
+    process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
+    process.env.GITHUB_REF_PROTECTED !== "true" ||
+    process.env.RELEASE_CONTROL_ENVIRONMENT !== "production") {
+    fail("recovery requires a protected manual Developers production environment");
+  }
+}
+
+async function recoveryInputs(options) {
+  requireRecoveryEnvironment();
+  const source = checkedOutSource(options);
+  const workflow = recoveryWorkflowIdentity(options);
+  const authorizedAt = required(options, "--authorized-at");
+  const ownerDispatchAuthorization = validateGitHubOwnerDispatchAuthorization({
+    workflowRun: await readJson(required(options, "--workflow-run"),
+      "recovery GitHub owner-dispatch workflow run"),
+    environment: await readJson(required(options, "--environment"),
+      "recovery GitHub production environment"),
+  }, { workflow, source, observedAt: authorizedAt });
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "recovery current public deployment");
+  return {
+    intent: await readJson(required(options, "--intent"), "public mutation intent"),
+    intentProvenance: await readJson(required(options, "--intent-provenance"),
+      "public mutation intent provenance"),
+    source,
+    workflow,
+    ownerDispatchAuthorization,
+    currentDeployment: currentCapture.deployment,
+    currentPublicResolution: currentCapture.publicResolution,
+    targetDeployment: (await readJson(required(options, "--target-deployment"),
+      "recovery target deployment")).deployment,
+    targetProtectionEvidence: await readJson(
+      required(options, "--target-protection-evidence"),
+      "recovery target protection evidence",
+    ),
+    targetSmoke: await readJson(required(options, "--target-smoke"),
+      "recovery target smoke"),
+    ...(optional(options, "--selected-bundle") ? {
+      selectedBundle: await readJson(optional(options, "--selected-bundle"),
+        "recovery selected bundle"),
+    } : {}),
+    authorizedAt,
+  };
+}
+
+function recoveryInputFlags() {
+  return [
+    "--intent", "--intent-provenance", "--current-deployment", "--target-deployment",
+    "--target-protection-evidence", "--target-smoke", "--selected-bundle",
+    "--workflow-run", "--environment", "--authorized-at", "--source-revision",
+    "--source-tree", ...workflowFlags(),
+  ];
+}
+
+async function recoveryAttemptCommand(options) {
+  assertOnly(options, [...recoveryInputFlags(), "--output"]);
+  const input = await recoveryInputs(options);
+  const intent = parsePublicMutationIntent(input.intent);
+  if ((intent.targetMode === "live") !== Boolean(input.selectedBundle)) {
+    fail("--selected-bundle is required exactly for a live recovery target");
+  }
+  await writeJson(required(options, "--output"),
+    createPublicMutationRecoveryAttempt(input));
+}
+
+async function recoveryAttemptProvenanceCommand(options) {
+  assertOnly(options, [
+    "--artifacts", "--artifact-archive", "--attempt", "--source-revision",
+    "--source-tree", "--output", ...workflowFlags(),
+  ]);
+  const provenance = validatePublicMutationRecoveryAttemptProvenance(
+    await readJson(required(options, "--artifacts"),
+      "recovery attempt artifact listing"),
+    {
+      attempt: await readJson(required(options, "--attempt"), "durable recovery attempt"),
+      artifactArchive: await readArtifactArchive(required(options, "--artifact-archive")),
+      source: checkedOutSource(options),
+      workflow: recoveryWorkflowIdentity(options),
+    },
+  );
+  await writeJson(required(options, "--output"), provenance);
+}
+
+async function recoveryReadinessCommand(options) {
+  assertOnly(options, [
+    ...recoveryInputFlags(), "--attempt", "--attempt-provenance", "--mutation-control",
+    "--confirmed-at", "--output",
+  ]);
+  const input = await recoveryInputs(options);
+  const intent = parsePublicMutationIntent(input.intent);
+  if ((intent.targetMode === "live") !== Boolean(input.selectedBundle)) {
+    fail("--selected-bundle is required exactly for a live recovery target");
+  }
+  await writeJson(required(options, "--output"), createPublicMutationRecoveryReadiness({
+    ...input,
+    attempt: await readJson(required(options, "--attempt"), "durable recovery attempt"),
+    attemptProvenance: await readJson(required(options, "--attempt-provenance"),
+      "durable recovery attempt provenance"),
+    mutationControl: await readJson(required(options, "--mutation-control"),
+      "Vercel mutation control"),
+    confirmedAt: required(options, "--confirmed-at"),
+  }));
+}
+
+async function plannedDeployReceiptCommand(options) {
+  assertOnly(options, [
+    "--intent", "--authorization", "--mutation-readiness", "--recovery-attempt",
+    "--recovery-readiness", "--production-deployment", "--production-smoke",
+    "--completed-at", "--output",
+  ]);
+  const production = await readJson(required(options, "--production-deployment"),
+    "planned public production deployment");
+  const recoveryAttemptPath = optional(options, "--recovery-attempt");
+  const recoveryReadinessPath = optional(options, "--recovery-readiness");
+  const authorizationPath = optional(options, "--authorization");
+  const mutationReadinessPath = optional(options, "--mutation-readiness");
+  if (Boolean(recoveryAttemptPath) !== Boolean(recoveryReadinessPath)) {
+    fail("planned recovery attempt and readiness must be supplied together");
+  }
+  if (Boolean(recoveryReadinessPath) === Boolean(authorizationPath) ||
+    Boolean(recoveryReadinessPath) === Boolean(mutationReadinessPath)) {
+    fail("planned receipt requires exactly normal authorization/readiness or recovery evidence");
+  }
+  await writeJson(required(options, "--output"), createPlannedDeployReceipt({
+    intent: await readJson(required(options, "--intent"), "planned mutation intent"),
+    ...(recoveryReadinessPath ? {
+      recoveryAttempt: await readJson(recoveryAttemptPath, "planned recovery attempt"),
+      recoveryReadiness: await readJson(recoveryReadinessPath, "planned recovery readiness"),
+    } : {
+      authorization: await readJson(authorizationPath,
+        "planned deploy authorization"),
+      mutationReadiness: await readJson(mutationReadinessPath,
+        "planned mutation readiness"),
+    }),
+    productionDeployment: production.deployment,
+    publicResolution: production.publicResolution,
+    productionSmoke: await readJson(required(options, "--production-smoke"),
+      "planned production smoke"),
+    completedAt: required(options, "--completed-at"),
+  }));
+}
+
+async function recoveredPromotionReceiptCommand(options) {
+  assertOnly(options, [
+    "--intent", "--plan", "--intent-authorization", "--intent-pre-mutation-state",
+    "--intent-selected-smoke", "--bundle", "--recovery-attempt", "--recovery-readiness",
+    "--production-deployment", "--production-smoke", "--promoted-at", "--output",
+  ]);
+  const production = await readJson(required(options, "--production-deployment"),
+    "recovered promoted production deployment");
+  await writeJson(required(options, "--output"), createRecoveredPromotionReceipt({
+    intent: await readJson(required(options, "--intent"), "promotion mutation intent"),
+    plan: await readJson(required(options, "--plan"), "promotion plan"),
+    intentAuthorization: await readJson(required(options, "--intent-authorization"),
+      "intent promotion authorization"),
+    intentPreMutationState: await readJson(required(options, "--intent-pre-mutation-state"),
+      "intent promotion pre-mutation state"),
+    intentSelectedSmoke: await readJson(required(options, "--intent-selected-smoke"),
+      "intent promotion selected smoke"),
+    bundle: await readJson(required(options, "--bundle"), "promotion bundle"),
+    recoveryAttempt: await readJson(required(options, "--recovery-attempt"),
+      "promotion recovery attempt"),
+    recoveryReadiness: await readJson(required(options, "--recovery-readiness"),
+      "promotion recovery readiness"),
+    productionDeployment: production.deployment,
+    publicResolution: production.publicResolution,
+    productionSmoke: await readJson(required(options, "--production-smoke"),
+      "recovered promotion production smoke"),
+    promotedAt: required(options, "--promoted-at"),
+  }));
+}
+
+async function recoveredRollbackReceiptCommand(options) {
+  assertOnly(options, [
+    "--intent", "--plan", "--intent-authorization", "--intent-pre-mutation-state",
+    "--intent-selected-smoke", "--previous-bundle", "--recovery-attempt",
+    "--recovery-readiness", "--production-deployment", "--production-smoke",
+    "--rolled-back-at", "--output",
+  ]);
+  const plan = await readJson(required(options, "--plan"), "rollback plan");
+  const previousBundlePath = optional(options, "--previous-bundle");
+  if ((parseRollbackPlan(plan).rollbackTarget.mode === "live") !==
+    Boolean(previousBundlePath)) {
+    fail("--previous-bundle is required exactly for a recovered live rollback");
+  }
+  const production = await readJson(required(options, "--production-deployment"),
+    "recovered rollback production deployment");
+  await writeJson(required(options, "--output"), createRecoveredRollbackReceipt({
+    intent: await readJson(required(options, "--intent"), "rollback mutation intent"),
+    plan,
+    intentAuthorization: await readJson(required(options, "--intent-authorization"),
+      "intent rollback authorization"),
+    intentPreMutationState: await readJson(required(options, "--intent-pre-mutation-state"),
+      "intent rollback pre-mutation state"),
+    intentSelectedSmoke: await readJson(required(options, "--intent-selected-smoke"),
+      "intent rollback selected smoke"),
+    ...(previousBundlePath ? {
+      previousBundle: await readJson(previousBundlePath, "previous promotion bundle"),
+    } : {}),
+    recoveryAttempt: await readJson(required(options, "--recovery-attempt"),
+      "rollback recovery attempt"),
+    recoveryReadiness: await readJson(required(options, "--recovery-readiness"),
+      "rollback recovery readiness"),
+    productionDeployment: production.deployment,
+    publicResolution: production.publicResolution,
+    productionSmoke: await readJson(required(options, "--production-smoke"),
+      "recovered rollback production smoke"),
+    rolledBackAt: required(options, "--rolled-back-at"),
+  }));
+}
+
 async function inspectCommand(options) {
   assertOnly(options, ["--kind", "--file", "--bundle-phase", "--bundle", "--output"]);
   const kind = required(options, "--kind");
@@ -860,6 +1287,14 @@ async function inspectCommand(options) {
     result = parsePublicAuthorization(value, { operation: "rollback" });
   } else if (kind === "authorization-deploy-planned") {
     result = parsePlannedDeployAuthorization(value);
+  } else if (kind === "mutation-intent") {
+    result = parsePublicMutationIntent(value);
+  } else if (kind === "recovery-attempt") {
+    result = parsePublicMutationRecoveryAttempt(value);
+  } else if (kind === "recovery-readiness") {
+    result = parsePublicMutationRecoveryReadiness(value);
+  } else if (kind === "planned-deploy-receipt") {
+    result = parsePlannedDeployReceipt(value);
   } else if (kind === "promotion") result = parsePromotionReceipt(value, { bundle });
   else if (kind === "rollback-plan") result = parseRollbackPlan(value, { bundle });
   else if (kind === "rollback") result = parseRollbackReceipt(value);
@@ -904,6 +1339,17 @@ const commands = new Map([
   ["authorize-planned-deploy", authorizePlannedDeployCommand],
   ["create-promotion-receipt", promotionReceiptCommand],
   ["create-pre-mutation-state", preMutationStateCommand],
+  ["create-public-mutation-intent", publicMutationIntentCommand],
+  ["create-mutation-intent-provenance", mutationIntentProvenanceCommand],
+  ["validate-mutation-intent-provenance", validateMutationIntentProvenanceCommand],
+  ["validate-pre-mutation-readiness", preMutationReadinessCommand],
+  ["validate-planned-mutation-readiness", plannedMutationReadinessCommand],
+  ["create-recovery-attempt", recoveryAttemptCommand],
+  ["create-recovery-attempt-provenance", recoveryAttemptProvenanceCommand],
+  ["create-recovery-readiness", recoveryReadinessCommand],
+  ["create-planned-deploy-receipt", plannedDeployReceiptCommand],
+  ["create-recovered-promotion-receipt", recoveredPromotionReceiptCommand],
+  ["create-recovered-rollback-receipt", recoveredRollbackReceiptCommand],
   ["create-rollback-plan", rollbackPlanCommand],
   ["create-rollback-receipt", rollbackReceiptCommand],
   ["inspect", inspectCommand],
