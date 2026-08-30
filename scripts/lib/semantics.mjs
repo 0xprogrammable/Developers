@@ -1103,7 +1103,7 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
       (readback, index) => {
         const { evidenceDigest, ...withoutDigest } = readback;
         const expectedProvider = [
-          ["drpc", "drpc.org"],
+          ["quicknode", "quicknode.com"],
           ["alchemy", "alchemy.com"],
         ][index];
         return readback.providerId === expectedProvider[0] &&
@@ -1123,7 +1123,7 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
       const transitionReadbacksValid = result.providerReadbacks.every(
         (readback, providerIndex) => {
           const expectedProvider = [
-            ["drpc", "drpc.org"],
+            ["quicknode", "quicknode.com"],
             ["alchemy", "alchemy.com"],
           ][providerIndex];
           const { evidenceDigest, ...withoutDigest } = readback;
@@ -1203,7 +1203,7 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
           (readback, providerIndex) => {
             const { evidenceDigest, ...withoutDigest } = readback;
             const expectedProvider = [
-              ["drpc", "drpc.org"],
+              ["quicknode", "quicknode.com"],
               ["alchemy", "alchemy.com"],
             ][providerIndex];
             return readback.providerId === expectedProvider[0] &&
