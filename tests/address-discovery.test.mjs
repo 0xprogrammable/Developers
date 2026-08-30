@@ -11,7 +11,11 @@ const FEE_RECIPIENT = "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
 describe("documentation contract", () => {
   test("pins the additive v2 launch and compatibility contracts byte-identically", async () => {
     for (const [file, expected] of [
-      ["schemas/v2/launch.schema.json", "b73431d0f124082ebb3f9a0170b2656a7eeb29ad75f986c269e967808e9b9df0"],
+      ["schemas/v2/launch.schema.json", "d47618dbe35ded3ee00517e47988a712faf6927790d72ea4b20a5fd26bd3e59b"],
+      [
+        "schemas/v2/custom-launch-source-verification-v4.schema.json",
+        "fd9e7eb9583157079bba35a898307940a69195d55e15316a979085e38a96dc2d",
+      ],
       ["compatibility/core-v2.json", "e863d39d25ff040f2d7a5c100d354019a11aaca8b102686e67ea0fe4e0be60b0"],
     ]) {
       const bytes = await readFile(path.join(REPOSITORY_ROOT, file));
@@ -477,6 +481,7 @@ describe("documentation contract", () => {
         "custom-fee-enforced-launch-profile-v2",
         "custom-launch-preflight-v1",
         "custom-launch-lifecycle-queue-v3",
+        "custom-launch-source-verification-v4",
         "direct-native-hook-graph-profile-discovery-v1",
         "direct-native-hook-graph-profile-discovery-v2",
         "direct-native-hook-graph-profile-discovery-v3",

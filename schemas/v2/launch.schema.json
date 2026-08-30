@@ -347,7 +347,27 @@
       }
     },
     "extensions": {
-      "$ref": "common.schema.json#/$defs/extensions"
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/extensions"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "programmable/backend-finalized-v4": {
+              "type": "object",
+              "required": [
+                "sourceVerification"
+              ],
+              "properties": {
+                "sourceVerification": {
+                  "$ref": "custom-launch-source-verification-v4.schema.json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "additionalProperties": false,

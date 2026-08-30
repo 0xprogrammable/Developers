@@ -95,6 +95,69 @@ function projectMetadata() {
   };
 }
 
+function exactSourceVerification(manifest = { chainId: 4663, caip2: "eip155:4663" }) {
+  return {
+    schemaVersion: "programmable.source-verification-status.v4",
+    chainId: String(manifest.chainId),
+    caip2: manifest.caip2,
+    chainDeploymentId: manifest.customLaunchV4?.chainDeploymentId ??
+      "robinhood-mainnet-custom-launch-v1",
+    status: "exact_match",
+    components: [
+      {
+        targetId: "hook",
+        address: "0x1111111111111111111111111111111111111111",
+        status: "exact_match",
+        exactMatchProvider: "sourcify-v2",
+        evidenceDigest: SHA_1,
+        updatedAt: "2026-08-29T15:02:00.000Z",
+      },
+      {
+        targetId: "token",
+        address: "0x2222222222222222222222222222222222222222",
+        status: "exact_match",
+        exactMatchProvider: "sourcify-v2",
+        evidenceDigest: SHA_2,
+        updatedAt: "2026-08-29T15:03:00.000Z",
+      },
+    ],
+    updatedAt: "2026-08-29T15:03:00.000Z",
+  };
+}
+
+function queuedSourceVerification() {
+  const value = exactSourceVerification();
+  value.status = "queued";
+  value.components[1] = {
+    targetId: "token",
+    address: "0x2222222222222222222222222222222222222222",
+    status: "queued",
+    exactMatchProvider: null,
+    evidenceDigest: null,
+    updatedAt: "2026-08-29T15:04:00.000Z",
+    nextAttemptAt: "2026-08-29T15:09:00.000Z",
+  };
+  value.updatedAt = "2026-08-29T15:04:00.000Z";
+  return value;
+}
+
+function nonExactSourceVerificationComponent(
+  component,
+  status,
+  updatedAt,
+  nextAttemptAt,
+) {
+  return {
+    targetId: component.targetId,
+    address: component.address,
+    status,
+    exactMatchProvider: null,
+    evidenceDigest: null,
+    updatedAt,
+    ...(nextAttemptAt === undefined ? {} : { nextAttemptAt }),
+  };
+}
+
 async function liveManifest(chainId = 4663) {
   const manifest = await developerManifestForChain(4663);
   const caip2 = `eip155:${chainId}`;
@@ -665,6 +728,7 @@ function resourceFor(manifest, overrides = {}) {
       declaredLaunchState: "pool-not-initialized",
       targetIds: [],
     },
+    sourceVerification: exactSourceVerification(manifest),
     onchain: {
       schemaVersion: "programmable.custom-launch-onchain-evidence.v2",
       apiVersion: "v4",
@@ -752,7 +816,13 @@ describe("Router-backed finalized V4 feed", () => {
     assert.equal(result.records[0].launch.creatorAddress, null);
     assert.equal(result.records[0].launch.launchWallet, null);
     assert.equal(result.records[0].verification.approvalMatch, "unavailable");
+    assert.equal(result.records[0].verification.provenanceStatus, "verified");
     assert.equal(result.records[0].launch.finality, "finalized");
+    assert.deepEqual(
+      result.records[0].extensions["programmable/backend-finalized-v4"]
+        .sourceVerification,
+      exactSourceVerification(manifest),
+    );
     assert.equal(isTrustedFinalizedCustomV4Record(result.records[0]), true);
     assert.match(result.sourceIdentityCommitment, /^sha256:[0-9a-f]{64}$/u);
 
@@ -763,6 +833,188 @@ describe("Router-backed finalized V4 feed", () => {
       publicRecord,
       "projected finalized V4 launch",
     );
+    assertValid(
+      registry.validator("custom-launch-source-verification-v4.schema.json"),
+      publicRecord.extensions["programmable/backend-finalized-v4"]
+        .sourceVerification,
+      "projected finalized V4 source verification",
+    );
+
+    const validateSourceVerification = registry.validator(
+      "custom-launch-source-verification-v4.schema.json",
+    );
+    const falseAggregate = queuedSourceVerification();
+    falseAggregate.status = "exact_match";
+    assert.equal(validateSourceVerification(falseAggregate), false);
+    const missingNextAttempt = queuedSourceVerification();
+    delete missingNextAttempt.components[1].nextAttemptAt;
+    assert.equal(validateSourceVerification(missingNextAttempt), false);
+    const nullNextAttempt = queuedSourceVerification();
+    nullNextAttempt.components[1].nextAttemptAt = null;
+    assert.equal(validateSourceVerification(nullNextAttempt), false);
+    const nonCanonicalTimestamp = exactSourceVerification();
+    nonCanonicalTimestamp.components[1].updatedAt = "2026-08-29T15:03:00Z";
+    nonCanonicalTimestamp.updatedAt = "2026-08-29T15:03:00Z";
+    assert.equal(validateSourceVerification(nonCanonicalTimestamp), false);
+  });
+
+  test("keeps queued source verification separate from Router provenance and finality", async () => {
+    const manifest = await liveManifest();
+    const page = pageFor(manifest);
+    page.launches[0].sourceVerification = queuedSourceVerification();
+    const result = await finalizedV4FeedTestOnly.read(
+      manifest,
+      promotionAnchorFor(manifest),
+      { force: true, loadPage: async () => page },
+    );
+
+    assert.equal(result.status, "current", JSON.stringify(result.error));
+    const record = result.records[0];
+    assert.equal(record.launch.finality, "finalized");
+    assert.equal(record.verification.provenanceStatus, "verified");
+    assert.equal(
+      record.extensions["programmable/backend-finalized-v4"]
+        .sourceVerification.status,
+      "queued",
+    );
+    assert.equal(
+      record.extensions["programmable/backend-finalized-v4"]
+        .sourceVerification.components[1].exactMatchProvider,
+      null,
+    );
+  });
+
+  test("rejects internally consistent extended-year source-verification timestamps", async () => {
+    const manifest = await liveManifest();
+    const page = pageFor(manifest);
+    const sourceVerification = queuedSourceVerification();
+    sourceVerification.components[0].updatedAt =
+      "+010000-01-01T00:00:00.000Z";
+    sourceVerification.components[1].updatedAt =
+      "+010000-01-01T00:00:01.000Z";
+    sourceVerification.components[1].nextAttemptAt =
+      "+010000-01-01T00:00:02.000Z";
+    sourceVerification.updatedAt = "+010000-01-01T00:00:01.000Z";
+    page.launches[0].sourceVerification = sourceVerification;
+
+    const registry = await createSchemaRegistry("v2");
+    assert.equal(
+      registry.validator("custom-launch-source-verification-v4.schema.json")(
+        sourceVerification,
+      ),
+      false,
+    );
+    const result = await finalizedV4FeedTestOnly.read(
+      manifest,
+      promotionAnchorFor(manifest),
+      { force: true, loadPage: async () => page },
+    );
+    assert.equal(result.status, "unavailable");
+    assert.deepEqual(result.records, []);
+  });
+
+  test("matches backend precedence for mixed verification states", async () => {
+    const manifest = await liveManifest();
+    const cases = [
+      {
+        aggregate: "retrying",
+        components: [
+          ["queued", "2026-08-29T15:04:00.000Z", "2026-08-29T15:09:00.000Z"],
+          ["retrying", "2026-08-29T15:05:00.000Z", "2026-08-29T15:10:00.000Z"],
+        ],
+        updatedAt: "2026-08-29T15:05:00.000Z",
+      },
+      {
+        aggregate: "needs_attention",
+        components: [
+          ["needs_attention", "2026-08-29T15:06:00.000Z", undefined],
+          ["queued", "2026-08-29T15:05:00.000Z", "2026-08-29T15:10:00.000Z"],
+        ],
+        updatedAt: "2026-08-29T15:06:00.000Z",
+      },
+    ];
+    const registry = await createSchemaRegistry("v2");
+    const validateSourceVerification = registry.validator(
+      "custom-launch-source-verification-v4.schema.json",
+    );
+
+    for (const testCase of cases) {
+      const page = pageFor(manifest);
+      const sourceVerification = exactSourceVerification(manifest);
+      sourceVerification.status = testCase.aggregate;
+      sourceVerification.components = sourceVerification.components.map(
+        (component, index) => nonExactSourceVerificationComponent(
+          component,
+          ...testCase.components[index],
+        ),
+      );
+      sourceVerification.updatedAt = testCase.updatedAt;
+      page.launches[0].sourceVerification = sourceVerification;
+
+      const result = await finalizedV4FeedTestOnly.read(
+        manifest,
+        promotionAnchorFor(manifest),
+        { force: true, loadPage: async () => page },
+      );
+      assert.equal(result.status, "current", JSON.stringify(result.error));
+      assert.equal(
+        result.records[0].extensions["programmable/backend-finalized-v4"]
+          .sourceVerification.status,
+        testCase.aggregate,
+      );
+      assert.equal(validateSourceVerification(sourceVerification), true);
+    }
+  });
+
+  test("rejects malformed, cross-chain or overstated source-verification readback", async () => {
+    const manifest = await liveManifest();
+    const anchor = promotionAnchorFor(manifest);
+    const mutations = [
+      (resource) => { delete resource.sourceVerification; },
+      (resource) => { resource.sourceVerification.chainId = "1"; },
+      (resource) => { resource.sourceVerification.status = "queued"; },
+      (resource) => { resource.sourceVerification.updatedAt = "2026-08-29T15:02:00.000Z"; },
+      (resource) => { resource.sourceVerification.components.reverse(); },
+      (resource) => {
+        resource.sourceVerification.components[0].address =
+          "0x111111111111111111111111111111111111111A";
+      },
+      (resource) => {
+        resource.sourceVerification.components[0].exactMatchProvider =
+          "blockscout";
+      },
+      (resource) => {
+        resource.sourceVerification.components[0].evidenceDigest = null;
+      },
+      (resource) => {
+        resource.sourceVerification.components[0].nextAttemptAt =
+          "2026-08-29T15:09:00.000Z";
+      },
+      (resource) => {
+        resource.sourceVerification.components[0].error = "provider secret";
+      },
+      (resource) => {
+        resource.sourceVerification.error = "provider secret";
+      },
+      (resource) => {
+        resource.sourceVerification = queuedSourceVerification();
+        delete resource.sourceVerification.components[1].nextAttemptAt;
+      },
+      (resource) => {
+        resource.sourceVerification = queuedSourceVerification();
+        resource.sourceVerification.components[1].nextAttemptAt = null;
+      },
+    ];
+    for (const mutate of mutations) {
+      const page = pageFor(manifest);
+      mutate(page.launches[0]);
+      const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
+        force: true,
+        loadPage: async () => page,
+      });
+      assert.equal(result.status, "unavailable");
+      assert.deepEqual(result.records, []);
+    }
   });
 
   test("accepts only the minimized finalized public DTO and never republishes private fields", async () => {

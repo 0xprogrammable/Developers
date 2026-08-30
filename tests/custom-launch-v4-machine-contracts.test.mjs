@@ -11,7 +11,7 @@ import {
 
 const OPENAPI_PATH = "openapi/custom-launch-v4.json";
 const EXPECTED_DOCUMENT_DIGEST =
-  "a86dc96465d0a079d1f0804a8c39499ee7e7e682f10a8e78b2850b8ff77bd53e";
+  "9a92f4614d41516520542266355677a0f02a1a8c9d0c037b4800d553c7ae5e3e";
 const SCHEMAS = Object.freeze({
   "capabilities.json": Object.freeze({
     component: "CustomLaunchCapabilitiesV2",
@@ -23,7 +23,7 @@ const SCHEMAS = Object.freeze({
   }),
   "custom-launch.json": Object.freeze({
     component: "CustomLaunchResourceV4",
-    sha256: "c9849f76da57044e3d0070d4f42a70271d6be50473103a2ff176f1e9ce0a878b",
+    sha256: "6d221ede08aca7784e4688f95a45b80467c4c937284c7ec968b557a2aed01730",
   }),
   "exact-wallet-transaction.json": Object.freeze({
     component: "ExactWalletTransactionV4",
@@ -35,11 +35,15 @@ const SCHEMAS = Object.freeze({
   }),
   "pack-config.json": Object.freeze({
     component: "PackConfigV4",
-    sha256: "4a7a924a4773bf3ff6a29dab4779c6e314bc53d068d3cd40958a84bbb0e9d8ef",
+    sha256: "529ecb2046e902b0b2d7fdcd6b3ef0c3c206817f952ff5f9a9ff400c740529dc",
   }),
   "preflight.json": Object.freeze({
     component: "CustomLaunchPreflightV2",
     sha256: "58075dde83c658fd85996b4e3f073fa6cfd5f80c472fd162aad7fede77530ffa",
+  }),
+  "source-verification-status.json": Object.freeze({
+    component: "SourceVerificationStatusV4",
+    sha256: "b966aee03edaef7d67e30231f5c13e580edd6c4d983a23293746159b7b9c1c22",
   }),
 });
 

@@ -5,6 +5,7 @@ This page explains the product state represented by v2. For live machine-readabl
 ```text
 GET https://developers.programmable.family/api/v2/status
 GET https://developers.programmable.family/api/v2/manifest
+GET https://developers.programmable.family/api/v2/manifests/4663
 ```
 
 This status page covers the unauthenticated read/discovery API. The separately hosted
@@ -18,6 +19,17 @@ and its canonical contracts are the versioned
 V1 and V2 historical reads remain compatible. Their authenticated POST routes are read-only
 and return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or
 `409 CUSTOM_LAUNCH_V2_READ_ONLY`.
+
+Those write states apply to Ethereum Mainnet (`chainId: 1`): V1 and V2 are
+historical-read/write-fenced surfaces, while V3 profile `3.3.0` is the current
+fresh-write lane. Robinhood Chain Mainnet (`chainId: 4663`) has a separate
+[planned V4 OpenAPI contract](https://programmable.market/openapi/custom-launch-v4.json).
+Its public writes, deployment roots, authoritative feed, and release remain
+unavailable. The V4 source-verification contracts are the
+[API status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
+and the separate
+[Developer projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json);
+publishing these schemas does not establish an exact match for any deployment.
 
 In the v2 status response, `customLaunchApi` is the retained V1 compatibility
 object. `currentCustomLaunchCreate` is the additive current V3 write pointer;
@@ -54,9 +66,18 @@ server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 | Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy, V1, or V2 fresh-write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
 | Stock-Paired records | — | Ethereum | Excluded | Not scanned or projected by active v2 discovery; frozen v1 compatibility semantics remain unchanged |
+| Custom Launch API V4 | `custom` | Robinhood Chain `4663` | Planned | No public writes; the chain manifest keeps public deployment roots null and returns an empty `unavailable` feed whose absence is not authoritative |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
 | Aion partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner recipient, accepted template, Registry record, or live fee path is published; similarly named code is not evidence |
-| Other networks | — | — | Not declared | Support exists only when a network appears as active in the manifest |
+| Other networks | — | — | Not declared | Support exists only when the canonical discovery and per-chain manifest publish it |
+
+For Robinhood Chain, a prepared address or source binding is not a public
+deployment root. Promotion requires a released manifest with non-null Router
+identity, start block, runtime identity, deployment evidence, finality policy,
+and canary evidence, followed by a current complete read model. Until then,
+`GET /api/v2/launches?chainId=4663` and the matching token list can return HTTP
+`200` with `status: "unavailable"` and no records; that empty result means
+"unknown", not "no launches exist".
 
 ## What `custom` means today
 
@@ -276,6 +297,18 @@ The status of an API does not establish fee enforcement, an exact-source match,
 a successful simulation, finality, tradability, claim support, or an audit. Read
 each field independently. API availability does not prove fee accrual, payment,
 claimability, continuing liquidity or an independent audit.
+
+For every chain, keep these evidence axes separate:
+
+| Axis | What establishes it |
+| --- | --- |
+| Finality | The chain-qualified finalized checkpoint and canonical block evidence |
+| Exact source verification | A provider result accepted by the versioned source-verification contract; for Robinhood V4, only durable Sourcify V2 exact evidence can produce `exact_match` |
+| Indexing | Complete, current traversal and quality evidence for that chain's read model |
+| Public visibility | Actual publication of the finalized record through the public feed |
+
+Success on one axis does not imply success on another. None of them alone
+establish liquidity, trading support, fee behavior, or safety.
 
 ## Ready, degraded, and unavailable
 

@@ -15,6 +15,7 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Preserve the strict Robinhood V4 source-verification projection separately from canonical-Router provenance and Ethereum finality, and reserve `exact_match` for durable Sourcify V2 exact evidence.
 - Activate Classic V4 discovery alongside historical V3 through manifest refresh, keep Classic V1 and V2 out of active scans, and exclude Stock-Paired records from active v2 discovery while preserving the immutable v1 compatibility snapshot.
 - Replace the retired HTTP 410 Classic source with the complete paginated `https://programmable.market/api/explore` catalog bound to Envio deployment `production-6157d22`, and publish separate exact Classic V4 Router canary evidence with `classicOnchainCanary: true`. Router remains provenance and transport rather than a public category.
 - Make the native Custom fee manifest explicitly conditional on exact per-launch fee evidence, and restore finalized Router metadata ingestion under the required quality envelope. SHARD's separately labeled platform-curated legacy image and links remain bound to its exact Router identity rather than altering signed project metadata.

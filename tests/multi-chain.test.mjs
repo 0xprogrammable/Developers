@@ -546,8 +546,8 @@ function syntheticLiveRobinhood(manifest) {
       "0x1dbbdaaad901ea3c6134dca0d4872a4789b3c071bf8ccfb44edd65d26d817388",
     artifact: {
       sourceRepository: "https://github.com/programmablehq/PROGRAMMABLE",
-      sourceCommit: "7aa16a1921ad357b31a5071acbc3dd5d646cf9c0",
-      sourceTree: "df36bb728018a0c5bed78517330328dd45e0b1e4",
+      sourceCommit: "53926119030772040eca34b4796a36353c9da2d2",
+      sourceTree: "d9118605665cf047ec32214c7dc51608e9a362f0",
       sourcePath:
         "contracts/src/robinhood-custom-launch/ProgrammableLaunchStampRouterV1.sol",
       artifactPath:

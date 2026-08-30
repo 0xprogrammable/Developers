@@ -1,0 +1,116 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { describe, test } from "node:test";
+
+const ROOT = process.cwd();
+const DOCUMENTS = [
+  "docs/status.md",
+  "docs/README.md",
+  "docs/quickstart.md",
+  "docs/concepts/multi-chain.md",
+  "docs/reference/http-api.md",
+  "docs/reference/onchain-verification.md",
+  "llms.txt",
+  "llms-full.txt",
+];
+const V4_OPENAPI =
+  "https://programmable.market/openapi/custom-launch-v4.json";
+const V4_SOURCE_STATUS =
+  "https://programmable.market/schemas/custom-launch/v4/source-verification-status.json";
+const V4_DEVELOPER_PROJECTION =
+  "https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json";
+
+async function read(relativePath) {
+  return readFile(path.join(ROOT, relativePath), "utf8");
+}
+
+function selectedManifestExample(source) {
+  const match = source.match(
+    /selected[\s\S]*?```json\n([\s\S]*?)\n```/iu,
+  );
+  assert.ok(match, "selected planned manifest example is missing");
+  return JSON.parse(match[1]);
+}
+
+describe("Robinhood V4 documentation contract", () => {
+  test("links the planned V4 and both source-verification contracts", async () => {
+    for (const relativePath of DOCUMENTS) {
+      const source = await read(relativePath);
+      for (const url of [V4_OPENAPI, V4_SOURCE_STATUS, V4_DEVELOPER_PROJECTION]) {
+        assert.ok(source.includes(url), `${relativePath} is missing ${url}`);
+      }
+    }
+  });
+
+  test("keeps the selected planned manifest example fail-closed", async () => {
+    for (const relativePath of [
+      "docs/quickstart.md",
+      "docs/concepts/multi-chain.md",
+      "llms-full.txt",
+    ]) {
+      const manifest = selectedManifestExample(await read(relativePath));
+      assert.equal(manifest.chainId, 4663, relativePath);
+      assert.equal(manifest.caip2, "eip155:4663", relativePath);
+      assert.deepEqual(manifest.deployments, [], relativePath);
+      assert.equal(
+        manifest.customRegistry.publicSubmissionsEnabled,
+        false,
+        relativePath,
+      );
+      assert.equal(manifest.customRegistry.address, null, relativePath);
+      assert.equal(manifest.customRegistry.startBlock, null, relativePath);
+      assert.equal(manifest.launchStampRouter.status, "planned", relativePath);
+      assert.equal(manifest.launchStampRouter.address, null, relativePath);
+      assert.equal(manifest.launchStampRouter.startBlock, null, relativePath);
+      assert.equal(manifest.launchStampRouter.runtimeCodeHash, null, relativePath);
+      assert.equal(
+        manifest.launchStampRouter.deploymentEvidence,
+        null,
+        relativePath,
+      );
+      assert.equal(manifest.customLaunchV4.status, "planned", relativePath);
+      assert.equal(manifest.customLaunchV4.profile, null, relativePath);
+      assert.equal(manifest.customLaunchV4.finalityPolicy, null, relativePath);
+      assert.equal(
+        manifest.extensions["programmable/read-model-v1"]
+          .absenceAuthoritative,
+        false,
+        relativePath,
+      );
+    }
+  });
+
+  test("separates chain write state and public evidence axes", async () => {
+    const [status, http, onchain, llms, llmsFull] = await Promise.all([
+      read("docs/status.md"),
+      read("docs/reference/http-api.md"),
+      read("docs/reference/onchain-verification.md"),
+      read("llms.txt"),
+      read("llms-full.txt"),
+    ]);
+
+    for (const source of [status, http, llms, llmsFull]) {
+      assert.match(source, /chain(?:Id)?:?\s*1|chain-1/iu);
+      assert.match(source, /V1[\s\S]*V2[\s\S]*(?:read-only|write-fenced|write-fence)/iu);
+      assert.match(source, /V3(?: profile)? `?3\.3\.0`?[\s\S]*fresh/iu);
+      assert.match(source, /4663[\s\S]*planned/iu);
+      assert.match(source, /4663[\s\S]*(?:no public writes|public writes[^.]*unavailable)/iu);
+    }
+
+    for (const source of [status, http, onchain, llms, llmsFull]) {
+      for (const term of [
+        "finality",
+        "exact source verification",
+        "indexing",
+        "public visibility",
+      ]) {
+        assert.match(source, new RegExp(term.replaceAll(" ", "\\s+"), "iu"));
+      }
+    }
+
+    assert.match(status, /empty result means[\s\S]*unknown/iu);
+    assert.match(http, /absenceAuthoritative: false/iu);
+    assert.match(onchain, /empty[\s\S]*unavailable[\s\S]*non-authoritative/iu);
+  });
+});
