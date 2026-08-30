@@ -3441,6 +3441,11 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.doesNotMatch(plannedDeploy, /--bundle(?:-phase)?/u);
   assert.match(plannedDeploy,
     /vercel deploy --prebuilt --target=production[\s\S]*--skip-domain/u);
+  const plannedCandidateDeploy = plannedDeployJob.steps.find((step) =>
+    step.name === "Create unaliased source-bound planned candidate");
+  assert.equal(plannedCandidateDeploy?.env?.VERCEL_PROJECT_ID,
+    "${{ secrets.VERCEL_PROJECT_ID }}",
+    "planned candidate creation must provide the Vercel project binding");
   assert.match(plannedDeploy,
     /programmableReleaseMode=planned/u);
   assert.match(plannedDeploy,
@@ -3521,6 +3526,11 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /verify-planned[\s\S]*unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u,
     "planned source validation must clear both phase selectors");
   assert.match(text, /--skip-domain/u);
+  const stageCandidateDeploy = document.jobs.stage.steps.find((step) =>
+    step.name === "Create unaliased production-target deployment");
+  assert.equal(stageCandidateDeploy?.env?.VERCEL_PROJECT_ID,
+    "${{ secrets.VERCEL_PROJECT_ID }}",
+    "stage candidate creation must provide the Vercel project binding");
   assert.match(text, /--phase "\$phase"/u);
   assert.match(text, /--bundle-phase stage --bundle "\$ROBINHOOD_STAGE_BUNDLE_PATH"/u);
   assert.match(text, /--bundle-phase promotion/u);
