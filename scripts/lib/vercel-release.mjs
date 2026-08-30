@@ -426,7 +426,9 @@ function exactInstant(value, label) {
 function exactSecondInstant(value, label) {
   assert(typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(value) &&
-    Number.isFinite(Date.parse(value)), `${label} must be a canonical UTC second`);
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value.replace(/Z$/u, ".000Z"),
+  `${label} must be a canonical UTC second`);
   return value;
 }
 

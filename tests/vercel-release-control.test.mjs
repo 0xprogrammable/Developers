@@ -2792,9 +2792,16 @@ test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", 
   assert.throws(() => ownerDispatchAuthorization("2026-08-29T15:02:00.000Z", {
     environmentOverrides: { created_at: "2026-08-27T00:00:00.000Z" },
   }), /canonical UTC second/u);
+  assert.throws(() => ownerDispatchAuthorization("2026-08-29T15:02:00.000Z", {
+    environmentOverrides: { created_at: "2026-02-31T00:00:00Z" },
+  }), /canonical UTC second/u);
   const fractionalEvidence = structuredClone(ownerDispatch);
   fractionalEvidence.environment.updatedAt = "2026-08-27T00:05:00.000Z";
   assert.throws(() => parseGitHubOwnerDispatchAuthorization(fractionalEvidence),
+    /canonical UTC second/u);
+  const impossibleEvidence = structuredClone(ownerDispatch);
+  impossibleEvidence.environment.createdAt = "2026-02-31T00:00:00Z";
+  assert.throws(() => parseGitHubOwnerDispatchAuthorization(impossibleEvidence),
     /canonical UTC second/u);
 });
 
