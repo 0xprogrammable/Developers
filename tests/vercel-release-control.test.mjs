@@ -75,6 +75,11 @@ import {
   validateGitHubRunEvidence,
   validatePlannedRobinhoodManifest,
 } from "../scripts/lib/vercel-release.mjs";
+import {
+  PROTECTION_PROBE_RETRY_DELAYS_MS,
+  PROTECTION_PROBE_TIMEOUT_MS,
+  probeGeneratedDeploymentProtection,
+} from "../scripts/lib/vercel-protection-probe.mjs";
 
 const sha = (character) => `sha256:${character.repeat(64)}`;
 const hash = (character) => `0x${character.repeat(64)}`;
@@ -1749,6 +1754,157 @@ const formalProductionAliases = [VERCEL_PRODUCTION_ORIGIN, PRODUCTION_ORIGIN]
   .map((origin) => new URL(origin).hostname)
   .sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
 const vercelProductionAliases = [new URL(VERCEL_PRODUCTION_ORIGIN).hostname];
+
+function protectionProbeResponse(status, cancelled, headers = {}) {
+  return {
+    status,
+    headers: new Headers(headers),
+    body: {
+      async cancel() {
+        cancelled.push(status);
+      },
+    },
+  };
+}
+
+test("retries only bounded unprotected generated-deployment responses", async () => {
+  assert.equal(PROTECTION_PROBE_TIMEOUT_MS, 55_000);
+  assert.deepEqual(PROTECTION_PROBE_RETRY_DELAYS_MS,
+    [5_000, 10_000, 10_000, 10_000, 10_000]);
+
+  const cancelled = [];
+  const plannedUnavailableHeaders = {
+    "content-type": "application/problem+json; charset=utf-8",
+    "retry-after": "30",
+    "x-programmable-status": "error",
+  };
+  const responses = [
+    protectionProbeResponse(503, cancelled, plannedUnavailableHeaders),
+    protectionProbeResponse(503, cancelled, plannedUnavailableHeaders),
+    protectionProbeResponse(302, cancelled),
+  ];
+  const waits = [];
+  const signal = new AbortController().signal;
+  const requests = [];
+  const response = await probeGeneratedDeploymentProtection(
+    "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+    {
+      fetchImpl: async (url, options) => {
+        requests.push({ url, options });
+        return responses.shift();
+      },
+      waitImpl: async (delay, value, options) => {
+        waits.push({ delay, value, options });
+      },
+      retryDelaysMs: [7, 11],
+      signal,
+    },
+  );
+  assert.equal(response.status, 302);
+  assert.deepEqual(cancelled, [503, 503]);
+  assert.deepEqual(waits.map(({ delay }) => delay), [7, 11]);
+  assert.equal(requests.length, 3);
+  for (const request of requests) {
+    assert.equal(request.url,
+      "https://developers-stage.vercel.app/api/v2/status?chainId=4663");
+    assert.deepEqual(request.options.headers, { accept: "application/json" });
+    assert.equal(request.options.redirect, "manual");
+    assert.equal(request.options.signal, signal);
+  }
+  assert.equal(waits.every(({ options }) => options.signal === signal), true);
+
+  let unprotectedAttempts = 0;
+  const stillUnprotected = await probeGeneratedDeploymentProtection(
+    "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+    {
+      fetchImpl: async () => {
+        unprotectedAttempts += 1;
+        return protectionProbeResponse(503, [], plannedUnavailableHeaders);
+      },
+      waitImpl: async () => {},
+      retryDelaysMs: [0, 0],
+      signal,
+    },
+  );
+  assert.equal(stillUnprotected.status, 503);
+  assert.equal(unprotectedAttempts, 3);
+  const candidate = deployment(
+    "dpl_unprotected123",
+    "https://developers-stage.vercel.app",
+  );
+  assert.throws(() => createStageProtectionEvidence({
+    deployment: candidate,
+    projectId: target.projectId,
+    projectProtection: {
+      id: target.projectId,
+      ssoProtection: { deploymentType: "prod_deployment_urls_and_all_previews" },
+      protectionBypass: { "release-control": { scope: "automation-bypass" } },
+    },
+    response: {
+      status: stillUnprotected.status,
+      location: null,
+      server: "Vercel",
+      vercelId: "fra1::test",
+    },
+    checkedAt: "2026-08-29T14:59:00.000Z",
+  }), /did not return its authentication redirect/u);
+
+  for (const terminalStatus of [200, 301, 302, 401, 404, 429, 503]) {
+    let attempts = 0;
+    const terminal = await probeGeneratedDeploymentProtection(
+      "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+      {
+        fetchImpl: async () => {
+          attempts += 1;
+          return protectionProbeResponse(terminalStatus, []);
+        },
+        waitImpl: async () => assert.fail("terminal responses must not be retried"),
+        retryDelaysMs: [0, 0],
+        signal,
+      },
+    );
+    assert.equal(terminal.status, terminalStatus);
+    assert.equal(attempts, 1);
+  }
+
+  for (const malformedHeaders of [
+    {},
+    { ...plannedUnavailableHeaders, "content-type": "text/html" },
+    { ...plannedUnavailableHeaders, "x-programmable-status": "ready" },
+    { ...plannedUnavailableHeaders, "retry-after": "60" },
+  ]) {
+    let attempts = 0;
+    const malformed = await probeGeneratedDeploymentProtection(
+      "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+      {
+        fetchImpl: async () => {
+          attempts += 1;
+          return protectionProbeResponse(503, [], malformedHeaders);
+        },
+        waitImpl: async () => assert.fail("unrelated 503 responses must not be retried"),
+        retryDelaysMs: [0, 0],
+        signal,
+      },
+    );
+    assert.equal(malformed.status, 503);
+    assert.equal(attempts, 1);
+  }
+
+  const abort = new DOMException("probe aborted", "AbortError");
+  let abortedAttempts = 0;
+  await assert.rejects(probeGeneratedDeploymentProtection(
+    "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+    {
+      fetchImpl: async () => {
+        abortedAttempts += 1;
+        throw abort;
+      },
+      retryDelaysMs: [0, 0],
+      signal,
+    },
+  ), (error) => error === abort);
+  assert.equal(abortedAttempts, 1);
+});
 
 test("accepts automatic provider aliases on staged candidates and rejects formal domains", () => {
   const providerAlias = "programmable-developers-aficialais-projects.vercel.app";
@@ -3636,6 +3792,9 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(providerCapture,
     /protectionOutput[\s\S]*createStageProtectionEvidence/u,
     "planned candidates must use the same provider protection proof as live stages");
+  assert.match(providerCapture,
+    /probeGeneratedDeploymentProtection[\s\S]*createStageProtectionEvidence/u,
+    "generated deployment protection propagation must remain bounded before strict validation");
   assert.match(providerCapture,
     /inspect", PRODUCTION_ORIGIN[\s\S]*createVercelPublicDeploymentResolution/u,
     "public-origin resolution evidence must come from a direct public-domain inspection");
