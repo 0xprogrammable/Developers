@@ -45,6 +45,7 @@ import {
   parseStageBundle,
   parsePromotionPlan,
   parsePromotionReceipt,
+  parseGitHubOwnerDispatchAuthorization,
   parsePlannedDeployAuthorization,
   parsePublicAuthorization,
   parseRollbackPlan,
@@ -137,15 +138,15 @@ function ownerDispatchAuthorization(observedAt, {
       actor: { login: workflow.actor, id: Number(workflow.actorId) },
       triggering_actor: { login: workflow.actor, id: Number(workflow.actorId) },
       head_commit: { id: runSource.revision, tree_id: runSource.tree },
-      created_at: "2026-08-29T15:00:00.000Z",
-      run_started_at: "2026-08-29T15:00:01.000Z",
+      created_at: "2026-08-29T15:00:00Z",
+      run_started_at: "2026-08-29T15:00:01Z",
       ...runOverrides,
     },
     environment: {
       id: 19441858925,
       name: "production",
-      created_at: "2026-08-27T00:00:00.000Z",
-      updated_at: "2026-08-27T00:05:00.000Z",
+      created_at: "2026-08-27T00:00:00Z",
+      updated_at: "2026-08-27T00:05:00Z",
       can_admins_bypass: false,
       protection_rules: [{ type: "branch_policy" }],
       deployment_branch_policy: {
@@ -2766,8 +2767,14 @@ test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", 
   assert.equal(ownerDispatch.owner.id, "258789013");
   assert.equal(ownerDispatch.observedAt, "2026-08-29T15:02:00.000Z");
   assert.equal(ownerDispatch.environment.id, "19441858925");
+  assert.equal(ownerDispatch.environment.createdAt, "2026-08-27T00:00:00Z");
+  assert.equal(ownerDispatch.environment.updatedAt, "2026-08-27T00:05:00Z");
   assert.equal(ownerDispatch.environment.protectedBranchesOnly, true);
   assert.equal(ownerDispatch.environment.canAdminsBypass, false);
+  assert.deepEqual(parseGitHubOwnerDispatchAuthorization(ownerDispatch, {
+    workflow,
+    source: promotionSource,
+  }), ownerDispatch);
   assert.throws(() => ownerDispatchAuthorization("2026-08-29T15:02:00.000Z", {
     runOverrides: {
       actor: { login: "programmable-infra", id: 309941960 },
@@ -2782,6 +2789,13 @@ test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", 
       protection_rules: [{ type: "required_reviewers" }],
     },
   }), /must not invent a second-party reviewer gate/u);
+  assert.throws(() => ownerDispatchAuthorization("2026-08-29T15:02:00.000Z", {
+    environmentOverrides: { created_at: "2026-08-27T00:00:00.000Z" },
+  }), /canonical UTC second/u);
+  const fractionalEvidence = structuredClone(ownerDispatch);
+  fractionalEvidence.environment.updatedAt = "2026-08-27T00:05:00.000Z";
+  assert.throws(() => parseGitHubOwnerDispatchAuthorization(fractionalEvidence),
+    /canonical UTC second/u);
 });
 
 test("pins planned deployment/readback and a protected two-phase Vercel workflow", async () => {

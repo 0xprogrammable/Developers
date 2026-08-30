@@ -2917,10 +2917,10 @@ export function validateGitHubOwnerDispatchAuthorization(value, expected) {
     branchPolicy.protected_branches === true &&
     branchPolicy.custom_branch_policies === false,
   "GitHub production environment is not protected-main-only with admin bypass disabled");
-  exactInstant(environment.created_at, "GitHub production environment created_at");
-  exactInstant(environment.updated_at, "GitHub production environment updated_at");
-  exactInstant(run.created_at, "GitHub owner-dispatch run created_at");
-  exactInstant(run.run_started_at, "GitHub owner-dispatch run_started_at");
+  exactSecondInstant(environment.created_at, "GitHub production environment created_at");
+  exactSecondInstant(environment.updated_at, "GitHub production environment updated_at");
+  exactSecondInstant(run.created_at, "GitHub owner-dispatch run created_at");
+  exactSecondInstant(run.run_started_at, "GitHub owner-dispatch run_started_at");
   assert(Date.parse(environment.updated_at) >= Date.parse(environment.created_at) &&
     Date.parse(run.run_started_at) >= Date.parse(run.created_at) &&
     Date.parse(expected.observedAt) >= Date.parse(run.run_started_at),
@@ -2980,8 +2980,8 @@ export function parseGitHubOwnerDispatchAuthorization(value, { workflow, source 
     COMMIT.test(workflowRun.sourceRevision) && COMMIT.test(workflowRun.sourceTree) &&
     workflowRun.event === "workflow_dispatch",
   "GitHub owner-dispatch authorization evidence is invalid");
-  exactInstant(environment.createdAt, "authorized GitHub environment createdAt");
-  exactInstant(environment.updatedAt, "authorized GitHub environment updatedAt");
+  exactSecondInstant(environment.createdAt, "authorized GitHub environment createdAt");
+  exactSecondInstant(environment.updatedAt, "authorized GitHub environment updatedAt");
   exactInstant(evidence.observedAt, "GitHub owner-dispatch observedAt");
   assert(Date.parse(environment.updatedAt) >= Date.parse(environment.createdAt),
     "GitHub owner-dispatch environment timestamps disagree");
