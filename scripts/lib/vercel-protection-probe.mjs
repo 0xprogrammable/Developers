@@ -42,7 +42,7 @@ export async function probeGeneratedDeploymentProtection(url, {
 } = {}) {
   for (let attempt = 0; ; attempt += 1) {
     const response = await fetchImpl(url, {
-      headers: { accept: "application/json" },
+      headers: { accept: "text/html" },
       redirect: "manual",
       signal,
     });

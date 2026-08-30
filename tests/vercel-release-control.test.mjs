@@ -1807,7 +1807,7 @@ test("retries only bounded unprotected generated-deployment responses", async ()
   for (const request of requests) {
     assert.equal(request.url,
       "https://developers-stage.vercel.app/api/v2/status?chainId=4663");
-    assert.deepEqual(request.options.headers, { accept: "application/json" });
+    assert.deepEqual(request.options.headers, { accept: "text/html" });
     assert.equal(request.options.redirect, "manual");
     assert.equal(request.options.signal, signal);
   }
@@ -1958,6 +1958,24 @@ test("retries only the exact Vercel deployment propagation 404", async () => {
     assert.equal(malformed.status, 404);
     assert.equal(attempts, 1);
   }
+});
+
+test("requests the Vercel protection redirect representation", async () => {
+  let observedAccept = null;
+  const response = await probeGeneratedDeploymentProtection(
+    "https://developers-stage.vercel.app/api/v2/status?chainId=4663",
+    {
+      fetchImpl: async (_url, options) => {
+        observedAccept = options.headers.accept;
+        return protectionProbeResponse(observedAccept === "text/html" ? 302 : 401, []);
+      },
+      waitImpl: async () => assert.fail("a protected response must not be retried"),
+      retryDelaysMs: [0],
+      signal: new AbortController().signal,
+    },
+  );
+  assert.equal(observedAccept, "text/html");
+  assert.equal(response.status, 302);
 });
 
 test("accepts automatic provider aliases on staged candidates and rejects formal domains", () => {
