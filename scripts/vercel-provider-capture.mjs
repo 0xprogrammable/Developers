@@ -38,7 +38,7 @@ function argumentsMap(argv) {
   }
   const allowed = [
     "--selector", "--output", "--protection-output", "--source-revision", "--source-tree",
-    "--stage-bundle-digest",
+    "--stage-bundle-digest", "--release-mode",
   ];
   for (const key of values.keys()) {
     if (!allowed.includes(key)) fail(`unsupported provider-capture option ${key}`);
@@ -49,15 +49,29 @@ function argumentsMap(argv) {
   if (selector !== PRODUCTION_ORIGIN && !DEPLOYMENT_ID.test(selector)) {
     fail("--selector must be the public origin or a Vercel deployment ID");
   }
+  const releaseMode = values.get("--release-mode") ?? null;
+  if (releaseMode !== null && releaseMode !== "planned") {
+    fail("--release-mode may select only planned readback");
+  }
   const source = ["--source-revision", "--source-tree", "--stage-bundle-digest"]
     .map((key) => values.get(key));
-  if (source.some(Boolean) && !source.every(Boolean)) {
-    fail("source revision, tree, and Phase-A bundle digest are all-or-none");
+  if (releaseMode === "planned") {
+    if (!source[0] || !source[1] || source[2]) {
+      fail("planned readback requires source revision and tree without a phase bundle digest");
+    }
+  } else if (source.some(Boolean) && !source.every(Boolean)) {
+    fail("stage source revision, tree, and Phase-A bundle digest are all-or-none");
   }
   if (values.has("--protection-output") && !DEPLOYMENT_ID.test(selector)) {
     fail("protection evidence requires an immutable Vercel deployment ID");
   }
-  return { selector, output, protectionOutput: values.get("--protection-output"), source };
+  return {
+    selector,
+    output,
+    protectionOutput: values.get("--protection-output"),
+    source,
+    releaseMode,
+  };
 }
 
 async function boundedJson(file, label) {
@@ -102,7 +116,8 @@ function vercelJson(args, label) {
   }
 }
 
-const { selector, output, protectionOutput, source } = argumentsMap(process.argv.slice(2));
+const { selector, output, protectionOutput, source, releaseMode } =
+  argumentsMap(process.argv.slice(2));
 const token = process.env.VERCEL_TOKEN;
 const orgId = process.env.VERCEL_ORG_ID;
 const projectId = process.env.VERCEL_PROJECT_ID;
@@ -123,7 +138,15 @@ const link = await boundedJson(path.join(ROOT, ".vercel", "project.json"),
 const target = releaseTarget(orgId, projectId);
 assertVercelProjectBinding(api, link, target);
 const deployment = normalizeVercelDeployment({ inspectOutput: inspect, apiOutput: api });
-if (source.every(Boolean)) {
+if (releaseMode === "planned") {
+  if (DEPLOYMENT_ID.test(selector) && deployment.aliases.length !== 0) {
+    fail("planned candidate must remain unaliased until its public smoke succeeds");
+  }
+  assertVercelDeploymentMetadata(api, {
+    source: releaseSource(source[0], source[1]),
+    releaseMode,
+  });
+} else if (source.every(Boolean)) {
   assertVercelDeploymentMetadata(api, {
     source: releaseSource(source[0], source[1]),
     stageBundleDigest: source[2],

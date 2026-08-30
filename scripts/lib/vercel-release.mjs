@@ -3179,6 +3179,15 @@ export function parseStageProtectionEvidence(value, { deployment } = {}) {
 export function assertVercelDeploymentMetadata(apiOutput, expected) {
   const api = apiOutput?.deployment ?? apiOutput;
   const meta = plainObject(api?.meta, "Vercel deployment metadata");
+  if (expected.releaseMode === "planned") {
+    assert(meta.programmableSourceRevision === expected.source.revision &&
+      meta.programmableSourceTree === expected.source.tree &&
+      meta.programmableReleaseMode === "planned" &&
+      !Object.hasOwn(meta, "programmableStageBundleDigest") &&
+      !Object.hasOwn(meta, "programmablePromotionBundleDigest"),
+    "Vercel planned deployment metadata differs from the checked-out source or selects a phase bundle");
+    return;
+  }
   assert(meta.programmableSourceRevision === expected.source.revision &&
     meta.programmableSourceTree === expected.source.tree &&
     meta.programmableStageBundleDigest === expected.stageBundleDigest,

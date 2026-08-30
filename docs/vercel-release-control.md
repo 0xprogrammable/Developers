@@ -13,6 +13,59 @@ All Vercel mutations use the repository-locked CLI version and the configured pr
 no workflow accepts a caller-selected project, scope, evidence path, artifact name, or deployment
 URL.
 
+## Planned/docs source readback
+
+`operation: verify-planned` is the non-mutating path for a docs or planned/null release. It locally
+builds and checks the exact current protected `main`, but it never creates a Vercel deployment,
+changes an alias, enables a write route, or selects a Robinhood stage or promotion bundle. The
+canonical stage and promotion files must both remain absent.
+
+The operation runs only after an intentionally selected public deployment already exists. That
+deployment must bind the exact protected source using these Vercel metadata fields:
+
+```text
+programmableSourceRevision=<exact protected main commit>
+programmableSourceTree=<exact protected main tree>
+programmableReleaseMode=planned
+```
+
+It must not carry `programmableStageBundleDigest` or `programmablePromotionBundleDigest`. The
+workflow resolves `developers.programmable.family` through the configured Vercel project, verifies
+those source bindings, checks the public chain-4663 manifest, status, launch feed, and token list in
+`planned` mode without a protection bypass, then re-queries the alias and requires the deployment ID
+to remain unchanged. The resulting readback artifact proves only the planned/null public contract:
+no public submissions, unavailable empty Robinhood feeds, null deployment roots, and
+`publicWrites:false`. It grants no Phase-A, Phase-B, deployment, alias, or write authority.
+
+`operation: deploy-planned` is the owner-authorized docs/planned publication path. It accepts no
+deployment ID, URL, phase bundle, prior run, protection bypass, provider configuration, or onchain
+input. The safe dispatch input is exactly:
+
+```text
+operation: deploy-planned
+stage_run_id: <blank>
+previous_promotion_run_id: <blank>
+promotion_run_id: <blank>
+```
+
+The job checks the exact current protected `main` revision and tree, clears both phase selectors,
+requires both canonical phase files to be absent, and repeats the locked build and repository
+checks. It then builds Vercel production bytes from that checkout and creates one production-target
+candidate with `--skip-domain` and only the three planned source metadata fields above. The generated
+candidate must remain unaliased and pass the full chain-4663 planned smoke directly, without a
+protection bypass. A protected or otherwise unreadable candidate fails before any alias mutation;
+the workflow does not alter Vercel protection or other provider configuration to make it pass.
+
+Immediately before mutation, the workflow rechecks protected `main` and provider-requeries the same
+source-bound, unaliased candidate. It also requires the current public deployment ID to remain the
+same one captured before candidate creation. Only the checked candidate ID is passed to
+`vercel promote`. The public
+origin must then resolve to the same ID, pass the same planned smoke without bypass, and still resolve
+to that ID after the smoke. The previous public deployment and all candidate/public readbacks are
+retained as evidence for manual recovery. This path publishes read-only docs and planned/null API
+state only; it cannot activate Robinhood, enable submissions, introduce deployment roots, configure
+an indexer, or inherit Phase-A/Phase-B authority.
+
 The release toolchain pins `vercel@59.10.0` as a development dependency and invokes only that
 checked-in lockfile resolution through `node_modules/.bin/vercel`. The package overrides are limited
 to remediated versions inside that exact Vercel distribution, including builder adapters shipped by
