@@ -106,7 +106,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
     },
     batchNumber: "123",
     l2Providers: [
-      { providerId: "drpc", trustDomain: "drpc.org", l1Confirmations: "12" },
+      { providerId: "quicknode", trustDomain: "quicknode.com", l1Confirmations: "12" },
       {
         providerId: "alchemy",
         trustDomain: "alchemy.com",
@@ -178,7 +178,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
     fallbackHandlerSlot:
       "0x000000000000000000000000fd0732dc9e303f09fcef3a7388ad10a83459ec99",
     guardSlot: `0x${"0".repeat(64)}`,
-    primaryProvider: safeProvider("drpc", "drpc.org"),
+    primaryProvider: safeProvider("quicknode", "quicknode.com"),
     secondaryProvider: safeProvider("alchemy", "alchemy.com"),
     ethereumFinalityEvidence,
   };
@@ -253,7 +253,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
       blockHash: hash("a"),
       registrySource: structuredClone(registrySource),
       providerReadbacks: [
-        providerReadback("drpc", "drpc.org"),
+        providerReadback("quicknode", "quicknode.com"),
         providerReadback("alchemy", "alchemy.com"),
       ],
     };
@@ -315,7 +315,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
         "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
       providerReadbacks: [
         atomicTransitionReadback(
-          "drpc", "drpc.org", contract, contractBinding.address,
+          "quicknode", "quicknode.com", contract, contractBinding.address,
           contractBinding.runtimeCodeHash,
         ),
         atomicTransitionReadback(
@@ -361,7 +361,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
       atomicReceiptLogs,
     ),
     providerReadbacks: [
-      atomicReadback("drpc", "drpc.org"),
+      atomicReadback("quicknode", "quicknode.com"),
       atomicReadback("alchemy", "alchemy.com"),
     ],
     resultingContracts: [
@@ -426,7 +426,7 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
       "sha256:353e6f6441b47695b41cee0c3645cde8dd7492d2f7f574bfb6aa4371e41bb6ba",
     allocRuntimeCodeBytes: 9152,
     providerReadbacks: [
-      genesisReadback("drpc", "drpc.org"),
+      genesisReadback("quicknode", "quicknode.com"),
       genesisReadback("alchemy", "alchemy.com"),
     ],
   };

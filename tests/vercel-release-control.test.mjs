@@ -669,7 +669,7 @@ function legacyPromotionFixture() {
     },
     providerQuorums: {
       robinhood: [
-        { providerId: "drpc", trustDomain: "drpc.org" },
+        { providerId: "quicknode", trustDomain: "quicknode.com" },
         { providerId: "alchemy", trustDomain: "alchemy.com" },
       ],
       ethereum: [
@@ -1513,7 +1513,7 @@ function stageFixture() {
     logIndex: "1",
   };
   const l2ProviderPins = [
-    { role: "primary", providerId: "drpc", trustDomain: "drpc.org" },
+    { role: "primary", providerId: "quicknode", trustDomain: "quicknode.com" },
     { role: "secondary", providerId: "alchemy", trustDomain: "alchemy.com" },
   ];
   const l2ProviderReadbacks = l2ProviderPins.map((provider, index) => {
@@ -2650,6 +2650,10 @@ test("keeps Phase A closed and accepts Phase B only through its distinct parser"
 
   for (const mutate of [
     (candidate) => { candidate.captureAuthorization.trustClass = "test-only"; },
+    (candidate) => {
+      candidate.captureClosure.l2ProviderReadbacks[0].identity.providerId = "drpc";
+      candidate.captureClosure.l2ProviderReadbacks[0].identity.trustDomain = "drpc.org";
+    },
     (candidate) => {
       candidate.captureClosure.schemaVersion =
         "programmable.robinhood-custom-launch.capture-closure.v2";

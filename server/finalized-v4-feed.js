@@ -754,8 +754,8 @@ function validEthereumFinalityEvidence(value, profile) {
     !Array.isArray(value.l2Providers) || value.l2Providers.length !== 2 ||
     !exactKeys(value.l2Providers[0], [
       "l1Confirmations", "providerId", "trustDomain",
-    ]) || value.l2Providers[0].providerId !== "drpc" ||
-    value.l2Providers[0].trustDomain !== "drpc.org" ||
+    ]) || value.l2Providers[0].providerId !== "quicknode" ||
+    value.l2Providers[0].trustDomain !== "quicknode.com" ||
     !positiveDecimal(value.l2Providers[0].l1Confirmations) ||
     !exactKeys(value.l2Providers[1], [
       "l1Confirmations", "providerId", "trustDomain",
@@ -829,7 +829,7 @@ function validSafeConfigurationEvidence(value, profile) {
     value.fallbackHandlerSlot !==
       "0x000000000000000000000000fd0732dc9e303f09fcef3a7388ad10a83459ec99" ||
     value.guardSlot !== `0x${"0".repeat(64)}` ||
-    !validSafeProvider(value.primaryProvider, "drpc", "drpc.org") ||
+    !validSafeProvider(value.primaryProvider, "quicknode", "quicknode.com") ||
     !validSafeProvider(value.secondaryProvider, "alchemy", "alchemy.com") ||
     !SHA256.test(value.atomicRootStateEvidenceDigest ?? "") ||
     !validEthereumFinalityEvidence(value.ethereumFinalityEvidence, profile) ||
@@ -916,7 +916,7 @@ function validAtomicResult(
     !Array.isArray(value.providerReadbacks) ||
     value.providerReadbacks.length !== 2 ||
     !validAtomicRootTransitionReadback(
-      value.providerReadbacks[0], "drpc", "drpc.org", contract, address,
+      value.providerReadbacks[0], "quicknode", "quicknode.com", contract, address,
       runtimeCodeHash, deploymentBlockNumber, deploymentBlockHash,
     ) || !validAtomicRootTransitionReadback(
       value.providerReadbacks[1], "alchemy", "alchemy.com", contract, address,
@@ -978,7 +978,7 @@ function validProgrammableDeploymentEvidence(value, binding) {
     !Array.isArray(value.providerReadbacks) ||
     value.providerReadbacks.length !== 2 ||
     !validAtomicProviderReadback(
-      value.providerReadbacks[0], "drpc", "drpc.org", value.transactionHash,
+      value.providerReadbacks[0], "quicknode", "quicknode.com", value.transactionHash,
     ) || !validAtomicProviderReadback(
       value.providerReadbacks[1],
       "alchemy",
@@ -1060,8 +1060,8 @@ function validPermit2GenesisProvenance(value, contracts) {
     value.providerReadbacks.length !== 2 ||
     !validGenesisProviderReadback(
       value.providerReadbacks[0],
-      "drpc",
-      "drpc.org",
+      "quicknode",
+      "quicknode.com",
     ) || !validGenesisProviderReadback(
       value.providerReadbacks[1],
       "alchemy",
@@ -1152,7 +1152,7 @@ function validExternalRootDeploymentEvidence(value, contracts) {
       !Array.isArray(evidence.providerReadbacks) ||
       evidence.providerReadbacks.length !== 2 ||
       !validExternalRootProviderReadback(
-        evidence.providerReadbacks[0], "drpc", "drpc.org", expected,
+        evidence.providerReadbacks[0], "quicknode", "quicknode.com", expected,
       ) || !validExternalRootProviderReadback(
         evidence.providerReadbacks[1], "alchemy", "alchemy.com", expected,
       ) || evidence.providerReadbacks.some((readback) =>

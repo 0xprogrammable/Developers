@@ -316,7 +316,7 @@ const ROOTS = Object.freeze({
 });
 
 const CAPTURE_L2_PROVIDERS = Object.freeze([
-  Object.freeze({ role: "primary", providerId: "drpc", trustDomain: "drpc.org" }),
+  Object.freeze({ role: "primary", providerId: "quicknode", trustDomain: "quicknode.com" }),
   Object.freeze({ role: "secondary", providerId: "alchemy", trustDomain: "alchemy.com" }),
 ]);
 const CAPTURE_ETHEREUM_PROVIDERS = Object.freeze([
