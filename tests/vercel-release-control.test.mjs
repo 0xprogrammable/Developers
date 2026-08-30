@@ -2282,6 +2282,33 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
     orgId: target.orgId,
     projectId: target.projectId,
   }, target), target);
+  const ownerBoundApi = structuredClone(api);
+  delete ownerBoundApi.teamId;
+  ownerBoundApi.ownerId = target.orgId;
+  ownerBoundApi.team = { id: target.orgId };
+  ownerBoundApi.project = { id: target.projectId };
+  assert.deepEqual(assertVercelProjectBinding(ownerBoundApi, {
+    orgId: target.orgId,
+    projectId: target.projectId,
+  }, target), target);
+  const contradictoryOwnerApi = structuredClone(api);
+  contradictoryOwnerApi.ownerId = "team_other";
+  assert.throws(() => assertVercelProjectBinding(contradictoryOwnerApi, {
+    orgId: target.orgId,
+    projectId: target.projectId,
+  }, target), /protected project and organization/u);
+  const missingOwnerApi = structuredClone(api);
+  delete missingOwnerApi.teamId;
+  assert.throws(() => assertVercelProjectBinding(missingOwnerApi, {
+    orgId: target.orgId,
+    projectId: target.projectId,
+  }, target), /protected project and organization/u);
+  const contradictoryProjectApi = structuredClone(ownerBoundApi);
+  contradictoryProjectApi.project.id = "prj_other";
+  assert.throws(() => assertVercelProjectBinding(contradictoryProjectApi, {
+    orgId: target.orgId,
+    projectId: target.projectId,
+  }, target), /protected project and organization/u);
   assert.doesNotThrow(() => assertVercelDeploymentMetadata(api, {
     source,
     stageBundleDigest: stageBundle.stageBundleDigest,
