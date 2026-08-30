@@ -3647,6 +3647,10 @@ function exactDeployment(value, label, { staged = false } = {}) {
   return deployment;
 }
 
+export function assertVercelStagedDeployment(value, label = "staged Vercel deployment") {
+  return exactDeployment(value, label, { staged: true });
+}
+
 function exactLegacyStagedDeployment(value, label) {
   const deployment = exactDeployment(value, label);
   assert(!deployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
