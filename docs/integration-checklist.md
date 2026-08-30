@@ -16,7 +16,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 - [ ] Scan only enabled Classic releases from the current manifest: historical V3 plus current V4. Keep V1/V2 as inactive history and exclude Stock from active v2 discovery.
 - [ ] Accept the Programmable label only from an official manifest-listed source.
 - [ ] For a full Registry-backed record, require `platformId: "programmable"`, `category: "custom"`, and `publicLabel: "Programmable Custom"` from the trusted projection.
-- [ ] Deduplicate by `launchId`; key token assets by chain ID plus address, and project-only launches by `projectId` plus their authenticated asset graph.
+- [ ] Deduplicate normalized feed records by chain ID plus `launchId`; key Router provenance by chain ID plus Router address plus `launchId`, token assets by chain ID plus address, and project-only launches by chain, `projectId`, and their authenticated asset graph.
 - [ ] Keep provider, partner, template, model, hook, and market type as secondary attribution.
 - [ ] Never trust name, symbol, logo, metadata tag, creator text, or a copied event as origin proof.
 - [ ] Treat top-level `launchStampRouter` as a forward-only provenance and transport trust root, not a public category; never use it to backfill a historical Classic or Custom launch.

@@ -106,7 +106,9 @@ describe("documentation contract", () => {
       /attempt <= 3/,
       /retry-after/,
       /Page cursor loop detected/,
-      /recordsByLaunchId\.set\(record\.launchId, record\)/,
+      /const pollScope = \{ chainId, category \}/,
+      /recordsByKey\.set\(`\$\{record\.chainId\}:\$\{record\.launchId\}`, record\)/,
+      /request = \{ \.\.\.pollScope, cursor: nextCursor, limit: 100 \}/,
       /commitRecordsAndCursor\(backfill\)/,
       /ingestTraversal\(durableResumeCursor\)/,
     ]) {
@@ -499,6 +501,20 @@ describe("documentation contract", () => {
         ({ source, destination }) =>
           source === "/schemas/v2" &&
           destination === "/schemas/v2/index.json",
+      ),
+    );
+    assert.ok(
+      vercel.rewrites.some(
+        ({ source, destination }) =>
+          source === "/v2/chains/:chainId/launches/:launchId" &&
+          destination === "/api/v2/chains/:chainId/launches/:launchId",
+      ),
+    );
+    assert.ok(
+      vercel.rewrites.some(
+        ({ source, destination }) =>
+          source === "/api/v2/launches/:launchId" &&
+          destination === "/api/v2/launch-detail?launchId=:launchId",
       ),
     );
   });

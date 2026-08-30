@@ -11,14 +11,14 @@ Both paths must use the same identities and lifecycle rules.
    unparameterized manifest remains the Ethereum alias.
 3. Store the highest accepted `manifestVersion` per chain.
 4. Check `/api/v2/status?chainId={chainId}` for freshness and lifecycle.
-5. Fetch `/api/v2/launches?chainId={chainId}` and use `page.nextCursor` to complete the current traversal.
+5. Fetch `/api/v2/launches?chainId={chainId}` with any category filter you need. Repeat that exact chain and category on every `page.nextCursor` continuation.
 6. Upsert records by the launch's chain-bound identity.
 7. Key token assets by chain ID and address; key project-only records by `projectId` and `launchId` and preserve their asset graph.
-8. After the traversal is durably applied, store `page.resumeCursor` with its chain scope and use it as `after` for the next incremental poll.
+8. After the traversal is durably applied, store `page.resumeCursor` with its API-major, chain, and category scope. Repeat the same chain and category when using it as `after` for the next incremental poll.
 9. Process finality changes and any `orphaned` correction the API returns.
 10. Reconcile non-final records periodically from a prior finalized boundary.
 
-Cursors are opaque. Return them unchanged. A replayed page must be harmless.
+Cursors are opaque. Return them unchanged and never move them to another chain or category scope. A replayed page must be harmless.
 
 The Developer service obtains its hosted Classic baseline from the canonical paginated `https://programmable.market/api/explore` catalog. It accepts that catalog only with the expected schema, identity, scope, and Envio deployment `production-6157d22` binding. The retired legacy token source returns HTTP `410` and is no longer used. Downstream consumers should continue to use the Developer feed, which exposes the validated normalized projection and its source boundary.
 

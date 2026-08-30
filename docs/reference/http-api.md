@@ -340,15 +340,15 @@ When event coverage, metadata, supply, receipt, or block-timestamp enrichment is
 When `page.hasMore` is true, continue the current traversal with:
 
 ```text
-GET /api/v2/launches?cursor={urlEncodedCursor}
+GET /api/v2/launches?chainId={chainId}&category={category}&cursor={urlEncodedCursor}
 ```
 
-Cursors are opaque. Store and return them unchanged. Do not parse a cursor into application logic. The service binds both the chain ordering checkpoint and the authenticated Custom Registry generation so a newly accepted launch cannot be missed merely because its finalized block is older than the previous poll.
+Cursors are opaque. Store and return them unchanged. Do not parse a cursor into application logic. Repeat the exact `chainId` and `category` scope from the request that created the cursor; omit `category` on every request only if the original traversal omitted it. The service binds the API major version, chain, category, chain ordering checkpoint, and authenticated Custom Registry generation so a newly accepted launch cannot be missed merely because its finalized block is older than the previous poll.
 
 After the full traversal has been durably applied, persist `page.resumeCursor`. Begin the next incremental poll with:
 
 ```text
-GET /api/v2/launches?after={urlEncodedResumeCursor}
+GET /api/v2/launches?chainId={chainId}&category={category}&after={urlEncodedResumeCursor}
 ```
 
 Do not send `after` and `cursor` together. `page.nextCursor` continues one traversal; `page.resumeCursor` is the durable high-water checkpoint for a later poll. `snapshot.cursor` identifies the response snapshot boundary.
@@ -357,9 +357,11 @@ Implement replay-safe deduplication because retries and reorg reconciliation can
 
 ## Launch by ID
 
-### `GET /api/v2/launches/{launchId}`
+### `GET /api/v2/chains/{chainId}/launches/{launchId}`
 
-Returns one launch by its globally scoped `launchId`. Use this route for project-only, multi-token, and multi-asset records as well as token-backed launches. URL-encode the complete opaque launch ID as one path segment and validate the response against the v2 launch schema.
+Returns one launch by chain and opaque `launchId`. Use this route for project-only, multi-token, and multi-asset records as well as token-backed launches. URL-encode the complete opaque launch ID as one path segment and validate the response against the v2 launch schema. Store normalized feed records under at least `chainId + launchId`; Router provenance is identified more precisely by `chainId + Router address + launchId`.
+
+`GET /api/v2/launches/{launchId}` remains an Ethereum-only compatibility alias for `/api/v2/chains/1/launches/{launchId}`. New multi-chain integrations must not use the alias or treat a launch ID as globally unique across chains.
 
 Do not construct a launch ID from project name, symbol, creator metadata, or a market address. Obtain it from the canonical feed, Registry evidence, or a verified canonical-Router stamp.
 

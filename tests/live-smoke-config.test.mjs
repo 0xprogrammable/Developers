@@ -21,4 +21,8 @@ test("live smoke allows a bounded serverless cold start", async () => {
   assert.match(source, /lintOpenApiGraph/u);
   assert.match(source, /openapi\/programmable-v2\.yaml/u);
   assert.match(source, /api\/v2/u);
+  assert.match(
+    source,
+    /\/chains\/\$\{launch\.chainId\}\/launches\/\$\{encodeURIComponent\(launch\.launchId\)\}/u,
+  );
 });

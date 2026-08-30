@@ -2770,7 +2770,7 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   assert.equal(canonicalSha256(
     "programmable.developers.vercel-routing-defaults.v1",
     frozenRoutingDefaults,
-  ), "sha256:167196cd215e815e91a90d24e9318f8e82198776b55fbbfc5da9253bff195708",
+  ), "sha256:c7f50c104e54e4c0496abce63bb218c4f2edb3ebf71d8b640b09166c06fe1074",
   "V1/V2 routes, asset defaults, redirects, and security headers must remain byte-semantic stable");
   const releaseCliSource = await readFile(path.resolve("scripts/vercel-release.mjs"), "utf8");
   assert.match(releaseCliSource,

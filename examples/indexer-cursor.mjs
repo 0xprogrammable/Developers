@@ -58,12 +58,15 @@ for (;;) {
 
     // Persist the full record in a real indexer. Unknown optional fields are part
     // of the raw payload and can become useful without a client release. Upsert
-    // by launchId so retries and finality changes are safe. Reconcile non-final
-    // records against later snapshots instead of assuming a complete tombstone stream.
+    // by chain ID plus launchId so retries and finality changes are safe without
+    // colliding with the same opaque launch ID on another chain. Reconcile
+    // non-final records against later snapshots instead of assuming a complete
+    // tombstone stream.
+    const storageKey = `${identity.chainId}:${identity.launchId}`;
     console.log(
       JSON.stringify({
         operation: "upsert",
-        key: identity.launchId,
+        key: storageKey,
         launchId: identity.launchId,
         projectId: identity.projectId,
         chainId: identity.chainId,
