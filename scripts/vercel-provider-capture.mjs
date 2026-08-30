@@ -10,6 +10,7 @@ import {
   VERCEL_PRODUCTION_ORIGIN,
   assertVercelDeploymentMetadata,
   assertVercelProjectBinding,
+  assertVercelStagedDeployment,
   createVercelProductionBinding,
   createVercelProductionDomainInventory,
   createVercelProviderAliasBinding,
@@ -212,8 +213,8 @@ const publicAliasBinding = providerReread
   })
   : undefined;
 if (releaseMode === "planned") {
-  if (DEPLOYMENT_ID.test(selector) && deployment.aliases.length !== 0) {
-    fail("planned candidate must remain unaliased until its public smoke succeeds");
+  if (DEPLOYMENT_ID.test(selector)) {
+    assertVercelStagedDeployment(deployment, "planned candidate");
   }
   assertVercelDeploymentMetadata(api, {
     source: releaseSource(source[0], source[1]),

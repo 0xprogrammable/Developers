@@ -27,6 +27,7 @@ import {
   STAGE_BUNDLE_SCHEMA,
   assertVercelDeploymentMetadata,
   assertVercelProjectBinding,
+  assertVercelStagedDeployment,
   createPromotionPlan,
   createPromotionReceipt,
   createPublicAuthorization,
@@ -1748,6 +1749,23 @@ const formalProductionAliases = [VERCEL_PRODUCTION_ORIGIN, PRODUCTION_ORIGIN]
   .map((origin) => new URL(origin).hostname)
   .sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
 const vercelProductionAliases = [new URL(VERCEL_PRODUCTION_ORIGIN).hostname];
+
+test("accepts automatic provider aliases on staged candidates and rejects formal domains", () => {
+  const providerAlias = "programmable-developers-aficialais-projects.vercel.app";
+  const candidate = deployment(
+    "dpl_provideralias123",
+    "https://developers-stage.vercel.app",
+    [providerAlias],
+  );
+  assert.deepEqual(assertVercelStagedDeployment(candidate, "planned candidate"), candidate);
+
+  for (const formalAlias of formalProductionAliases) {
+    assert.throws(() => assertVercelStagedDeployment({
+      ...candidate,
+      aliases: [formalAlias],
+    }, "planned candidate"), /formal production domain/u);
+  }
+});
 
 function productionDomainInventory(
   checkedAt = "2026-08-29T15:00:30.000Z",
@@ -3613,7 +3631,8 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /path\.join\(ROOT, "node_modules", "\.bin", "vercel"\)/u);
   assert.doesNotMatch(providerCapture, /\bnpx\b|--token\b/u);
   assert.match(providerCapture,
-    /planned candidate must remain unaliased until its public smoke succeeds/u);
+    /DEPLOYMENT_ID\.test\(selector\)[\s\S]*assertVercelStagedDeployment\(deployment/u,
+    "planned capture must allow provider aliases while rejecting formal production domains");
   assert.match(providerCapture,
     /protectionOutput[\s\S]*createStageProtectionEvidence/u,
     "planned candidates must use the same provider protection proof as live stages");
