@@ -672,7 +672,7 @@ async function authorizePlannedDeployCommand(options) {
     source,
     target: protectedTarget(options),
     currentDeployment,
-    currentPublicResolution: currentCapture.publicResolution,
+    currentProductionBinding: currentCapture.productionBinding,
     ...(mutation === "promote-candidate" ? {
       candidateDeployment: (await readJson(candidateOptions[0],
         "planned Vercel candidate deployment")).deployment,
@@ -695,6 +695,8 @@ async function promotionReceiptCommand(options) {
     ...workflowFlags(),
   ]);
   const bundle = await readJson(required(options, "--bundle"), "promotion bundle");
+  const productionCapture = await readJson(required(options, "--production-deployment"),
+    "production deployment");
   const receipt = createPromotionReceipt({
     plan: await readJson(required(options, "--plan"), "promotion plan"),
     authorization: await readJson(required(options, "--authorization"),
@@ -705,8 +707,8 @@ async function promotionReceiptCommand(options) {
       "promotion pre-mutation state"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected promotion smoke receipt"),
-    productionDeployment: (await readJson(required(options, "--production-deployment"),
-      "production deployment")).deployment,
+    productionDeployment: productionCapture.deployment,
+    productionBinding: productionCapture.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "production smoke receipt"),
     workflow: workflowIdentity(options),
@@ -767,6 +769,8 @@ async function rollbackReceiptCommand(options) {
   if ((parsedPlan.rollbackTarget.mode === "live") !== Boolean(previousBundlePath)) {
     fail("--previous-bundle is required exactly for a live rollback target");
   }
+  const productionCapture = await readJson(required(options, "--production-deployment"),
+    "rolled-back production deployment");
   const receipt = createRollbackReceipt({
     plan,
     authorization: await readJson(required(options, "--authorization"),
@@ -778,8 +782,8 @@ async function rollbackReceiptCommand(options) {
       "rollback pre-mutation state"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected rollback smoke receipt"),
-    productionDeployment: (await readJson(required(options, "--production-deployment"),
-      "rolled-back production deployment")).deployment,
+    productionDeployment: productionCapture.deployment,
+    productionBinding: productionCapture.productionBinding,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "post-rollback smoke receipt"),
     workflow: workflowIdentity(options),
@@ -807,11 +811,13 @@ async function preMutationStateCommand(options) {
   if (requiresBundle !== Boolean(selectedBundlePath)) {
     fail("--selected-bundle is required exactly for a live selected deployment");
   }
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "fresh current production deployment");
   const state = createPreMutationState({
     operation,
     plan,
-    currentDeployment: (await readJson(required(options, "--current-deployment"),
-      "fresh current production deployment")).deployment,
+    currentDeployment: currentCapture.deployment,
+    currentProductionBinding: currentCapture.productionBinding,
     selectedDeployment: (await readJson(required(options, "--selected-deployment"),
       "fresh selected deployment")).deployment,
     selectedProtectionEvidence: await readJson(
