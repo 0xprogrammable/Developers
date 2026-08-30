@@ -146,10 +146,13 @@ publicWrites: false
 ```
 
 Phase A can create one production-target Vercel deployment only with `--skip-domain`. The deployment
-must have no production alias, must be protected by Vercel Authentication, and must pass the exact
-chain-4663 smoke through the scoped automation bypass. The sealed stage receipt continues to carry
-`publicAuthorization:false` and `publicWrites:false`. Do not copy or overwrite the stage bundle at
-the promotion path.
+must be protected by Vercel Authentication and pass the exact chain-4663 smoke through the scoped
+automation bypass. Immediately before sealing the receipt, the workflow independently resolves the
+canonical public origin through Vercel and requires it to select a different immutable deployment.
+The creation-time deployment `alias` array remains descriptive metadata only; it is never accepted
+as proof that the stage is or is not public. The sealed stage receipt binds that provider resolution
+and continues to carry `publicAuthorization:false` and `publicWrites:false`. Do not copy or overwrite
+the stage bundle at the promotion path.
 
 ## Phase B: reviewed evidence-only commit
 
@@ -205,10 +208,14 @@ Phase-A stage digest, Phase-B promotion digest, Indexer evidence, Vercel project
 selected deployment, current deployment, and build digest. Immediately before mutation, the
 workflow re-queries both Vercel deployments, re-proves generated-URL protection, and repeats the
 protected stage smoke. That fresh smoke and protection proof are sealed into the pre-mutation
-state; the smoke must be no more than five minutes older than the sealed promotion receipt.
+state together with a fresh provider resolution proving that the public origin still selects the
+approved current deployment and not the target. The smoke and resolution must be no more than five
+minutes older than the sealed promotion receipt.
 
 After `vercel promote`, the public origin must pass the same chain-4663 smoke without a protection
-bypass. A successful alias change without that receipt and smoke is not a completed release.
+bypass. The promotion receipt binds a second fresh public-origin resolution to the exact selected
+deployment; creation-time alias arrays cannot satisfy either check. A successful alias change
+without that resolution, receipt, and smoke is not a completed release.
 
 ## Owner-authorized rollback
 
@@ -216,8 +223,11 @@ Rollback is another protected manual operation, not an automatic fallback. Its p
 current promotion receipt and artifact, current deployment, prior deployment, prior mode, and prior
 promotion bundle when the target was live. The exact owner dispatch grants one fresh
 mutation only. The workflow re-queries current and target deployments, re-proves protection and
-smokes the exact target, seals both observations into the pre-mutation state, promotes that target
-deployment, and smokes the public origin again without bypass.
+smokes the exact target, seals both observations plus the current public-origin resolution into the
+pre-mutation state, promotes that target deployment, and smokes the public origin again without
+bypass. The rollback receipt then binds a fresh post-mutation public-origin resolution to the exact
+restored deployment. No rollback decision interprets a deployment record's alias array as current
+routing authority.
 
 A rollback to the planned release must restore the planned/null chain-4663 behavior: unavailable
 feeds, zero public items, no public submissions, and no live metadata. A rollback to an older live

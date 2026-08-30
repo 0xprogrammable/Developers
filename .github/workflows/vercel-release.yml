@@ -787,6 +787,17 @@ jobs:
             --protection-bypass true \
             --output .release-evidence/stage/staged-smoke.json
 
+      - name: Resolve current public origin before sealing dark stage
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/stage/current-public-deployment.json
+
       - name: Seal non-public stage receipt
         env:
           ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
@@ -801,6 +812,7 @@ jobs:
             --manifest deployments/robinhood-v2.json \
             --ethereum-manifest deployments/ethereum-v2.json \
             --deployment .release-evidence/stage/deployment.json \
+            --current-public-deployment .release-evidence/stage/current-public-deployment.json \
             --protection-evidence .release-evidence/stage/protection-evidence.json \
             --staged-smoke .release-evidence/stage/staged-smoke.json \
             --build-root .vercel/output \

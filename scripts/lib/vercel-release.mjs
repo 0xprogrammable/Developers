@@ -12,17 +12,17 @@ export const PROMOTION_BUNDLE_SCHEMA =
 export const DEVELOPERS_PROMOTION_INPUT_SCHEMA =
   "programmable.robinhood-custom-launch.developers-promotion-input.v1";
 export const STAGE_RECEIPT_SCHEMA =
-  "programmable.developers.vercel-stage-receipt.v1";
+  "programmable.developers.vercel-stage-receipt.v2";
 export const PROMOTION_PLAN_SCHEMA =
-  "programmable.developers.vercel-promotion-plan.v1";
+  "programmable.developers.vercel-promotion-plan.v2";
 export const ROLLBACK_PLAN_SCHEMA =
-  "programmable.developers.vercel-rollback-plan.v1";
+  "programmable.developers.vercel-rollback-plan.v2";
 export const PUBLIC_AUTHORIZATION_SCHEMA =
   "programmable.developers.vercel-public-authorization.v1";
 export const PROMOTION_RECEIPT_SCHEMA =
-  "programmable.developers.vercel-promotion-receipt.v1";
+  "programmable.developers.vercel-promotion-receipt.v2";
 export const ROLLBACK_RECEIPT_SCHEMA =
-  "programmable.developers.vercel-rollback-receipt.v1";
+  "programmable.developers.vercel-rollback-receipt.v2";
 export const LIVE_SMOKE_SCHEMA =
   "programmable.developers.chain-4663-live-smoke.v1";
 export const PLANNED_SMOKE_SCHEMA =
@@ -58,7 +58,7 @@ export const PLANNED_DEPLOY_AUTHORIZATION_SCHEMA =
 export const SOURCE_TRANSITION_SCHEMA =
   "programmable.developers.evidence-only-source-transition.v1";
 export const PRE_MUTATION_STATE_SCHEMA =
-  "programmable.developers.vercel-pre-mutation-state.v1";
+  "programmable.developers.vercel-pre-mutation-state.v2";
 
 export const CANONICAL_STAGE_BUNDLE_PATH =
   "release/robinhood-chain-4663/programmable-stage-bundle.json";
@@ -3043,7 +3043,7 @@ export function createPlannedDeployAuthorization(input) {
     "candidate creation authorization must not claim a candidate that does not exist yet");
   } else {
     candidateDeployment = exactDeployment(input.candidateDeployment,
-      "planned deploy authorized candidate", { staged: true });
+      "planned deploy authorized candidate");
     candidateProtectionEvidence = parseStageProtectionEvidence(
       input.candidateProtectionEvidence, { deployment: candidateDeployment },
     );
@@ -3126,7 +3126,7 @@ export function parsePlannedDeployAuthorization(value) {
     "candidate creation authorization must not contain candidate evidence");
   } else {
     const candidate = exactDeployment(authorization.candidateDeployment,
-      "planned Vercel deploy authorized candidate", { staged: true });
+      "planned Vercel deploy authorized candidate");
     const protection = parseStageProtectionEvidence(
       authorization.candidateProtectionEvidence, { deployment: candidate },
     );
@@ -3216,7 +3216,7 @@ export function parseVercelPublicDeploymentResolution(value, {
   return resolution;
 }
 
-function exactDeployment(value, label, { staged = false } = {}) {
+function exactDeployment(value, label) {
   const deployment = exactKeys(value, [
     "id", "url", "target", "readyState", "aliases", "createdAt",
   ], label);
@@ -3240,11 +3240,12 @@ function exactDeployment(value, label, { staged = false } = {}) {
     [...new Set(normalizedAliases)].sort((left, right) => Buffer.compare(
       Buffer.from(left), Buffer.from(right),
     ))), `${label}.aliases must be sorted and unique`);
-  if (staged) {
-    assert(!deployment.aliases.some((alias) =>
-      alias === new URL(PRODUCTION_ORIGIN).hostname),
-    `${label} already carries the public production alias`);
-  }
+  // Vercel's deployment record exposes creation-time alias metadata. It is
+  // useful as bounded descriptive data, but it is not routing authority: an
+  // origin can be promoted after the deployment record was created without
+  // that array becoming an authoritative current-origin lookup. Every release
+  // transition therefore binds a fresh provider resolution of PRODUCTION_ORIGIN
+  // instead of interpreting this array as public or non-public state.
   return deployment;
 }
 
@@ -3281,7 +3282,7 @@ export function normalizeVercelDeployment({ deployOutput, inspectOutput, apiOutp
 
 export function createStageProtectionEvidence(input) {
   const deployment = exactDeployment(input.deployment,
-    "Vercel protected staged deployment", { staged: true });
+    "Vercel protected staged deployment");
   const response = exactKeys(input.response,
     ["status", "location", "server", "vercelId"], "Vercel protection probe response");
   assert(Number.isSafeInteger(response.status) &&
@@ -3365,7 +3366,7 @@ export function parseStageProtectionEvidence(value, { deployment } = {}) {
   exactInstant(evidence.checkedAt, "Vercel stage protection checkedAt");
   if (deployment) {
     const parsed = exactDeployment(deployment,
-      "Vercel stage protection deployment", { staged: true });
+      "Vercel stage protection deployment");
     assert(evidence.deploymentId === parsed.id && evidence.deploymentUrl === parsed.url,
       "Vercel stage protection evidence differs from the provider deployment");
   }
@@ -3506,7 +3507,13 @@ export function createStageReceipt(input) {
   const source = exactSource(input.source);
   const workflow = exactWorkflow(input.workflow);
   const target = exactTarget(input.target);
-  const deployment = exactDeployment(input.deployment, "staged Vercel deployment", { staged: true });
+  const deployment = exactDeployment(input.deployment, "staged Vercel deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, { target },
+  );
+  assert(currentPublicResolution.deploymentId !== deployment.id &&
+    currentPublicResolution.deploymentUrl !== deployment.url,
+  "Vercel public origin already selects the staged deployment");
   const protectionEvidence = parseStageProtectionEvidence(input.protectionEvidence, {
     deployment,
   });
@@ -3523,7 +3530,9 @@ export function createStageReceipt(input) {
   exactInstant(input.stagedAt, "stage receipt stagedAt");
   assertFreshTransition(protectionEvidence.checkedAt, stagedSmoke.checkedAt,
     "Vercel dark-stage protection and smoke");
-  assertFreshTransition(stagedSmoke.checkedAt, input.stagedAt,
+  assertFreshTransition(stagedSmoke.checkedAt, currentPublicResolution.checkedAt,
+    "Vercel dark-stage public-origin resolution");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.stagedAt,
     "Vercel dark-stage receipt");
   const v3 = frozenEthereumV3Identity(input.ethereumManifest);
   const value = {
@@ -3544,6 +3553,7 @@ export function createStageReceipt(input) {
     ),
     ethereumV3IdentityDigest: v3.digest,
     deployment,
+    currentPublicResolution,
     protectionEvidence,
     stagedSmokeDigest: stagedSmoke.smokeDigest,
     workflow,
@@ -3559,7 +3569,8 @@ export function parseStageReceipt(value, {
     "schemaVersion", "state", "publicAuthorization", "publicWrites", "chainId", "caip2",
     "chainDeploymentId", "stageBundleDigest", "chainDeploymentDescriptorDigest", "source",
     "target", "buildOutputDigest", "manifestDigest", "ethereumV3IdentityDigest", "deployment",
-    "protectionEvidence", "stagedSmokeDigest", "workflow", "stagedAt", "stageReceiptDigest",
+    "currentPublicResolution", "protectionEvidence", "stagedSmokeDigest", "workflow",
+    "stagedAt", "stageReceiptDigest",
   ], "Vercel stage receipt");
   assert(receipt.schemaVersion === STAGE_RECEIPT_SCHEMA &&
     receipt.state === "staged-not-public" && receipt.publicAuthorization === false &&
@@ -3568,7 +3579,13 @@ export function parseStageReceipt(value, {
   "Vercel stage receipt does not remain non-public");
   exactSource(receipt.source, "Vercel stage receipt source");
   exactTarget(receipt.target, "Vercel stage receipt target");
-  exactDeployment(receipt.deployment, "Vercel stage receipt deployment", { staged: true });
+  exactDeployment(receipt.deployment, "Vercel stage receipt deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    receipt.currentPublicResolution, { target: receipt.target },
+  );
+  assert(currentPublicResolution.deploymentId !== receipt.deployment.id &&
+    currentPublicResolution.deploymentUrl !== receipt.deployment.url,
+  "Vercel stage receipt public origin selects the staged deployment");
   const protectionEvidence = parseStageProtectionEvidence(
     receipt.protectionEvidence, { deployment: receipt.deployment },
   );
@@ -3579,6 +3596,8 @@ export function parseStageReceipt(value, {
   exactSha256(receipt.ethereumV3IdentityDigest, "Vercel stage receipt ethereumV3IdentityDigest");
   exactWorkflow(receipt.workflow, "Vercel stage receipt workflow");
   exactInstant(receipt.stagedAt, "Vercel stage receipt stagedAt");
+  assertFreshTransition(currentPublicResolution.checkedAt, receipt.stagedAt,
+    "Vercel stage receipt public-origin resolution");
   const { stageReceiptDigest, ...withoutDigest } = receipt;
   assert(stageReceiptDigest === canonicalSha256(STAGE_RECEIPT_SCHEMA, withoutDigest),
     "Vercel stage receipt digest is invalid");
@@ -3593,7 +3612,7 @@ export function parseStageReceipt(value, {
   if (target) assert(canonicalEqual(receipt.target, exactTarget(target)),
     "Vercel stage receipt differs from the protected target");
   if (deployment) assert(canonicalEqual(receipt.deployment,
-    exactDeployment(deployment, "provider-requeried staged Vercel deployment", { staged: true })),
+    exactDeployment(deployment, "provider-requeried staged Vercel deployment")),
   "Vercel stage receipt differs from the provider-requeried deployment");
   if (workflowRun) {
     const expected = exactKeys(workflowRun,
@@ -3616,7 +3635,9 @@ export function parseStageReceipt(value, {
     "Vercel stage receipt differs from its dark-stage smoke");
     assertFreshTransition(protectionEvidence.checkedAt, smoke.checkedAt,
       "Vercel dark-stage protection and smoke");
-    assertFreshTransition(smoke.checkedAt, receipt.stagedAt,
+    assertFreshTransition(smoke.checkedAt, currentPublicResolution.checkedAt,
+      "Vercel dark-stage public-origin resolution");
+    assertFreshTransition(currentPublicResolution.checkedAt, receipt.stagedAt,
       "Vercel dark-stage receipt");
   }
   return receipt;
@@ -3753,7 +3774,7 @@ export function createPromotionPlan(input) {
       `developers-vercel-stage-${stage.workflow.runId}-${stage.workflow.runAttempt}`,
   "promotion plan stage artifact differs from the stage receipt workflow");
   const stagedProviderDeployment = exactDeployment(input.stagedProviderDeployment,
-    "promotion plan fresh staged provider deployment", { staged: true });
+    "promotion plan fresh staged provider deployment");
   assert(canonicalEqual(stagedProviderDeployment, stage.deployment),
     "promotion plan fresh provider deployment differs from the stage receipt");
   const stagedSmoke = parseSmokeReceipt(input.stagedSmoke, {
@@ -3774,13 +3795,24 @@ export function createPromotionPlan(input) {
   });
   assert(previousSmoke.origin === PRODUCTION_ORIGIN,
     "promotion plan previous smoke did not target production");
+  const previousDeployment = exactDeployment(input.previousDeployment,
+    "promotion plan previous public deployment");
+  const previousPublicResolution = parseVercelPublicDeploymentResolution(
+    input.previousPublicResolution, {
+      deployment: previousDeployment,
+      target: stage.target,
+    },
+  );
+  assert(previousPublicResolution.deploymentId !== stage.deployment.id &&
+    previousPublicResolution.deploymentUrl !== stage.deployment.url,
+  "promotion plan public origin already selects the staged deployment");
   const previousPromotion = input.previousMode === "live"
     ? parsePromotionReceipt(input.previousPromotionReceipt, {
       bundle: input.previousBundle, target: input.target,
     })
     : undefined;
   if (previousPromotion) {
-    assert(sameImmutableDeployment(previousPromotion.deployment, input.previousDeployment),
+    assert(sameImmutableDeployment(previousPromotion.deployment, previousDeployment),
       "promotion plan current deployment differs from the previous promotion receipt");
   }
   const previousPromotionArtifact = previousPromotion
@@ -3800,7 +3832,7 @@ export function createPromotionPlan(input) {
       ? parsePromotionBundle(input.previousBundle).promotionBundleDigest
       : null,
     promotionReceiptDigest: previousPromotion?.promotionReceiptDigest ?? null,
-    deployment: input.previousDeployment,
+    deployment: previousDeployment,
     smokeDigest: previousSmoke.smokeDigest,
   }, "promotion plan previous release");
   const indexerEvidence = parseIndexerPromotionEvidence({
@@ -3819,6 +3851,10 @@ export function createPromotionPlan(input) {
     "promotion plan stage protection and smoke verification");
   assertFreshTransition(stagedSmoke.checkedAt, input.preparedAt,
     "promotion plan stage smoke verification");
+  assertFreshTransition(previousPublicResolution.checkedAt, previousSmoke.checkedAt,
+    "promotion plan public-origin resolution and smoke verification");
+  assertFreshTransition(previousSmoke.checkedAt, input.preparedAt,
+    "promotion plan current public smoke verification");
   const value = {
     schemaVersion: PROMOTION_PLAN_SCHEMA,
     state: "ready-awaiting-owner-authorization",
@@ -3843,6 +3879,7 @@ export function createPromotionPlan(input) {
     stageArtifact,
     indexerEvidence,
     previousRelease: previous,
+    previousPublicResolution,
     previousPromotionArtifact,
     workflow: exactWorkflow(input.workflow),
     preparedAt: input.preparedAt,
@@ -3860,7 +3897,7 @@ export function parsePromotionPlan(value, {
     "sourceTransition", "target", "stagedDeployment", "stagedProviderDeployment",
     "buildOutputDigest", "stagedSmokeDigest", "stageProtectionEvidence", "stageRunEvidence",
     "stageArtifact", "indexerEvidence", "previousRelease",
-    "previousPromotionArtifact", "workflow",
+    "previousPublicResolution", "previousPromotionArtifact", "workflow",
     "preparedAt", "promotionPlanDigest",
   ], "Vercel promotion plan");
   assert(plan.schemaVersion === PROMOTION_PLAN_SCHEMA &&
@@ -3876,9 +3913,9 @@ export function parsePromotionPlan(value, {
     canonicalEqual(sourceTransition.promotionSource, plan.source),
   "Vercel promotion plan source transition disagrees with its sources");
   exactTarget(plan.target, "Vercel promotion plan target");
-  exactDeployment(plan.stagedDeployment, "Vercel promotion plan stagedDeployment", { staged: true });
+  exactDeployment(plan.stagedDeployment, "Vercel promotion plan stagedDeployment");
   exactDeployment(plan.stagedProviderDeployment,
-    "Vercel promotion plan stagedProviderDeployment", { staged: true });
+    "Vercel promotion plan stagedProviderDeployment");
   assert(canonicalEqual(plan.stagedProviderDeployment, plan.stagedDeployment),
     "Vercel promotion plan fresh provider deployment differs from the staged receipt");
   exactSha256(plan.buildOutputDigest, "Vercel promotion plan buildOutputDigest");
@@ -3903,6 +3940,15 @@ export function parsePromotionPlan(value, {
   assert(indexerEvidence.promotionBundleDigest === plan.promotionBundleDigest,
     "Vercel promotion plan Indexer evidence differs from the promotion bundle");
   exactPreviousRelease(plan.previousRelease, "Vercel promotion plan previousRelease");
+  const previousPublicResolution = parseVercelPublicDeploymentResolution(
+    plan.previousPublicResolution, {
+      deployment: plan.previousRelease.deployment,
+      target: plan.target,
+    },
+  );
+  assert(previousPublicResolution.deploymentId !== plan.stagedDeployment.id &&
+    previousPublicResolution.deploymentUrl !== plan.stagedDeployment.url,
+  "Vercel promotion plan public origin selects the staged deployment");
   if (plan.previousRelease.mode === "planned") {
     assert(plan.previousPromotionArtifact === null,
       "planned previous release must not claim a promotion artifact");
@@ -3921,6 +3967,8 @@ export function parsePromotionPlan(value, {
   "Vercel promotion plan Indexer evidence is older than 24 hours");
   assertFreshTransition(stageProtectionEvidence.checkedAt, plan.preparedAt,
     "Vercel promotion plan stage protection verification");
+  assertFreshTransition(previousPublicResolution.checkedAt, plan.preparedAt,
+    "Vercel promotion plan public-origin verification");
   const { promotionPlanDigest, ...withoutDigest } = plan;
   assert(promotionPlanDigest === canonicalSha256(PROMOTION_PLAN_SCHEMA, withoutDigest),
     "Vercel promotion plan digest is invalid");
@@ -4105,7 +4153,7 @@ export function createPreMutationState(input) {
   const current = exactDeployment(input.currentDeployment,
     "pre-mutation current production deployment");
   const selected = exactDeployment(input.selectedDeployment,
-    "pre-mutation selected deployment", { staged: true });
+    "pre-mutation selected deployment");
   const expectedCurrent = operation === "promote"
     ? plan.previousRelease.deployment
     : plan.currentDeployment;
@@ -4113,10 +4161,17 @@ export function createPreMutationState(input) {
     ? plan.stagedDeployment
     : plan.rollbackDeployment;
   assert(sameImmutableDeployment(current, expectedCurrent) &&
-    current.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname) &&
-    sameImmutableDeployment(selected, expectedSelected) &&
-    !selected.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
+    sameImmutableDeployment(selected, expectedSelected),
   "fresh Vercel deployment state differs from the approved release transition");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, {
+      deployment: current,
+      target: plan.target,
+    },
+  );
+  assert(currentPublicResolution.deploymentId !== selected.id &&
+    currentPublicResolution.deploymentUrl !== selected.url,
+  "fresh Vercel public origin already selects the release target");
   const selectedProtectionEvidence = parseStageProtectionEvidence(
     input.selectedProtectionEvidence, { deployment: selected },
   );
@@ -4146,12 +4201,15 @@ export function createPreMutationState(input) {
     "pre-mutation state must use the fresh selected deployment smoke time");
   assertFreshTransition(selectedProtectionEvidence.checkedAt, selectedSmoke.checkedAt,
     "pre-mutation selected deployment verification");
+  assertFreshTransition(currentPublicResolution.checkedAt, input.checkedAt,
+    "pre-mutation public-origin resolution");
   const value = {
     schemaVersion: PRE_MUTATION_STATE_SCHEMA,
     state: "fresh-provider-requery",
     operation,
     planDigest: operation === "promote" ? plan.promotionPlanDigest : plan.rollbackPlanDigest,
     currentDeployment: current,
+    currentPublicResolution,
     selectedDeployment: selected,
     selectedProtectionEvidence,
     selectedSmokeDigest: selectedSmoke.smokeDigest,
@@ -4165,22 +4223,30 @@ export function parsePreMutationState(value, {
 } = {}) {
   const state = exactKeys(value, [
     "schemaVersion", "state", "operation", "planDigest", "currentDeployment",
-    "selectedDeployment", "selectedProtectionEvidence", "selectedSmokeDigest", "checkedAt",
-    "preMutationStateDigest",
+    "currentPublicResolution", "selectedDeployment", "selectedProtectionEvidence",
+    "selectedSmokeDigest", "checkedAt", "preMutationStateDigest",
   ], "Vercel pre-mutation state");
   assert(state.schemaVersion === PRE_MUTATION_STATE_SCHEMA &&
     state.state === "fresh-provider-requery" && state.operation === operation,
   "Vercel pre-mutation state is invalid");
   exactSha256(state.planDigest, "Vercel pre-mutation state planDigest");
   exactDeployment(state.currentDeployment, "Vercel pre-mutation current deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    state.currentPublicResolution, { deployment: state.currentDeployment },
+  );
   exactDeployment(state.selectedDeployment,
-    "Vercel pre-mutation selected deployment", { staged: true });
+    "Vercel pre-mutation selected deployment");
+  assert(currentPublicResolution.deploymentId !== state.selectedDeployment.id &&
+    currentPublicResolution.deploymentUrl !== state.selectedDeployment.url,
+  "Vercel pre-mutation public origin selects the release target");
   const selectedProtectionEvidence = parseStageProtectionEvidence(
     state.selectedProtectionEvidence, { deployment: state.selectedDeployment },
   );
   exactSha256(state.selectedSmokeDigest, "Vercel pre-mutation selectedSmokeDigest");
   assertFreshTransition(selectedProtectionEvidence.checkedAt, state.checkedAt,
     "Vercel pre-mutation selected deployment verification");
+  assertFreshTransition(currentPublicResolution.checkedAt, state.checkedAt,
+    "Vercel pre-mutation public-origin resolution");
   exactInstant(state.checkedAt, "Vercel pre-mutation state checkedAt");
   const { preMutationStateDigest, ...withoutDigest } = state;
   assert(preMutationStateDigest === canonicalSha256(PRE_MUTATION_STATE_SCHEMA, withoutDigest),
@@ -4190,6 +4256,7 @@ export function parsePreMutationState(value, {
       operation,
       plan,
       currentDeployment: state.currentDeployment,
+      currentPublicResolution: state.currentPublicResolution,
       selectedDeployment: state.selectedDeployment,
       selectedProtectionEvidence: state.selectedProtectionEvidence,
       selectedSmoke,
@@ -4209,9 +4276,14 @@ export function createPromotionReceipt(input) {
   });
   const deployment = exactDeployment(input.productionDeployment,
     "promoted Vercel deployment");
-  assert(sameImmutableDeployment(deployment, plan.stagedDeployment) &&
-    deployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
-  "public promotion did not select and alias the exact staged deployment");
+  assert(sameImmutableDeployment(deployment, plan.stagedDeployment),
+    "public promotion did not select the exact staged deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    input.publicResolution, {
+      deployment,
+      target: plan.target,
+    },
+  );
   const preMutationState = parsePreMutationState(input.preMutationState, {
     operation: "promote", plan, selectedSmoke: input.selectedSmoke,
     selectedBundle: input.bundle,
@@ -4224,6 +4296,12 @@ export function createPromotionReceipt(input) {
   exactInstant(input.promotedAt, "promotion receipt promotedAt");
   assertFreshTransition(preMutationState.checkedAt, input.promotedAt,
     "Vercel public promotion");
+  assertFreshTransition(preMutationState.checkedAt, publicResolution.checkedAt,
+    "Vercel public promotion provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, smoke.checkedAt,
+    "Vercel post-promotion public-origin resolution and smoke");
+  assertFreshTransition(smoke.checkedAt, input.promotedAt,
+    "Vercel post-promotion public smoke");
   const authorizationAge = Date.parse(preMutationState.checkedAt) -
     Date.parse(authorization.authorizedAt);
   assert(authorizationAge >= 0 && authorizationAge <= 30 * 60_000,
@@ -4248,9 +4326,11 @@ export function createPromotionReceipt(input) {
     sourceTransition: plan.sourceTransition,
     target: plan.target,
     deployment,
+    publicResolution,
     buildOutputDigest: plan.buildOutputDigest,
     stageArtifact: plan.stageArtifact,
     previousRelease: plan.previousRelease,
+    previousPublicResolution: plan.previousPublicResolution,
     productionSmokeDigest: smoke.smokeDigest,
     workflow: exactWorkflow(input.workflow),
     promotedAt: input.promotedAt,
@@ -4264,8 +4344,9 @@ export function parsePromotionReceipt(value, { bundle, target } = {}) {
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest", "promotionPlanDigest",
     "stageReceiptDigest",
     "authorizationDigest", "preMutationStateDigest", "indexerEvidence", "stagedSource", "source", "sourceTransition",
-    "target", "deployment", "buildOutputDigest", "stageArtifact", "previousRelease",
-    "productionSmokeDigest", "workflow", "promotedAt", "promotionReceiptDigest",
+    "target", "deployment", "publicResolution", "buildOutputDigest", "stageArtifact",
+    "previousRelease", "previousPublicResolution", "productionSmokeDigest", "workflow",
+    "promotedAt", "promotionReceiptDigest",
   ], "Vercel promotion receipt");
   assert(receipt.schemaVersion === PROMOTION_RECEIPT_SCHEMA &&
     receipt.state === "promoted-live" && receipt.publicAuthorization === true &&
@@ -4292,6 +4373,12 @@ export function parsePromotionReceipt(value, { bundle, target } = {}) {
   "Vercel promotion receipt source transition differs from its sources");
   exactTarget(receipt.target, "Vercel promotion receipt target");
   exactDeployment(receipt.deployment, "Vercel promotion receipt deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    receipt.publicResolution, {
+      deployment: receipt.deployment,
+      target: receipt.target,
+    },
+  );
   exactSha256(receipt.buildOutputDigest, "Vercel promotion receipt buildOutputDigest");
   assert(receipt.buildOutputDigest === sourceTransition.buildOutputDigest,
     "Vercel promotion receipt source transition changed the staged build output");
@@ -4299,8 +4386,14 @@ export function parsePromotionReceipt(value, { bundle, target } = {}) {
   assert(stageArtifact.sourceRevision === receipt.stagedSource.revision,
     "Vercel promotion receipt stage artifact differs from the staged source");
   exactPreviousRelease(receipt.previousRelease, "Vercel promotion receipt previousRelease");
+  parseVercelPublicDeploymentResolution(receipt.previousPublicResolution, {
+    deployment: receipt.previousRelease.deployment,
+    target: receipt.target,
+  });
   exactWorkflow(receipt.workflow, "Vercel promotion receipt workflow");
   exactInstant(receipt.promotedAt, "Vercel promotion receipt promotedAt");
+  assertFreshTransition(publicResolution.checkedAt, receipt.promotedAt,
+    "Vercel promotion receipt public-origin resolution");
   const { promotionReceiptDigest, ...withoutDigest } = receipt;
   assert(promotionReceiptDigest === canonicalSha256(PROMOTION_RECEIPT_SCHEMA, withoutDigest),
     "Vercel promotion receipt digest is invalid");
@@ -4316,14 +4409,20 @@ export function createRollbackPlan(input) {
   const promotion = parsePromotionReceipt(input.promotionReceipt, {
     bundle: input.bundle, target: input.target,
   });
+  const currentDeployment = exactDeployment(input.currentDeployment,
+    "rollback plan current deployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    input.currentPublicResolution, {
+      deployment: currentDeployment,
+      target: promotion.target,
+    },
+  );
   const currentSmoke = parseSmokeReceipt(input.currentSmoke, {
     expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.bundle,
   });
   assert(currentSmoke.origin === PRODUCTION_ORIGIN &&
-    sameImmutableDeployment(input.currentDeployment, promotion.deployment) &&
-    input.currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
+    sameImmutableDeployment(currentDeployment, promotion.deployment),
   "rollback plan current production differs from the promotion receipt");
-  exactDeployment(input.currentDeployment, "rollback plan current deployment");
   const promotionArtifact = parseGitHubArtifactEvidence(input.promotionArtifact);
   assert(promotionArtifact.runId === promotion.workflow.runId &&
     promotionArtifact.runAttempt === promotion.workflow.runAttempt &&
@@ -4342,13 +4441,16 @@ export function createRollbackPlan(input) {
   });
   assert(targetSmoke.origin === promotion.previousRelease.deployment.url,
     "rollback target smoke did not use the exact prior deployment URL");
-  assert(sameImmutableDeployment(input.targetDeployment,
-    promotion.previousRelease.deployment) &&
-    !input.targetDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
-  "rollback plan target differs from the exact unaliased prior deployment");
-  exactDeployment(input.targetDeployment, "rollback plan target deployment");
+  const targetDeployment = exactDeployment(input.targetDeployment,
+    "rollback plan target deployment");
+  assert(sameImmutableDeployment(targetDeployment,
+    promotion.previousRelease.deployment),
+  "rollback plan target differs from the exact prior deployment");
+  assert(currentPublicResolution.deploymentId !== targetDeployment.id &&
+    currentPublicResolution.deploymentUrl !== targetDeployment.url,
+  "rollback plan public origin already selects the rollback target");
   const targetProtectionEvidence = parseStageProtectionEvidence(
-    input.targetProtectionEvidence, { deployment: input.targetDeployment },
+    input.targetProtectionEvidence, { deployment: targetDeployment },
   );
   assert(targetProtectionEvidence.projectProtection.projectId === promotion.target.projectId,
     "rollback plan target protection evidence is for a different project");
@@ -4357,6 +4459,10 @@ export function createRollbackPlan(input) {
     "rollback plan target protection and smoke verification");
   assertFreshTransition(targetSmoke.checkedAt, input.preparedAt,
     "rollback plan target smoke verification");
+  assertFreshTransition(currentPublicResolution.checkedAt, currentSmoke.checkedAt,
+    "rollback plan current public-origin resolution and smoke");
+  assertFreshTransition(currentSmoke.checkedAt, input.preparedAt,
+    "rollback plan current public smoke verification");
   const value = {
     schemaVersion: ROLLBACK_PLAN_SCHEMA,
     state: "ready-awaiting-owner-authorization",
@@ -4372,10 +4478,11 @@ export function createRollbackPlan(input) {
     indexerEvidence: promotion.indexerEvidence,
     source: promotion.source,
     target: promotion.target,
-    currentDeployment: input.currentDeployment,
+    currentDeployment,
+    currentPublicResolution,
     currentSmokeDigest: currentSmoke.smokeDigest,
     rollbackTarget: promotion.previousRelease,
-    rollbackDeployment: input.targetDeployment,
+    rollbackDeployment: targetDeployment,
     targetSmokeDigest: targetSmoke.smokeDigest,
     targetProtectionEvidence,
     workflow: exactWorkflow(input.workflow),
@@ -4390,8 +4497,9 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest",
     "promotionReceiptDigest", "promotionArtifact",
     "indexerEvidence",
-    "source", "target", "currentDeployment", "currentSmokeDigest", "rollbackTarget",
-    "rollbackDeployment", "targetSmokeDigest", "targetProtectionEvidence", "workflow",
+    "source", "target", "currentDeployment", "currentPublicResolution",
+    "currentSmokeDigest", "rollbackTarget", "rollbackDeployment", "targetSmokeDigest",
+    "targetProtectionEvidence", "workflow",
     "preparedAt", "rollbackPlanDigest",
   ], "Vercel rollback plan");
   assert(plan.schemaVersion === ROLLBACK_PLAN_SCHEMA &&
@@ -4412,12 +4520,21 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
     "Vercel rollback plan promotion artifact differs from its source");
   exactTarget(plan.target, "Vercel rollback plan target");
   exactDeployment(plan.currentDeployment, "Vercel rollback plan currentDeployment");
+  const currentPublicResolution = parseVercelPublicDeploymentResolution(
+    plan.currentPublicResolution, {
+      deployment: plan.currentDeployment,
+      target: plan.target,
+    },
+  );
   exactSha256(plan.currentSmokeDigest, "Vercel rollback plan currentSmokeDigest");
   exactPreviousRelease(plan.rollbackTarget, "Vercel rollback plan rollbackTarget");
   exactDeployment(plan.rollbackDeployment,
-    "Vercel rollback plan rollbackDeployment", { staged: true });
+    "Vercel rollback plan rollbackDeployment");
   assert(sameImmutableDeployment(plan.rollbackDeployment, plan.rollbackTarget.deployment),
     "Vercel rollback plan provider target differs from the historical release");
+  assert(currentPublicResolution.deploymentId !== plan.rollbackDeployment.id &&
+    currentPublicResolution.deploymentUrl !== plan.rollbackDeployment.url,
+  "Vercel rollback plan public origin selects the rollback target");
   exactSha256(plan.targetSmokeDigest, "Vercel rollback plan targetSmokeDigest");
   const targetProtectionEvidence = parseStageProtectionEvidence(
     plan.targetProtectionEvidence, { deployment: plan.rollbackDeployment },
@@ -4428,6 +4545,8 @@ export function parseRollbackPlan(value, { bundle, promotionReceipt, target } = 
   exactInstant(plan.preparedAt, "Vercel rollback plan preparedAt");
   assertFreshTransition(targetProtectionEvidence.checkedAt, plan.preparedAt,
     "Vercel rollback plan target protection verification");
+  assertFreshTransition(currentPublicResolution.checkedAt, plan.preparedAt,
+    "Vercel rollback plan current public-origin verification");
   const { rollbackPlanDigest, ...withoutDigest } = plan;
   assert(rollbackPlanDigest === canonicalSha256(ROLLBACK_PLAN_SCHEMA, withoutDigest),
     "Vercel rollback plan digest is invalid");
@@ -4449,9 +4568,14 @@ export function createRollbackReceipt(input) {
   });
   const deployment = exactDeployment(input.productionDeployment,
     "rolled-back Vercel deployment");
-  assert(sameImmutableDeployment(deployment, plan.rollbackDeployment) &&
-    deployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
-  "public rollback did not select and alias the exact prior deployment");
+  assert(sameImmutableDeployment(deployment, plan.rollbackDeployment),
+    "public rollback did not select the exact prior deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    input.publicResolution, {
+      deployment,
+      target: plan.target,
+    },
+  );
   const preMutationState = parsePreMutationState(input.preMutationState, {
     operation: "rollback", plan, selectedSmoke: input.selectedSmoke,
     selectedBundle: input.previousBundle,
@@ -4467,6 +4591,12 @@ export function createRollbackReceipt(input) {
   exactInstant(input.rolledBackAt, "rollback receipt rolledBackAt");
   assertFreshTransition(preMutationState.checkedAt, input.rolledBackAt,
     "Vercel public rollback");
+  assertFreshTransition(preMutationState.checkedAt, publicResolution.checkedAt,
+    "Vercel public rollback provider resolution");
+  assertFreshTransition(publicResolution.checkedAt, smoke.checkedAt,
+    "Vercel post-rollback public-origin resolution and smoke");
+  assertFreshTransition(smoke.checkedAt, input.rolledBackAt,
+    "Vercel post-rollback public smoke");
   const authorizationAge = Date.parse(preMutationState.checkedAt) -
     Date.parse(authorization.authorizedAt);
   assert(authorizationAge >= 0 && authorizationAge <= 30 * 60_000,
@@ -4490,6 +4620,7 @@ export function createRollbackReceipt(input) {
     source: plan.source,
     target: plan.target,
     deployment,
+    publicResolution,
     restoredMode: plan.rollbackTarget.mode,
     restoredPromotionBundleDigest: plan.rollbackTarget.promotionBundleDigest,
     productionSmokeDigest: smoke.smokeDigest,
@@ -4505,8 +4636,9 @@ export function parseRollbackReceipt(value, { target } = {}) {
     "chainDeploymentId", "stageBundleDigest", "promotionBundleDigest", "promotionReceiptDigest",
     "rollbackPlanDigest", "authorizationDigest", "preMutationStateDigest",
     "promotionArtifact", "indexerEvidence",
-    "source", "target", "deployment", "restoredMode", "restoredPromotionBundleDigest",
-    "productionSmokeDigest", "workflow", "rolledBackAt", "rollbackReceiptDigest",
+    "source", "target", "deployment", "publicResolution", "restoredMode",
+    "restoredPromotionBundleDigest", "productionSmokeDigest", "workflow", "rolledBackAt",
+    "rollbackReceiptDigest",
   ], "Vercel rollback receipt");
   assert(receipt.schemaVersion === ROLLBACK_RECEIPT_SCHEMA &&
     receipt.state === "rolled-back-verified" && receipt.publicAuthorization === true &&
@@ -4533,8 +4665,16 @@ export function parseRollbackReceipt(value, { target } = {}) {
   "Vercel rollback receipt evidence differs from the promoted release");
   exactTarget(receipt.target, "Vercel rollback receipt target");
   exactDeployment(receipt.deployment, "Vercel rollback receipt deployment");
+  const publicResolution = parseVercelPublicDeploymentResolution(
+    receipt.publicResolution, {
+      deployment: receipt.deployment,
+      target: receipt.target,
+    },
+  );
   exactWorkflow(receipt.workflow, "Vercel rollback receipt workflow");
   exactInstant(receipt.rolledBackAt, "Vercel rollback receipt rolledBackAt");
+  assertFreshTransition(publicResolution.checkedAt, receipt.rolledBackAt,
+    "Vercel rollback receipt public-origin resolution");
   const { rollbackReceiptDigest, ...withoutDigest } = receipt;
   assert(rollbackReceiptDigest === canonicalSha256(ROLLBACK_RECEIPT_SCHEMA, withoutDigest),
     "Vercel rollback receipt digest is invalid");

@@ -375,7 +375,7 @@ async function normalizeDeploymentCommand(options) {
 async function stageReceiptCommand(options) {
   assertOnly(options, [
     "--repository-root", "--bundle", "--manifest", "--ethereum-manifest", "--deployment",
-    "--protection-evidence", "--staged-smoke",
+    "--current-public-deployment", "--protection-evidence", "--staged-smoke",
     "--build-root",
     "--source-revision", "--source-tree", "--org-id", "--project-id", "--staged-at", "--output",
     ...workflowFlags(),
@@ -388,12 +388,17 @@ async function stageReceiptCommand(options) {
   await validateManifest(manifest);
   const normalized = await readJson(required(options, "--deployment"),
     "normalized Vercel deployment");
+  const currentPublicCapture = await readJson(
+    required(options, "--current-public-deployment"),
+    "current public Vercel deployment",
+  );
   const build = await hashBuildOutput(required(options, "--build-root"));
   const receipt = createStageReceipt({
     bundle,
     manifest,
     ethereumManifest,
     deployment: normalized.deployment,
+    currentPublicResolution: currentPublicCapture.publicResolution,
     protectionEvidence: await readJson(required(options, "--protection-evidence"),
       "Vercel stage protection evidence"),
     stagedSmoke: await readJson(required(options, "--staged-smoke"),
@@ -537,6 +542,8 @@ async function promotionPlanCommand(options) {
   const sourceTransition = verifyEvidenceOnlyTransition(
     parsedStage.source, source, currentBuild.digest,
   );
+  const previousCapture = await readJson(required(options, "--previous-deployment"),
+    "previous production deployment");
   const input = {
     stageReceipt,
     stageBundle,
@@ -572,8 +579,8 @@ async function promotionPlanCommand(options) {
       : {}),
     previousSmoke: await readJson(required(options, "--previous-smoke"),
       "previous production smoke receipt"),
-    previousDeployment: (await readJson(required(options, "--previous-deployment"),
-      "previous production deployment")).deployment,
+    previousDeployment: previousCapture.deployment,
+    previousPublicResolution: previousCapture.publicResolution,
     source,
     target: protectedTarget(options),
     workflow: workflowIdentity(options),
@@ -695,6 +702,8 @@ async function promotionReceiptCommand(options) {
     ...workflowFlags(),
   ]);
   const bundle = await readJson(required(options, "--bundle"), "promotion bundle");
+  const productionCapture = await readJson(required(options, "--production-deployment"),
+    "production deployment");
   const receipt = createPromotionReceipt({
     plan: await readJson(required(options, "--plan"), "promotion plan"),
     authorization: await readJson(required(options, "--authorization"),
@@ -705,8 +714,8 @@ async function promotionReceiptCommand(options) {
       "promotion pre-mutation state"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected promotion smoke receipt"),
-    productionDeployment: (await readJson(required(options, "--production-deployment"),
-      "production deployment")).deployment,
+    productionDeployment: productionCapture.deployment,
+    publicResolution: productionCapture.publicResolution,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "production smoke receipt"),
     workflow: workflowIdentity(options),
@@ -726,6 +735,8 @@ async function rollbackPlanCommand(options) {
     "promotion receipt");
   const bundle = await readJson(required(options, "--bundle"), "promotion bundle");
   const previousBundlePath = optional(options, "--previous-bundle");
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "current production deployment");
   const input = {
     promotionReceipt,
     promotionArtifact: parseGitHubArtifactEvidence(await readJson(
@@ -737,8 +748,8 @@ async function rollbackPlanCommand(options) {
       : {}),
     currentSmoke: await readJson(required(options, "--current-smoke"),
       "current production smoke receipt"),
-    currentDeployment: (await readJson(required(options, "--current-deployment"),
-      "current production deployment")).deployment,
+    currentDeployment: currentCapture.deployment,
+    currentPublicResolution: currentCapture.publicResolution,
     targetSmoke: await readJson(required(options, "--target-smoke"),
       "rollback target smoke receipt"),
     targetDeployment: (await readJson(required(options, "--target-deployment"),
@@ -767,6 +778,8 @@ async function rollbackReceiptCommand(options) {
   if ((parsedPlan.rollbackTarget.mode === "live") !== Boolean(previousBundlePath)) {
     fail("--previous-bundle is required exactly for a live rollback target");
   }
+  const productionCapture = await readJson(required(options, "--production-deployment"),
+    "rolled-back production deployment");
   const receipt = createRollbackReceipt({
     plan,
     authorization: await readJson(required(options, "--authorization"),
@@ -778,8 +791,8 @@ async function rollbackReceiptCommand(options) {
       "rollback pre-mutation state"),
     selectedSmoke: await readJson(required(options, "--selected-smoke"),
       "fresh selected rollback smoke receipt"),
-    productionDeployment: (await readJson(required(options, "--production-deployment"),
-      "rolled-back production deployment")).deployment,
+    productionDeployment: productionCapture.deployment,
+    publicResolution: productionCapture.publicResolution,
     productionSmoke: await readJson(required(options, "--production-smoke"),
       "post-rollback smoke receipt"),
     workflow: workflowIdentity(options),
@@ -807,11 +820,13 @@ async function preMutationStateCommand(options) {
   if (requiresBundle !== Boolean(selectedBundlePath)) {
     fail("--selected-bundle is required exactly for a live selected deployment");
   }
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "fresh current production deployment");
   const state = createPreMutationState({
     operation,
     plan,
-    currentDeployment: (await readJson(required(options, "--current-deployment"),
-      "fresh current production deployment")).deployment,
+    currentDeployment: currentCapture.deployment,
+    currentPublicResolution: currentCapture.publicResolution,
     selectedDeployment: (await readJson(required(options, "--selected-deployment"),
       "fresh selected deployment")).deployment,
     selectedProtectionEvidence: await readJson(

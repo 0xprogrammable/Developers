@@ -1731,6 +1731,19 @@ function deployment(id, url, aliases = []) {
   };
 }
 
+function publicResolution(
+  value,
+  checkedAt = "2026-08-29T15:00:00.000Z",
+  resolutionTarget = target,
+) {
+  return createVercelPublicDeploymentResolution({
+    origin: PRODUCTION_ORIGIN,
+    deployment: value,
+    target: resolutionTarget,
+    checkedAt,
+  });
+}
+
 function protectionEvidence(
   value,
   checkedAt = "2026-08-29T14:59:00.000Z",
@@ -2242,7 +2255,7 @@ test("freezes exact Ethereum CLI 3.3.9 and programmablehq release identity", () 
   }
 });
 
-test("normalizes Vercel evidence and rejects a staged production alias", () => {
+test("normalizes Vercel evidence and rejects a stage selected by the public origin", () => {
   const stageBundle = stageFixture();
   const deploy = {
     status: "ok",
@@ -2346,6 +2359,7 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
     manifest: liveManifest(stageBundle, "stage"),
     ethereumManifest: ethereumManifest(),
     deployment: publicDeployment,
+    currentPublicResolution: publicResolution(normalized),
     protectionEvidence: protectionEvidence(normalized),
     stagedSmoke: smoke("live", normalized.url, stageBundle,
       "2026-08-29T15:00:00.000Z", "stage"),
@@ -2354,7 +2368,7 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
     target,
     workflow,
     stagedAt: "2026-08-29T15:00:00.000Z",
-  }), /public production alias/u);
+  }), /public origin already selects the staged deployment/u);
 });
 
 test("binds both planned Vercel mutations to fresh owner and protected-candidate evidence", () => {
@@ -2534,11 +2548,16 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     "dpl_stage123",
     "https://developers-stage.vercel.app/",
   );
+  const previousDeployment = deployment(
+    "dpl_previous123",
+    "https://developers-previous.vercel.app/",
+  );
   const stage = createStageReceipt({
     bundle: stageBundle,
     manifest: liveManifest(stageBundle, "stage"),
     ethereumManifest: ethereumManifest(),
     deployment: stageDeployment,
+    currentPublicResolution: publicResolution(previousDeployment),
     protectionEvidence: protectionEvidence(stageDeployment),
     stagedSmoke: smoke("live", stageDeployment.url, stageBundle,
       "2026-08-29T15:00:00.000Z", "stage"),
@@ -2550,6 +2569,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   });
   assert.equal(stage.schemaVersion, STAGE_RECEIPT_SCHEMA);
   assert.equal(stage.publicAuthorization, false);
+  assert.equal(stage.currentPublicResolution.deploymentId, previousDeployment.id);
   assert.equal(parseStageReceipt(stage, {
     bundle: stageBundle,
     source,
@@ -2559,11 +2579,6 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   }).state,
     "staged-not-public");
 
-  const previousDeployment = deployment(
-    "dpl_previous123",
-    "https://developers-previous.vercel.app/",
-    [new URL(PRODUCTION_ORIGIN).hostname],
-  );
   const plan = createPromotionPlan({
     stageReceipt: stage,
     stageBundle,
@@ -2577,6 +2592,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     previousMode: "planned",
     previousSmoke: smoke("planned", PRODUCTION_ORIGIN),
     previousDeployment,
+    previousPublicResolution: publicResolution(previousDeployment),
     indexerEvidence: indexerEvidence(bundle),
     stageRunEvidence: actionsRunEvidence(),
     stageArtifact: actionsArtifact(
@@ -2607,6 +2623,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   assert.equal(plan.stageRunEvidence.sourceTree, source.tree);
   assert.deepEqual(plan.stagedProviderDeployment, stageDeployment);
   assert.equal(plan.stageProtectionEvidence.deploymentId, stageDeployment.id);
+  assert.equal(plan.previousPublicResolution.deploymentId, previousDeployment.id);
   assert.deepEqual(plan.sourceTransition.addedPaths, [
     CANONICAL_INDEXER_DEPLOYMENT_RECEIPT_PATH,
     CANONICAL_INDEXER_RELEASE_AUDIT_PATH,
@@ -2655,9 +2672,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     plan,
   }).planDigest, plan.promotionPlanDigest);
 
-  const promotedDeployment = { ...stageDeployment, aliases: [
-    new URL(PRODUCTION_ORIGIN).hostname,
-  ] };
+  const promotedDeployment = { ...stageDeployment, aliases: [] };
   const promotionInput = {
     plan,
     authorization,
@@ -2667,6 +2682,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "promote",
       plan,
       currentDeployment: previousDeployment,
+      currentPublicResolution: publicResolution(
+        previousDeployment, "2026-08-29T15:02:10.000Z",
+      ),
       selectedDeployment: stageDeployment,
       selectedProtectionEvidence: protectionEvidence(
         stageDeployment, "2026-08-29T15:02:20.000Z",
@@ -2681,7 +2699,12 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       "live", stageDeployment.url, bundle, "2026-08-29T15:02:30.000Z",
     ),
     productionDeployment: promotedDeployment,
-    productionSmoke: smoke("live", PRODUCTION_ORIGIN, bundle),
+    publicResolution: publicResolution(
+      promotedDeployment, "2026-08-29T15:02:40.000Z",
+    ),
+    productionSmoke: smoke(
+      "live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:02:50.000Z",
+    ),
     workflow,
     promotedAt: "2026-08-29T15:03:00.000Z",
   };
@@ -2692,6 +2715,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     operation: "promote",
     plan,
     currentDeployment: previousDeployment,
+    currentPublicResolution: publicResolution(
+      previousDeployment, "2026-08-29T15:02:10.000Z",
+    ),
     selectedDeployment: stageDeployment,
     selectedProtectionEvidence: mismatchedPreMutationProtection,
     selectedSmoke: smoke(
@@ -2700,8 +2726,38 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     selectedBundle: bundle,
     checkedAt: "2026-08-29T15:02:30.000Z",
   }), /selected deployment verification/u);
+  assert.throws(() => createPreMutationState({
+    operation: "promote",
+    plan,
+    currentDeployment: previousDeployment,
+    currentPublicResolution: publicResolution(
+      stageDeployment, "2026-08-29T15:02:10.000Z",
+    ),
+    selectedDeployment: stageDeployment,
+    selectedProtectionEvidence: protectionEvidence(
+      stageDeployment, "2026-08-29T15:02:20.000Z",
+    ),
+    selectedSmoke: smoke(
+      "live", stageDeployment.url, bundle, "2026-08-29T15:02:30.000Z",
+    ),
+    selectedBundle: bundle,
+    checkedAt: "2026-08-29T15:02:30.000Z",
+  }), /selected a different deployment/u);
   const promotion = createPromotionReceipt(promotionInput);
   assert.equal(parsePromotionReceipt(promotion, { bundle, target }).state, "promoted-live");
+  assert.equal(promotion.publicResolution.deploymentId, promotedDeployment.id);
+  assert.throws(() => createPromotionReceipt({
+    ...promotionInput,
+    publicResolution: publicResolution(
+      previousDeployment, "2026-08-29T15:02:40.000Z",
+    ),
+  }), /selected a different deployment/u);
+  assert.throws(() => createPromotionReceipt({
+    ...promotionInput,
+    publicResolution: publicResolution(
+      promotedDeployment, "2026-08-29T15:02:20.000Z",
+    ),
+  }), /public promotion provider resolution/u);
   assert.throws(() => createPromotionReceipt({
     ...promotionInput,
     selectedSmoke: smoke(
@@ -2711,6 +2767,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "promote",
       plan,
       currentDeployment: previousDeployment,
+      currentPublicResolution: publicResolution(
+        previousDeployment, "2026-08-29T14:57:40.000Z",
+      ),
       selectedDeployment: stageDeployment,
       selectedProtectionEvidence: protectionEvidence(
         stageDeployment, "2026-08-29T14:57:50.000Z",
@@ -2728,6 +2787,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     bundle,
     currentSmoke: smoke("live", PRODUCTION_ORIGIN, bundle, "2026-08-29T15:04:00.000Z"),
     currentDeployment: promotedDeployment,
+    currentPublicResolution: publicResolution(
+      promotedDeployment, "2026-08-29T15:03:50.000Z",
+    ),
     promotionArtifact: actionsArtifact(
       `developers-vercel-promotion-${workflow.runId}-${workflow.runAttempt}`,
       promotionSource,
@@ -2745,6 +2807,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   });
   assert.equal(rollbackPlan.schemaVersion, ROLLBACK_PLAN_SCHEMA);
   assert.equal(rollbackPlan.rollbackDeployment.aliases.length, 0);
+  assert.equal(rollbackPlan.currentPublicResolution.deploymentId, promotedDeployment.id);
   assert.equal(rollbackPlan.targetProtectionEvidence.deploymentId, previousDeployment.id);
   assert.equal(parseRollbackPlan(rollbackPlan, {
     bundle,
@@ -2766,6 +2829,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "rollback",
       plan: rollbackPlan,
       currentDeployment: promotedDeployment,
+      currentPublicResolution: publicResolution(
+        promotedDeployment, "2026-08-29T15:05:10.000Z",
+      ),
       selectedDeployment: { ...previousDeployment, aliases: [] },
       selectedProtectionEvidence: protectionEvidence(
         { ...previousDeployment, aliases: [] }, "2026-08-29T15:05:20.000Z",
@@ -2777,6 +2843,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     selectedSmoke: smoke("planned", previousDeployment.url, undefined,
       "2026-08-29T15:05:30.000Z"),
     productionDeployment: previousDeployment,
+    publicResolution: publicResolution(
+      previousDeployment, "2026-08-29T15:05:45.000Z",
+    ),
     productionSmoke: smoke("planned", PRODUCTION_ORIGIN, undefined,
       "2026-08-29T15:06:00.000Z"),
     workflow,
@@ -2785,6 +2854,13 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
   const rollback = createRollbackReceipt(rollbackInput);
   assert.equal(rollback.state, "rolled-back-verified");
   assert.equal(rollback.deployment.id, "dpl_previous123");
+  assert.equal(rollback.publicResolution.deploymentId, previousDeployment.id);
+  assert.throws(() => createRollbackReceipt({
+    ...rollbackInput,
+    publicResolution: publicResolution(
+      previousDeployment, "2026-08-29T15:05:20.000Z",
+    ),
+  }), /public rollback provider resolution/u);
   assert.throws(() => createRollbackReceipt({
     ...rollbackInput,
     selectedSmoke: smoke("planned", previousDeployment.url, undefined,
@@ -2793,6 +2869,9 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
       operation: "rollback",
       plan: rollbackPlan,
       currentDeployment: promotedDeployment,
+      currentPublicResolution: publicResolution(
+        promotedDeployment, "2026-08-29T15:00:40.000Z",
+      ),
       selectedDeployment: { ...previousDeployment, aliases: [] },
       selectedProtectionEvidence: protectionEvidence(
         { ...previousDeployment, aliases: [] }, "2026-08-29T15:00:50.000Z",
@@ -3078,6 +3157,12 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(text, /--protection-bypass false/u);
   assert.match(text, /capture:github-release-evidence/u);
   assert.match(text, /create-pre-mutation-state/u);
+  assert.match(text,
+    /Resolve current public origin before sealing dark stage[\s\S]*--selector "\$PRODUCTION_ORIGIN"[\s\S]*current-public-deployment\.json/u,
+    "the dark-stage receipt must bind a provider resolution of the public origin");
+  assert.match(text,
+    /--current-public-deployment \.release-evidence\/stage\/current-public-deployment\.json/u,
+    "the stage receipt must consume the exact public-origin provider capture");
   assert.match(text,
     /--stage-protection-evidence \.release-evidence\/plan\/stage-protection\.json/u);
   assert.match(text,
