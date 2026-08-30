@@ -51,6 +51,8 @@ export const GITHUB_ARTIFACT_EVIDENCE_SCHEMA =
   "programmable.developers.github-actions-artifact-evidence.v1";
 export const GITHUB_OWNER_DISPATCH_AUTHORIZATION_SCHEMA =
   "programmable.developers.github-owner-dispatch-authorization.v1";
+export const PLANNED_DEPLOY_AUTHORIZATION_SCHEMA =
+  "programmable.developers.vercel-planned-deploy-authorization.v1";
 export const SOURCE_TRANSITION_SCHEMA =
   "programmable.developers.evidence-only-source-transition.v1";
 export const PRE_MUTATION_STATE_SCHEMA =
@@ -3002,6 +3004,124 @@ export function parseGitHubOwnerDispatchAuthorization(value, { workflow, source 
     canonicalSha256(GITHUB_OWNER_DISPATCH_AUTHORIZATION_SCHEMA, withoutDigest),
   "GitHub owner-dispatch authorization digest is invalid");
   return evidence;
+}
+
+export function createPlannedDeployAuthorization(input) {
+  const mutation = input.mutation;
+  assert(["create-candidate", "promote-candidate"].includes(mutation),
+    "planned deploy authorization mutation is invalid");
+  const source = exactSource(input.source, "planned deploy authorization source");
+  const target = exactTarget(input.target, "planned deploy authorization target");
+  const workflow = exactWorkflow(input.workflow, "planned deploy authorization workflow");
+  const currentDeployment = exactDeployment(input.currentDeployment,
+    "planned deploy current public deployment");
+  assert(currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
+    "planned deploy authorization current deployment lacks the public production alias");
+  const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
+    input.ownerDispatchAuthorization, { workflow, source },
+  );
+  exactInstant(input.authorizedAt, "planned deploy authorization authorizedAt");
+  assert(ownerDispatchAuthorization.observedAt === input.authorizedAt,
+    "planned deploy authorization must use the freshly observed owner dispatch");
+
+  let candidateDeployment = null;
+  let candidateProtectionEvidence = null;
+  let candidateSmokeDigest = null;
+  if (mutation === "create-candidate") {
+    assert(input.candidateDeployment === undefined &&
+      input.candidateProtectionEvidence === undefined && input.candidateSmoke === undefined,
+    "candidate creation authorization must not claim a candidate that does not exist yet");
+  } else {
+    candidateDeployment = exactDeployment(input.candidateDeployment,
+      "planned deploy authorized candidate", { staged: true });
+    candidateProtectionEvidence = parseStageProtectionEvidence(
+      input.candidateProtectionEvidence, { deployment: candidateDeployment },
+    );
+    assert(candidateProtectionEvidence.projectProtection.projectId === target.projectId,
+      "planned deploy candidate protection evidence is for a different project");
+    const candidateSmoke = parseSmokeReceipt(input.candidateSmoke, {
+      expectedMode: "planned",
+    });
+    assert(candidateSmoke.origin === candidateDeployment.url,
+      "planned deploy candidate smoke did not target the protected candidate");
+    assertFreshTransition(candidateProtectionEvidence.checkedAt, candidateSmoke.checkedAt,
+      "planned deploy candidate protection and authenticated smoke");
+    assertFreshTransition(candidateSmoke.checkedAt, input.authorizedAt,
+      "planned deploy candidate smoke and owner authorization");
+    candidateSmokeDigest = candidateSmoke.smokeDigest;
+  }
+
+  const value = {
+    schemaVersion: PLANNED_DEPLOY_AUTHORIZATION_SCHEMA,
+    state: "owner-authorized-planned-deploy",
+    mutation,
+    publicAuthorization: false,
+    publicWrites: false,
+    source,
+    target,
+    currentDeployment,
+    candidateDeployment,
+    candidateProtectionEvidence,
+    candidateSmokeDigest,
+    ownerDispatchAuthorization,
+    workflow,
+    authorizedAt: input.authorizedAt,
+  };
+  return withDigest(PLANNED_DEPLOY_AUTHORIZATION_SCHEMA, value,
+    "authorizationDigest");
+}
+
+export function parsePlannedDeployAuthorization(value) {
+  const authorization = exactKeys(value, [
+    "schemaVersion", "state", "mutation", "publicAuthorization", "publicWrites",
+    "source", "target", "currentDeployment", "candidateDeployment",
+    "candidateProtectionEvidence", "candidateSmokeDigest", "ownerDispatchAuthorization",
+    "workflow", "authorizedAt", "authorizationDigest",
+  ], "planned Vercel deploy authorization");
+  assert(authorization.schemaVersion === PLANNED_DEPLOY_AUTHORIZATION_SCHEMA &&
+    authorization.state === "owner-authorized-planned-deploy" &&
+    ["create-candidate", "promote-candidate"].includes(authorization.mutation) &&
+    authorization.publicAuthorization === false && authorization.publicWrites === false,
+  "planned Vercel deploy authorization is invalid");
+  const source = exactSource(authorization.source,
+    "planned Vercel deploy authorization source");
+  const target = exactTarget(authorization.target,
+    "planned Vercel deploy authorization target");
+  const workflow = exactWorkflow(authorization.workflow,
+    "planned Vercel deploy authorization workflow");
+  const currentDeployment = exactDeployment(authorization.currentDeployment,
+    "planned Vercel deploy current public deployment");
+  assert(currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
+    "planned Vercel deploy authorization current deployment lacks the public production alias");
+  const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
+    authorization.ownerDispatchAuthorization, { workflow, source },
+  );
+  exactInstant(authorization.authorizedAt,
+    "planned Vercel deploy authorization authorizedAt");
+  assert(ownerDispatchAuthorization.observedAt === authorization.authorizedAt,
+    "planned Vercel deploy authorization differs from its owner-dispatch observation");
+
+  if (authorization.mutation === "create-candidate") {
+    assert(authorization.candidateDeployment === null &&
+      authorization.candidateProtectionEvidence === null &&
+      authorization.candidateSmokeDigest === null,
+    "candidate creation authorization must not contain candidate evidence");
+  } else {
+    const candidate = exactDeployment(authorization.candidateDeployment,
+      "planned Vercel deploy authorized candidate", { staged: true });
+    const protection = parseStageProtectionEvidence(
+      authorization.candidateProtectionEvidence, { deployment: candidate },
+    );
+    assert(protection.projectProtection.projectId === target.projectId,
+      "planned Vercel deploy candidate protection evidence is for a different project");
+    exactSha256(authorization.candidateSmokeDigest,
+      "planned Vercel deploy candidateSmokeDigest");
+  }
+  const { authorizationDigest, ...withoutDigest } = authorization;
+  assert(authorizationDigest === canonicalSha256(
+    PLANNED_DEPLOY_AUTHORIZATION_SCHEMA, withoutDigest,
+  ), "planned Vercel deploy authorization digest is invalid");
+  return authorization;
 }
 
 function exactTarget(value, label = "Vercel release target") {
