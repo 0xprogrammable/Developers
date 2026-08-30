@@ -13,6 +13,7 @@ import {
   assertVercelStagedDeployment,
   createVercelProductionBinding,
   createVercelProductionDomainInventory,
+  createVercelMutationControlEvidence,
   createVercelProviderAliasBinding,
   createVercelProviderDeploymentResolution,
   createVercelPublicAliasBinding,
@@ -47,7 +48,7 @@ function argumentsMap(argv) {
   }
   const allowed = [
     "--selector", "--output", "--protection-output", "--source-revision", "--source-tree",
-    "--stage-bundle-digest", "--release-mode",
+    "--stage-bundle-digest", "--release-mode", "--mutation-control-output",
   ];
   for (const key of values.keys()) {
     if (!allowed.includes(key)) fail(`unsupported provider-capture option ${key}`);
@@ -78,6 +79,7 @@ function argumentsMap(argv) {
     selector,
     output,
     protectionOutput: values.get("--protection-output"),
+    mutationControlOutput: values.get("--mutation-control-output"),
     source,
     releaseMode,
   };
@@ -125,7 +127,7 @@ function vercelJson(args, label) {
   }
 }
 
-const { selector, output, protectionOutput, source, releaseMode } =
+const { selector, output, protectionOutput, mutationControlOutput, source, releaseMode } =
   argumentsMap(process.argv.slice(2));
 const token = process.env.VERCEL_TOKEN;
 const orgId = process.env.VERCEL_ORG_ID;
@@ -265,10 +267,16 @@ await writeJson(output, {
   ...(productionBinding ? { productionBinding } : {}),
 });
 
-if (protectionOutput) {
-  const projectProtection = vercelJson([
+let projectState;
+function projectQuery() {
+  projectState ??= vercelJson([
     "api", `/v9/projects/${projectId}`, "--raw", ...auth,
-  ], "Vercel project protection query");
+  ], "Vercel project protection and mutation-control query");
+  return projectState;
+}
+
+if (protectionOutput) {
+  const projectProtection = projectQuery();
   const response = await probeGeneratedDeploymentProtection(
     `${deployment.url}/api/v2/status?chainId=4663`,
   );
@@ -286,6 +294,14 @@ if (protectionOutput) {
   });
   await response.body?.cancel();
   await writeJson(protectionOutput, evidence);
+}
+
+if (mutationControlOutput) {
+  await writeJson(mutationControlOutput, createVercelMutationControlEvidence({
+    project: projectQuery(),
+    target,
+    checkedAt: new Date().toISOString(),
+  }));
 }
 
 process.stdout.write(`Provider capture sealed for ${deployment.id}; no public mutation performed.\n`);
