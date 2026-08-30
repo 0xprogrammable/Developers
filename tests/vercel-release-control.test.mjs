@@ -3446,6 +3446,11 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.equal(plannedCandidateDeploy?.env?.VERCEL_PROJECT_ID,
     "${{ secrets.VERCEL_PROJECT_ID }}",
     "planned candidate creation must provide the Vercel project binding");
+  const plannedCandidateBinding = plannedDeployJob.steps.find((step) =>
+    step.name === "Bind exact unaliased candidate to planned source");
+  assert.match(plannedCandidateBinding?.run ?? "",
+    /candidate-create\.json --path id/u,
+    "planned candidate binding must read Vercel CLI JSON at its exact top-level ID");
   assert.match(plannedDeploy,
     /programmableReleaseMode=planned/u);
   assert.match(plannedDeploy,
@@ -3531,6 +3536,11 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.equal(stageCandidateDeploy?.env?.VERCEL_PROJECT_ID,
     "${{ secrets.VERCEL_PROJECT_ID }}",
     "stage candidate creation must provide the Vercel project binding");
+  const stageCandidateBinding = document.jobs.stage.steps.find((step) =>
+    step.name === "Provider-requery stage and protection");
+  assert.match(stageCandidateBinding?.run ?? "",
+    /stage\/deploy\.json --path id/u,
+    "stage binding must read Vercel CLI JSON at its exact top-level ID");
   assert.match(text, /--phase "\$phase"/u);
   assert.match(text, /--bundle-phase stage --bundle "\$ROBINHOOD_STAGE_BUNDLE_PATH"/u);
   assert.match(text, /--bundle-phase promotion/u);

@@ -482,7 +482,7 @@ jobs:
         run: |
           set -euo pipefail
           candidate_id="$(npm run --silent release:vercel -- field \
-            --file .release-evidence/planned-deploy/candidate-create.json --path deployment.id)"
+            --file .release-evidence/planned-deploy/candidate-create.json --path id)"
           npm run capture:vercel-provider -- \
             --selector "$candidate_id" \
             --source-revision "$GITHUB_SHA" \
@@ -781,7 +781,7 @@ jobs:
         run: |
           set -euo pipefail
           deployment_id="$(npm run --silent release:vercel -- field \
-            --file .release-evidence/stage/deploy.json --path deployment.id)"
+            --file .release-evidence/stage/deploy.json --path id)"
           npm run capture:vercel-provider -- \
             --selector "$deployment_id" \
             --source-revision "$GITHUB_SHA" \
