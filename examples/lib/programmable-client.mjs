@@ -124,7 +124,6 @@ export function launchIdentity(launch) {
       : "unknown";
 
   return {
-    platformId: text(record.platformId),
     launchId: text(
       record.launchId,
       `${chainId}:${token.address ?? "unknown-token"}`,
@@ -311,6 +310,8 @@ export function advertisedDeploymentAddresses(manifest) {
   const root = object(manifest);
   collectManifestAddresses(root.deployments, addresses, 0);
   collectManifestAddresses(root.customRegistry, addresses, 0);
+  const routerAddress = normalizedAddress(object(root.launchStampRouter).address);
+  if (routerAddress) addresses.add(routerAddress);
 
   return addresses;
 }
@@ -321,6 +322,8 @@ export function provenanceManifestMatch(manifest, verification) {
   const sourceId = text(verification.sourceId);
   const registryAddress = normalizedAddress(verification.registryAddress);
   const launcherAddress = normalizedAddress(verification.launcherAddress);
+  const router = object(root.launchStampRouter);
+  const routerAddress = normalizedAddress(router.address);
 
   if (registryAddress) {
     const registryCandidates = new Set();
@@ -342,6 +345,20 @@ export function provenanceManifestMatch(manifest, verification) {
       matched: registryCandidates.has(registryAddress),
       sourceIdMatched:
         !sourceId || deployments.some((deployment) => sourceMatches(deployment, sourceId)),
+    };
+  }
+
+  if (launcherAddress && routerAddress === launcherAddress) {
+    const routerVersion = text(router.version);
+    const routerSourceId = routerVersion
+      ? `programmable-launch-stamp-router-v${routerVersion}`
+      : null;
+    return {
+      role: "launchStampRouter",
+      matched: true,
+      sourceIdMatched:
+        !sourceId ||
+        (routerSourceId !== null && sourceId.toLowerCase() === routerSourceId),
     };
   }
 

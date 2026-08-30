@@ -124,7 +124,7 @@ An empty `markets` array is valid. It means the launch currently has no register
 
 `status: "degraded"` can accompany valid recognized launch items when metadata, supply, or block-timestamp enrichment is incomplete. Preserve null and unavailable fields and inspect each record's `identityStatus`, `supplyStatus`, metadata trust, and `provenanceStatus`. Incomplete enrichment does not remove a recognized launch.
 
-The snapshot's top-level block is the highest represented chain boundary, so an included launch is never newer than the response snapshot. Its finality remains conservative across the represented sources. Inspect `snapshot.sources.classicIndexer`, `snapshot.sources.customRegistry`, and `snapshot.sources.routerCustom` for the exact source vector, including a source that is behind the top-level boundary. Router Custom commitment changes intentionally replay Router identities during an `after` poll so a newly published identity with an older launch block cannot be skipped. Upsert by `launchId` and treat that replay as at-least-once delivery.
+The snapshot's top-level block is the highest represented chain boundary, so an included launch is never newer than the response snapshot. Its finality remains conservative across the represented sources. Inspect `snapshot.sources.classicIndexer`, `snapshot.sources.customRegistry`, and `snapshot.sources.routerCustom` for the exact source vector, including a source that is behind the top-level boundary. Router Custom commitment changes intentionally replay Router identities during an `after` poll so a newly published identity with an older launch block cannot be skipped. Upsert by `chainId + launchId` and treat that replay as at-least-once delivery.
 
 The hosted Classic baseline is read from the canonical paginated `https://programmable.market/api/explore` catalog and accepted only when its schema, scope, evidence and identity commitments are internally consistent. The current evidence reports Envio deployment `production-6157d22`, but legitimate deployment revisions do not require code changes. The retired legacy token source returns HTTP `410` and is not used. Consumers should still integrate through the Developer discovery and launch-feed URLs above rather than binding directly to that internal upstream.
 
@@ -141,10 +141,13 @@ means the chain read model is not released, not that the chain has no launches.
 
 ## 5. Consume the feed in JavaScript
 
-This bounded reference performs a full backfill, rejects page-cursor loops, deduplicates replayed launch IDs, commits the traversal before advancing the durable cursor, then begins an incremental `after` poll. Requests use a 10-second timeout, at most three attempts, bounded `Retry-After`, and full-jitter exponential backoff. The in-memory commit function keeps the snippet runnable; replace that one function with a durable database transaction in production.
+This bounded reference performs a full backfill, rejects page-cursor loops, deduplicates replayed chain-scoped launch IDs, commits the traversal before advancing the durable cursor, then begins an incremental `after` poll. It keeps the same chain and category on the first request, every `cursor` continuation, and every later `after` poll. Requests use a 10-second timeout, at most three attempts, bounded `Retry-After`, and full-jitter exponential backoff. The in-memory commit function keeps the snippet runnable; replace that one function with a durable database transaction in production.
 
 ```js
 const baseUrl = "https://developers.programmable.family"
+const chainId = 1
+const category = "custom"
+const pollScope = { chainId, category }
 const retryableStatuses = new Set([408, 429, 500, 502, 503, 504])
 const maximumPages = 1_000
 const durableRecords = new Map()
@@ -180,9 +183,11 @@ async function getJson(path, search = {}) {
 }
 
 async function ingestTraversal(after = null) {
-  const recordsByLaunchId = new Map()
+  const recordsByKey = new Map()
   const traversedCursors = new Set()
-  let request = after ? { after, limit: 100 } : { limit: 100 }
+  let request = after
+    ? { ...pollScope, after, limit: 100 }
+    : { ...pollScope, limit: 100 }
   let resumeCursor = null
 
   for (let pageCount = 0; pageCount < maximumPages; pageCount += 1) {
@@ -202,8 +207,12 @@ async function ingestTraversal(after = null) {
       if (typeof record.launchId !== "string" || record.launchId.length === 0) {
         throw new Error("Launch record is missing launchId")
       }
-      // Upsert by launchId: retries and finality changes can replay a record.
-      recordsByLaunchId.set(record.launchId, record)
+      if (String(record.chainId) !== String(chainId)) {
+        throw new Error("Launch record escaped the requested chain scope")
+      }
+      // Retries and finality changes can replay a record. Chain scope prevents
+      // the same opaque launch ID on another chain from overwriting it.
+      recordsByKey.set(`${record.chainId}:${record.launchId}`, record)
     }
 
     if (feed.page.hasMore !== true) {
@@ -213,7 +222,7 @@ async function ingestTraversal(after = null) {
       if (typeof resumeCursor !== "string" || resumeCursor.length === 0) {
         throw new Error("resumeCursor missing at the traversal boundary")
       }
-      return { records: [...recordsByLaunchId.values()], resumeCursor }
+      return { records: [...recordsByKey.values()], resumeCursor }
     }
 
     const nextCursor = feed.page.nextCursor
@@ -224,7 +233,7 @@ async function ingestTraversal(after = null) {
       throw new Error("Page cursor loop detected")
     }
     traversedCursors.add(nextCursor)
-    request = { cursor: nextCursor, limit: 100 }
+    request = { ...pollScope, cursor: nextCursor, limit: 100 }
   }
 
   throw new Error(`Traversal exceeded ${maximumPages} pages`)
@@ -232,7 +241,9 @@ async function ingestTraversal(after = null) {
 
 async function commitRecordsAndCursor({ records, resumeCursor }) {
   // Replace this in-memory demo with one durable database transaction.
-  for (const record of records) durableRecords.set(record.launchId, record)
+  for (const record of records) {
+    durableRecords.set(`${record.chainId}:${record.launchId}`, record)
+  }
   durableResumeCursor = resumeCursor
 }
 
@@ -254,8 +265,8 @@ function wait(milliseconds) {
 }
 
 const [status, manifest] = await Promise.all([
-  getJson("/api/v2/status"),
-  getJson("/api/v2/manifest"),
+  getJson("/api/v2/status", { chainId }),
+  getJson(`/api/v2/manifests/${chainId}`),
 ])
 
 const backfill = await ingestTraversal()
@@ -275,13 +286,13 @@ In production, verify that the URLs selected from the discovery document stay on
 
 ## 6. Fetch one launch
 
-Use the launch ID returned by the feed for every record shape:
+Use the chain and launch ID returned by the feed for every record shape:
 
 ```text
-GET https://developers.programmable.family/api/v2/launches/{launchId}
+GET https://developers.programmable.family/api/v2/chains/{chainId}/launches/{launchId}
 ```
 
-URL-encode the complete launch ID as one path segment. This route covers project-only and multi-asset records.
+URL-encode the complete launch ID as one path segment. This route covers project-only and multi-asset records. The older `/api/v2/launches/{launchId}` route is an Ethereum-only compatibility alias; new integrations should not use it.
 
 For a token convenience lookup, use the detail route with an address returned by the feed:
 
@@ -296,8 +307,8 @@ Use the numeric chain ID and token contract address exactly as identity inputs. 
 Before shipping:
 
 - Validate responses against the repository JSON Schemas.
-- Deduplicate feed items by `launchId`; key assets by `chainId` and token address.
-- Preserve project-only records with `token: null`; key them by `projectId` and `launchId`, and retain their authenticated `assets` graph.
+- Deduplicate normalized feed items by `chainId + launchId`; key Router provenance by `chainId + Router address + launchId`, and key assets by `chainId` and token address.
+- Preserve project-only records with `token: null`; key them by chain, `projectId`, and `launchId`, and retain their authenticated `assets` graph.
 - Preserve the onchain launch timestamp rather than the time your service first observed the record.
 - Accept a null timestamp, partial identity or provenance, and unavailable supply without dropping a recognized launch.
 - Treat a degraded or unavailable response as a bounded partial view; keep recognized records, do not convert null into zero, and do not interpret absence as deletion.

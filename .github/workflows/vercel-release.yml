@@ -7,7 +7,7 @@ on:
         description: Exact fail-closed release transition
         required: true
         type: choice
-        options: [stage, promote, rollback]
+        options: [verify-planned, deploy-planned, stage, promote, rollback]
       stage_run_id:
         description: Successful stage run ID; promote only
         required: false
@@ -49,8 +49,8 @@ env:
   NPM_CONFIG_AUDIT: "false"
   NPM_CONFIG_FUND: "false"
   PRODUCTION_ORIGIN: https://developers.programmable.family
-  ROBINHOOD_STAGE_BUNDLE_PATH: release/robinhood-chain-4663/programmable-stage-bundle.json
-  ROBINHOOD_PROMOTION_BUNDLE_PATH: release/robinhood-chain-4663/programmable-promotion-bundle.json
+  CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH: release/robinhood-chain-4663/programmable-stage-bundle.json
+  CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH: release/robinhood-chain-4663/programmable-promotion-bundle.json
   INDEXER_RELEASE_IDENTITY_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-release-identity.json
   INDEXER_DEPLOYMENT_RECEIPT_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-deployment-receipt.json
   INDEXER_RELEASE_AUDIT_PATH: docs/operations/releases/robinhood-chain-4663/robinhood-mainnet-indexer-release-audit.json
@@ -84,7 +84,7 @@ jobs:
           set -euo pipefail
           decimal='^[1-9][0-9]*$'
           case "$OPERATION" in
-            stage)
+            verify-planned|deploy-planned|stage)
               test -z "$STAGE_RUN_ID" && test -z "$PREVIOUS_RUN_ID" && test -z "$PROMOTION_RUN_ID"
               ;;
             promote)
@@ -145,29 +145,48 @@ jobs:
           OPERATION: ${{ inputs.operation }}
         run: |
           set -euo pipefail
-          if test "$OPERATION" = stage; then
-            unset ROBINHOOD_PROMOTION_BUNDLE_PATH
-          else
-            unset ROBINHOOD_STAGE_BUNDLE_PATH
-          fi
+          case "$OPERATION" in
+            verify-planned|deploy-planned)
+              unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
+              ;;
+            stage)
+              export ROBINHOOD_STAGE_BUNDLE_PATH="$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
+              unset ROBINHOOD_PROMOTION_BUNDLE_PATH
+              ;;
+            promote|rollback)
+              unset ROBINHOOD_STAGE_BUNDLE_PATH
+              export ROBINHOOD_PROMOTION_BUNDLE_PATH="$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+              ;;
+            *) exit 1 ;;
+          esac
           npm run build
           npm run check
           git diff --exit-code
 
-      - name: Validate exact phase bundle without inferring public authority
+      - name: Validate exact selected release contract without inferring public authority
         id: bundle
         env:
           OPERATION: ${{ inputs.operation }}
         run: |
           set -euo pipefail
           mkdir -p .release-evidence/source
-          if test "$OPERATION" = stage; then
-            phase=stage
-            bundle_path="$ROBINHOOD_STAGE_BUNDLE_PATH"
-          else
-            phase=promotion
-            bundle_path="$ROBINHOOD_PROMOTION_BUNDLE_PATH"
-          fi
+          case "$OPERATION" in
+            verify-planned|deploy-planned)
+              test ! -e "$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
+              test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+              printf 'digest=\n' >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            stage)
+              phase=stage
+              bundle_path="$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
+              ;;
+            promote|rollback)
+              phase=promotion
+              bundle_path="$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+              ;;
+            *) exit 1 ;;
+          esac
           npm run release:vercel -- validate-bundle \
             --phase "$phase" \
             --repository-root "$GITHUB_WORKSPACE" \
@@ -178,6 +197,366 @@ jobs:
           digest="$(npm run --silent release:vercel -- field \
             --file .release-evidence/source/bundle.json --path bundleDigest)"
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+
+  verify-planned:
+    name: Verify source-bound planned public readback
+    if: >-
+      inputs.operation == 'verify-planned' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install locked readback dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          test "$(./node_modules/.bin/vercel --version | tail -n 1)" = "59.10.0"
+
+      - name: Pull exact Vercel project binding
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
+          ./node_modules/.bin/vercel pull --yes --environment=production \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Bind current public deployment to exact planned source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/planned
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned/deployment-before.json
+
+      - name: Smoke planned public endpoints without bypass
+        run: |
+          set -euo pipefail
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+            --mode planned --protection-bypass false \
+            --output .release-evidence/planned/smoke.json
+
+      - name: Reconfirm the same source-bound public deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned/deployment-after.json
+          before_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned/deployment-before.json --path deployment.id)"
+          after_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned/deployment-after.json --path deployment.id)"
+          test "$before_id" = "$after_id"
+
+      - name: Upload immutable planned readback
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-planned-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/planned
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report planned boundary
+        run: |
+          {
+            printf '### Planned public readback verified\n\n'
+            printf -- '- Source revision: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Source tree: `%s`\n' "${{ needs.validate-source.outputs.source-tree }}"
+            printf -- '- No deployment or alias mutation was performed\n'
+            printf -- '- No Robinhood phase bundle was selected\n'
+            printf -- '- `publicWrites:false`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-planned:
+    name: Deploy source-bound planned docs release
+    if: >-
+      inputs.operation == 'deploy-planned' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install audited locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit --ignore-scripts
+          test "$(./node_modules/.bin/vercel --version | tail -n 1)" = "59.10.0"
+
+      - name: Build and check exact planned source
+        run: |
+          set -euo pipefail
+          unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
+          test ! -e "$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
+          test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+          npm run build
+          npm run check
+          git diff --exit-code
+
+      - name: Pull exact Vercel project binding
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
+          ./node_modules/.bin/vercel pull --yes --environment=production \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Build exact production candidate bytes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: ./node_modules/.bin/vercel build --prod --scope "$VERCEL_ORG_ID"
+
+      - name: Capture current public deployment before mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/planned-deploy
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/planned-deploy/previous-deployment.json
+
+      - name: Create unaliased source-bound planned candidate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vercel deploy --prebuilt --target=production \
+            --skip-domain --yes --json --scope "$VERCEL_ORG_ID" \
+            --meta "programmableSourceRevision=$GITHUB_SHA" \
+            --meta "programmableSourceTree=${{ needs.validate-source.outputs.source-tree }}" \
+            --meta "programmableReleaseMode=planned" \
+            > .release-evidence/planned-deploy/candidate-create.json
+
+      - name: Bind exact unaliased candidate to planned source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate-create.json --path deployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$candidate_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned-deploy/candidate.json
+
+      - name: Smoke exact planned candidate without bypass
+        run: |
+          set -euo pipefail
+          candidate_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate.json --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$candidate_url" npm run smoke:chain-4663 -- \
+            --mode planned --protection-bypass false \
+            --output .release-evidence/planned-deploy/candidate-smoke.json
+
+      - name: Reconfirm current protected main before Vercel mutation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Provider-requery exact candidate before alias mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate.json --path deployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$candidate_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned-deploy/candidate-pre-mutation.json
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --output .release-evidence/planned-deploy/previous-deployment-pre-mutation.json
+          previous_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/previous-deployment.json \
+            --path deployment.id)"
+          current_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/previous-deployment-pre-mutation.json \
+            --path deployment.id)"
+          test "$previous_id" = "$current_id"
+
+      - name: Promote only the verified planned candidate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set -euo pipefail
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate-pre-mutation.json \
+            --path deployment.id)"
+          ./node_modules/.bin/vercel promote "$candidate_id" --yes --scope "$VERCEL_ORG_ID"
+
+      - name: Bind public alias to the verified candidate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned-deploy/public-deployment.json
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate-pre-mutation.json \
+            --path deployment.id)"
+          public_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/public-deployment.json --path deployment.id)"
+          test "$candidate_id" = "$public_id"
+
+      - name: Smoke planned public endpoints without bypass
+        run: |
+          set -euo pipefail
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" npm run smoke:chain-4663 -- \
+            --mode planned --protection-bypass false \
+            --output .release-evidence/planned-deploy/public-smoke.json
+
+      - name: Reconfirm public alias after smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode planned \
+            --output .release-evidence/planned-deploy/public-deployment-after-smoke.json
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/candidate-pre-mutation.json \
+            --path deployment.id)"
+          public_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/planned-deploy/public-deployment-after-smoke.json \
+            --path deployment.id)"
+          test "$candidate_id" = "$public_id"
+          rm .release-evidence/planned-deploy/candidate-create.json
+
+      - name: Upload immutable planned deployment readback
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-planned-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/planned-deploy
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report planned deployment boundary
+        run: |
+          candidate=.release-evidence/planned-deploy/candidate-pre-mutation.json
+          {
+            printf '### Planned docs release deployed and read back\n\n'
+            printf -- '- Deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$candidate" --path deployment.id)"
+            printf -- '- Source revision: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Source tree: `%s`\n' "${{ needs.validate-source.outputs.source-tree }}"
+            printf -- '- No Robinhood phase bundle or protection bypass was used\n'
+            printf -- '- `publicWrites:false`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   stage:
     name: Stage protected unaliased deployment
@@ -284,6 +663,7 @@ jobs:
 
       - name: Smoke exact stage through scoped bypass
         env:
+          ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -euo pipefail
@@ -297,6 +677,7 @@ jobs:
 
       - name: Seal non-public stage receipt
         env:
+          ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
@@ -468,6 +849,7 @@ jobs:
 
       - name: Validate stage against provider and protected source
         env:
+          ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
@@ -487,6 +869,7 @@ jobs:
 
       - name: Smoke only the provider-verified stage
         env:
+          ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           url="$(npm run --silent release:vercel -- field \
@@ -523,6 +906,8 @@ jobs:
         id: plan
         env:
           PRIOR_RUN_ID: ${{ inputs.previous_promotion_run_id }}
+          ROBINHOOD_STAGE_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH }}
+          ROBINHOOD_PROMOTION_BUNDLE_PATH: ${{ env.CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |

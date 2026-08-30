@@ -2283,6 +2283,18 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
     source,
     stageBundleDigest: stageBundle.stageBundleDigest,
   }));
+  const plannedApi = structuredClone(api);
+  delete plannedApi.meta.programmableStageBundleDigest;
+  plannedApi.meta.programmableReleaseMode = "planned";
+  assert.doesNotThrow(() => assertVercelDeploymentMetadata(plannedApi, {
+    source,
+    releaseMode: "planned",
+  }));
+  plannedApi.meta.programmableStageBundleDigest = stageBundle.stageBundleDigest;
+  assert.throws(() => assertVercelDeploymentMetadata(plannedApi, {
+    source,
+    releaseMode: "planned",
+  }), /selects a phase bundle/u);
   assert.throws(() => protectionEvidence(
     normalized,
     "2026-08-29T14:59:00.000Z",
@@ -2662,16 +2674,21 @@ test("binds selected GitHub runs, artifacts, and the canonical owner dispatch", 
   }), /must not invent a second-party reviewer gate/u);
 });
 
-test("pins a protected two-phase Vercel workflow with scoped secrets and public smokes", async () => {
+test("pins planned deployment/readback and a protected two-phase Vercel workflow", async () => {
   const workflowPath = path.resolve(".github/workflows/vercel-release.yml");
   const text = await readFile(workflowPath, "utf8");
   const document = parseYaml(text);
   assert.deepEqual(Object.keys(document.jobs), [
-    "validate-source", "stage", "prepare-promotion", "promote", "prepare-rollback", "rollback",
+    "validate-source", "verify-planned", "deploy-planned", "stage", "prepare-promotion",
+    "promote", "prepare-rollback", "rollback",
   ]);
   assert.deepEqual(document.permissions, { contents: "read", actions: "read" });
-  assert.equal(document.env.ROBINHOOD_STAGE_BUNDLE_PATH, CANONICAL_STAGE_BUNDLE_PATH);
-  assert.equal(document.env.ROBINHOOD_PROMOTION_BUNDLE_PATH, CANONICAL_PROMOTION_BUNDLE_PATH);
+  assert.equal(document.env.ROBINHOOD_STAGE_BUNDLE_PATH, undefined);
+  assert.equal(document.env.ROBINHOOD_PROMOTION_BUNDLE_PATH, undefined);
+  assert.equal(document.env.CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH,
+    CANONICAL_STAGE_BUNDLE_PATH);
+  assert.equal(document.env.CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH,
+    CANONICAL_PROMOTION_BUNDLE_PATH);
   assert.equal(document.env.INDEXER_RELEASE_IDENTITY_PATH,
     CANONICAL_INDEXER_RELEASE_IDENTITY_PATH);
   assert.equal(document.env.INDEXER_DEPLOYMENT_RECEIPT_PATH,
@@ -2713,7 +2730,9 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   }
   assert.equal(document.jobs.promote.environment, "production");
   assert.equal(document.jobs.rollback.environment, "production");
-  for (const name of ["stage", "promote", "rollback"]) {
+  assert.equal(document.jobs["verify-planned"].environment, "production");
+  assert.equal(document.jobs["deploy-planned"].environment, "production");
+  for (const name of ["deploy-planned", "stage", "promote", "rollback"]) {
     const mutationGate = document.jobs[name].steps.find((step) =>
       step.name === "Reconfirm current protected main before Vercel mutation");
     assert.match(mutationGate?.run ?? "", /origin\/main\^\{commit\}.*GITHUB_SHA/su,
@@ -2735,6 +2754,40 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   assert.equal(actionRefs.every((reference) => /^[0-9a-f]{40}$/u.test(reference)), true);
   assert.doesNotMatch(text, /\bnpx\b|npm exec|--package=/u);
   assert.doesNotMatch(text, /--token\b/u);
+  const plannedReadback = JSON.stringify(document.jobs["verify-planned"]);
+  assert.match(plannedReadback, /--release-mode planned/u);
+  assert.match(plannedReadback, /--mode planned --protection-bypass false/u);
+  assert.doesNotMatch(plannedReadback,
+    /ROBINHOOD_(?:STAGE|PROMOTION)_BUNDLE_PATH|vercel (?:deploy|promote|rollback)|--skip-domain/u,
+    "planned verification must not select a phase bundle or mutate Vercel");
+  const plannedDeploy = JSON.stringify(document.jobs["deploy-planned"]);
+  assert.match(plannedDeploy,
+    /unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u);
+  for (const step of document.jobs["deploy-planned"].steps) {
+    assert.equal(step.env?.ROBINHOOD_STAGE_BUNDLE_PATH, undefined,
+      `${step.name} must not select the stage bundle`);
+    assert.equal(step.env?.ROBINHOOD_PROMOTION_BUNDLE_PATH, undefined,
+      `${step.name} must not select the promotion bundle`);
+  }
+  assert.doesNotMatch(plannedDeploy,
+    /--bundle(?:-phase)?|VERCEL_AUTOMATION_BYPASS_SECRET|--protection-bypass true/u);
+  assert.match(plannedDeploy,
+    /vercel deploy --prebuilt --target=production[\s\S]*--skip-domain/u);
+  assert.match(plannedDeploy,
+    /programmableReleaseMode=planned/u);
+  assert.match(plannedDeploy,
+    /candidate_url[\s\S]*--mode planned --protection-bypass false/u);
+  assert.match(plannedDeploy,
+    /previous-deployment-pre-mutation\.json[\s\S]*test [^\n]*previous_id[^\n]*current_id/u,
+    "planned publication must reject concurrent public-alias drift");
+  assert.match(plannedDeploy,
+    /vercel promote[^\n]*candidate_id[^\n]*--yes/u);
+  assert.match(plannedDeploy,
+    /PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*public-smoke\.json/u);
+  const sourceValidation = JSON.stringify(document.jobs["validate-source"]);
+  assert.match(sourceValidation,
+    /verify-planned[\s\S]*unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u,
+    "planned source validation must clear both phase selectors");
   assert.match(text, /--skip-domain/u);
   assert.match(text, /--phase "\$phase"/u);
   assert.match(text, /--bundle-phase stage --bundle "\$ROBINHOOD_STAGE_BUNDLE_PATH"/u);
@@ -2770,7 +2823,7 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   assert.equal(canonicalSha256(
     "programmable.developers.vercel-routing-defaults.v1",
     frozenRoutingDefaults,
-  ), "sha256:167196cd215e815e91a90d24e9318f8e82198776b55fbbfc5da9253bff195708",
+  ), "sha256:c7f50c104e54e4c0496abce63bb218c4f2edb3ebf71d8b640b09166c06fe1074",
   "V1/V2 routes, asset defaults, redirects, and security headers must remain byte-semantic stable");
   const releaseCliSource = await readFile(path.resolve("scripts/vercel-release.mjs"), "utf8");
   assert.match(releaseCliSource,
@@ -2801,6 +2854,8 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   assert.match(providerCapture,
     /path\.join\(ROOT, "node_modules", "\.bin", "vercel"\)/u);
   assert.doesNotMatch(providerCapture, /\bnpx\b|--token\b/u);
+  assert.match(providerCapture,
+    /planned candidate must remain unaliased until its public smoke succeeds/u);
   const repositoryCheck = await readFile(path.resolve("scripts/check.mjs"), "utf8");
   assert.match(repositoryCheck, /git.*ls-files.*--error-unmatch/su,
     "ordinary repository checks must require tracked phase evidence");
@@ -2823,6 +2878,15 @@ test("pins a protected two-phase Vercel workflow with scoped secrets and public 
   }
   assert.match(runbook, /no established distinct release reviewer/u,
     "release runbook must explain the repository-grounded single-owner boundary");
+  assert.match(runbook,
+    /operation: verify-planned[\s\S]*never creates a Vercel deployment[\s\S]*publicWrites:false/u,
+    "release runbook must preserve the non-mutating planned/null boundary");
+  assert.match(runbook,
+    /programmableReleaseMode=planned[\s\S]*must not carry `programmableStageBundleDigest`/u,
+    "planned deployment documentation must bind source without phase evidence");
+  assert.match(runbook,
+    /operation: deploy-planned[\s\S]*--skip-domain[\s\S]*vercel promote[\s\S]*publicWrites:false/u,
+    "runbook must document candidate-first planned publication and its read-only boundary");
   assert.match(await readFile(path.resolve(".gitignore"), "utf8"),
     /^\.release-evidence\/$/mu,
     "runtime evidence must stay untracked without weakening canonical evidence paths");

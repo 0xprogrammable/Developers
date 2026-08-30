@@ -39,7 +39,10 @@ import {
   publicLaunch,
 } from "../server/normalize.js";
 import { createSchemaRegistry, assertValid } from "../scripts/lib/schema.mjs";
-import { provenanceManifestMatch } from "../examples/lib/programmable-client.mjs";
+import {
+  advertisedDeploymentAddresses,
+  provenanceManifestMatch,
+} from "../examples/lib/programmable-client.mjs";
 
 function record(block, transaction, log, addressByte) {
   const sortKey = `${String(block).padStart(16, "0")}:${String(transaction).padStart(10, "0")}:${String(log).padStart(10, "0")}:0x${addressByte.repeat(40)}`;
@@ -973,6 +976,30 @@ describe("server projections", () => {
     assert.equal(normalized.launch.modelVersion, "3");
     assert.equal(match.sourceIdMatched, true);
     assert.equal(match.matched, true);
+  });
+
+  test("matches the top-level launch stamp Router as a manifest provenance role", async () => {
+    const manifest = JSON.parse(
+      await readFile(
+        new URL("../deployments/ethereum-v2.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    const router = manifest.launchStampRouter;
+    const match = provenanceManifestMatch(manifest, {
+      launcherAddress: router.address,
+      sourceId: `programmable-launch-stamp-router-v${router.version}`,
+    });
+
+    assert.deepEqual(match, {
+      role: "launchStampRouter",
+      matched: true,
+      sourceIdMatched: true,
+    });
+    assert.equal(
+      advertisedDeploymentAddresses(manifest).has(router.address.toLowerCase()),
+      true,
+    );
   });
 
   test("includes only finalized launches with complete identity in the token list", async () => {

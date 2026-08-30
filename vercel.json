@@ -191,6 +191,10 @@
       "destination": "/api/v2/launches/:chainId/:tokenAddress"
     },
     {
+      "source": "/v2/chains/:chainId/launches/:launchId",
+      "destination": "/api/v2/chains/:chainId/launches/:launchId"
+    },
+    {
       "source": "/api/v2/launches/:launchId",
       "destination": "/api/v2/launch-detail?launchId=:launchId"
     },

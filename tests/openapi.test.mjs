@@ -52,6 +52,7 @@ describe("OpenAPI v2 contract", () => {
     assert.equal(spec.info.version, "2.0.0");
     assert.deepEqual(Object.keys(spec.paths).sort(), [
       "/.well-known/programmable.json",
+      "/api/v2/chains/{chainId}/launches/{launchId}",
       "/api/v2/launches",
       "/api/v2/launches/{chainId}/{tokenAddress}",
       "/api/v2/launches/{launchId}",
@@ -261,6 +262,7 @@ describe("OpenAPI v2 contract", () => {
   test("documents problem JSON and filter parity on every v2 feed route", () => {
     for (const route of [
       "/api/v2/launches",
+      "/api/v2/chains/{chainId}/launches/{launchId}",
       "/api/v2/launches/{chainId}/{tokenAddress}",
       "/api/v2/launches/{launchId}",
       "/api/v2/token-list",
@@ -278,5 +280,29 @@ describe("OpenAPI v2 contract", () => {
         assert.ok(resolved.content?.["application/problem+json"], `${route} ${code}`);
       }
     }
+  });
+
+  test("publishes chain-scoped launch lookup and cursor scope semantics", () => {
+    const chainLookup =
+      spec.paths["/api/v2/chains/{chainId}/launches/{launchId}"].get;
+    assert.deepEqual(
+      chainLookup.parameters.map((value) => value.$ref),
+      [
+        "#/components/parameters/ChainIdPath",
+        "#/components/parameters/LaunchIdPath",
+      ],
+    );
+    assert.match(
+      spec.paths["/api/v2/launches/{launchId}"].get.description,
+      /Ethereum compatibility alias/u,
+    );
+    assert.match(
+      spec.components.parameters.CursorQuery.description,
+      /same `chainId` and `category`/u,
+    );
+    assert.match(
+      spec.components.parameters.AfterQuery.description,
+      /same `chainId` and `category`/u,
+    );
   });
 });

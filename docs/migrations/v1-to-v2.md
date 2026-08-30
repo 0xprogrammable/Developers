@@ -24,7 +24,7 @@ Provider names, factories, hook addresses, token addresses and template versions
 | `/api/v1/status` | `/api/v2/status` |
 | `/api/v1/manifest` | `/api/v2/manifest` |
 | `/api/v1/launches` | `/api/v2/launches` |
-| No launch-ID detail route | `/api/v2/launches/{launchId}` |
+| No launch-ID detail route | `/api/v2/chains/{chainId}/launches/{launchId}`; the unqualified route remains an Ethereum alias |
 | `/api/v1/launches/{chainId}/{tokenAddress}` | `/api/v2/launches/{chainId}/{tokenAddress}` |
 | `/api/v1/token-list` | `/api/v2/token-list` |
 | `/openapi/programmable-v1.yaml` | `/openapi/programmable-v2.yaml` |
@@ -36,7 +36,7 @@ The pagination model, response shape and read-only security boundary remain the 
 
 1. Read `/.well-known/programmable.json` and use its v2 URLs.
 2. Start a new v2 backfill and persist the v2 `resumeCursor`.
-3. Deduplicate by `launchId` and use the launch-ID detail route for project-only or multi-asset records.
+3. Deduplicate normalized records by chain ID plus `launchId` and use the chain-qualified launch-ID detail route for project-only or multi-asset records.
 4. Preserve `token: null`, authenticated assets, and zero, one, or several markets without fabricating a token or pool.
 5. Map only `classic` and `custom` to the two exact display labels above.
 6. Remove v1 Stock-Paired records from any Programmable Custom filter.

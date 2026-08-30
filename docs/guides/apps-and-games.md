@@ -8,7 +8,8 @@ Fetch the launch record and decide what your product understands:
 
 ```js
 const baseUrl = "https://developers.programmable.family"
-const feedResponse = await fetch(`${baseUrl}/api/v2/launches?limit=1`)
+const chainId = 1
+const feedResponse = await fetch(`${baseUrl}/api/v2/launches?chainId=${chainId}&limit=1`)
 if (!feedResponse.ok) throw new Error(`Feed lookup failed: ${feedResponse.status}`)
 
 const feed = await feedResponse.json()
@@ -16,7 +17,7 @@ const first = feed.items[0]
 if (!first) throw new Error("No registered launch is currently available")
 
 const response = await fetch(
-  `${baseUrl}/api/v2/launches/${encodeURIComponent(first.launchId)}`,
+  `${baseUrl}/api/v2/chains/${first.chainId}/launches/${encodeURIComponent(first.launchId)}`,
 )
 
 if (!response.ok) throw new Error(`Launch lookup failed: ${response.status}`)

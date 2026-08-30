@@ -97,7 +97,7 @@ For each enabled Classic V3 or V4 deployment:
 6. Derive the launch and asset identities according to the published schema; never use name, symbol, image, or creator text as identity.
 7. Reconcile the normalized result with the API record and retain any evidence conflict for operator review.
 
-Multiple enabled deployments can overlap. Deduplicate the normalized launch by `launchId`, not by whichever deployment your scanner encountered first. Refreshing the manifest is sufficient for a generic scanner to discover V4; no new hard-coded address or category is required.
+Multiple enabled deployments can overlap. Deduplicate the normalized launch by chain ID plus `launchId`, not by whichever deployment your scanner encountered first. Retain chain ID plus Router address plus `launchId` for exact Router provenance. Refreshing the manifest is sufficient for a generic scanner to discover V4; no new hard-coded address or category is required.
 
 ## Launch stamp Router verification
 

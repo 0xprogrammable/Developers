@@ -6,7 +6,10 @@ import {
   createLaunchesHandler,
   launchFeedPayload,
 } from "../api/v2/launches.js";
-import { createLaunchIdDetailHandler } from "../api/v2/launch-detail.js";
+import {
+  createChainLaunchIdDetailHandler,
+  createLaunchIdDetailHandler,
+} from "../api/v2/launch-detail.js";
 import { createLaunchDetailHandler } from
   "../api/v2/launches/[chainId]/[tokenAddress].js";
 import {
@@ -453,6 +456,123 @@ describe("v2 API contract", () => {
     assert.equal(response.status, 200);
     assert.equal(response.body.launchId, project.launchId);
     assert.equal(response.body.token, null);
+  });
+
+  test("scopes launchId detail lookup to the requested chain", async () => {
+    const sharedLaunchId = "fixture:shared-launch-id";
+    const ethereum = launch(10, { chainId: 1, launchId: sharedLaunchId });
+    const robinhood = launch(11, {
+      chainId: 4663,
+      launchId: sharedLaunchId,
+      token: null,
+    });
+    const datasets = new Map([
+      [1, dataset([ethereum], { chainId: 1, supportedChainIds: [1, 4663] })],
+      [4663, dataset([robinhood], { chainId: 4663, supportedChainIds: [1, 4663] })],
+    ]);
+    let loadedChainId = null;
+    const handler = createChainLaunchIdDetailHandler(async (chainId) => {
+      loadedChainId = chainId;
+      return datasets.get(chainId);
+    });
+
+    const response = await call(
+      handler,
+      { chainId: "4663", launchId: sharedLaunchId },
+      `/api/v2/chains/4663/launches/${sharedLaunchId}`,
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(loadedChainId, 4663);
+    assert.equal(response.body.chainId, 4663);
+    assert.equal(response.body.launchId, sharedLaunchId);
+    assert.equal(response.body.token, null);
+  });
+
+  test("rejects an invalid chain before loading launchId detail data", async () => {
+    let loaded = false;
+    const handler = createChainLaunchIdDetailHandler(async () => {
+      loaded = true;
+      return dataset([]);
+    });
+    const response = await call(
+      handler,
+      { chainId: "0", launchId: "fixture:10" },
+      "/api/v2/chains/0/launches/fixture:10",
+    );
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.code, "invalid-chain-id");
+    assert.equal(loaded, false);
+  });
+
+  test("does not return a matching launchId from another chain", async () => {
+    const sharedLaunchId = "fixture:shared-launch-id";
+    const otherChain = launch(10, { chainId: 1, launchId: sharedLaunchId });
+    const current = dataset([otherChain], {
+      chainId: 4663,
+      supportedChainIds: [1, 4663],
+    });
+    const handler = createChainLaunchIdDetailHandler(async () => current);
+    const response = await call(
+      handler,
+      { chainId: "4663", launchId: sharedLaunchId },
+      `/api/v2/chains/4663/launches/${sharedLaunchId}`,
+    );
+
+    assert.equal(response.status, 404);
+    assert.equal(response.body.code, "launch-not-found");
+  });
+
+  test("keeps planned-chain launchId absence non-authoritative", async () => {
+    const current = dataset([], {
+      status: "unavailable",
+      chainId: 4663,
+      supportedChainIds: [1, 4663],
+      coverage: { status: "unavailable", checkpoint: null },
+    });
+    const handler = createChainLaunchIdDetailHandler(async () => current);
+    const response = await call(
+      handler,
+      { chainId: "4663", launchId: "fixture:planned" },
+      "/api/v2/chains/4663/launches/fixture:planned",
+    );
+
+    assert.equal(response.status, 503);
+    assert.equal(response.body.code, "index-coverage-incomplete");
+  });
+
+  test("reports an unsupported chain without converting it to availability failure", async () => {
+    const handler = createChainLaunchIdDetailHandler(async () => {
+      throw Object.assign(new Error("unsupported"), { code: "CHAIN_NOT_SUPPORTED" });
+    });
+    const response = await call(
+      handler,
+      { chainId: "8453", launchId: "fixture:10" },
+      "/api/v2/chains/8453/launches/fixture:10",
+    );
+
+    assert.equal(response.status, 404);
+    assert.equal(response.body.code, "chain-not-supported");
+  });
+
+  test("keeps the legacy launchId route as an Ethereum-only alias", async () => {
+    const sharedLaunchId = "fixture:shared-launch-id";
+    const ethereum = launch(10, { chainId: 1, launchId: sharedLaunchId });
+    const robinhood = launch(11, { chainId: 4663, launchId: sharedLaunchId });
+    const current = dataset([robinhood, ethereum], {
+      supportedChainIds: [1, 4663],
+    });
+    const handler = createLaunchIdDetailHandler(async () => current);
+
+    const response = await call(
+      handler,
+      { launchId: sharedLaunchId },
+      `/api/v2/launches/${sharedLaunchId}`,
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.chainId, 1);
   });
 
   test("token lookup ignores project-only records and avoids a false 404 on stale Custom coverage", async () => {

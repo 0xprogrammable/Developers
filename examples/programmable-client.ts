@@ -138,6 +138,15 @@ export class ProgrammableClient {
     return this.get(`/api/v2/launches/${encodeURIComponent(required(launchId, "launchId"))}`)
   }
 
+  launchByIdForChain(chainId: number, launchId: string): Promise<LaunchRecord> {
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("chainId must be a positive safe integer")
+    }
+    return this.get(
+      `/api/v2/chains/${chainId}/launches/${encodeURIComponent(required(launchId, "launchId"))}`,
+    )
+  }
+
   launchByToken(chainId: number, tokenAddress: string): Promise<LaunchRecord> {
     if (!Number.isSafeInteger(chainId) || chainId <= 0) {
       throw new Error("chainId must be a positive safe integer")

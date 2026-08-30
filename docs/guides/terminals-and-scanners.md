@@ -29,11 +29,17 @@ Every recognized Custom launch uses the same `custom` category even when its tok
 
 The baseline integration discovers every recognized launch. Charting, quotes, simulation, and execution are separate per-market capabilities and may be unavailable.
 
+## Chain selection and release state
+
+Ethereum Mainnet (`chainId: 1`) is the active Developer read lane. Robinhood Chain Mainnet (`chainId: 4663`) is advertised only as planned until its manifest publishes the exact deployment roots and both its API and read model are promoted. A planned manifest or an HTTP `200` with `unavailable` quality is not evidence of a live Router, pool, token, indexer, or trading path.
+
+Select a chain from `/.well-known/programmable.json`, then use `/api/v2/manifests/{chainId}`, `/api/v2/status?chainId={chainId}`, and `/api/v2/launches?chainId={chainId}`. Keep the same chain and category on every cursor continuation and later `after` poll. For a planned or unavailable chain, retain any recognized bounded records, but do not start Router scanning, enable charting or trading, or treat an absent record as authoritative. See [Indexers and data platforms](indexers.md) for cursor and checkpoint rules.
+
 ## Minimum integration
 
 1. Fetch `/.well-known/programmable.json`.
-2. Read `/api/v2/status` and `/api/v2/manifest`.
-3. Backfill `/api/v2/launches` until `page.hasMore` is false.
+2. Select one advertised chain and read `/api/v2/status?chainId={chainId}` plus `/api/v2/manifests/{chainId}`.
+3. Backfill `/api/v2/launches?chainId={chainId}` until `page.hasMore` is false, preserving the chain and category scope on every page.
 4. Persist `launchId`, project and asset identities, provenance, timestamp, finality, markets, capabilities, and fees.
 5. Use `page.nextCursor` to finish the current traversal, then persist `page.resumeCursor` and poll with `after`.
 6. Reconcile finality and explicit reorg states.
