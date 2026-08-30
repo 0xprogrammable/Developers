@@ -17,6 +17,7 @@ import {
   DEVELOPERS_PROMOTION_INPUT_SCHEMA,
   PROMOTION_BUNDLE_SCHEMA,
   PROMOTION_PLAN_SCHEMA,
+  PLANNED_DEPLOY_AUTHORIZATION_SCHEMA,
   PRODUCTION_ORIGIN,
   PUBLIC_AUTHORIZATION_SCHEMA,
   RELEASE_CONSTANTS,
@@ -34,6 +35,7 @@ import {
   createStageProtectionEvidence,
   createStageReceipt,
   createEvidenceOnlySourceTransition,
+  createPlannedDeployAuthorization,
   createPreMutationState,
   frozenEthereumV3Identity,
   hashBuildOutput,
@@ -43,6 +45,7 @@ import {
   parseStageBundle,
   parsePromotionPlan,
   parsePromotionReceipt,
+  parsePlannedDeployAuthorization,
   parsePublicAuthorization,
   parseRollbackPlan,
   parseStageReceipt,
@@ -2324,6 +2327,86 @@ test("normalizes Vercel evidence and rejects a staged production alias", () => {
   }), /public production alias/u);
 });
 
+test("binds both planned Vercel mutations to fresh owner and protected-candidate evidence", () => {
+  const currentDeployment = deployment(
+    "dpl_previous123",
+    "https://developers-previous.vercel.app/",
+    [new URL(PRODUCTION_ORIGIN).hostname],
+  );
+  const candidateDeployment = deployment(
+    "dpl_planned123",
+    "https://developers-planned.vercel.app/",
+  );
+  const creationAuthorizedAt = "2026-08-29T15:01:00.000Z";
+  const creation = createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  });
+  assert.equal(creation.schemaVersion, PLANNED_DEPLOY_AUTHORIZATION_SCHEMA);
+  assert.equal(creation.publicAuthorization, false);
+  assert.equal(creation.publicWrites, false);
+  assert.equal(parsePlannedDeployAuthorization(creation).mutation, "create-candidate");
+
+  const protection = protectionEvidence(
+    candidateDeployment,
+    "2026-08-29T15:02:00.000Z",
+  );
+  const candidateSmoke = smoke(
+    "planned",
+    candidateDeployment.url,
+    undefined,
+    "2026-08-29T15:03:00.000Z",
+  );
+  const promotionAuthorizedAt = "2026-08-29T15:04:00.000Z";
+  const promotion = createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment,
+    candidateDeployment,
+    candidateProtectionEvidence: protection,
+    candidateSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(promotionAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: promotionAuthorizedAt,
+  });
+  assert.equal(promotion.publicAuthorization, false);
+  assert.equal(promotion.publicWrites, false);
+  assert.equal(promotion.candidateProtectionEvidence.publicAccess, false);
+  assert.equal(parsePlannedDeployAuthorization(promotion).mutation, "promote-candidate");
+
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "promote-candidate",
+    source,
+    target,
+    currentDeployment,
+    candidateDeployment,
+    candidateProtectionEvidence: protectionEvidence(
+      candidateDeployment,
+      "2026-08-29T14:50:00.000Z",
+    ),
+    candidateSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(promotionAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: promotionAuthorizedAt,
+  }), /must complete within five minutes/u);
+  assert.throws(() => createPlannedDeployAuthorization({
+    mutation: "create-candidate",
+    source,
+    target,
+    currentDeployment,
+    candidateDeployment,
+    ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
+    workflow,
+    authorizedAt: creationAuthorizedAt,
+  }), /must not claim a candidate/u);
+});
+
 test("separates stage, owner authorization, promotion, and exact rollback receipts", () => {
   const stageBundle = stageFixture();
   const bundle = promotionFixture();
@@ -2760,30 +2843,85 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.doesNotMatch(plannedReadback,
     /ROBINHOOD_(?:STAGE|PROMOTION)_BUNDLE_PATH|vercel (?:deploy|promote|rollback)|--skip-domain/u,
     "planned verification must not select a phase bundle or mutate Vercel");
-  const plannedDeploy = JSON.stringify(document.jobs["deploy-planned"]);
+  const plannedDeployJob = document.jobs["deploy-planned"];
+  const plannedDeploy = JSON.stringify(plannedDeployJob);
   assert.match(plannedDeploy,
     /unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u);
-  for (const step of document.jobs["deploy-planned"].steps) {
+  for (const step of plannedDeployJob.steps) {
     assert.equal(step.env?.ROBINHOOD_STAGE_BUNDLE_PATH, undefined,
       `${step.name} must not select the stage bundle`);
     assert.equal(step.env?.ROBINHOOD_PROMOTION_BUNDLE_PATH, undefined,
       `${step.name} must not select the promotion bundle`);
   }
-  assert.doesNotMatch(plannedDeploy,
-    /--bundle(?:-phase)?|VERCEL_AUTOMATION_BYPASS_SECRET|--protection-bypass true/u);
+  assert.doesNotMatch(plannedDeploy, /--bundle(?:-phase)?/u);
   assert.match(plannedDeploy,
     /vercel deploy --prebuilt --target=production[\s\S]*--skip-domain/u);
   assert.match(plannedDeploy,
     /programmableReleaseMode=planned/u);
   assert.match(plannedDeploy,
-    /candidate_url[\s\S]*--mode planned --protection-bypass false/u);
+    /candidate_url[\s\S]*--mode planned --protection-bypass true/u);
+  assert.match(plannedDeploy,
+    /candidate\.json[\s\S]*--protection-output \.release-evidence\/planned-deploy\/candidate-protection\.json/u);
+  assert.match(plannedDeploy,
+    /candidate-pre-mutation\.json[\s\S]*--protection-output[\s\S]*candidate-protection-pre-mutation\.json/u);
+  const protectedCandidateSmokeSteps = plannedDeployJob.steps.filter((step) =>
+    step.env?.VERCEL_AUTOMATION_BYPASS_SECRET !== undefined);
+  assert.deepEqual(protectedCandidateSmokeSteps.map((step) => step.name), [
+    "Smoke exact protected planned candidate through scoped bypass",
+    "Fresh authenticated smoke of provider-verified planned candidate",
+  ]);
+  for (const step of protectedCandidateSmokeSteps) {
+    assert.equal(step.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+      "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}");
+    assert.match(step.run, /candidate[^\n]*[\s\S]*--mode planned --protection-bypass true/u);
+    assert.doesNotMatch(step.run, /PRODUCTION_ORIGIN/u);
+  }
+  for (const step of plannedDeployJob.steps.filter((candidate) =>
+    !protectedCandidateSmokeSteps.includes(candidate))) {
+    assert.equal(step.env?.VERCEL_AUTOMATION_BYPASS_SECRET, undefined,
+      `${step.name} must not receive the Vercel automation bypass secret`);
+  }
+  const candidateAuthorization = plannedDeployJob.steps.find((step) =>
+    step.name === "Authorize protected planned candidate creation");
+  const promotionAuthorization = plannedDeployJob.steps.find((step) =>
+    step.name === "Reauthorize protected planned alias mutation");
+  for (const authorizationStep of [candidateAuthorization, promotionAuthorization]) {
+    assert.match(authorizationStep?.run ?? "", /actions\/runs\/\$GITHUB_RUN_ID/u);
+    assert.match(authorizationStep?.run ?? "", /environments\/production/u);
+    assert.match(authorizationStep?.run ?? "", /authorize-planned-deploy/u);
+    assert.equal(authorizationStep?.env?.RELEASE_CONTROL_ENVIRONMENT, "production");
+  }
+  assert.match(candidateAuthorization.run, /--mutation create-candidate/u);
+  assert.match(candidateAuthorization.run,
+    /--current-deployment \.release-evidence\/planned-deploy\/previous-deployment\.json/u);
+  assert.match(promotionAuthorization.run, /--mutation promote-candidate/u);
+  assert.match(promotionAuthorization.run,
+    /--candidate-deployment[\s\S]*--candidate-protection-evidence[\s\S]*--candidate-smoke/u);
+  const plannedStepNames = plannedDeployJob.steps.map((step) => step.name);
+  const candidateSourceGate = plannedDeployJob.steps.find((step) =>
+    step.name === "Reconfirm current protected main before planned candidate creation");
+  assert.match(candidateSourceGate?.run ?? "", /origin\/main\^\{commit\}.*GITHUB_SHA/su);
+  assert.equal(plannedStepNames.indexOf(
+    "Reconfirm current protected main before planned candidate creation",
+  ) < plannedStepNames.indexOf("Authorize protected planned candidate creation"), true);
+  assert.equal(plannedStepNames.indexOf("Authorize protected planned candidate creation") <
+    plannedStepNames.indexOf("Create unaliased source-bound planned candidate"), true);
+  assert.equal(plannedStepNames.indexOf("Provider-requery exact candidate before alias mutation") <
+    plannedStepNames.indexOf("Reauthorize protected planned alias mutation"), true);
+  assert.equal(plannedStepNames.indexOf("Reconfirm current protected main before Vercel mutation") <
+    plannedStepNames.indexOf("Reauthorize protected planned alias mutation"), true);
+  assert.equal(plannedStepNames.indexOf("Reauthorize protected planned alias mutation") <
+    plannedStepNames.indexOf("Promote only the verified planned candidate"), true);
   assert.match(plannedDeploy,
     /previous-deployment-pre-mutation\.json[\s\S]*test [^\n]*previous_id[^\n]*current_id/u,
     "planned publication must reject concurrent public-alias drift");
   assert.match(plannedDeploy,
     /vercel promote[^\n]*candidate_id[^\n]*--yes/u);
   assert.match(plannedDeploy,
-    /PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*public-smoke\.json/u);
+    /promotion-authorization\.json[\s\S]*--path candidateDeployment\.id[\s\S]*vercel promote/u,
+    "planned alias mutation must select the candidate from its sealed authorization");
+  assert.match(plannedDeploy,
+    /PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*--mode planned --protection-bypass false[\s\S]*public-smoke\.json/u);
   const sourceValidation = JSON.stringify(document.jobs["validate-source"]);
   assert.match(sourceValidation,
     /verify-planned[\s\S]*unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH/u,
@@ -2829,6 +2967,12 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(releaseCliSource,
     /exactTrackedJson[\s\S]*metadata\.size > MAX_JSON_BYTES/u,
     "tracked release inputs need a local size budget independent of public provider lengths");
+  assert.match(releaseCliSource,
+    /authorizePlannedDeployCommand[\s\S]*validateGitHubOwnerDispatchAuthorization[\s\S]*createPlannedDeployAuthorization/u,
+    "planned mutations must reuse the canonical owner and environment validator");
+  assert.match(releaseCliSource,
+    /GITHUB_EVENT_NAME[\s\S]*workflow_dispatch[\s\S]*GITHUB_REF_PROTECTED[\s\S]*RELEASE_CONTROL_ENVIRONMENT[\s\S]*production/u,
+    "planned mutation authorization must require the protected manual production environment");
   const packageManifest = JSON.parse(await readFile(path.resolve("package.json"), "utf8"));
   const packageLock = JSON.parse(await readFile(path.resolve("package-lock.json"), "utf8"));
   assert.equal(packageManifest.devDependencies.vercel, "59.10.0");
@@ -2856,6 +3000,14 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.doesNotMatch(providerCapture, /\bnpx\b|--token\b/u);
   assert.match(providerCapture,
     /planned candidate must remain unaliased until its public smoke succeeds/u);
+  assert.match(providerCapture,
+    /protectionOutput[\s\S]*createStageProtectionEvidence/u,
+    "planned candidates must use the same provider protection proof as live stages");
+  const chainSmoke = await readFile(path.resolve("scripts/chain-4663-live-smoke.mjs"), "utf8");
+  assert.doesNotMatch(chainSmoke, /planned\/public smoke may not use a Vercel protection bypass/u);
+  assert.match(chainSmoke,
+    /VERCEL_AUTOMATION_BYPASS_SECRET[\s\S]*hostname\.endsWith\("\.vercel\.app"\)/u,
+    "a planned bypass must remain limited to a secret-authenticated generated Vercel origin");
   const repositoryCheck = await readFile(path.resolve("scripts/check.mjs"), "utf8");
   assert.match(repositoryCheck, /git.*ls-files.*--error-unmatch/su,
     "ordinary repository checks must require tracked phase evidence");
@@ -2887,6 +3039,12 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(runbook,
     /operation: deploy-planned[\s\S]*--skip-domain[\s\S]*vercel promote[\s\S]*publicWrites:false/u,
     "runbook must document candidate-first planned publication and its read-only boundary");
+  assert.match(runbook,
+    /external Vercel deployment and alias mutation[\s\S]*can_admins_bypass:true[\s\S]*stops the job/u,
+    "runbook must distinguish external provider mutation from Robinhood write authority");
+  assert.match(runbook,
+    /prod_deployment_urls_and_all_previews[\s\S]*--protection-bypass true[\s\S]*public origin[\s\S]*--protection-bypass false/u,
+    "runbook must keep generated candidates protected while public reads use no bypass");
   assert.match(await readFile(path.resolve(".gitignore"), "utf8"),
     /^\.release-evidence\/$/mu,
     "runtime evidence must stay untracked without weakening canonical evidence paths");

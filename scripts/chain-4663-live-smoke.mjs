@@ -70,9 +70,6 @@ function parseArguments(argv) {
   if (!["true", "false"].includes(protectionBypass)) {
     fail("--protection-bypass must be true or false");
   }
-  if (mode === "planned" && protectionBypass === "true") {
-    fail("planned/public smoke may not use a Vercel protection bypass");
-  }
   if (mode === "live" && bundlePhase === "stage" && protectionBypass !== "true") {
     fail("a Phase-A bundle may be used only for a protected dark-stage smoke");
   }
@@ -130,7 +127,7 @@ function bypassHeaders(enabled, origin) {
   if (!enabled) return {};
   const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
   if (!secret || !new URL(origin).hostname.endsWith(".vercel.app")) {
-    fail("protection bypass requires a verified Vercel generated deployment origin and secret");
+    fail("protection bypass requires a credential-free Vercel generated deployment origin and secret");
   }
   return { "x-vercel-protection-bypass": secret };
 }

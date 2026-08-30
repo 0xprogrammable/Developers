@@ -38,8 +38,9 @@ no public submissions, unavailable empty Robinhood feeds, null deployment roots,
 `publicWrites:false`. It grants no Phase-A, Phase-B, deployment, alias, or write authority.
 
 `operation: deploy-planned` is the owner-authorized docs/planned publication path. It accepts no
-deployment ID, URL, phase bundle, prior run, protection bypass, provider configuration, or onchain
-input. The safe dispatch input is exactly:
+deployment ID, URL, phase bundle, prior run, caller-supplied protection bypass, provider
+configuration, or onchain input. It is an external Vercel deployment and alias mutation even though
+the Robinhood contract remains `publicWrites:false`. The safe dispatch input is exactly:
 
 ```text
 operation: deploy-planned
@@ -51,20 +52,32 @@ promotion_run_id: <blank>
 The job checks the exact current protected `main` revision and tree, clears both phase selectors,
 requires both canonical phase files to be absent, and repeats the locked build and repository
 checks. It then builds Vercel production bytes from that checkout and creates one production-target
-candidate with `--skip-domain` and only the three planned source metadata fields above. The generated
-candidate must remain unaliased and pass the full chain-4663 planned smoke directly, without a
-protection bypass. A protected or otherwise unreadable candidate fails before any alias mutation;
-the workflow does not alter Vercel protection or other provider configuration to make it pass.
+candidate with `--skip-domain` and only the three planned source metadata fields above. Before that
+first provider mutation, the job freshly reads the current GitHub `workflow_dispatch` run and
+`production` environment and seals the exact canonical owner, run, attempt, source revision/tree,
+environment id `19441858925`, protected-main-only branch policy, and disabled administrator bypass.
+The currently configured `can_admins_bypass:true` therefore stops the job before candidate creation;
+the owner must separately correct the environment policy before this path can run.
 
-Immediately before mutation, the workflow rechecks protected `main` and provider-requeries the same
-source-bound, unaliased candidate. It also requires the current public deployment ID to remain the
-same one captured before candidate creation. Only the checked candidate ID is passed to
-`vercel promote`. The public
-origin must then resolve to the same ID, pass the same planned smoke without bypass, and still resolve
-to that ID after the smoke. The previous public deployment and all candidate/public readbacks are
-retained as evidence for manual recovery. This path publishes read-only docs and planned/null API
-state only; it cannot activate Robinhood, enable submissions, introduce deployment roots, configure
-an indexer, or inherit Phase-A/Phase-B authority.
+The generated candidate must remain unaliased and protected. Provider inspection must prove an
+unauthenticated 302/303/307/308 redirect to the canonical Vercel authentication service and the
+project setting `prod_deployment_urls_and_all_previews`. Only the candidate smoke step receives the
+dedicated scoped `VERCEL_AUTOMATION_BYPASS_SECRET`, and it uses `--protection-bypass true` against the
+provider-verified, credential-free `.vercel.app` origin. The provider inspection never receives that
+secret, the secret is never written to evidence, and the workflow never weakens or changes project
+protection. The public origin is always smoked with `--protection-bypass false`.
+
+Immediately before alias mutation, the workflow rechecks protected `main`, provider-requeries the
+same source-bound unaliased candidate and its protection, repeats the authenticated candidate smoke,
+and requires the current public deployment ID to remain the one captured before candidate creation.
+It then freshly reads and validates the same owner-dispatch and environment authority again. The
+second authorization binds the exact current source, current public deployment, candidate,
+protection evidence, and planned smoke. Only that authorization-bound candidate ID is passed to
+`vercel promote`. The public origin must then resolve to the same ID, pass the planned smoke without
+bypass, and still resolve to that ID after the smoke. The previous public deployment and all
+candidate/public readbacks are retained as evidence for manual recovery. This path publishes
+read-only docs and planned/null API state only; it cannot activate Robinhood, enable submissions,
+introduce deployment roots, configure an indexer, or inherit Phase-A/Phase-B authority.
 
 The release toolchain pins `vercel@59.10.0` as a development dependency and invokes only that
 checked-in lockfile resolution through `node_modules/.bin/vercel`. The package overrides are limited
@@ -88,8 +101,9 @@ The existing `production` environment (GitHub environment id `19441858925`) is t
 used by the release jobs. Before the workflow is usable, an owner must configure it for
 protected branches only, with custom branch policies off and administrator bypass disabled. It must not add a
 required-reviewer rule unless repository governance first establishes a distinct canonical reviewer.
-The workflow reads the environment back from GitHub immediately before promotion or rollback and
-rejects any other id, branch policy, admin-bypass state, or an invented required-reviewer gate.
+The workflow reads the environment back from GitHub before every `deploy-planned` Vercel mutation
+and immediately before promotion or rollback. It rejects any other id, branch policy, admin-bypass
+state, or an invented required-reviewer gate.
 
 `production` must make `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and
 `VERCEL_AUTOMATION_BYPASS_SECRET` available as environment secrets. There are no required

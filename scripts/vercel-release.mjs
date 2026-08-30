@@ -16,6 +16,7 @@ import {
   assertVercelDeploymentMetadata,
   assertVercelProjectBinding,
   createEvidenceOnlySourceTransition,
+  createPlannedDeployAuthorization,
   createPreMutationState,
   createPromotionPlan,
   createPromotionReceipt,
@@ -27,6 +28,7 @@ import {
   hashBuildOutput,
   normalizeVercelDeployment,
   parseIndexerPromotionEvidence,
+  parsePlannedDeployAuthorization,
   parsePromotionBundle,
   parsePromotionPlan,
   parsePromotionReceipt,
@@ -625,6 +627,65 @@ async function authorizeCommand(options) {
   await writeJson(required(options, "--output"), authorization);
 }
 
+async function authorizePlannedDeployCommand(options) {
+  assertOnly(options, [
+    "--mutation", "--workflow-run", "--environment", "--authorized-at",
+    "--source-revision", "--source-tree", "--org-id", "--project-id",
+    "--current-deployment", "--candidate-deployment", "--candidate-protection-evidence",
+    "--candidate-smoke", "--output",
+    ...workflowFlags(),
+  ]);
+  if (process.env.GITHUB_ACTIONS !== "true" ||
+    process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
+    process.env.GITHUB_REF_PROTECTED !== "true" ||
+    process.env.RELEASE_CONTROL_ENVIRONMENT !== "production") {
+    fail("planned deploy authorization requires a protected manual Developers production environment");
+  }
+  const mutation = required(options, "--mutation");
+  if (!["create-candidate", "promote-candidate"].includes(mutation)) {
+    fail("--mutation must be create-candidate or promote-candidate");
+  }
+  const source = checkedOutSource(options);
+  const workflow = workflowIdentity(options);
+  const authorizedAt = required(options, "--authorized-at");
+  const candidateOptions = [
+    "--candidate-deployment", "--candidate-protection-evidence", "--candidate-smoke",
+  ].map((name) => optional(options, name));
+  if (mutation === "create-candidate" && candidateOptions.some(Boolean)) {
+    fail("candidate evidence is forbidden before candidate creation");
+  }
+  if (mutation === "promote-candidate" && !candidateOptions.every(Boolean)) {
+    fail("candidate deployment, protection, and smoke evidence are required before promotion");
+  }
+  const ownerDispatchAuthorization = validateGitHubOwnerDispatchAuthorization({
+    workflowRun: await readJson(required(options, "--workflow-run"),
+      "GitHub owner-dispatch workflow run"),
+    environment: await readJson(required(options, "--environment"),
+      "GitHub production environment"),
+  }, { workflow, source, observedAt: authorizedAt });
+  const currentDeployment = (await readJson(
+    required(options, "--current-deployment"), "current public Vercel deployment",
+  )).deployment;
+  const authorization = createPlannedDeployAuthorization({
+    mutation,
+    source,
+    target: protectedTarget(options),
+    currentDeployment,
+    ...(mutation === "promote-candidate" ? {
+      candidateDeployment: (await readJson(candidateOptions[0],
+        "planned Vercel candidate deployment")).deployment,
+      candidateProtectionEvidence: await readJson(candidateOptions[1],
+        "planned Vercel candidate protection evidence"),
+      candidateSmoke: await readJson(candidateOptions[2],
+        "planned Vercel candidate smoke"),
+    } : {}),
+    ownerDispatchAuthorization,
+    workflow,
+    authorizedAt,
+  });
+  await writeJson(required(options, "--output"), authorization);
+}
+
 async function promotionReceiptCommand(options) {
   assertOnly(options, [
     "--plan", "--authorization", "--bundle", "--production-deployment", "--production-smoke",
@@ -780,6 +841,8 @@ async function inspectCommand(options) {
     result = parsePublicAuthorization(value, { operation: "promote" });
   } else if (kind === "authorization-rollback") {
     result = parsePublicAuthorization(value, { operation: "rollback" });
+  } else if (kind === "authorization-deploy-planned") {
+    result = parsePlannedDeployAuthorization(value);
   } else if (kind === "promotion") result = parsePromotionReceipt(value, { bundle });
   else if (kind === "rollback-plan") result = parseRollbackPlan(value, { bundle });
   else if (kind === "rollback") result = parseRollbackReceipt(value);
@@ -821,6 +884,7 @@ const commands = new Map([
   ["validate-github-artifact", validateGitHubArtifactCommand],
   ["create-promotion-plan", promotionPlanCommand],
   ["authorize", authorizeCommand],
+  ["authorize-planned-deploy", authorizePlannedDeployCommand],
   ["create-promotion-receipt", promotionReceiptCommand],
   ["create-pre-mutation-state", preMutationStateCommand],
   ["create-rollback-plan", rollbackPlanCommand],
