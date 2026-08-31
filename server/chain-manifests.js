@@ -7,14 +7,20 @@ export const SUPPORTED_CHAIN_IDS = Object.freeze([
   ROBINHOOD_CHAIN_ID,
 ]);
 
-const MANIFEST_FILES = new Map([
-  [DEFAULT_CHAIN_ID, "../deployments/ethereum-v2.json"],
-  [ROBINHOOD_CHAIN_ID, "../deployments/robinhood-v2.json"],
+// Keep literal file URLs at the read sites so serverless dependency tracing
+// includes both manifests in every function that consumes this module.
+const MANIFEST_READERS = new Map([
+  [DEFAULT_CHAIN_ID, () => readFile(
+    new URL("../deployments/ethereum-v2.json", import.meta.url), "utf8",
+  )],
+  [ROBINHOOD_CHAIN_ID, () => readFile(
+    new URL("../deployments/robinhood-v2.json", import.meta.url), "utf8",
+  )],
 ]);
 const manifestPromises = new Map();
 
 export function isSupportedChainId(chainId) {
-  return Number.isSafeInteger(chainId) && MANIFEST_FILES.has(chainId);
+  return Number.isSafeInteger(chainId) && MANIFEST_READERS.has(chainId);
 }
 
 export async function developerManifestForChain(chainId = DEFAULT_CHAIN_ID) {
@@ -25,10 +31,8 @@ export async function developerManifestForChain(chainId = DEFAULT_CHAIN_ID) {
   }
   let manifestPromise = manifestPromises.get(chainId);
   if (!manifestPromise) {
-    manifestPromise = readFile(
-      new URL(MANIFEST_FILES.get(chainId), import.meta.url),
-      "utf8",
-    ).then((source) => JSON.parse(source));
+    manifestPromise = MANIFEST_READERS.get(chainId)()
+      .then((source) => JSON.parse(source));
     manifestPromises.set(chainId, manifestPromise);
   }
   const manifest = await manifestPromise;

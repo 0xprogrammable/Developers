@@ -33,6 +33,12 @@ lookup. The CLI's existing project-owner lookup fallback handles project-scoped 
 no dependency code or authorization check is patched. Candidate creation remains prebuilt,
 production-target, source-bound and `--skip-domain`.
 
+Every completed Vercel build and every prebuilt staging attempt must contain
+byte-identical `ethereum-v2.json` and `robinhood-v2.json` manifests in each V2
+function bundle. The manifest reader uses literal file URLs at its read sites
+so dependency tracing retains both files. A missing or changed manifest stops
+the release before deployment, independently of source-level tests.
+
 Provider capture uses the same bounded, no-redirect project transport for independent deployment,
 domain and alias reads. Promotion uses one exact-project REST request for an already READY
 production-target deployment, then reads the provider alias job until it succeeds. It never
