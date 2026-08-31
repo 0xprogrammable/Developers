@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { createProjectApi, projectContext, runProjectCommand, stripBoundScope }
   from "../scripts/vercel-project-scope.mjs";
+import { verifyVercelFunctionManifests } from "../scripts/lib/vercel-function-manifests.mjs";
 
 const environment = { VERCEL_TOKEN: "test-project-token-never-log",
   VERCEL_ORG_ID: "team_expected", VERCEL_PROJECT_ID: "prj_expected" };
@@ -42,6 +43,24 @@ async function fixture(t, { linked = true } = {}) {
     throw new Error("unexpected endpoint");
   };
   return { root, requests, fetchImpl, environment };
+}
+
+async function functionAssets(root) {
+  await mkdir(path.join(root, "api/v2/manifests"), { recursive: true });
+  await mkdir(path.join(root, "deployments"), { recursive: true });
+  for (const entry of ["status", "manifests/[chainId]"]) {
+    await writeFile(path.join(root, `api/v2/${entry}.js`), "export default () => {};\n");
+    await mkdir(path.join(root,
+      `.vercel/output/functions/api/v2/${entry}.func/deployments`), { recursive: true });
+  }
+  for (const name of ["ethereum-v2.json", "robinhood-v2.json"]) {
+    const bytes = `${JSON.stringify({ name })}\n`;
+    await writeFile(path.join(root, "deployments", name), bytes);
+    for (const entry of ["status", "manifests/[chainId]"]) {
+      await writeFile(path.join(root,
+        `.vercel/output/functions/api/v2/${entry}.func/deployments/${name}`), bytes);
+    }
+  }
 }
 
 test("only matching protected scope is removed; account and context overrides fail closed", () => {
@@ -118,6 +137,7 @@ test("provider errors and redirects fail closed without secret or response-body 
 
 test("build and prebuilt stage delegate only to the pinned CLI with explicit project env and no account scope", async (t) => {
   const f = await fixture(t);
+  await functionAssets(f.root);
   await mkdir(path.join(f.root, "node_modules/vercel"), { recursive: true });
   await writeFile(path.join(f.root, "node_modules/vercel/package.json"), '{"version":"59.10.0"}');
   const calls = [];
@@ -138,6 +158,38 @@ test("build and prebuilt stage delegate only to the pinned CLI with explicit pro
   }
   await assert.rejects(runProjectCommand(["deploy", "--prod", "--yes"], f));
   assert.equal(calls.length, 2);
+});
+
+test("every V2 function must carry both byte-exact chain manifests", async (t) => {
+  const f = await fixture(t);
+  await functionAssets(f.root);
+  assert.deepEqual(await verifyVercelFunctionManifests(f.root),
+    { apiFunctionCount: 2, manifestChecks: 4 });
+  const target = path.join(f.root,
+    ".vercel/output/functions/api/v2/manifests/[chainId].func/deployments/robinhood-v2.json");
+  await unlink(target);
+  await assert.rejects(verifyVercelFunctionManifests(f.root), /missing robinhood-v2/u);
+  await writeFile(target, "{}");
+  await assert.rejects(verifyVercelFunctionManifests(f.root), /changed robinhood-v2/u);
+});
+
+test("a successful CLI build with missing manifests still fails before deployment", async (t) => {
+  const f = await fixture(t);
+  await functionAssets(f.root);
+  await mkdir(path.join(f.root, "node_modules/vercel"), { recursive: true });
+  await writeFile(path.join(f.root, "node_modules/vercel/package.json"), '{"version":"59.10.0"}');
+  let calls = 0;
+  f.execute = () => { calls += 1; return { status: 0 }; };
+  await unlink(path.join(f.root,
+    ".vercel/output/functions/api/v2/status.func/deployments/ethereum-v2.json"));
+  await assert.rejects(runProjectCommand(["build", "--prod"], f), /missing ethereum-v2/u);
+  assert.equal(calls, 1);
+  await assert.rejects(runProjectCommand(["deploy", "--prebuilt", "--target=production",
+    "--skip-domain", "--yes", "--json",
+    "--meta", `programmableSourceRevision=${"a".repeat(40)}`,
+    "--meta", `programmableSourceTree=${"b".repeat(40)}`,
+    "--meta", "programmableReleaseMode=planned"], f), /missing ethereum-v2/u);
+  assert.equal(calls, 1);
 });
 
 test("promotion is exact-project READY production only and sends one POST followed by readback", async (t) => {

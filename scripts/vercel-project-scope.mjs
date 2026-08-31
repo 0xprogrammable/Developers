@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { parseJsonStrict } from "./lib/files.mjs";
+import { verifyVercelFunctionManifests } from "./lib/vercel-function-manifests.mjs";
 import {
   PRODUCTION_ORIGIN, VERCEL_PRODUCTION_ORIGIN, assertVercelProjectBinding,
 } from "./lib/vercel-release.mjs";
@@ -225,10 +226,12 @@ export async function runProjectCommand(argv, {
     requireValue(version === "59.10.0", "Vercel CLI version differs from the reviewed version");
     const childEnv = { ...environment };
     delete childEnv.APP_PRINCIPAL_ENABLED;
+    if (command === "deploy") await verifyVercelFunctionManifests(root);
     const result = execute(process.execPath, [path.join(root,
       "node_modules/vercel/dist/index.js"), command, ...args],
     { cwd: root, env: childEnv, stdio: "inherit" });
     requireValue(result.status === 0, "Vercel project build or deployment failed");
+    if (command === "build") await verifyVercelFunctionManifests(root);
     return "";
   }
   if (command === "inspect") {
