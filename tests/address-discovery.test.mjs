@@ -481,6 +481,7 @@ describe("documentation contract", () => {
         "canonical-custom-registry-record-v3",
         "canonical-custom-registry-record-v4",
         "custom-fee-enforced-launch-profile-v2",
+        "custom-launch-chain-deployment-v4",
         "custom-launch-preflight-v1",
         "custom-launch-lifecycle-queue-v3",
         "custom-launch-source-verification-v4",
@@ -492,9 +493,21 @@ describe("documentation contract", () => {
         "launch",
         "manifest",
         "problem",
+        "robinhood-custom-launch-binding",
         "status",
         "token-list",
       ],
+    );
+    const v2Schemas = new Map(
+      schemaIndex.schemas.map(({ name, url }) => [name, url]),
+    );
+    assert.equal(
+      v2Schemas.get("custom-launch-chain-deployment-v4"),
+      "https://developers.programmable.family/schemas/v2/custom-launch-chain-deployment-v4.schema.json",
+    );
+    assert.equal(
+      v2Schemas.get("robinhood-custom-launch-binding"),
+      "https://developers.programmable.family/schemas/v2/robinhood-custom-launch-binding.schema.json",
     );
     assert.ok(
       vercel.rewrites.some(

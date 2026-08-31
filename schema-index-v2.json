@@ -20,6 +20,10 @@
       "url": "https://developers.programmable.family/schemas/v2/custom-fee-enforced-launch-profile-v2.schema.json"
     },
     {
+      "name": "custom-launch-chain-deployment-v4",
+      "url": "https://developers.programmable.family/schemas/v2/custom-launch-chain-deployment-v4.schema.json"
+    },
+    {
       "name": "custom-launch-preflight-v1",
       "url": "https://developers.programmable.family/schemas/v2/custom-launch-preflight-v1.schema.json"
     },
@@ -62,6 +66,10 @@
     {
       "name": "problem",
       "url": "https://developers.programmable.family/schemas/v2/problem.schema.json"
+    },
+    {
+      "name": "robinhood-custom-launch-binding",
+      "url": "https://developers.programmable.family/schemas/v2/robinhood-custom-launch-binding.schema.json"
     },
     {
       "name": "status",
