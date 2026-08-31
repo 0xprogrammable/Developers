@@ -3024,12 +3024,21 @@ test("normalizes Vercel evidence and rejects a stage selected by the public orig
   }), providerBinding);
   const missingProviderDomain = structuredClone(aliased);
   missingProviderDomain.alias = [];
-  assert.throws(() => normalizeVercelDeployment({
+  const staleAliasMetadata = normalizeVercelDeployment({
     inspectOutput: inspect,
     apiOutput: missingProviderDomain,
     providerOrigin: VERCEL_PRODUCTION_ORIGIN,
     providerRereadOutput: inspect,
-  }), /Vercel production alias/u);
+  });
+  assert.deepEqual(staleAliasMetadata.aliases, []);
+  assert.equal(productionBinding(staleAliasMetadata).deploymentId,
+    staleAliasMetadata.id);
+  assert.throws(() => createVercelProductionBinding({
+    deployment: staleAliasMetadata,
+    target,
+    ...productionBinding(staleAliasMetadata),
+    providerAliasBinding: undefined,
+  }), /provider alias binding/u);
   assert.throws(() => normalizeVercelDeployment({
     inspectOutput: inspect,
     apiOutput: aliased,
@@ -3320,7 +3329,7 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     workflow,
     authorizedAt: creationAuthorizedAt,
   }), /digest is invalid|provider evidence disagrees/u);
-  assert.throws(() => createPlannedDeployAuthorization({
+  const staleAliasAuthorization = createPlannedDeployAuthorization({
     mutation: "create-candidate",
     source,
     target,
@@ -3329,7 +3338,10 @@ test("binds both planned Vercel mutations to fresh owner and protected-candidate
     ownerDispatchAuthorization: ownerDispatchAuthorization(creationAuthorizedAt, { source }),
     workflow,
     authorizedAt: creationAuthorizedAt,
-  }), /lacks the Vercel production alias/u);
+  });
+  assert.equal(parsePlannedDeployAuthorization(staleAliasAuthorization).mutation,
+    "create-candidate");
+  assert.deepEqual(staleAliasAuthorization.currentDeployment.aliases, []);
 });
 
 test("recovers immutable public intent only from exact old or target state", () => {
@@ -4021,7 +4033,10 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     plan,
   }).planDigest, plan.promotionPlanDigest);
 
-  const promotedDeployment = { ...stageDeployment, aliases: vercelProductionAliases };
+  // The provider's creation-time metadata can remain unaliased after promotion;
+  // every production transition below must use the independently bound domains.
+  const promotedDeployment = { ...stageDeployment, aliases: [] };
+  const restoredDeployment = { ...previousDeployment, aliases: [] };
   const promotionInput = {
     plan,
     authorization,
@@ -4583,7 +4598,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     }),
     selectedSmoke: smoke("planned", previousDeployment.url, undefined,
       "2026-08-29T15:05:30.000Z"),
-    productionDeployment: previousDeployment,
+    productionDeployment: restoredDeployment,
     productionSmoke: smoke("planned", PRODUCTION_ORIGIN, undefined,
       "2026-08-29T15:06:00.000Z"),
     productionBinding: productionBinding(
@@ -4699,7 +4714,7 @@ test("separates stage, owner authorization, promotion, and exact rollback receip
     intentSelectedSmoke: rollbackInput.selectedSmoke,
     recoveryAttempt: rollbackRecoveryAttempt,
     recoveryReadiness: rollbackRecoveryReadiness,
-    productionDeployment: previousDeployment,
+    productionDeployment: restoredDeployment,
     productionSmoke: smoke(
       "planned", PRODUCTION_ORIGIN, undefined, "2026-08-29T15:08:00.000Z",
     ),
