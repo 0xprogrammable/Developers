@@ -3405,8 +3405,6 @@ export function createPlannedDeployAuthorization(input) {
   const workflow = exactWorkflow(input.workflow, "planned deploy authorization workflow");
   const currentDeployment = exactDeployment(input.currentDeployment,
     "planned deploy current public deployment");
-  assert(carriesVercelProductionAlias(currentDeployment),
-    "planned deploy current deployment lacks the Vercel production alias");
   const currentProductionBinding = parseVercelProductionBinding(
     input.currentProductionBinding, { deployment: currentDeployment, target },
   );
@@ -3506,9 +3504,6 @@ export function parsePlannedDeployAuthorization(value) {
   if (legacy && !legacyHasResolution) {
     assert(currentDeployment.aliases.includes(new URL(PRODUCTION_ORIGIN).hostname),
       "planned Vercel deploy authorization current deployment lacks the public production alias");
-  } else if (!legacy) {
-    assert(carriesVercelProductionAlias(currentDeployment),
-      "planned Vercel deploy current deployment lacks the Vercel production alias");
   }
   const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
     authorization.ownerDispatchAuthorization, { workflow, source },
@@ -4057,10 +4052,6 @@ function formalProductionAliases() {
     .map((origin) => new URL(origin).hostname);
 }
 
-function carriesVercelProductionAlias(deployment) {
-  return deployment.aliases.includes(new URL(VERCEL_PRODUCTION_ORIGIN).hostname);
-}
-
 function exactDeployment(value, label, { staged = false } = {}) {
   const deployment = exactKeys(value, [
     "id", "url", "target", "readyState", "aliases", "createdAt",
@@ -4142,12 +4133,9 @@ export function normalizeVercelDeployment({
   if (providerOrigin !== undefined || providerReread !== undefined) {
     assert(providerOrigin === VERCEL_PRODUCTION_ORIGIN && providerReread?.id === id,
       "Vercel production-origin reread differs from the selected deployment");
-    const apiAliases = [
-      ...(Array.isArray(api?.alias) ? api.alias : []),
-      ...(Array.isArray(api?.aliases) ? api.aliases : []),
-    ].map((alias) => alias.replace(/^https:\/\//u, "").toLowerCase());
-    assert(apiAliases.includes(new URL(VERCEL_PRODUCTION_ORIGIN).hostname),
-      "Vercel deployment API no longer carries the Vercel production alias");
+    // Promotion can leave this creation-time alias array unchanged. Current
+    // routing is established separately by the mandatory two-domain binding,
+    // including both authenticated alias-resource and origin-resolution reads.
   }
   assert((deploy?.readyState ?? inspect?.readyState) === "READY" &&
     inspect?.readyState === "READY" && api?.readyState === "READY",
@@ -5161,7 +5149,6 @@ export function createPreMutationState(input) {
     ? plan.stagedDeployment
     : plan.rollbackDeployment;
   assert(sameImmutableDeployment(current, expectedCurrent) &&
-    carriesVercelProductionAlias(current) &&
     sameImmutableDeployment(selected, expectedSelected) &&
     !formalProductionAliases().some((alias) => selected.aliases.includes(alias)),
   "fresh Vercel deployment state differs from the approved release transition");
@@ -6623,8 +6610,7 @@ export function createPromotionReceipt(input) {
   });
   const deployment = exactDeployment(input.productionDeployment,
     "promoted Vercel deployment");
-  assert(sameImmutableDeployment(deployment, plan.stagedDeployment) &&
-    carriesVercelProductionAlias(deployment),
+  assert(sameImmutableDeployment(deployment, plan.stagedDeployment),
   "public promotion did not bind the Vercel production alias to the exact staged deployment");
   const productionBinding = parseVercelProductionBinding(
     input.productionBinding, { deployment, target: plan.target },
@@ -6809,8 +6795,7 @@ export function createRecoveredPromotionReceipt(input) {
   const deployment = exactDeployment(input.productionDeployment,
     "recovered promoted Vercel deployment");
   assert(sameImmutableDeployment(deployment, plan.stagedDeployment) &&
-    sameImmutableDeployment(deployment, intent.targetDeployment) &&
-    carriesVercelProductionAlias(deployment),
+    sameImmutableDeployment(deployment, intent.targetDeployment),
   "recovered promotion did not select the exact staged deployment");
   const productionBinding = parseVercelProductionBinding(
     input.productionBinding, { deployment, target: plan.target },
@@ -7014,8 +6999,7 @@ export function createRollbackPlan(input) {
     expectedMode: "live", expectedBundlePhase: "promotion", bundle: input.bundle,
   });
   assert(currentSmoke.origin === PRODUCTION_ORIGIN &&
-    sameImmutableDeployment(currentDeployment, promotion.deployment) &&
-    carriesVercelProductionAlias(currentDeployment),
+    sameImmutableDeployment(currentDeployment, promotion.deployment),
   "rollback plan current production differs from the promotion receipt");
   const promotionArtifact = parseGitHubArtifactEvidence(input.promotionArtifact);
   const promotionArtifactBinding = verifyGitHubArtifactArchiveEntry(
@@ -7235,8 +7219,7 @@ export function createRollbackReceipt(input) {
   });
   const deployment = exactDeployment(input.productionDeployment,
     "rolled-back Vercel deployment");
-  assert(sameImmutableDeployment(deployment, plan.rollbackDeployment) &&
-    carriesVercelProductionAlias(deployment),
+  assert(sameImmutableDeployment(deployment, plan.rollbackDeployment),
   "public rollback did not bind the Vercel production alias to the exact prior deployment");
   const productionBinding = parseVercelProductionBinding(
     input.productionBinding, { deployment, target: plan.target },
@@ -7404,8 +7387,7 @@ export function createRecoveredRollbackReceipt(input) {
   const deployment = exactDeployment(input.productionDeployment,
     "recovered rollback production deployment");
   assert(sameImmutableDeployment(deployment, plan.rollbackDeployment) &&
-    sameImmutableDeployment(deployment, intent.targetDeployment) &&
-    carriesVercelProductionAlias(deployment),
+    sameImmutableDeployment(deployment, intent.targetDeployment),
   "recovered rollback did not select the exact prior deployment");
   const productionBinding = parseVercelProductionBinding(
     input.productionBinding, { deployment, target: plan.target },

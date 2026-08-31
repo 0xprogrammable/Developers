@@ -223,7 +223,12 @@ exact chain-4663 smoke through the scoped
 automation bypass. Immediately before sealing the receipt, the workflow independently resolves the
 two-domain production binding through Vercel and requires it to select a different immutable deployment.
 The creation-time deployment `alias` array remains descriptive metadata only; it is never accepted
-as proof that the stage is or is not public. The sealed stage receipt binds that production binding
+as proof that the stage is or is not public. A promoted deployment can still expose only its
+generated alias in that array. Current production readback and current-format release transitions
+therefore require the fresh two-domain binding, not membership in the creation-time array. Missing,
+foreign, redirected, deleted, stale or disagreeing alias-resource evidence still fails closed;
+legacy receipt parsing and conservative pre-publication stage checks remain unchanged.
+The sealed stage receipt binds that production binding
 and continues to carry `publicAuthorization:false` and `publicWrites:false`. Do not copy or overwrite
 the stage bundle at the promotion path. New stage receipts emit schema v3 and reject either formal
 production domain on the staged deployment while binding the current two-domain production state.
