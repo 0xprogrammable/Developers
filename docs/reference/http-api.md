@@ -304,12 +304,27 @@ If the Robinhood V4 lane is promoted, its records preserve the backend's complet
 `sourceVerification` readback at
 `extensions["programmable/backend-finalized-v4"].sourceVerification`. Its
 `queued`, `retrying`, `exact_match`, or `needs_attention` state is independent
-from both `launch.finality` and `verification.provenanceStatus`. Only an actual
-Sourcify V2 exact result may set a component's `exactMatchProvider` to
-`sourcify-v2` and attach an `evidenceDigest`; every other component state keeps
-both fields null. A Blockscout observation is supplementary provider evidence,
-not an exact-match authority. Pending verification never hides a finalized
-Router launch or rewrites its finality. The aggregate is `exact_match` only
+from both `launch.finality` and `verification.provenanceStatus`. An
+`exact_match` component carries three separate fields:
+
+- `providerObservation` records `provider: "sourcify-v2"`, classification
+  `PARTIAL_NO_CBOR_EXACT_BYTES`, `match`, `creationMatch` and `runtimeMatch` all
+  set to `match`, `releaseAuthority: false`, and the provider's `evidenceDigest`.
+- `exactSourceAuthority` is
+  `protected-hosted-build-finalized-transaction-bytecode`, not Sourcify.
+- `exactSourceBinding` uses `schemaVersion`
+  `programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v1`,
+  repeats `exactSourceAuthority` in `authority`, and carries a `bindingDigest`. Its ordered
+  `coveredEvidence` is `protected-source-tree`, `source-closure`,
+  `hosted-build-artifact`, `standard-json-input`, `compiler-binary`,
+  `compiler-settings`, `finalized-creation-transaction`, `creation-bytecode`,
+  `runtime-bytecode`.
+
+Every other component state keeps all three fields null. A Sourcify or
+Blockscout observation alone is not exact-source authority: `exact_match`
+requires a complete, independent `exactSourceBinding`. Pending verification
+never hides a finalized Router launch or rewrites its finality. The aggregate
+is `exact_match` only
 when every component is exact; otherwise `needs_attention` takes precedence,
 then `retrying`, then `queued`. Queued and retrying components include a
 canonical `nextAttemptAt`; terminal components omit it. The aggregate

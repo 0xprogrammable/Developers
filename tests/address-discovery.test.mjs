@@ -14,7 +14,7 @@ describe("documentation contract", () => {
       ["schemas/v2/launch.schema.json", "d47618dbe35ded3ee00517e47988a712faf6927790d72ea4b20a5fd26bd3e59b"],
       [
         "schemas/v2/custom-launch-source-verification-v4.schema.json",
-        "fd9e7eb9583157079bba35a898307940a69195d55e15316a979085e38a96dc2d",
+        "8644c494738f043218798c13093a42b66195661db490e796c2a394be47570385",
       ],
       ["compatibility/core-v2.json", "e863d39d25ff040f2d7a5c100d354019a11aaca8b102686e67ea0fe4e0be60b0"],
     ]) {

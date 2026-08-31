@@ -303,7 +303,7 @@ For every chain, keep these evidence axes separate:
 | Axis | What establishes it |
 | --- | --- |
 | Finality | The chain-qualified finalized checkpoint and canonical block evidence |
-| Exact source verification | A provider result accepted by the versioned source-verification contract; for Robinhood V4, only durable Sourcify V2 exact evidence can produce `exact_match` |
+| Exact source verification | A component result accepted by the versioned source-verification contract; Robinhood V4 `exact_match` requires the protected-source, hosted-build, compiler/settings, finalized-transaction and bytecode binding, with Sourcify V2 retained as a non-authoritative provider observation |
 | Indexing | Complete, current traversal and quality evidence for that chain's read model |
 | Public visibility | Actual publication of the finalized record through the public feed |
 

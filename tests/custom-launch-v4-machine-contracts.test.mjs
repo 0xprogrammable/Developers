@@ -11,31 +11,31 @@ import {
 
 const OPENAPI_PATH = "openapi/custom-launch-v4.json";
 const EXPECTED_DOCUMENT_DIGEST =
-  "8de25f1d3f9022e2e10ef08be2ee75d36fb4202b6616b00ad6d5e244b824c862";
+  "581eb94ad6b8500646ec8b60aa56023c1badee44daf8814ffcd821a85e1ed1ef";
 const SCHEMAS = Object.freeze({
   "capabilities.json": Object.freeze({
     component: "CustomLaunchCapabilitiesV2",
-    sha256: "6887876a30704478ae9f800227f046f2ee07d022633f6f6960588a1c1832de8e",
+    sha256: "441ae5f45536ff52dce618fdd55cc1f7235ff1535935070087d9328f1ae85434",
   }),
   "custom-launch-create-request.json": Object.freeze({
     component: "CustomLaunchCreateRequestV4",
-    sha256: "2a3520db569ea72d9e006d4c8fea3246336d69f9cee35cf527fdaea0341db33e",
+    sha256: "904e6a459f84885413faea02fd7bc609e2967dfc772dd52ed4a66b9f2bbe31bb",
   }),
   "custom-launch.json": Object.freeze({
     component: "CustomLaunchResourceV4",
-    sha256: "3a2c0adacb42934ee42cc355867ff5094937375040689a61d158fbbcf87d9ae7",
+    sha256: "1fec0ec89eb22f2b6dc8f5721e65c1a69f1a4171f1b0a5a8fd237b73e149d681",
   }),
   "exact-wallet-transaction.json": Object.freeze({
     component: "ExactWalletTransactionV4",
-    sha256: "8f4789b39e916acfe37b37d4829070f34758b64515256afd2932f258f6eb21ba",
+    sha256: "ca94fc74a2670d72ce222198730fd2380abb69924fa91e76a84853ae6f77965c",
   }),
   "onchain-evidence.json": Object.freeze({
     component: "CustomLaunchOnchainEvidenceV2",
-    sha256: "d99ae22d095cb591f25eb7fe679d727d863316798a4f5f62aeca25424fd15180",
+    sha256: "0c9521ba8c858d197562668a578468f578636eaccd4b4309d5120fce28e6e201",
   }),
   "pack-config.json": Object.freeze({
     component: "PackConfigV4",
-    sha256: "49df9abd0f920327cf5d57aaf95c72fc5567bc32599965fd8431e8ebf2f326c6",
+    sha256: "64a6aea9c45fc55c6acf63588ffadc668ca8465f84e1cb6dfd5577919d73ff7c",
   }),
   "preflight.json": Object.freeze({
     component: "CustomLaunchPreflightV2",
@@ -43,7 +43,7 @@ const SCHEMAS = Object.freeze({
   }),
   "source-verification-status.json": Object.freeze({
     component: "SourceVerificationStatusV4",
-    sha256: "b966aee03edaef7d67e30231f5c13e580edd6c4d983a23293746159b7b9c1c22",
+    sha256: "09844bfb244839084f06925f9f7fe8d2689e46c66ea4c453c7a7931fb68bb94c",
   }),
 });
 
@@ -110,6 +110,25 @@ describe("Custom Launch V4 public machine contracts", () => {
         if (typeof value.$ref === "string") {
           assert.match(value.$ref, /^#\//u, `${relativePath}: ${value.$ref}`);
         }
+      });
+    }
+  });
+
+  test("publishes the bounded chain-scoped V4 pagination contract", async () => {
+    const { document: openapi } = await strictDocument(OPENAPI_PATH);
+    for (const route of [
+      "/v4/chains/{chainId}/custom-launches",
+      "/v4/chains/{chainId}/finalized-custom-launches",
+    ]) {
+      const query = openapi.paths[route].get.parameters.filter(({ in: location }) =>
+        location === "query");
+      assert.deepEqual(query.map(({ name }) => name), ["limit", "cursor"]);
+      assert.deepEqual(query[0].schema, {
+        type: "integer", minimum: 1, maximum: 25, default: 10,
+      });
+      assert.deepEqual(query[1].schema, {
+        type: "string", minLength: 16, maxLength: 512,
+        pattern: "^[A-Za-z0-9_-]+$",
       });
     }
   });
