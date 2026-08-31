@@ -386,7 +386,11 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
     ],
     ethereumFinalityEvidence: structuredClone(ethereumFinalityEvidence),
     sourceVerification: {
-      sourcifyExactMatchCoveredContracts: [
+      sourcifyProviderMatchCoveredContracts: [
+        "programmableLaunchStampRouter",
+        "graphFactory",
+      ],
+      exactByteSourceBuildTransactionCoveredContracts: [
         "programmableLaunchStampRouter",
         "graphFactory",
       ],

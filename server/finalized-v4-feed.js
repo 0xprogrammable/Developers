@@ -13,7 +13,7 @@ const SOURCE_VERIFICATION_INSTANT =
   /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/u;
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const CURSOR = /^[A-Za-z0-9._~-]{1,1024}$/u;
+const CURSOR = /^[A-Za-z0-9_-]{16,512}$/u;
 const PROHIBITED_TEXT =
   /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u;
 const LIST_SCHEMA = "programmable.custom-launch-list.v4";
@@ -46,6 +46,15 @@ const FUNDING_SCHEMA = "programmable.custom-launch-funding-intent.v2";
 const LIQUIDITY_SCHEMA = "programmable.custom-launch-liquidity-model.v1";
 const SOURCE_VERIFICATION_SCHEMA =
   "programmable.source-verification-status.v4";
+const EXACT_SOURCE_AUTHORITY =
+  "protected-hosted-build-finalized-transaction-bytecode";
+const EXACT_SOURCE_BINDING_SCHEMA =
+  "programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v1";
+const EXACT_SOURCE_COVERED_EVIDENCE = Object.freeze([
+  "protected-source-tree", "source-closure", "hosted-build-artifact",
+  "standard-json-input", "compiler-binary", "compiler-settings",
+  "finalized-creation-transaction", "creation-bytecode", "runtime-bytecode",
+]);
 const RESPONSE_BYTES = 4 * 1_024 * 1_024;
 const REQUEST_TIMEOUT_MS = 6_000;
 const MAXIMUM_PAGES = 400;
@@ -1017,9 +1026,14 @@ function validProgrammableDeploymentEvidence(value, binding) {
       value.blockNumber || value.ethereumFinalityEvidence.l2Checkpoint.blockHash !==
       value.blockHash || !exactKeys(value.sourceVerification, [
       "officialSourcePinnedCoveredContracts",
-      "sourcifyExactMatchCoveredContracts",
+      "sourcifyProviderMatchCoveredContracts",
+      "exactByteSourceBuildTransactionCoveredContracts",
     ]) || canonicalizeJson(
-      value.sourceVerification.sourcifyExactMatchCoveredContracts,
+      value.sourceVerification.sourcifyProviderMatchCoveredContracts,
+    ) !== canonicalizeJson([
+      "programmableLaunchStampRouter", "graphFactory",
+    ]) || canonicalizeJson(
+      value.sourceVerification.exactByteSourceBuildTransactionCoveredContracts,
     ) !== canonicalizeJson([
       "programmableLaunchStampRouter", "graphFactory",
     ]) || canonicalizeJson(
@@ -1306,6 +1320,27 @@ function sourceVerificationAggregateStatus(components) {
   return "queued";
 }
 
+function validExactSourceEvidence(component) {
+  const observation = component.providerObservation;
+  const sourceBinding = component.exactSourceBinding;
+  return exactKeys(observation, [
+    "provider", "classification", "match", "creationMatch", "runtimeMatch",
+    "releaseAuthority", "evidenceDigest",
+  ]) && observation.provider === "sourcify-v2" &&
+    observation.classification === "PARTIAL_NO_CBOR_EXACT_BYTES" &&
+    observation.match === "match" && observation.creationMatch === "match" &&
+    observation.runtimeMatch === "match" && observation.releaseAuthority === false &&
+    SHA256.test(observation.evidenceDigest ?? "") &&
+    component.exactSourceAuthority === EXACT_SOURCE_AUTHORITY &&
+    exactKeys(sourceBinding, [
+      "schemaVersion", "authority", "coveredEvidence", "bindingDigest",
+    ]) && sourceBinding.schemaVersion === EXACT_SOURCE_BINDING_SCHEMA &&
+    sourceBinding.authority === EXACT_SOURCE_AUTHORITY &&
+    canonicalizeJson(sourceBinding.coveredEvidence) ===
+      canonicalizeJson(EXACT_SOURCE_COVERED_EVIDENCE) &&
+    SHA256.test(sourceBinding.bindingDigest ?? "");
+}
+
 function validSourceVerification(value, binding) {
   if (!exactKeys(value, [
     "caip2", "chainDeploymentId", "chainId", "components", "schemaVersion",
@@ -1326,7 +1361,8 @@ function validSourceVerification(value, binding) {
   for (const component of value.components) {
     const hasNextAttemptAt = Object.hasOwn(component ?? {}, "nextAttemptAt");
     if (!exactKeys(component, [
-      "address", "evidenceDigest", "exactMatchProvider", "status", "targetId",
+      "address", "providerObservation", "exactSourceAuthority", "exactSourceBinding",
+      "status", "targetId",
       "updatedAt", ...(hasNextAttemptAt ? ["nextAttemptAt"] : []),
     ]) || !SOURCE_VERIFICATION_TARGET_ID.test(component.targetId ?? "") ||
       !LOWERCASE_ADDRESS.test(component.address ?? "") ||
@@ -1348,13 +1384,13 @@ function validSourceVerification(value, binding) {
       : latestUpdatedAt;
 
     if (component.status === "exact_match") {
-      if (component.exactMatchProvider !== "sourcify-v2" ||
-        !SHA256.test(component.evidenceDigest ?? "") || hasNextAttemptAt) {
+      if (!validExactSourceEvidence(component) || hasNextAttemptAt) {
         return false;
       }
       continue;
     }
-    if (component.exactMatchProvider !== null || component.evidenceDigest !== null) {
+    if (component.providerObservation !== null || component.exactSourceAuthority !== null ||
+      component.exactSourceBinding !== null) {
       return false;
     }
     if (component.status === "needs_attention") {
@@ -1601,7 +1637,8 @@ function validatePage(value, binding) {
     safeInstant(value.generatedAt) === null || !canonicalQuality(value.quality) ||
     value.quality.status !== "ready" || !Array.isArray(value.launches) ||
     value.launches.length > 25 ||
-    !(value.nextCursor === null || CURSOR.test(value.nextCursor))) {
+    !(value.nextCursor === null ||
+      (typeof value.nextCursor === "string" && CURSOR.test(value.nextCursor)))) {
     throw new TypeError("Finalized V4 feed envelope is invalid or not ready");
   }
   return value.launches.map((resource) => validateResource(resource, binding));

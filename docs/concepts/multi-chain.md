@@ -142,7 +142,7 @@ Treat these outcomes independently for each chain:
 | Axis | Required evidence |
 | --- | --- |
 | Finality | The chain-specific policy and canonical checkpoint; Robinhood V4 additionally requires its bound L2 checkpoint and Ethereum-finality evidence |
-| Exact source verification | The versioned component status; only durable Sourcify V2 exact evidence can produce Robinhood V4 `exact_match` |
+| Exact source verification | The versioned component status; Robinhood V4 `exact_match` requires the protected-source, hosted-build, compiler/settings, finalized-transaction and bytecode binding, not a Sourcify V2 observation alone |
 | Indexing | A complete cursor traversal with current `ready` quality for the exact chain and deployment binding |
 | Public visibility | A record actually published by the public chain-qualified feed |
 

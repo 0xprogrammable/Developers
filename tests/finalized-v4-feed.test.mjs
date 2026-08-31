@@ -95,6 +95,32 @@ function projectMetadata() {
   };
 }
 
+function exactSourceVerificationEvidence(evidenceDigest) {
+  return {
+    providerObservation: {
+      provider: "sourcify-v2",
+      classification: "PARTIAL_NO_CBOR_EXACT_BYTES",
+      match: "match",
+      creationMatch: "match",
+      runtimeMatch: "match",
+      releaseAuthority: false,
+      evidenceDigest,
+    },
+    exactSourceAuthority: "protected-hosted-build-finalized-transaction-bytecode",
+    exactSourceBinding: {
+      schemaVersion:
+        "programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v1",
+      authority: "protected-hosted-build-finalized-transaction-bytecode",
+      coveredEvidence: [
+        "protected-source-tree", "source-closure", "hosted-build-artifact",
+        "standard-json-input", "compiler-binary", "compiler-settings",
+        "finalized-creation-transaction", "creation-bytecode", "runtime-bytecode",
+      ],
+      bindingDigest: evidenceDigest,
+    },
+  };
+}
+
 function exactSourceVerification(manifest = { chainId: 4663, caip2: "eip155:4663" }) {
   return {
     schemaVersion: "programmable.source-verification-status.v4",
@@ -108,16 +134,14 @@ function exactSourceVerification(manifest = { chainId: 4663, caip2: "eip155:4663
         targetId: "hook",
         address: "0x1111111111111111111111111111111111111111",
         status: "exact_match",
-        exactMatchProvider: "sourcify-v2",
-        evidenceDigest: SHA_1,
+        ...exactSourceVerificationEvidence(SHA_1),
         updatedAt: "2026-08-29T15:02:00.000Z",
       },
       {
         targetId: "token",
         address: "0x2222222222222222222222222222222222222222",
         status: "exact_match",
-        exactMatchProvider: "sourcify-v2",
-        evidenceDigest: SHA_2,
+        ...exactSourceVerificationEvidence(SHA_2),
         updatedAt: "2026-08-29T15:03:00.000Z",
       },
     ],
@@ -132,8 +156,9 @@ function queuedSourceVerification() {
     targetId: "token",
     address: "0x2222222222222222222222222222222222222222",
     status: "queued",
-    exactMatchProvider: null,
-    evidenceDigest: null,
+    providerObservation: null,
+    exactSourceAuthority: null,
+    exactSourceBinding: null,
     updatedAt: "2026-08-29T15:04:00.000Z",
     nextAttemptAt: "2026-08-29T15:09:00.000Z",
   };
@@ -151,8 +176,9 @@ function nonExactSourceVerificationComponent(
     targetId: component.targetId,
     address: component.address,
     status,
-    exactMatchProvider: null,
-    evidenceDigest: null,
+    providerObservation: null,
+    exactSourceAuthority: null,
+    exactSourceBinding: null,
     updatedAt,
     ...(nextAttemptAt === undefined ? {} : { nextAttemptAt }),
   };
@@ -576,7 +602,11 @@ function chainDeploymentFor(manifest) {
     ],
     ethereumFinalityEvidence: structuredClone(ethereumFinalityEvidence),
     sourceVerification: {
-      sourcifyExactMatchCoveredContracts: [
+      sourcifyProviderMatchCoveredContracts: [
+        "programmableLaunchStampRouter",
+        "graphFactory",
+      ],
+      exactByteSourceBuildTransactionCoveredContracts: [
         "programmableLaunchStampRouter",
         "graphFactory",
       ],
@@ -906,7 +936,7 @@ describe("Router-backed finalized V4 feed", () => {
     );
     assert.equal(
       record.extensions["programmable/backend-finalized-v4"]
-        .sourceVerification.components[1].exactMatchProvider,
+        .sourceVerification.components[1].providerObservation,
       null,
     );
   });
@@ -1007,11 +1037,11 @@ describe("Router-backed finalized V4 feed", () => {
           "0x111111111111111111111111111111111111111A";
       },
       (resource) => {
-        resource.sourceVerification.components[0].exactMatchProvider =
+        resource.sourceVerification.components[0].providerObservation.provider =
           "blockscout";
       },
       (resource) => {
-        resource.sourceVerification.components[0].evidenceDigest = null;
+        resource.sourceVerification.components[0].providerObservation.evidenceDigest = null;
       },
       (resource) => {
         resource.sourceVerification.components[0].nextAttemptAt =
@@ -1038,6 +1068,63 @@ describe("Router-backed finalized V4 feed", () => {
       const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
         force: true,
         loadPage: async () => page,
+      });
+      assert.equal(result.status, "unavailable");
+      assert.deepEqual(result.records, []);
+    }
+  });
+
+  test("requires the independent exact-source binding and rejects legacy provider authority", async () => {
+    const manifest = await liveManifest();
+    const anchor = promotionAnchorFor(manifest);
+    const registry = await createSchemaRegistry("v2");
+    const validate = registry.validator("custom-launch-source-verification-v4.schema.json");
+    const mutations = [
+      (component) => { component.providerObservation.releaseAuthority = true; },
+      (component) => { component.providerObservation.classification = "FULL"; },
+      (component) => { component.providerObservation.match = "exact_match"; },
+      (component) => { component.providerObservation.creationMatch = "exact_match"; },
+      (component) => { component.providerObservation.runtimeMatch = "exact_match"; },
+      (component) => { component.providerObservation.privateResponse = "not-public"; },
+      (component) => { component.exactSourceAuthority = "sourcify-v2"; },
+      (component) => { component.exactSourceBinding = null; },
+      (component) => { component.exactSourceBinding.authority = "sourcify-v2"; },
+      (component) => { component.exactSourceBinding.schemaVersion = "unrecognized.v1"; },
+      (component) => { component.exactSourceBinding.coveredEvidence.reverse(); },
+      (component) => { component.exactSourceBinding.coveredEvidence.pop(); },
+      (component) => { component.exactSourceBinding.bindingDigest = null; },
+      (component) => { component.exactSourceBinding.privateResponse = "not-public"; },
+      (component) => {
+        delete component.providerObservation;
+        delete component.exactSourceAuthority;
+        delete component.exactSourceBinding;
+        component.exactMatchProvider = "sourcify-v2";
+        component.evidenceDigest = SHA_1;
+      },
+      (component) => {
+        component.status = "needs_attention";
+      },
+    ];
+    for (const mutate of mutations) {
+      const page = pageFor(manifest);
+      mutate(page.launches[0].sourceVerification.components[0]);
+      assert.equal(validate(page.launches[0].sourceVerification), false);
+      const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
+        force: true, loadPage: async () => page,
+      });
+      assert.equal(result.status, "unavailable");
+      assert.deepEqual(result.records, []);
+    }
+  });
+
+  test("rejects stale or non-string V4 continuation cursors", async () => {
+    const manifest = await liveManifest();
+    const anchor = promotionAnchorFor(manifest);
+    for (const cursor of ["short", "a".repeat(513), "a".repeat(16) + ".", 1234567890123456]) {
+      const page = pageFor(manifest);
+      page.nextCursor = cursor;
+      const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
+        force: true, loadPage: async () => page,
       });
       assert.equal(result.status, "unavailable");
       assert.deepEqual(result.records, []);

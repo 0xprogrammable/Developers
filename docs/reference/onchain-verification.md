@@ -74,7 +74,7 @@ Keep these conclusions separate and chain-qualified:
 | Axis | Required evidence |
 | --- | --- |
 | Finality | Canonical chain block evidence plus the published finality policy; Robinhood V4 also binds its L2 checkpoint to Ethereum finality |
-| Exact source verification | The versioned component result; Robinhood V4 reserves `exact_match` for durable Sourcify V2 exact evidence |
+| Exact source verification | The versioned component result; Robinhood V4 reserves `exact_match` for the protected-source, hosted-build, compiler/settings, finalized-transaction and bytecode binding, with provider observations reported separately |
 | Indexing | A complete current read-model traversal for the exact chain and deployment binding |
 | Public visibility | A finalized record actually emitted by the public Developer feed |
 
@@ -172,9 +172,18 @@ custom module's business semantics. Post-finality source verification runs
 asynchronously and may be labeled exact only after a real provider exact match;
 its pending or unavailable state cannot block or reverse launch finality.
 Source verification, launch finality and fee enforcement remain independently
-reported states. For Robinhood V4, only a durable Sourcify V2 exact result is
-reported as `exact_match`; a Blockscout observation alone never grants that
-state. The API resource follows the
+reported states.
+
+For Robinhood V4, `exact_match` requires `exactSourceAuthority` to be
+`protected-hosted-build-finalized-transaction-bytecode` and an independent
+`exactSourceBinding`. That binding covers the protected
+source tree and source closure, hosted build artifact, standard JSON input,
+compiler binary and settings, finalized creation transaction, and creation and
+runtime bytecode. Sourcify V2 is retained separately in `providerObservation`
+with classification `PARTIAL_NO_CBOR_EXACT_BYTES`, `match`, `creationMatch` and
+`runtimeMatch` all set to `match`, `releaseAuthority: false`, and its own
+`evidenceDigest`. Neither that observation nor a Blockscout observation alone
+grants `exact_match`. The API resource follows the
 [Custom Launch V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json),
 while the public feed follows the separate
 [Developer V4 projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json).

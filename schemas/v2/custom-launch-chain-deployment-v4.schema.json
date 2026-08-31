@@ -327,7 +327,11 @@
         },
         "sourceVerification": {
           "const": {
-            "sourcifyExactMatchCoveredContracts": [
+            "sourcifyProviderMatchCoveredContracts": [
+              "programmableLaunchStampRouter",
+              "graphFactory"
+            ],
+            "exactByteSourceBuildTransactionCoveredContracts": [
               "programmableLaunchStampRouter",
               "graphFactory"
             ],

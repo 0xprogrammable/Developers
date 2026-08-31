@@ -213,14 +213,85 @@
       "format": "date-time",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
     },
+    "providerObservation": {
+      "type": "object",
+      "required": [
+        "provider",
+        "classification",
+        "match",
+        "creationMatch",
+        "runtimeMatch",
+        "releaseAuthority",
+        "evidenceDigest"
+      ],
+      "properties": {
+        "provider": {
+          "const": "sourcify-v2"
+        },
+        "classification": {
+          "const": "PARTIAL_NO_CBOR_EXACT_BYTES"
+        },
+        "match": {
+          "const": "match"
+        },
+        "creationMatch": {
+          "const": "match"
+        },
+        "runtimeMatch": {
+          "const": "match"
+        },
+        "releaseAuthority": {
+          "const": false
+        },
+        "evidenceDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
+      },
+      "additionalProperties": false
+    },
+    "exactSourceBinding": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "authority",
+        "coveredEvidence",
+        "bindingDigest"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v1"
+        },
+        "authority": {
+          "const": "protected-hosted-build-finalized-transaction-bytecode"
+        },
+        "coveredEvidence": {
+          "const": [
+            "protected-source-tree",
+            "source-closure",
+            "hosted-build-artifact",
+            "standard-json-input",
+            "compiler-binary",
+            "compiler-settings",
+            "finalized-creation-transaction",
+            "creation-bytecode",
+            "runtime-bytecode"
+          ]
+        },
+        "bindingDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        }
+      },
+      "additionalProperties": false
+    },
     "component": {
       "type": "object",
       "required": [
         "targetId",
         "address",
         "status",
-        "exactMatchProvider",
-        "evidenceDigest",
+        "providerObservation",
+        "exactSourceAuthority",
+        "exactSourceBinding",
         "updatedAt"
       ],
       "properties": {
@@ -237,16 +308,26 @@
         "status": {
           "$ref": "#/$defs/status"
         },
-        "exactMatchProvider": {
+        "providerObservation": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/providerObservation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exactSourceAuthority": {
           "enum": [
-            "sourcify-v2",
+            "protected-hosted-build-finalized-transaction-bytecode",
             null
           ]
         },
-        "evidenceDigest": {
+        "exactSourceBinding": {
           "oneOf": [
             {
-              "$ref": "#/$defs/sha256Digest"
+              "$ref": "#/$defs/exactSourceBinding"
             },
             {
               "type": "null"
@@ -266,11 +347,14 @@
             "status": {
               "const": "exact_match"
             },
-            "exactMatchProvider": {
-              "const": "sourcify-v2"
+            "providerObservation": {
+              "$ref": "#/$defs/providerObservation"
             },
-            "evidenceDigest": {
-              "$ref": "#/$defs/sha256Digest"
+            "exactSourceAuthority": {
+              "const": "protected-hosted-build-finalized-transaction-bytecode"
+            },
+            "exactSourceBinding": {
+              "$ref": "#/$defs/exactSourceBinding"
             },
             "nextAttemptAt": false
           }
@@ -286,10 +370,13 @@
                 "retrying"
               ]
             },
-            "exactMatchProvider": {
+            "providerObservation": {
               "type": "null"
             },
-            "evidenceDigest": {
+            "exactSourceAuthority": {
+              "type": "null"
+            },
+            "exactSourceBinding": {
               "type": "null"
             },
             "nextAttemptAt": {
@@ -302,10 +389,13 @@
             "status": {
               "const": "needs_attention"
             },
-            "exactMatchProvider": {
+            "providerObservation": {
               "type": "null"
             },
-            "evidenceDigest": {
+            "exactSourceAuthority": {
+              "type": "null"
+            },
+            "exactSourceBinding": {
               "type": "null"
             },
             "nextAttemptAt": false
