@@ -4978,7 +4978,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(plannedReadback,
     /provider-smoke\.json[\s\S]*manifestDigest[\s\S]*smoke\.json[\s\S]*manifestDigest/u);
   assert.doesNotMatch(plannedReadback,
-    /ROBINHOOD_(?:STAGE|PROMOTION)_BUNDLE_PATH|vercel (?:deploy|promote|rollback)|--skip-domain/u,
+    /ROBINHOOD_(?:STAGE|PROMOTION)_BUNDLE_PATH|(?:vercel|vercel-project-scope\.mjs) (?:deploy|promote|rollback)|--skip-domain/u,
     "planned verification must not select a phase bundle or mutate Vercel");
   const plannedDeployJob = document.jobs["deploy-planned"];
   const plannedDeploy = JSON.stringify(plannedDeployJob);
@@ -4992,7 +4992,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   }
   assert.doesNotMatch(plannedDeploy, /--bundle(?:-phase)?/u);
   assert.match(plannedDeploy,
-    /vercel deploy --prebuilt --target=production[\s\S]*--skip-domain/u);
+    /vercel-project-scope\.mjs deploy --prebuilt --target=production[\s\S]*--skip-domain/u);
   const plannedCandidateDeploy = plannedDeployJob.steps.find((step) =>
     step.name === "Create source-bound planned candidate without formal domains");
   assert.equal(plannedCandidateDeploy?.env?.VERCEL_PROJECT_ID,
@@ -5037,7 +5037,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(finalPlannedBoundary.run,
     /actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production/u);
   assert.match(finalPlannedBoundary.run,
-    /validate-planned-mutation-readiness[\s\S]*vercel promote/u);
+    /validate-planned-mutation-readiness[\s\S]*vercel-project-scope\.mjs promote/u);
   for (const step of plannedDeployJob.steps.filter((candidate) =>
     !protectedCandidateSmokeSteps.includes(candidate))) {
     assert.equal(step.env?.VERCEL_AUTOMATION_BYPASS_SECRET, undefined,
@@ -5080,9 +5080,9 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /previous-deployment-pre-mutation\.json[\s\S]*test [^\n]*previous_id[^\n]*current_id/u,
     "planned publication must reject concurrent public-alias drift");
   assert.match(plannedDeploy,
-    /vercel promote[^\n]*candidate_id[^\n]*--yes/u);
+    /vercel-project-scope\.mjs promote[^\n]*candidate_id[^\n]*--yes/u);
   assert.match(plannedDeploy,
-    /promotion-authorization\.json[\s\S]*--path candidateDeployment\.id[\s\S]*vercel promote/u,
+    /promotion-authorization\.json[\s\S]*--path candidateDeployment\.id[\s\S]*vercel-project-scope\.mjs promote/u,
     "planned alias mutation must select the candidate from its sealed authorization");
   assert.match(plannedDeploy,
     /VERCEL_PRODUCTION_ORIGIN[\s\S]*--release-mode planned[\s\S]*PRODUCTION_ORIGIN[\s\S]*--mode planned --protection-bypass false[\s\S]*public-smoke\.json/u);
@@ -5158,7 +5158,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     assert.match(step.run, /--selector "\$VERCEL_PRODUCTION_ORIGIN"/u);
     assert.match(step.run, /--protection-output/u);
     assert.match(step.run, /--protection-bypass true/u);
-    assert.match(step.run, /vercel promote/u);
+    assert.match(step.run, /vercel-project-scope\.mjs promote/u);
     assert.equal(step.env.RELEASE_CONTROL_ENVIRONMENT, "production");
     assert.equal(step.env.VERCEL_AUTOMATION_BYPASS_SECRET, undefined,
       `${step.name} must not export the bypass secret to provider capture`);
@@ -5171,7 +5171,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     assert.match(step.run, /Authorization: Bearer \$github_token/u);
     assert.match(step.run, /VERCEL_TOKEN="\$vercel_token" npm run capture:vercel-provider/u);
     assert.match(step.run,
-      /authorized_at[\s\S]*--selector "\$VERCEL_PRODUCTION_ORIGIN"[\s\S]*--mutation-control-output[\s\S]*--mutation-control[\s\S]*vercel promote/u,
+      /authorized_at[\s\S]*--selector "\$VERCEL_PRODUCTION_ORIGIN"[\s\S]*--mutation-control-output[\s\S]*--mutation-control[\s\S]*vercel-project-scope\.mjs promote/u,
       `${step.name} must bind post-authorization provider mutation control before its one mutation`);
   }
   assert.match(text, /owner-dispatch-run\.raw\.json/u);
@@ -5220,7 +5220,8 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     path.resolve("scripts/vercel-provider-capture.mjs"), "utf8",
   );
   assert.match(providerCapture,
-    /path\.join\(ROOT, "node_modules", "\.bin", "vercel"\)/u);
+    /path\.join\(ROOT, "scripts", "vercel-project-scope\.mjs"\)/u);
+  assert.match(providerCapture, /execFileSync\(process\.execPath, \[VERCEL, \.\.\.args\]/u);
   assert.doesNotMatch(providerCapture, /\bnpx\b|--token\b/u);
   assert.match(providerCapture,
     /DEPLOYMENT_ID\.test\(selector\)[\s\S]*assertVercelStagedDeployment\(deployment/u,
@@ -5283,7 +5284,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     /programmableReleaseMode=planned[\s\S]*must not carry `programmableStageBundleDigest`/u,
     "planned deployment documentation must bind source without phase evidence");
   assert.match(runbook,
-    /operation: deploy-planned[\s\S]*--skip-domain[\s\S]*vercel promote[\s\S]*publicWrites:false/u,
+    /operation: deploy-planned[\s\S]*--skip-domain[\s\S]*vercel-project-scope\.mjs promote[\s\S]*publicWrites:false/u,
     "runbook must document candidate-first planned publication and its read-only boundary");
   assert.match(runbook,
     /external Vercel deployment and alias mutation[\s\S]*can_admins_bypass:true[\s\S]*stops the job/u,
@@ -5329,7 +5330,7 @@ test("pins recovery to immutable intent and exact old-target-third classificatio
   assert.equal(actionRefs.length > 0, true);
   assert.equal(actionRefs.every((reference) => /^[0-9a-f]{40}$/u.test(reference)), true);
   assert.doesNotMatch(text, /\bnpx\b|npm exec|--package=|--token\b/u);
-  assert.doesNotMatch(text, /vercel deploy/u,
+  assert.doesNotMatch(text, /(?:vercel|vercel-project-scope\.mjs) deploy/u,
     "recovery may never create a replacement candidate");
   const names = job.steps.map(({ name }) => name);
   assert.equal(names.indexOf("Download exact immutable mutation intent artifact") <
@@ -5381,8 +5382,8 @@ test("pins recovery to immutable intent and exact old-target-third classificatio
     /create-recovery-attempt-provenance[\s\S]*actions\/runs\/\$GITHUB_RUN_ID[\s\S]*environments\/production[\s\S]*authorized_at[\s\S]*--selector "\$VERCEL_PRODUCTION_ORIGIN"/u,
     "final owner/environment observations must follow archive verification and immediately precede provider readiness");
   assert.match(boundary.run,
-    /case "\$classification"[\s\S]*old\)[\s\S]*vercel promote[\s\S]*target\)[\s\S]*no second Vercel mutation/u);
-  assert.equal((boundary.run.match(/vercel promote/gmu) ?? []).length, 1,
+    /case "\$classification"[\s\S]*old\)[\s\S]*vercel-project-scope\.mjs promote[\s\S]*target\)[\s\S]*no second Vercel mutation/u);
+  assert.equal((boundary.run.match(/vercel-project-scope\.mjs promote/gmu) ?? []).length, 1,
     "recovery may perform at most one exact target mutation");
   assert.match(text,
     /create-recovered-promotion-receipt[\s\S]*developers-vercel-promotion-\$\{\{ github\.run_id \}\}/u,

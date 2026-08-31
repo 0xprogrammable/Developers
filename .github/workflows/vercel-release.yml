@@ -254,7 +254,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
-          ./node_modules/.bin/vercel pull --yes --environment=production \
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
             --scope "$VERCEL_ORG_ID"
 
       - name: Bind current public deployment to exact planned source
@@ -391,14 +391,15 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
-          ./node_modules/.bin/vercel pull --yes --environment=production \
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
             --scope "$VERCEL_ORG_ID"
 
       - name: Build exact production candidate bytes
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: ./node_modules/.bin/vercel build --prod --scope "$VERCEL_ORG_ID"
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: node scripts/vercel-project-scope.mjs build --prod --scope "$VERCEL_ORG_ID"
 
       - name: Capture current public deployment before mutation
         env:
@@ -467,7 +468,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          ./node_modules/.bin/vercel deploy --prebuilt --target=production \
+          node scripts/vercel-project-scope.mjs deploy --prebuilt --target=production \
             --skip-domain --yes --json --scope "$VERCEL_ORG_ID" \
             --meta "programmableSourceRevision=$GITHUB_SHA" \
             --meta "programmableSourceTree=${{ needs.validate-source.outputs.source-tree }}" \
@@ -712,7 +713,7 @@ jobs:
             --output .release-evidence/planned-deploy/planned-mutation-readiness.json
           rm .release-evidence/planned-deploy/final-owner-dispatch-run.raw.json \
             .release-evidence/planned-deploy/final-production-environment.raw.json
-          VERCEL_TOKEN="$vercel_token" ./node_modules/.bin/vercel promote \
+          VERCEL_TOKEN="$vercel_token" node scripts/vercel-project-scope.mjs promote \
             "$candidate_id" --yes --scope "$VERCEL_ORG_ID"
           unset github_token vercel_token
 
@@ -860,14 +861,15 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
-          ./node_modules/.bin/vercel pull --yes --environment=production \
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
             --scope "$VERCEL_ORG_ID"
 
       - name: Build production bytes without publishing
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: ./node_modules/.bin/vercel build --prod --scope "$VERCEL_ORG_ID"
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: node scripts/vercel-project-scope.mjs build --prod --scope "$VERCEL_ORG_ID"
 
       - name: Reconfirm current protected main before Vercel mutation
         run: |
@@ -888,7 +890,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .release-evidence/stage
-          ./node_modules/.bin/vercel deploy --prebuilt --target=production --skip-domain --yes --json \
+          node scripts/vercel-project-scope.mjs deploy --prebuilt --target=production --skip-domain --yes --json \
             --scope "$VERCEL_ORG_ID" \
             --meta "programmableSourceRevision=$GITHUB_SHA" \
             --meta "programmableSourceTree=${{ needs.validate-source.outputs.source-tree }}" \
@@ -1094,9 +1096,9 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           set -euo pipefail
-          ./node_modules/.bin/vercel pull --yes --environment=production \
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
             --scope "$VERCEL_ORG_ID"
-          ./node_modules/.bin/vercel build --prod \
+          node scripts/vercel-project-scope.mjs build --prod \
             --scope "$VERCEL_ORG_ID"
 
       - name: Provider-requery selected stage and protection
@@ -1350,7 +1352,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+        run: node scripts/vercel-project-scope.mjs pull --yes --environment=production --scope "$VERCEL_ORG_ID"
 
       - name: Fresh provider-requery current and selected deployments
         env:
@@ -1516,7 +1518,7 @@ jobs:
             --output .release-evidence/promote/mutation-readiness.json
           rm .release-evidence/promote/final-owner-dispatch-run.raw.json \
             .release-evidence/promote/final-production-environment.raw.json
-          VERCEL_TOKEN="$vercel_token" ./node_modules/.bin/vercel promote "$selected_id" --yes \
+          VERCEL_TOKEN="$vercel_token" node scripts/vercel-project-scope.mjs promote "$selected_id" --yes \
             --scope "$VERCEL_ORG_ID"
           unset github_token vercel_token
 
@@ -1662,7 +1664,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+        run: node scripts/vercel-project-scope.mjs pull --yes --environment=production --scope "$VERCEL_ORG_ID"
 
       - name: Provider-requery current and rollback target
         env:
@@ -1856,7 +1858,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: ./node_modules/.bin/vercel pull --yes --environment=production --scope "$VERCEL_ORG_ID"
+        run: node scripts/vercel-project-scope.mjs pull --yes --environment=production --scope "$VERCEL_ORG_ID"
 
       - name: Fresh provider-requery current and target deployments
         env:
@@ -2055,7 +2057,7 @@ jobs:
           npm run release:vercel -- validate-pre-mutation-readiness "${readiness_args[@]}"
           rm .release-evidence/rollback/final-owner-dispatch-run.raw.json \
             .release-evidence/rollback/final-production-environment.raw.json
-          VERCEL_TOKEN="$vercel_token" ./node_modules/.bin/vercel promote "$target_id" --yes \
+          VERCEL_TOKEN="$vercel_token" node scripts/vercel-project-scope.mjs promote "$target_id" --yes \
             --scope "$VERCEL_ORG_ID"
           unset github_token vercel_token
 
