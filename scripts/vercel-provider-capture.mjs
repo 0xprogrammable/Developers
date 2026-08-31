@@ -27,7 +27,7 @@ import { parseJsonStrict } from "./lib/files.mjs";
 import { probeGeneratedDeploymentProtection } from "./lib/vercel-protection-probe.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const VERCEL = path.join(ROOT, "node_modules", ".bin", "vercel");
+const VERCEL = path.join(ROOT, "scripts", "vercel-project-scope.mjs");
 const MAX_BYTES = 32 * 1024 * 1024;
 const DEPLOYMENT_ID = /^dpl_[A-Za-z0-9]+$/u;
 
@@ -110,7 +110,7 @@ async function writeJson(file, value) {
 function vercelJson(args, label) {
   let stdout;
   try {
-    stdout = execFileSync(VERCEL, args, {
+    stdout = execFileSync(process.execPath, [VERCEL, ...args], {
       cwd: ROOT,
       encoding: "utf8",
       maxBuffer: MAX_BYTES,

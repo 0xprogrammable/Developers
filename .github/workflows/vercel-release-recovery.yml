@@ -217,7 +217,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
-          ./node_modules/.bin/vercel pull --yes --environment=production \
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
             --scope "$VERCEL_ORG_ID"
 
       - name: Prepare fresh owner-authorized recovery attempt
@@ -437,7 +437,7 @@ jobs:
             --path classification)"
           case "$classification" in
             old)
-              VERCEL_TOKEN="$vercel_token" ./node_modules/.bin/vercel promote \
+              VERCEL_TOKEN="$vercel_token" node scripts/vercel-project-scope.mjs promote \
                 "$target_id" --yes --scope "$VERCEL_ORG_ID"
               ;;
             target)

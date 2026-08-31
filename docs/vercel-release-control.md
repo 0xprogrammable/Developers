@@ -12,9 +12,34 @@ manual workflow can only complete or verify one immutable intent artifact from a
 normal run; it cannot stage or create a candidate. Pull requests and pushes cannot stage, promote,
 roll back, or recover. Repository-owned `vercel.json` sets `git.deploymentEnabled:false`, so merging either
 evidence phase cannot cause Vercel for Git to build or alias the commit outside this control plane.
-All Vercel mutations use the repository-locked CLI version and the configured project;
+All Vercel mutations use the repository-owned project-scoped operator and the configured project;
 no workflow accepts a caller-selected project, scope, evidence path, artifact name, or deployment
 URL.
+
+## Project-scoped provider access
+
+The release token remains scoped to `programmable-developers`. The pinned Vercel CLI 59.10.0
+performs account/team lookups for `pull`, `inspect`, and `promote` that a project-scoped token
+does not authorize. `scripts/vercel-project-scope.mjs` uses the corresponding project and
+deployment REST resources with the exact configured `teamId`; it never queries a user/account,
+widens token scope, changes ownership, or enables a CLI feature flag.
+
+Pull validates the provider project ID and owning organization before reading its production
+environment. Only new protected `.vercel/project.json` and `.vercel/.env.production.local` files
+are written; values are never logged or retained as release evidence. Every later command checks
+that local project binding. Build and candidate creation still use the locked CLI 59.10.0,
+with both explicit project environment bindings and without the redundant global account-scope
+lookup. The CLI's existing project-owner lookup fallback handles project-scoped deployment;
+no dependency code or authorization check is patched. Candidate creation remains prebuilt,
+production-target, source-bound and `--skip-domain`.
+
+Provider capture uses the same bounded, no-redirect project transport for independent deployment,
+domain and alias reads. Promotion uses one exact-project REST request for an already READY
+production-target deployment, then reads the provider alias job until it succeeds. It never
+rebuilds a preview deployment or retries a mutation. Unknown responses, unexpected ownership,
+rolling releases, authorization failures and timeout leave the existing read-only recovery
+workflow as the only continuation. All preceding owner/source/intent/readiness gates and the
+subsequent independent two-domain public verification remain mandatory.
 
 ## Planned/docs source readback
 
@@ -96,12 +121,12 @@ and requires the current public deployment ID to remain the one captured before 
 Before this final boundary it seals and uploads an immutable
 `programmable.developers.vercel-public-mutation-intent.v1` artifact that binds the exact old and
 target deployment IDs, complete two-domain production binding, source, project, owner authorization, candidate
-protection, and smoke. In the same shell step as `vercel promote`, it then freshly reads and validates
+protection, and smoke. In the same shell step as `node scripts/vercel-project-scope.mjs promote`, it then freshly reads and validates
 the raw GitHub run and production environment again, freshly resolves both formal production domains,
 re-queries the target and protection, repeats the smoke, and enforces the five-minute chronology. The
 second authorization binds the exact current source, current public deployment, candidate,
 protection evidence, and planned smoke. Only that authorization-bound candidate ID is passed to
-`vercel promote`. A durable planned-readiness object binds the final candidate protection and smoke,
+`node scripts/vercel-project-scope.mjs promote`. A durable planned-readiness object binds the final candidate protection and smoke,
 fresh authorization, post-authorization two-domain production binding, immutable intent, and
 confirmation time. That same provider capture also reads the protected project after authorization,
 requires Rolling Releases to be disabled, and rejects any `lastAliasRequest` whose state is
@@ -261,7 +286,7 @@ state together with a fresh production binding proving that both formal domains 
 approved current deployment and not the target. The smoke and binding must be no more than five
 minutes older than the sealed promotion receipt.
 
-Before `vercel promote`, the normal run also uploads its exact plan, authorization, pre-mutation
+Before `node scripts/vercel-project-scope.mjs promote`, the normal run also uploads its exact plan, authorization, pre-mutation
 state, target evidence, bundle, and `programmable.developers.vercel-public-mutation-intent.v1` as an
 immutable Actions artifact. The final mutation step does not trust those timestamps alone: it
 re-reads raw `workflow_dispatch` and `production` environment state, resolves both production domains,
@@ -275,7 +300,7 @@ requires Rolling Releases to be disabled and no pending or in-progress `lastAlia
 provider mutation-control object is timestamped, digested, and bound into readiness. A succeeded
 last request must resolve to the same public deployment regardless of when it was requested.
 
-After `vercel promote`, both formal production domains must bind the selected deployment and the
+After `node scripts/vercel-project-scope.mjs promote`, both formal production domains must bind the selected deployment and the
 public `.family` origin must pass the same chain-4663 smoke without a protection bypass. Its manifest
 must equal the exact immutable selected-deployment smoke. The workflow then repeats the full provider
 capture and seals the post-smoke production binding into the v3 promotion receipt. Rollback uses the
@@ -338,7 +363,7 @@ chronology, seals
 machine:
 
 ```text
-exact old state    -> one exact-target `vercel promote`, then verified receipt
+exact old state    -> one exact-target `node scripts/vercel-project-scope.mjs promote`, then verified receipt
 exact target state -> no Vercel mutation, only verified completion and receipt
 any third state    -> hard stop
 ```
