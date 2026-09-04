@@ -8763,10 +8763,18 @@ export function validateDirectChainEvidence(evidence, manifest, stage) {
   "direct-chain evidence finality differs");
   const finalized = value.finalizedCheckpoint;
   exactDecimal(finalized?.blockNumber, "direct-chain finalized block", true);
-  exactHash(finalized?.blockHash, "direct-chain finalized hash");
+  exactHash32(finalized?.blockHash, "direct-chain finalized hash");
   assert(finalized.tag === "finalized", "direct-chain evidence requires a finalized RPC checkpoint");
   const deployment = value.deployment;
   const router = manifest.launchStampRouter;
+  const expectedBindings = router.deploymentEvidence.observedBindings;
+  const observedBindings = exactKeys(deployment?.observedBindings, Object.keys(expectedBindings),
+    "direct-chain observed bindings");
+  assert(observedBindings.chainId === expectedBindings.chainId &&
+    ["permitAuthority", "graphFactory", "poolManager"].every((name) =>
+      sameAddress(observedBindings[name], expectedBindings[name]) &&
+      observedBindings[`${name}RuntimeCodeHash`] === expectedBindings[`${name}RuntimeCodeHash`]),
+  "direct-chain observed bindings differ from exact Router deployment evidence");
   assert(deployment?.finality === "finalized" && deployment.receiptStatus === 1 &&
     deployment.transactionHash === stage.finalizedBindings.deploymentTransactionHash &&
     deployment.blockNumber === stage.startBlock &&
@@ -8775,7 +8783,6 @@ export function validateDirectChainEvidence(evidence, manifest, stage) {
     deployment.runtimeCodeHash === router.runtimeCodeHash &&
     deployment.runtimeCodeBytes === router.deploymentEvidence.runtimeCodeBytes &&
     deployment.runtimeCodeSha256 === router.deploymentEvidence.runtimeCodeSha256 &&
-    canonicalEqual(deployment.observedBindings, router.deploymentEvidence.observedBindings) &&
     BigInt(deployment.previousBlockNumber) === BigInt(stage.startBlock) - 1n &&
     deployment.previousRuntimeCode === "0x",
   "direct-chain evidence deployment does not bind exact Router bytes and receipt");
@@ -8789,7 +8796,7 @@ export function validateDirectChainEvidence(evidence, manifest, stage) {
     BigInt(launch.blockNumber) <= BigInt(finalized.blockNumber),
   "direct-chain evidence canary is not the exact existing finalized Custom launch");
   for (const key of ["transactionHash", "blockHash", "launchId", "stampHash"])
-    exactHash(launch[key], `direct-chain launch ${key}`);
+    exactHash32(launch[key], `direct-chain launch ${key}`);
   assert(launch.launchStamp?.kind === "1" && launch.launchStamp.stampHash === launch.stampHash &&
     sameAddress(launch.launchStamp.token, launch.components?.token) &&
     sameAddress(launch.launchStamp.hook, launch.components?.hook) &&

@@ -5,9 +5,12 @@ import {developerManifestForChain} from '../server/chain-manifests.js';
 import {activeFinalizedV4Binding} from '../server/finalized-v4-feed.js';
 import {createSchemaRegistry,assertValid} from '../scripts/lib/schema.mjs';
 import {validateManifestSemantics} from '../scripts/lib/semantics.mjs';
+import {parseStageBundle,validateDirectChainEvidence} from '../scripts/lib/vercel-release.mjs';
 
 const manifest=await developerManifestForChain(4663);
 const registry=await createSchemaRegistry('v2');
+const evidence=JSON.parse(await readFile(new URL('../deployments/robinhood-direct-chain-evidence-v1.json',import.meta.url),'utf8'));
+const stage=parseStageBundle(JSON.parse(await readFile(new URL('../release/robinhood-chain-4663/programmable-stage-bundle.json',import.meta.url),'utf8')));
 
 test('direct-chain roots are independently released without opening hosted indexing or writes',()=>{
  assertValid(registry.validator('manifest.schema.json'),manifest,'Robinhood direct-chain manifest');
@@ -49,4 +52,31 @@ test('public finalized launch evidence binds the canonical Router canary and dep
  assert.equal(evidence.deployment.blockNumber,manifest.launchStampRouter.startBlock);
  assert.ok(BigInt(evidence.finalizedCheckpoint.blockNumber)>=BigInt(canary.blockNumber));
  assert.equal(evidence.finalizedCheckpoint.tag,'finalized');
+});
+
+test('release controller accepts the shipped direct-chain evidence and closed stage',()=>{
+ assert.equal(validateDirectChainEvidence(evidence,manifest,stage),evidence);
+});
+
+test('release controller rejects malformed and zero finalized-block and launch-stamp hashes',()=>{
+ for(const invalid of ['0x1',`0x${'0'.repeat(64)}`,`0x${'A'.repeat(64)}`]) {
+  const checkpoint=structuredClone(evidence);
+  checkpoint.finalizedCheckpoint.blockHash=invalid;
+  assert.throws(()=>validateDirectChainEvidence(checkpoint,manifest,stage),/direct-chain finalized hash must be a nonzero lowercase bytes32/);
+  const launch=structuredClone(evidence);
+  launch.launch.stampHash=invalid;
+  assert.throws(()=>validateDirectChainEvidence(launch,manifest,stage),/direct-chain launch stampHash must be a nonzero lowercase bytes32/);
+ }
+});
+
+test('release controller preserves binding identity across address casing and rejects binding drift',()=>{
+ for(const mutate of [
+  b=>{b.graphFactory=`0x${'1'.repeat(40)}`;},
+  b=>{b.graphFactoryRuntimeCodeHash=`0x${'1'.repeat(64)}`;},
+  b=>{b.chainId=1;},
+  b=>{b.extra=true;},
+ ]) {
+  const changed=structuredClone(evidence); mutate(changed.deployment.observedBindings);
+  assert.throws(()=>validateDirectChainEvidence(changed,manifest,stage),/direct-chain observed bindings/);
+ }
 });
