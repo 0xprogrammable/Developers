@@ -120,5 +120,87 @@ async function loadStatus() {
 
 loadStatus();
 
+async function loadRobinhoodReleaseStatus() {
+  const ledger = document.querySelector("#robinhood-status-ledger");
+  const releaseLine = document.querySelector("#robinhood-release-line");
+  const releaseStatus = document.querySelector("#robinhood-runtime-status");
+  const routerState = document.querySelector("#robinhood-router-state");
+  const readModelState = document.querySelector("#robinhood-read-model-state");
+  const writeApiState = document.querySelector("#robinhood-write-api-state");
+  const statusUpdated = document.querySelector("#robinhood-status-updated");
+
+  if (!ledger) return;
+
+  try {
+    const response = await fetch("/api/v2/manifests/4663", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Robinhood manifest request failed");
+
+    const manifest = await response.json();
+    const router = manifest.launchStampRouter;
+    const readModel = manifest.extensions?.["programmable/read-model-v1"];
+    const routerLive =
+      manifest.chainId === 4663 &&
+      manifest.caip2 === "eip155:4663" &&
+      router?.status === "live" &&
+      /^0x[0-9a-f]{40}$/i.test(router.address ?? "") &&
+      /^[0-9]+$/.test(router.startBlock ?? "") &&
+      /^0x[0-9a-f]{64}$/i.test(router.runtimeCodeHash ?? "") &&
+      Boolean(router.abiUrl) &&
+      Boolean(router.abiSha256) &&
+      Boolean(router.canaryEvidence) &&
+      Boolean(router.finalityConfirmations);
+    const readModelReady =
+      readModel?.status === "ready" && readModel.absenceAuthoritative === true;
+    const writeApiLive = manifest.customLaunchV4?.api?.status === "live";
+
+    if (routerState) routerState.textContent = formatStatus(router?.status);
+    if (readModelState) readModelState.textContent = formatStatus(readModel?.status);
+    if (writeApiState) {
+      writeApiState.textContent = formatStatus(manifest.customLaunchV4?.api?.status);
+    }
+
+    if (releaseLine) {
+      releaseLine.classList.remove("is-live", "is-planned", "is-unavailable");
+      releaseLine.classList.add(routerLive ? "is-live" : "is-planned");
+    }
+    if (releaseStatus) {
+      releaseStatus.textContent = routerLive
+        ? "Canonical Router live · direct onchain ingestion may start"
+        : "Integration contract published · runtime activation pending";
+    }
+    if (statusUpdated) {
+      statusUpdated.textContent = routerLive
+        ? readModelReady
+          ? "Router and hosted read model are live. Verify the manifest before every scan."
+          : "Router is live. Direct verification is available; hosted-feed absence is not authoritative."
+        : writeApiLive
+          ? "Write API state does not activate the Router. Keep terminal ingestion paused."
+          : "Terminal teams can implement now. Keep production ingestion paused until the Router is live.";
+    }
+  } catch {
+    if (releaseLine) {
+      releaseLine.classList.remove("is-live", "is-planned");
+      releaseLine.classList.add("is-unavailable");
+    }
+    if (releaseStatus) {
+      releaseStatus.textContent = "Manifest unavailable · do not infer release state";
+    }
+    if (routerState) routerState.textContent = "Unavailable";
+    if (readModelState) readModelState.textContent = "Unavailable";
+    if (writeApiState) writeApiState.textContent = "Unavailable";
+    if (statusUpdated) {
+      statusUpdated.textContent =
+        "The current manifest could not be read. Keep ingestion paused and retry later.";
+    }
+  } finally {
+    ledger.setAttribute("aria-busy", "false");
+  }
+}
+
+loadRobinhoodReleaseStatus();
+
 const currentYear = document.querySelector("#current-year");
 if (currentYear) currentYear.textContent = String(new Date().getFullYear());

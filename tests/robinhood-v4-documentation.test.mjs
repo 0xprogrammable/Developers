@@ -113,4 +113,35 @@ describe("Robinhood V4 documentation contract", () => {
     assert.match(http, /absenceAuthoritative: false/iu);
     assert.match(onchain, /empty[\s\S]*unavailable[\s\S]*non-authoritative/iu);
   });
+
+  test("publishes a chain-4663 terminal entry point without inventing live roots", async () => {
+    const [page, home, sitemap, readme, docsIndex, llms, llmsFull] =
+      await Promise.all([
+        read("public/robinhood-terminal-indexer.html"),
+        read("public/index.html"),
+        read("public/sitemap.xml"),
+        read("README.md"),
+        read("docs/README.md"),
+        read("llms.txt"),
+        read("llms-full.txt"),
+      ]);
+    const publicUrl =
+      "https://developers.programmable.family/robinhood-terminal-indexer";
+
+    assert.match(page, /eip155:4663/u);
+    assert.match(page, /platformId[\s\S]*programmable/u);
+    assert.match(page, /category[\s\S]*custom/u);
+    assert.match(page, /Programmable Custom/u);
+    assert.match(page, /CustomGraph = 1/u);
+    assert.match(page, /runtime activation pending/iu);
+    assert.match(page, /do not scan while the Router is <code>planned<\/code>/iu);
+    assert.match(page, /\/api\/v2\/manifests\/4663/u);
+    assert.match(page, /programmable-launch-stamp-router-v1\.json/u);
+    assert.doesNotMatch(page, /0x[0-9a-f]{40}/iu);
+
+    assert.match(home, /href="\/robinhood-terminal-indexer"/u);
+    for (const source of [sitemap, readme, docsIndex, llms, llmsFull]) {
+      assert.ok(source.includes(publicUrl));
+    }
+  });
 });

@@ -98,6 +98,7 @@ Launch policy: https://github.com/programmablehq/Launch-Policy
 
 ## Integration guides
 
+- [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer): Public chain-4663 integration entry point with the canonical label contract, dynamic activation gate and direct Router verification path.
 - [Trading terminals and scanners](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
 - [Launch providers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/launch-providers.md): Prelaunch atomic or finalized staged registration, provider handoff, registry invariants and activation gates.
 - [Wallets and explorers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
