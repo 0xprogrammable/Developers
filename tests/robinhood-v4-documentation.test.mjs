@@ -148,5 +148,20 @@ describe("Robinhood V4 documentation contract", () => {
     for (const source of [sitemap, readme, docsIndex, llms, llmsFull]) {
       assert.ok(source.includes(publicUrl));
     }
+
+    const [markdown, publishedMarkdown] = await Promise.all([
+      read("docs/guides/robinhood-terminal-indexer.md"),
+      read("public/robinhood-terminal-indexer.md"),
+    ]);
+    assert.equal(publishedMarkdown, markdown, "agents receive the exact maintained Markdown source");
+    assert.match(page, /rel="alternate" type="text\/markdown"/u);
+    assert.match(page, /href="\/robinhood-terminal-indexer\.md"/u);
+    assert.match(page, /<h1[^>]*>Robinhood terminal integration<\/h1>/u);
+    for (const anchor of ["contract", "integration", "verification", "resources", "example"]) {
+      assert.ok(page.includes(`id="${anchor}"`), `existing #${anchor} links remain valid`);
+    }
+    for (const source of [llms, llmsFull]) {
+      assert.ok(source.includes(`${publicUrl}.md`));
+    }
   });
 });

@@ -1,0 +1,109 @@
+@font-face {
+  font-family: "Instrument Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/assets/fonts/instrument-sans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/ibm-plex-mono-regular-latin.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light dark;
+  --page: #ffffff;
+  --ink: #202124;
+  --muted: #5b6068;
+  --rule: #dce0e5;
+  --code: #f6f7f8;
+  --link: #2257a6;
+  --focus: #2257a6;
+  --sans: "Instrument Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 16px/24px var(--sans); }
+a { color: var(--link); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible, pre:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+[hidden] { display: none !important; }
+button { font: inherit; cursor: pointer; }
+.site-header { max-width: 1120px; margin: 0 auto; padding: 0 24px; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--rule); }
+.site-header a { display: inline-flex; align-items: center; min-height: 44px; }
+.site-name { color: var(--ink); font-weight: 600; text-decoration: none; gap: 12px; }
+.site-name span { color: var(--muted); font-weight: 400; }
+.reference-layout { max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; display: grid; grid-template-columns: 192px minmax(0, 1fr); gap: 64px; }
+.contents { align-self: start; position: sticky; top: 32px; font-size: 14px; line-height: 20px; }
+.contents p { margin: 0 0 8px; color: var(--muted); }
+.contents a { display: flex; align-items: center; min-height: 44px; text-decoration: none; color: var(--ink); }
+.contents a:hover { color: var(--link); text-decoration: underline; }
+main { min-width: 0; max-width: 760px; }
+.mobile-contents { display: none; }
+.anchor-alias { scroll-margin-top: 24px; }
+.document-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; font-size: 14px; line-height: 20px; margin: -12px 0 16px; }
+.document-tools a, .document-tools button { display: inline-flex; align-items: center; min-height: 44px; }
+.document-tools button { background: none; border: 0; color: var(--link); padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+h1, h2 { text-wrap: balance; font-weight: 600; scroll-margin-top: 24px; }
+h1 { font-size: 30px; line-height: 36px; margin: 0 0 16px; letter-spacing: -0.02em; }
+h2 { font-size: 20px; line-height: 28px; margin: 40px 0 16px; }
+p { margin: 0 0 16px; }
+p, li { text-wrap: pretty; }
+ol, ul { padding-left: 24px; margin: 0 0 24px; }
+li { padding-left: 4px; margin-bottom: 16px; }
+code { font: 400 14px/20px var(--mono); overflow-wrap: anywhere; }
+:not(pre) > code { background: var(--code); border-radius: 4px; padding: 2px 4px; }
+.code-example { background: var(--code); border: 1px solid var(--rule); border-radius: 4px; margin: 0 0 24px; }
+.code-toolbar { min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: var(--muted); font: 400 12px/16px var(--mono); }
+.code-toolbar button { min-width: 44px; min-height: 44px; padding: 0 4px; color: var(--muted); background: none; border: 0; font: 400 14px/20px var(--sans); }
+.code-toolbar button:hover { color: var(--ink); text-decoration: underline; }
+pre { margin: 0; padding: 0 16px 16px; overflow-x: auto; white-space: pre; tab-size: 2; }
+pre code { overflow-wrap: normal; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 24px; font-size: 14px; line-height: 20px; }
+th { text-align: left; font-weight: 600; }
+th, td { vertical-align: top; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+td:last-child, th:last-child { padding-right: 0; }
+td a { overflow-wrap: anywhere; }
+#verification-results + table td:first-child code { white-space: nowrap; }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; line-height: 20px; }
+footer a { display: inline-flex; align-items: center; min-height: 44px; }
+.skip-link { position: fixed; z-index: 1; top: 8px; left: 8px; padding: 12px 16px; background: var(--page); border: 2px solid var(--focus); transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
+.copy-announcement { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (prefers-color-scheme: dark) {
+  :root { --page: #17181a; --ink: #eceef0; --muted: #a9afb8; --rule: #3c4148; --code: #202225; --link: #a6c8ff; --focus: #a6c8ff; }
+}
+
+@media (max-width: 900px) {
+  .reference-layout { grid-template-columns: 160px minmax(0, 1fr); gap: 32px; }
+}
+
+@media (max-width: 720px) {
+  .site-header { padding-inline: 16px; }
+  .reference-layout { display: flex; flex-direction: column; gap: 24px; padding: 24px 16px 40px; }
+  .contents { display: none; }
+  .mobile-contents { display: block; margin-bottom: 24px; border-bottom: 1px solid var(--rule); font-size: 14px; line-height: 20px; }
+  .mobile-contents summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+  .mobile-contents nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; padding-bottom: 12px; }
+  .mobile-contents a { display: flex; align-items: center; min-height: 44px; }
+  .document-tools { margin-top: -8px; gap: 0 16px; }
+  h1 { font-size: 24px; line-height: 32px; }
+  h2 { margin-top: 32px; }
+  th, td { padding-block: 12px; padding-right: 8px; }
+  .site-name { gap: 8px; }
+}
+
+@media print {
+  :root { color-scheme: light; --page: #ffffff; --ink: #202124; --muted: #5b6068; --rule: #dce0e5; --code: #f6f7f8; --link: #202124; }
+  .contents, .mobile-contents, .document-tools, .code-toolbar button, .skip-link { display: none; }
+  .reference-layout { display: block; padding: 24px 0; }
+  main { max-width: none; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  h2 { break-after: avoid; }
+}

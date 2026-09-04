@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "ajv": "8.20.0",
+    "marked": "18.0.11",
     "vercel": "59.10.0",
     "yaml": "^2.8.3"
   },

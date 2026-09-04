@@ -32,6 +32,7 @@ public/schemas/
 public/specifications/
 public/llms.txt
 public/llms-full.txt
+public/robinhood-terminal-indexer.md
 
 # Logs
 *.log

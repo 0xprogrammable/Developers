@@ -3,499 +3,201 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="The official integration contract for identifying Programmable Custom launches on Robinhood Chain."
-    />
-    <meta name="theme-color" content="#090c12" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Robinhood terminal integration | Programmable Developers" />
-    <meta
-      property="og:description"
-      content="Manifest discovery, canonical Router verification and public labels for Programmable Custom launches on Robinhood Chain."
-    />
-    <meta
-      property="og:image"
-      content="https://developers.programmable.family/assets/brand/programmable-developers-og.png"
-    />
-    <meta
-      property="og:url"
-      content="https://developers.programmable.family/robinhood-terminal-indexer"
-    />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link
-      rel="canonical"
-      href="https://developers.programmable.family/robinhood-terminal-indexer"
-    />
+    <title>Robinhood terminal integration | Programmable Docs</title>
+    <meta name="description" content="Reference for verifying and indexing Programmable Custom launch stamps on Robinhood Chain: commands, classification, finality and schemas." />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:title" content="Robinhood terminal integration | Programmable Docs" />
+    <meta property="og:description" content="Commands and verification rules for Programmable Custom tokens on chain 4663." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://developers.programmable.family/robinhood-terminal-indexer" />
+    <link rel="canonical" href="https://developers.programmable.family/robinhood-terminal-indexer" />
+    <link rel="alternate" type="text/markdown" title="Markdown" href="/robinhood-terminal-indexer.md" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link
-      rel="preload"
-      href="/assets/fonts/instrument-sans-latin.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      href="/assets/fonts/ibm-plex-mono-regular-latin.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link rel="stylesheet" href="/styles.css" />
-    <script src="/app.js" defer></script>
-    <title>Robinhood terminal integration | Programmable Developers</title>
+    <link rel="stylesheet" href="/reference.css" />
+    <script src="/reference.js" defer></script>
   </head>
-  <body class="guide-page">
+  <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
-
     <header class="site-header">
-      <div class="header-inner">
-        <a class="brand" href="/" aria-label="Programmable Developers home">
-          <img
-            class="brand-mark"
-            src="/assets/brand/programmable-loop-mark.png"
-            alt=""
-            width="28"
-            height="28"
-          />
-          <span>Programmable</span>
-          <span class="brand-section">Developers</span>
-        </a>
-
-        <nav class="desktop-nav" aria-label="On this page">
-          <a href="#contract">Contract</a>
-          <a href="#integration">Integration</a>
-          <a href="#verification">Verification</a>
-          <a href="#resources">Resources</a>
-        </nav>
-
-        <a
-          class="github-link"
-          href="https://github.com/programmablehq/Developers"
-          rel="noreferrer"
-        >
-          GitHub
-          <span aria-hidden="true">↗</span>
-        </a>
-      </div>
+      <a class="site-name" href="/">Programmable <span>Docs</span></a>
+      <a href="https://github.com/programmablehq/Developers">GitHub</a>
     </header>
-
-    <main id="main-content" tabindex="-1">
-      <section class="guide-hero" aria-labelledby="guide-title">
-        <div class="guide-hero-copy">
-          <p class="eyebrow">Robinhood Chain · eip155:4663</p>
-          <h1 id="guide-title">Index Programmable Custom launches.</h1>
-          <p class="guide-lede">
-            This is the official integration contract for terminals, scanners and market-data
-            platforms. Integrate once, follow the chain manifest, and recognize future launches
-            from the canonical Programmable Router without pinning an address in your client.
-          </p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="/api/v2/manifests/4663">
-              Open chain manifest
-            </a>
-            <a
-              class="button button-secondary"
-              href="/abis/programmable-launch-stamp-router-v1.json"
-            >
-              Download Router ABI
-            </a>
-          </div>
-          <div
-            class="release-line is-planned"
-            id="robinhood-release-line"
-            role="status"
-            aria-live="polite"
-          >
-            <span class="status-dot" aria-hidden="true"></span>
-            <span id="robinhood-runtime-status">
-              Reading canonical Router release state…
-            </span>
-          </div>
+    <div class="reference-layout">
+      <nav class="contents" aria-label="On this page">
+        <p>On this page</p>
+        <div>
+          <a href="#verify-a-token">Verify a token</a>
+          <a href="#classification">Classification</a>
+          <a href="#index-launches">Index launches</a>
+          <a href="#verification-results">Verification results</a>
+          <a href="#reference-files">Reference files</a>
+          <a href="#scope">Scope</a>
         </div>
-
-        <aside class="identity-instrument" aria-labelledby="identity-title">
-          <div class="instrument-heading">
-            <span id="identity-title">Canonical terminal label</span>
-            <span>V2</span>
-          </div>
-          <dl>
-            <div>
-              <dt>Platform</dt>
-              <dd><code>programmable</code></dd>
-            </div>
-            <div>
-              <dt>Category</dt>
-              <dd><code>custom</code></dd>
-            </div>
-            <div>
-              <dt>Display</dt>
-              <dd>Programmable Custom</dd>
-            </div>
-            <div>
-              <dt>Chain</dt>
-              <dd><code>eip155:4663</code></dd>
-            </div>
-            <div>
-              <dt>Proof</dt>
-              <dd><code>CustomGraph = 1</code></dd>
-            </div>
-          </dl>
-          <p>
-            Assign the label only after the exact manifest-bound Router record, proof and finality
-            checks agree.
-          </p>
-        </aside>
-      </section>
-
-      <section class="guide-section" id="contract" aria-labelledby="contract-title">
-        <div class="guide-section-heading">
-          <p>Public contract</p>
-          <div>
-            <h2 id="contract-title">One identity. No heuristic labels.</h2>
-            <p>
-              Every recognized Custom hook can have different code, permissions, token contracts
-              and pool behavior. The public identity remains stable because it comes from the
-              canonical launch stamp, not from those implementation details.
-            </p>
-          </div>
+      </nav>
+      <main id="main-content" tabindex="-1">
+        <div class="document-tools" aria-label="Document formats">
+          <a href="/robinhood-terminal-indexer.md">Read Markdown</a>
+          <button type="button" id="copy-page" hidden>Copy page</button>
+          <a href="https://github.com/programmablehq/Developers/blob/main/docs/guides/robinhood-terminal-indexer.md">View source</a>
         </div>
-
-        <div class="contract-ledger" aria-label="Programmable Custom classification fields">
-          <div>
-            <code>platformId</code>
-            <strong>programmable</strong>
-            <span>Stable platform namespace</span>
-          </div>
-          <div>
-            <code>category</code>
-            <strong>custom</strong>
-            <span>The only category for Custom hooks</span>
-          </div>
-          <div>
-            <code>publicLabel</code>
-            <strong>Programmable Custom</strong>
-            <span>Recommended terminal display label</span>
-          </div>
-          <div>
-            <code>provenance</code>
-            <strong>Canonical Router stamp</strong>
-            <span>Chain + Router + launch ID</span>
-          </div>
-        </div>
-
-        <aside class="guide-note">
-          A hook address, Uniswap v4 pool, provider name, API response or token metadata is not
-          enough to assign the Programmable label. The stamp proves launch provenance; it does not
-          promise safety, liquidity, sellability, execution support or a specific fee.
-        </aside>
-      </section>
-
-      <section class="guide-section" id="integration" aria-labelledby="integration-title">
-        <div class="guide-section-heading">
-          <p>Integration</p>
-          <div>
-            <h2 id="integration-title">Follow the manifest, not a copied address.</h2>
-            <p>
-              Resolve the live Router roots from the Robinhood manifest and index finalized
-              stamps directly from the chain. Hosted read-model and public submission states
-              are separate; this integration does not depend on an Envio deployment.
-            </p>
-          </div>
-        </div>
-
-        <ol class="integration-steps">
-          <li>
-            <span>01</span>
-            <div>
-              <h3>Discover the chain</h3>
-              <p>
-                Fetch <code>/.well-known/programmable.json</code>, select chain
-                <code>4663</code>, then resolve its advertised manifest URL.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>02</span>
-            <div>
-              <h3>Require complete live roots</h3>
-              <p>
-                Do not scan while the Router is <code>planned</code>. Require a live Router,
-                non-null address and start block, runtime hash, finality policy, ABI hash,
-                deployment evidence and an existing finalized launch. Confirm that
-                <code>directChainIntegration.status</code> is <code>live</code>.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>03</span>
-            <div>
-              <h3>Backfill, verify and follow</h3>
-              <p>
-                Read finalized Router logs from the manifest start block. Cross-check each launch
-                through its token or pool lookup, <code>launchStamp</code> and, for address-based
-                checks, <code>stampProof</code> at one canonical finalized block. Each new
-                individual Custom hook is discovered from its stamp; no hook allowlist is needed.
-              </p>
-            </div>
-          </li>
-        </ol>
-
-        <div class="code-block guide-code">
-          <div class="code-heading">
-            <span>Activation gate</span>
-            <button type="button" data-copy-target="robinhood-activation-code">
-              <span>Copy</span>
-            </button>
-          </div>
-          <pre tabindex="0"><code id="robinhood-activation-code">async function getLiveRobinhoodRouter() {
-  const manifestUrl =
-    "https://developers.programmable.family/api/v2/manifests/4663";
-  const response = await fetch(manifestUrl);
-  if (!response.ok) throw new Error(`Manifest returned ${response.status}`);
-
-  const manifest = await response.json();
-  const router = manifest.launchStampRouter;
-  const routerIsLive =
-    manifest.chainId === 4663 &amp;&amp;
-    manifest.caip2 === "eip155:4663" &amp;&amp;
-    manifest.directChainIntegration?.status === "live" &amp;&amp;
-    router?.status === "live" &amp;&amp;
-    /^0x[0-9a-f]{40}$/i.test(router.address ?? "") &amp;&amp;
-    /^[0-9]+$/.test(router.startBlock ?? "") &amp;&amp;
-    /^0x[0-9a-f]{64}$/i.test(router.runtimeCodeHash ?? "") &amp;&amp;
-    router.abiUrl &amp;&amp;
-    router.abiSha256 &amp;&amp;
-    router.deploymentEvidence?.verificationStatus === "finalized-verified" &amp;&amp;
-    router.canaryEvidence?.finality === "finalized" &amp;&amp;
-    manifest.directChainIntegration.finality.mode === "rpc-finalized";
-
-  // Validate the published schemas, then verify these roots through your RPC.
-  return routerIsLive ? router : null;
-}
-
-const router = await getLiveRobinhoodRouter();
-if (router) {
-  // Backfill the exact Router from startBlock, then verify every stamp.
-}</code></pre>
-        </div>
-      </section>
-
-      <section class="guide-section" id="verification" aria-labelledby="verification-title">
-        <div class="guide-section-heading">
-          <p>Verification</p>
-          <div>
-            <h2 id="verification-title">Accept only a consistent stamp.</h2>
-            <p>
-              A launch qualifies only when the onchain evidence and the current manifest agree at
-              the same canonical block.
-            </p>
-          </div>
-        </div>
-
-        <div class="signal-columns">
-          <section aria-labelledby="accept-title">
-            <p class="signal-label is-accept" id="accept-title">Accept</p>
-            <ul>
-              <li>Exact manifest Router emitter and published event topic</li>
-              <li>Router runtime, ABI bytes and immutable bindings match</li>
-              <li>Token or PoolManager + PoolId lookup returns a nonzero launch ID</li>
-              <li><code>launchStamp</code> and <code>stampProof</code> agree</li>
-              <li><code>LaunchKindV1.CustomGraph = 1</code> at the finalized boundary</li>
-            </ul>
-          </section>
-          <section aria-labelledby="reject-title">
-            <p class="signal-label is-reject" id="reject-title">Reject or keep indeterminate</p>
-            <ul>
-              <li>The same event topic emitted by another address</li>
-              <li>A hook or pool that exists without a canonical stamp</li>
-              <li>Classification copied from metadata, an API or a provider name</li>
-              <li>A timeout, chain mismatch, pruned block or inconsistent proof</li>
-              <li>An empty planned feed treated as proof that no launch exists</li>
-            </ul>
-          </section>
-        </div>
-
-        <div class="status-ledger guide-status-ledger" id="robinhood-status-ledger" aria-busy="true">
-          <div>
-            <span>Router</span>
-            <strong id="robinhood-router-state">Checking…</strong>
-          </div>
-          <div>
-            <span>Hosted read model</span>
-            <strong id="robinhood-read-model-state">Planned</strong>
-          </div>
-          <div>
-            <span>Custom Launch API V4</span>
-            <strong id="robinhood-write-api-state">Planned</strong>
-          </div>
-          <p id="robinhood-status-updated">
-            Reading the current chain manifest…
-          </p>
-        </div>
-      </section>
-
-      <section class="guide-section" id="example" aria-labelledby="example-title">
-        <div class="guide-section-heading">
-          <p>Working example</p>
-          <div>
-            <h2 id="example-title">Verify an existing finalized launch.</h2>
-            <p>
-              The example reads discovery and the current manifest, fetches the published launch
-              receipt, derives its token from the exact Router event and verifies the onchain
-              record. It needs Node.js 20 or later. The command uses a public Robinhood RPC
-              verified with this release; use your own archive-capable provider for production indexing.
-            </p>
-          </div>
-        </div>
-        <div class="code-block guide-code">
-          <div class="code-heading">
-            <span>Run the public verifier</span>
-            <button type="button" data-copy-target="robinhood-example-code"><span>Copy</span></button>
-          </div>
-          <pre tabindex="0"><code id="robinhood-example-code">git clone https://github.com/programmablehq/Developers.git
+        <details class="mobile-contents">
+          <summary>On this page</summary>
+          <nav aria-label="On this page"><a href="#verify-a-token">Verify a token</a>
+          <a href="#classification">Classification</a>
+          <a href="#index-launches">Index launches</a>
+          <a href="#verification-results">Verification results</a>
+          <a href="#reference-files">Reference files</a>
+          <a href="#scope">Scope</a></nav>
+        </details>
+        <article>
+<h1 id="robinhood-terminal-integration">Robinhood terminal integration</h1>
+<p>Identify Programmable Custom tokens on Robinhood Chain Mainnet (<code>4663</code>, <code>eip155:4663</code>) using the canonical Router&#39;s finalized launch stamps. This reference covers token classification and continuous indexing.</p>
+<p>Direct-chain verification is live. The hosted read model and public self-serve V4 API/CLI remain planned. Read the <a href="https://developers.programmable.family/api/v2/manifests/4663">chain manifest (JSON)</a> for the current release state.</p>
+<span id="example" class="anchor-alias"></span><h2 id="verify-a-token">Verify a token</h2>
+<p>Requirements: Node.js 20 or later and a Robinhood RPC that supports finalized, historical block-hash reads. No Programmable API key or package installation is required. The public RPC below works for the example; use your own provider for production indexing.</p>
+<p>Clone the repository and verify the existing launch referenced by the manifest:</p>
+<div class="code-example">
+  <div class="code-toolbar"><span>sh</span><button type="button" data-copy-code="example-1" aria-label="Copy code example 1" hidden>Copy</button></div>
+  <pre tabindex="0" aria-label="Code example 1"><code id="example-1">git clone https://github.com/programmablehq/Developers.git
 cd Developers
 PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
-  node examples/verify-robinhood-release.mjs
-
-# Verify any future stamped token with the same manifest:
-PROGRAMMABLE_CHAIN_ID=4663 \
+  node examples/verify-robinhood-release.mjs</code></pre>
+</div>
+<p>To verify another token, replace <code>&lt;token-address&gt;</code> with its address:</p>
+<div class="code-example">
+  <div class="code-toolbar"><span>sh</span><button type="button" data-copy-code="example-2" aria-label="Copy code example 2" hidden>Copy</button></div>
+  <pre tabindex="0" aria-label="Code example 2"><code id="example-2">PROGRAMMABLE_CHAIN_ID=4663 \
 PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
   node examples/verify-launch-stamp.mjs token &lt;token-address&gt;</code></pre>
-        </div>
-        <aside class="guide-note">
-          The expected result is <code>state: stamped</code>, <code>category: custom</code> and
-          <code>publicLabel: Programmable Custom</code>. The Router launch ID is a bytes32 value;
-          the API request UUID is a different identifier. Provider errors return
-          <code>indeterminate</code> and never mean that a launch is absent.
-        </aside>
-        <div class="signal-columns guide-explanation">
-          <section aria-labelledby="finality-title">
-            <h3 id="finality-title">Keep a finalized boundary</h3>
-            <p>
-              Use the RPC <code>finalized</code> block and pin its hash for all reads. An explicit
-              block must be at or below that finalized boundary. Robinhood head confirmations
-              alone do not establish finality. If your provider cannot serve a canonical historical
-              state, use an archive-capable RPC; keep the result indeterminate until every read succeeds.
-            </p>
-          </section>
-          <section aria-labelledby="future-title">
-            <h3 id="future-title">Follow future launches</h3>
-            <p>
-              Scan bounded log ranges from <code>startBlock</code>, using the exact Router address
-              and published topics. Dedupe by chain, block hash, transaction hash and log index.
-              Save a checkpoint only after the whole range verifies; retry smaller ranges on
-              provider limits. Refresh the manifest, honor any Router end block, and rewind
-              affected records after a canonical block mismatch.
-            </p>
-          </section>
-        </div>
-      </section>
+</div>
+<p>The verifier returns JSON. A verified token has <code>state: &quot;stamped&quot;</code>, <code>category: &quot;custom&quot;</code> and <code>publicLabel: &quot;Programmable Custom&quot;</code>. An RPC failure returns <code>indeterminate</code>; it does not mean the token is absent.</p>
+<span id="contract" class="anchor-alias"></span><h2 id="classification">Classification</h2>
+<p>Apply these fields only after the checks below succeed:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>chainId</code></td>
+<td><code>4663</code></td>
+</tr>
+<tr>
+<td><code>platformId</code></td>
+<td><code>programmable</code></td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td><code>custom</code></td>
+</tr>
+<tr>
+<td><code>publicLabel</code></td>
+<td><code>Programmable Custom</code></td>
+</tr>
+<tr>
+<td>Launch kind</td>
+<td><code>CustomGraph = 1</code></td>
+</tr>
+</tbody></table>
+<p>The same rule applies to existing and future stamped launches by any developer. Hook code, permissions and token behavior may differ. No per-token, creator or hook allowlist is needed for classification.</p>
+<p>A token name, hook address, pool, provider label or API response alone is insufficient. A deployment without a valid canonical Router stamp does not qualify.</p>
+<span id="integration" class="anchor-alias"></span><h2 id="index-launches">Index launches</h2>
+<ol>
+<li>Fetch <a href="https://developers.programmable.family/.well-known/programmable.json">platform discovery</a>. Select <code>chains[]</code> where <code>chainId</code> is <code>4663</code>, then fetch that entry&#39;s <code>manifestUrl</code>.</li>
+<li>Validate the manifest against the <a href="https://developers.programmable.family/schemas/v2/manifest.schema.json">V2 manifest schema</a>. Require <code>chainId: 4663</code>, <code>caip2: &quot;eip155:4663&quot;</code>, <code>directChainIntegration.status: &quot;live&quot;</code> and <code>launchStampRouter.status: &quot;live&quot;</code>. Resolve the Router address, <code>startBlock</code>, ABI, runtime hash, bindings and finality policy from this manifest. Do not hardcode deployment addresses.</li>
+<li>Fetch the Router&#39;s <code>abiUrl</code> and check its bytes against <code>abiSha256</code>. Verify the Router runtime and immutable bindings through your RPC. Check its finalized deployment evidence and the existing finalized launch referenced by the manifest. The <a href="https://github.com/programmablehq/Developers/blob/main/docs/reference/launch-stamp.md">Router reference</a> specifies these checks.</li>
+<li>Read <code>eth_getLogs</code> in bounded ranges from <code>startBlock</code> through the canonical finalized block. Filter by the exact Router address and the manifest&#39;s published event topics. The same topic emitted by another address is not a Programmable stamp.</li>
+<li>For each launch, read the token or pool lookup and <code>launchStamp</code> at the same canonical finalized block. Require a nonzero launch ID and <code>CustomGraph = 1</code>. For a token or component address, also verify <code>stampProof</code>. Match the launch ID, token, hook, PoolManager, pool ID and stamp hash across the event and getter records. Verify the route and component runtime bindings described in the Router reference.</li>
+<li>Deduplicate logs by chain ID, block hash, transaction hash and log index. Save a range checkpoint only after the whole range verifies. Reduce the range and retry when a provider limits a query; do not skip the failed range.</li>
+<li>Continue from the saved checkpoint and refresh the manifest. Honor each Router&#39;s start and end block. On a canonical block-hash mismatch, rewind affected records and reprocess them. Keep recognized tokens visible even if metadata, charts or trading support are unavailable.</li>
+</ol>
+<p>Use the RPC <code>finalized</code> boundary and pin the block hash for all reads. An explicit block must be a canonical ancestor at or below that boundary. A number of head confirmations or a <code>latest</code> read is not a substitute. If the provider cannot serve the required state, leave verification indeterminate and retry with a suitable provider.</p>
+<p>The Router launch ID is <code>bytes32</code>. An API request UUID is a separate identifier; do not join records by treating them as interchangeable.</p>
+<span id="verification" class="anchor-alias"></span><h2 id="verification-results">Verification results</h2>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Meaning and action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>stamped</code></td>
+<td>The canonical Router record and required proofs agree. Apply the classification above.</td>
+</tr>
+<tr>
+<td><code>not-stamped</code></td>
+<td>A successful canonical lookup returned a zero launch ID. Do not assign the Programmable label from this Router lookup.</td>
+</tr>
+<tr>
+<td><code>indeterminate</code></td>
+<td>A required read or check could not be completed. Retry; do not interpret the result as absence.</td>
+</tr>
+<tr>
+<td><code>unavailable</code></td>
+<td>The manifest does not provide usable Router release roots. Wait for a supported release state.</td>
+</tr>
+</tbody></table>
+<p>Empty or unavailable hosted feeds are not proof that no launches exist. Index the canonical chain records for this integration.</p>
+<span id="resources" class="anchor-alias"></span><h2 id="reference-files">Reference files</h2>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Discovery</td>
+<td><a href="https://developers.programmable.family/.well-known/programmable.json">/.well-known/programmable.json</a></td>
+</tr>
+<tr>
+<td>Robinhood manifest (JSON)</td>
+<td><a href="https://developers.programmable.family/api/v2/manifests/4663">/api/v2/manifests/4663</a></td>
+</tr>
+<tr>
+<td>Chain status</td>
+<td><a href="https://developers.programmable.family/api/v2/status?chainId=4663">/api/v2/status?chainId=4663</a></td>
+</tr>
+<tr>
+<td>Router ABI</td>
+<td><a href="https://developers.programmable.family/abis/programmable-launch-stamp-router-v1.json">/abis/programmable-launch-stamp-router-v1.json</a></td>
+</tr>
+<tr>
+<td>Finalized deployment and launch evidence</td>
+<td><a href="https://developers.programmable.family/deployments/robinhood-direct-chain-evidence-v1.json">/deployments/robinhood-direct-chain-evidence-v1.json</a></td>
+</tr>
+<tr>
+<td>Read API OpenAPI</td>
+<td><a href="https://developers.programmable.family/openapi/programmable-v2.yaml">/openapi/programmable-v2.yaml</a></td>
+</tr>
+<tr>
+<td>Direct-chain schema</td>
+<td><a href="https://developers.programmable.family/schemas/v2/direct-chain-integration.schema.json">/schemas/v2/direct-chain-integration.schema.json</a></td>
+</tr>
+<tr>
+<td>Router verification specification</td>
+<td><a href="https://github.com/programmablehq/Developers/blob/main/docs/reference/launch-stamp.md">docs/reference/launch-stamp.md</a></td>
+</tr>
+<tr>
+<td>Terminal data contract</td>
+<td><a href="https://github.com/programmablehq/Developers/blob/main/docs/guides/terminals-and-scanners.md">docs/guides/terminals-and-scanners.md</a></td>
+</tr>
+<tr>
+<td>Verifier source</td>
+<td><a href="https://github.com/programmablehq/Developers/blob/main/examples/verify-launch-stamp.mjs">examples/verify-launch-stamp.mjs</a></td>
+</tr>
+</tbody></table>
+<h2 id="scope">Scope</h2>
+<p>The stamp establishes launch provenance. It does not establish an audit, safety, liquidity, sellability, trading support, current pool state or a particular fee. A terminal must assess execution support for each market separately.</p>
+<p>This integration reads chain data. It does not submit or sign launches, and it does not depend on the planned hosted indexer or public V4 submission API. Machine clients can read <a href="https://developers.programmable.family/robinhood-terminal-indexer.md">this page as Markdown</a>; its content is the source for the HTML page.</p>
 
-      <section class="guide-section" id="resources" aria-labelledby="resources-title">
-        <div class="guide-section-heading">
-          <p>Resources</p>
-          <div>
-            <h2 id="resources-title">Use the canonical files directly.</h2>
-            <p>
-              These URLs are stable integration entry points. Refresh discovery and the manifest
-              instead of copying deployment values into your code.
-            </p>
-          </div>
-        </div>
-
-        <div class="resource-stack">
-          <a href="/.well-known/programmable.json">
-            <code>JSON</code>
-            <span>
-              <strong>Platform discovery</strong>
-              <small>/.well-known/programmable.json</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="/api/v2/manifests/4663">
-            <code>JSON</code>
-            <span>
-              <strong>Robinhood chain manifest</strong>
-              <small>/api/v2/manifests/4663</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="/api/v2/status?chainId=4663">
-            <code>JSON</code>
-            <span>
-              <strong>Chain-qualified status</strong>
-              <small>/api/v2/status?chainId=4663</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="/deployments/robinhood-direct-chain-evidence-v1.json">
-            <code>JSON</code>
-            <span><strong>Finalized deployment and launch evidence</strong>
-              <small>Router roots, receipt and same-block stamp verification</small></span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="https://github.com/programmablehq/Developers/blob/main/examples/verify-robinhood-release.mjs" rel="noreferrer">
-            <code>JS</code>
-            <span><strong>Runnable release verifier</strong>
-              <small>Discover and verify the existing finalized launch</small></span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="/openapi/programmable-v2.yaml">
-            <code>YAML</code>
-            <span>
-              <strong>Developer read API</strong>
-              <small>/openapi/programmable-v2.yaml</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a href="/abis/programmable-launch-stamp-router-v1.json">
-            <code>ABI</code>
-            <span>
-              <strong>Chain-neutral Router ABI</strong>
-              <small>/abis/programmable-launch-stamp-router-v1.json</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a
-            href="https://github.com/programmablehq/Developers/blob/main/docs/reference/launch-stamp.md"
-            rel="noreferrer"
-          >
-            <code>MD</code>
-            <span>
-              <strong>Complete Router verification</strong>
-              <small>Events, getters, finality and reorg handling</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-          <a
-            href="https://github.com/programmablehq/Developers/blob/main/docs/guides/terminals-and-scanners.md"
-            rel="noreferrer"
-          >
-            <code>MD</code>
-            <span>
-              <strong>Full terminal contract</strong>
-              <small>Labels, feeds, market support and acceptance cases</small>
-            </span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <div>
-        <span>Programmable Developers</span>
-        <nav aria-label="Footer navigation">
-          <a href="/api/v2/manifests/4663">Manifest</a>
-          <a href="/openapi/programmable-v2.yaml">OpenAPI</a>
-          <a href="https://github.com/programmablehq/Developers">GitHub</a>
-        </nav>
-        <span>© <span id="current-year">2026</span> Programmable</span>
-      </div>
-    </footer>
-
+        </article>
+        <footer><a href="https://github.com/programmablehq/Developers/issues">Report a documentation issue</a></footer>
+      </main>
+    </div>
     <p class="copy-announcement" id="copy-announcement" role="status" aria-live="polite"></p>
   </body>
 </html>

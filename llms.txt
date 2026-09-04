@@ -6,6 +6,7 @@ Canonical site: https://developers.programmable.family
 Source repository: https://github.com/programmablehq/Developers
 Read API base: https://developers.programmable.family/api/v2
 Full agent context: https://developers.programmable.family/llms-full.txt
+Robinhood terminal reference (Markdown): https://developers.programmable.family/robinhood-terminal-indexer.md
 Custom Launch API base: https://api.programmable.market
 Custom Launch API guide: https://programmable.market/docs/developers/custom-launch
 Custom Launch V3 OpenAPI: https://programmable.market/openapi/custom-launch-v3.json

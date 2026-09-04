@@ -121,6 +121,10 @@ The hosted Classic baseline is the complete paginated `https://programmable.mark
 
 ## Robinhood terminal direct-chain integration
 
+The HTML reference and its Markdown version share one source. Read
+https://developers.programmable.family/robinhood-terminal-indexer.md for commands,
+classification, indexing steps, verification results and schema links.
+
 From a clone of https://github.com/programmablehq/Developers with Node.js 20 or
 later, run the following without a package install:
 
