@@ -215,7 +215,7 @@ export async function runProjectCommand(argv, {
         "Only prebuilt production staging without domains is allowed");
       const metadata = args.slice(required.length);
       requireValue(metadata.length === 6 && metadata.every((value, index) => index % 2 === 0
-        ? value === "--meta" : /^(programmableSourceRevision=[0-9a-f]{40}|programmableSourceTree=[0-9a-f]{40}|programmableReleaseMode=planned|programmableStageBundleDigest=sha256:[0-9a-f]{64})$/u.test(value)),
+        ? value === "--meta" : /^(programmableSourceRevision=[0-9a-f]{40}|programmableSourceTree=[0-9a-f]{40}|programmableReleaseMode=(planned|direct-chain)|programmableStageBundleDigest=sha256:[0-9a-f]{64})$/u.test(value)),
       "Vercel deployment metadata is invalid");
       const keys = metadata.filter((_, index) => index % 2 === 1).map((value) => value.split("=")[0]);
       requireValue(new Set(keys).size === 3 && keys.includes("programmableSourceRevision")
