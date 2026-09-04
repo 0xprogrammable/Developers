@@ -4869,6 +4869,15 @@ export function parseStageProtectionEvidence(value, { deployment } = {}) {
 export function assertVercelDeploymentMetadata(apiOutput, expected) {
   const api = apiOutput?.deployment ?? apiOutput;
   const meta = plainObject(api?.meta, "Vercel deployment metadata");
+  if (expected.releaseMode === "direct-chain") {
+    assert(meta.programmableSourceRevision === expected.source.revision &&
+      meta.programmableSourceTree === expected.source.tree &&
+      meta.programmableReleaseMode === "direct-chain" &&
+      !Object.hasOwn(meta, "programmableStageBundleDigest") &&
+      !Object.hasOwn(meta, "programmablePromotionBundleDigest"),
+    "Vercel direct-chain deployment metadata differs from the source or selects a hosted phase");
+    return;
+  }
   if (expected.releaseMode === "planned") {
     assert(meta.programmableSourceRevision === expected.source.revision &&
       meta.programmableSourceTree === expected.source.tree &&
@@ -8215,3 +8224,607 @@ export const RELEASE_CONSTANTS = Object.freeze({
   emptyRuntimeCodeHash: EMPTY_RUNTIME_CODE_HASH,
   frozenEthereumV3Identity: FROZEN_V3_IDENTITY,
 });
+
+
+// External terminal publication is intentionally separate from both planned/null
+// publication and the Envio-bound Phase-B hosted read-model promotion above.
+export const DIRECT_CHAIN_SMOKE_SCHEMA =
+  "programmable.developers.chain-4663-direct-chain-smoke.v1";
+export const DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA =
+  "programmable.developers.vercel-direct-chain-deploy-authorization.v1";
+export const DIRECT_CHAIN_PUBLIC_MUTATION_READINESS_SCHEMA =
+  "programmable.developers.vercel-direct-chain-public-mutation-readiness.v1";
+export const DIRECT_CHAIN_MUTATION_INTENT_SCHEMA =
+  "programmable.developers.vercel-direct-chain-mutation-intent.v1";
+export const DIRECT_CHAIN_DEPLOY_RECEIPT_SCHEMA =
+  "programmable.developers.vercel-direct-chain-deploy-receipt.v1";
+export const CANONICAL_DIRECT_CHAIN_EVIDENCE_PATH =
+  "deployments/robinhood-direct-chain-evidence-v1.json";
+
+export function parseDirectChainSmokeReceipt(value) {
+  const smoke = exactKeys(value, [
+    "schemaVersion", "mode", "origin", "chainId", "caip2", "manifestDigest",
+    "evidenceDigest", "publicWrites", "hostedIndexer", "finalizedFeedStatus",
+    "launchId", "checkedAt", "smokeDigest",
+  ], "direct-chain smoke");
+  const origin = new URL(smoke.origin);
+  assert(smoke.schemaVersion === DIRECT_CHAIN_SMOKE_SCHEMA &&
+    smoke.mode === "direct-chain" && smoke.chainId === CHAIN_ID && smoke.caip2 === CAIP2 &&
+    smoke.publicWrites === false && smoke.hostedIndexer === "unavailable" &&
+    smoke.finalizedFeedStatus === "ready" &&
+    smoke.launchId === "b451a50f-026b-4e68-9c16-68e41c318076" &&
+    origin.origin === smoke.origin && origin.protocol === "https:" &&
+    origin.username === "" && origin.password === "",
+  "direct-chain smoke has the wrong capability, launch or origin");
+  exactSha256(smoke.manifestDigest, "direct-chain smoke manifestDigest");
+  exactSha256(smoke.evidenceDigest, "direct-chain smoke evidenceDigest");
+  exactInstant(smoke.checkedAt, "direct-chain smoke checkedAt");
+  const { smokeDigest, ...payload } = smoke;
+  assert(smokeDigest === canonicalSha256(DIRECT_CHAIN_SMOKE_SCHEMA, payload),
+    "direct-chain smoke digest differs");
+  return smoke;
+}
+
+export function createDirectChainDeployAuthorization(input) {
+  const mutation = input.mutation;
+  assert(["create-candidate", "promote-candidate"].includes(mutation),
+    "direct-chain deploy authorization mutation is invalid");
+  const source = exactSource(input.source, "direct-chain deploy authorization source");
+  const target = exactTarget(input.target, "direct-chain deploy authorization target");
+  const workflow = exactWorkflow(input.workflow, "direct-chain deploy authorization workflow");
+  const currentDeployment = exactDeployment(input.currentDeployment,
+    "direct-chain deploy current public deployment");
+  const currentProductionBinding = parseVercelProductionBinding(
+    input.currentProductionBinding, { deployment: currentDeployment, target },
+  );
+  const ownerDispatchAuthorization = parseGitHubOwnerDispatchAuthorization(
+    input.ownerDispatchAuthorization, { workflow, source },
+  );
+  exactInstant(input.authorizedAt, "direct-chain deploy authorization authorizedAt");
+  assert(ownerDispatchAuthorization.observedAt === input.authorizedAt,
+    "direct-chain deploy authorization must use the freshly observed owner dispatch");
+  assertFreshTransition(currentProductionBinding.checkedAt, input.authorizedAt,
+    "direct-chain deploy production binding");
+
+  let candidateDeployment = null;
+  let candidateProtectionEvidence = null;
+  let candidateSmokeDigest = null;
+  if (mutation === "create-candidate") {
+    assert(input.candidateDeployment === undefined &&
+      input.candidateProtectionEvidence === undefined && input.candidateSmoke === undefined,
+    "candidate creation authorization must not claim a candidate that does not exist yet");
+  } else {
+    candidateDeployment = exactDeployment(input.candidateDeployment,
+      "direct-chain deploy authorized candidate", { staged: true });
+    candidateProtectionEvidence = parseStageProtectionEvidence(
+      input.candidateProtectionEvidence, { deployment: candidateDeployment },
+    );
+    assert(candidateProtectionEvidence.projectProtection.projectId === target.projectId,
+      "direct-chain deploy candidate protection evidence is for a different project");
+    const candidateSmoke = parseDirectChainSmokeReceipt(input.candidateSmoke);
+    assert(candidateSmoke.manifestDigest === input.manifestDigest &&
+      candidateSmoke.evidenceDigest === input.evidenceDigest,
+    "direct-chain candidate differs from the exact checked source contract");
+    assert(candidateSmoke.origin === candidateDeployment.url,
+      "direct-chain deploy candidate smoke did not target the protected candidate");
+    assertFreshTransition(candidateProtectionEvidence.checkedAt, candidateSmoke.checkedAt,
+      "direct-chain deploy candidate protection and authenticated smoke");
+    assertFreshTransition(candidateSmoke.checkedAt, input.authorizedAt,
+      "direct-chain deploy candidate smoke and owner authorization");
+    candidateSmokeDigest = candidateSmoke.smokeDigest;
+  }
+
+  const value = {
+    schemaVersion: DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA,
+    state: "owner-authorized-direct-chain-deploy",
+    mutation,
+    publicAuthorization: false,
+    publicWrites: false,
+    source,
+    target,
+    manifestDigest: exactSha256(input.manifestDigest, "direct-chain authorization manifestDigest"),
+    evidenceDigest: exactSha256(input.evidenceDigest, "direct-chain authorization evidenceDigest"),
+    currentDeployment,
+    currentProductionBinding,
+    candidateDeployment,
+    candidateProtectionEvidence,
+    candidateSmokeDigest,
+    ownerDispatchAuthorization,
+    workflow,
+    authorizedAt: input.authorizedAt,
+  };
+  return withDigest(DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA, value,
+    "authorizationDigest");
+}
+
+
+export function parseDirectChainDeployAuthorization(value) {
+  const authorization = exactKeys(value, [
+    "schemaVersion", "state", "mutation", "publicAuthorization", "publicWrites",
+    "source", "target", "manifestDigest", "evidenceDigest", "currentDeployment",
+    "currentProductionBinding", "candidateDeployment", "candidateProtectionEvidence",
+    "candidateSmokeDigest", "ownerDispatchAuthorization", "workflow", "authorizedAt",
+    "authorizationDigest",
+  ], "direct-chain deploy authorization");
+  assert(authorization.schemaVersion === DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA &&
+    authorization.state === "owner-authorized-direct-chain-deploy" &&
+    ["create-candidate", "promote-candidate"].includes(authorization.mutation) &&
+    authorization.publicAuthorization === false && authorization.publicWrites === false,
+  "direct-chain authorization state differs");
+  const source = exactSource(authorization.source);
+  const target = exactTarget(authorization.target);
+  const workflow = exactWorkflow(authorization.workflow);
+  const current = exactDeployment(authorization.currentDeployment);
+  const binding = parseVercelProductionBinding(authorization.currentProductionBinding, {
+    deployment: current, target,
+  });
+  const owner = parseGitHubOwnerDispatchAuthorization(authorization.ownerDispatchAuthorization,
+    { workflow, source });
+  exactSha256(authorization.manifestDigest, "direct-chain authorization manifestDigest");
+  exactSha256(authorization.evidenceDigest, "direct-chain authorization evidenceDigest");
+  exactInstant(authorization.authorizedAt, "direct-chain authorization authorizedAt");
+  assert(owner.observedAt === authorization.authorizedAt,
+    "direct-chain authorization is not the fresh owner observation");
+  assertFreshTransition(binding.checkedAt, authorization.authorizedAt,
+    "direct-chain source production binding");
+  if (authorization.mutation === "create-candidate") {
+    assert(authorization.candidateDeployment === null &&
+      authorization.candidateProtectionEvidence === null && authorization.candidateSmokeDigest === null,
+    "direct-chain creation authorization contains future candidate evidence");
+  } else {
+    const candidate = exactDeployment(authorization.candidateDeployment,
+      "direct-chain candidate", { staged: true });
+    const protection = parseStageProtectionEvidence(authorization.candidateProtectionEvidence,
+      { deployment: candidate });
+    assert(protection.projectProtection.projectId === target.projectId,
+      "direct-chain candidate protection project differs");
+    assert(!sameImmutableDeployment(current, candidate),
+      "direct-chain candidate is already public");
+    exactSha256(authorization.candidateSmokeDigest, "direct-chain authorization smoke digest");
+    assertFreshTransition(protection.checkedAt, authorization.authorizedAt,
+      "direct-chain authorization candidate protection");
+  }
+  const { authorizationDigest, ...payload } = authorization;
+  assert(authorizationDigest === canonicalSha256(DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA, payload),
+    "direct-chain authorization digest differs");
+  return authorization;
+}
+
+export function createDirectChainMutationIntent(input) {
+  const authorization = parseDirectChainDeployAuthorization(input.authorization);
+  const smoke = parseDirectChainSmokeReceipt(input.selectedSmoke);
+  assert(authorization.mutation === "promote-candidate" &&
+    input.operation === "deploy-direct-chain" &&
+    smoke.origin === authorization.candidateDeployment.url &&
+    smoke.smokeDigest === authorization.candidateSmokeDigest &&
+    smoke.manifestDigest === authorization.manifestDigest &&
+    smoke.evidenceDigest === authorization.evidenceDigest,
+  "direct-chain intent differs from its authorization or selected smoke");
+  exactInstant(input.createdAt, "direct-chain mutation intent createdAt");
+  assertFreshTransition(smoke.checkedAt, input.createdAt, "direct-chain intent smoke");
+  assertFreshTransition(authorization.authorizedAt, input.createdAt, "direct-chain intent authorization");
+  return withDigest(DIRECT_CHAIN_MUTATION_INTENT_SCHEMA, {
+    schemaVersion: DIRECT_CHAIN_MUTATION_INTENT_SCHEMA,
+    state: "sealed-before-direct-chain-publication",
+    operation: "deploy-direct-chain", publicWrites: false, hostedIndexer: "unavailable",
+    source: authorization.source, target: authorization.target, workflow: authorization.workflow,
+    manifestDigest: authorization.manifestDigest, evidenceDigest: authorization.evidenceDigest,
+    currentDeployment: authorization.currentDeployment,
+    currentProductionBinding: authorization.currentProductionBinding,
+    targetDeployment: authorization.candidateDeployment,
+    targetProtectionEvidence: authorization.candidateProtectionEvidence,
+    targetSmokeDigest: smoke.smokeDigest, authorizationDigest: authorization.authorizationDigest,
+    evidenceCheckedAt: smoke.checkedAt, createdAt: input.createdAt,
+  }, "mutationIntentDigest");
+}
+
+export function parseDirectChainMutationIntent(value, validation = {}) {
+  const intent = exactKeys(value, [
+    "schemaVersion", "state", "operation", "publicWrites", "hostedIndexer", "source", "target",
+    "workflow", "manifestDigest", "evidenceDigest", "currentDeployment", "currentProductionBinding",
+    "targetDeployment", "targetProtectionEvidence", "targetSmokeDigest", "authorizationDigest",
+    "evidenceCheckedAt", "createdAt", "mutationIntentDigest",
+  ], "direct-chain mutation intent");
+  assert(intent.schemaVersion === DIRECT_CHAIN_MUTATION_INTENT_SCHEMA &&
+    intent.state === "sealed-before-direct-chain-publication" &&
+    intent.operation === "deploy-direct-chain" && intent.publicWrites === false &&
+    intent.hostedIndexer === "unavailable", "direct-chain intent capability differs");
+  exactSource(intent.source); exactTarget(intent.target); exactWorkflow(intent.workflow);
+  const current = exactDeployment(intent.currentDeployment);
+  const candidate = exactDeployment(intent.targetDeployment, "direct-chain intent candidate", { staged: true });
+  const binding = parseVercelProductionBinding(intent.currentProductionBinding,
+    { deployment: current, target: intent.target });
+  const protection = parseStageProtectionEvidence(intent.targetProtectionEvidence, { deployment: candidate });
+  assert(protection.projectProtection.projectId === intent.target.projectId &&
+    !sameImmutableDeployment(current, candidate), "direct-chain intent target differs or is public");
+  for (const key of ["manifestDigest", "evidenceDigest", "targetSmokeDigest", "authorizationDigest"])
+    exactSha256(intent[key], `direct-chain intent ${key}`);
+  exactInstant(intent.createdAt, "direct-chain intent createdAt");
+  exactInstant(intent.evidenceCheckedAt, "direct-chain intent evidenceCheckedAt");
+  assertFreshTransition(binding.checkedAt, intent.evidenceCheckedAt, "direct-chain intent production binding");
+  assertFreshTransition(protection.checkedAt, intent.evidenceCheckedAt, "direct-chain intent protection");
+  assertFreshTransition(intent.evidenceCheckedAt, intent.createdAt, "direct-chain intent sealing");
+  const { mutationIntentDigest, ...payload } = intent;
+  assert(mutationIntentDigest === canonicalSha256(DIRECT_CHAIN_MUTATION_INTENT_SCHEMA, payload),
+    "direct-chain intent digest differs");
+  if (validation.operation) {
+    assert(validation.operation === intent.operation, "direct-chain intent operation substitution");
+    const recreated = createDirectChainMutationIntent({ ...validation, createdAt: intent.createdAt });
+    assert(recreated.mutationIntentDigest === mutationIntentDigest, "direct-chain intent evidence substitution");
+  }
+  return intent;
+}
+
+export function validateDirectChainPublicMutationReadiness(input) {
+  const authorization = parseDirectChainDeployAuthorization(input.authorization);
+  assert(authorization.mutation === "promote-candidate",
+    "direct-chain public mutation requires a promote-candidate authorization");
+  const intent = parseDirectChainMutationIntent(input.intent, {
+    operation: "deploy-direct-chain",
+    authorization: input.intentAuthorization ?? input.authorization,
+    selectedSmoke: input.intentSelectedSmoke,
+  });
+  assert(canonicalEqual(authorization.source, intent.source) &&
+    canonicalEqual(authorization.target, intent.target) &&
+    canonicalEqual(authorization.workflow, intent.workflow) &&
+    authorization.manifestDigest === intent.manifestDigest &&
+    authorization.evidenceDigest === intent.evidenceDigest,
+  "fresh direct-chain authorization differs from the immutable mutation intent");
+  const current = exactDeployment(input.currentDeployment,
+    "final direct-chain pre-mutation current production deployment");
+  assert(sameImmutableDeployment(current, authorization.currentDeployment),
+    "final direct-chain pre-mutation provider re-query found public routing drift");
+  assert(sameImmutableDeployment(current, intent.currentDeployment) &&
+    sameImmutableDeployment(authorization.candidateDeployment, intent.targetDeployment),
+  "final direct-chain mutation readiness differs from the immutable mutation intent");
+  const currentProductionBinding = parseVercelProductionBinding(
+    input.currentProductionBinding, {
+      deployment: current,
+      target: authorization.target,
+    },
+  );
+  const mutationControl = parseVercelMutationControlEvidence(input.mutationControl, {
+    target: authorization.target,
+  });
+  assert(mutationControl.mutationAvailable,
+    "Vercel has a pending or in-progress alias mutation");
+  assertMutationControlResolutionConsistency(mutationControl, currentProductionBinding);
+  assert(sameProductionBindingIdentity(
+    currentProductionBinding, authorization.currentProductionBinding,
+  ), "final direct-chain production binding differs from the authorization");
+  assert(!sameImmutableDeployment(current, authorization.candidateDeployment),
+    "direct-chain public origin already selects the authorized candidate");
+  const candidateProtection = parseStageProtectionEvidence(
+    authorization.candidateProtectionEvidence, {
+      deployment: authorization.candidateDeployment,
+    },
+  );
+  const candidateSmoke = parseDirectChainSmokeReceipt(input.candidateSmoke);
+  assert(candidateProtection.projectProtection.projectId === authorization.target.projectId &&
+    candidateSmoke.origin === authorization.candidateDeployment.url &&
+    candidateSmoke.smokeDigest === authorization.candidateSmokeDigest &&
+    candidateSmoke.manifestDigest === authorization.manifestDigest &&
+    candidateSmoke.evidenceDigest === authorization.evidenceDigest,
+  "direct-chain mutation readiness candidate evidence differs from the authorization");
+  exactInstant(input.confirmedAt, "direct-chain mutation readiness confirmedAt");
+  assertFreshTransition(candidateProtection.checkedAt, candidateSmoke.checkedAt,
+    "direct-chain candidate protection and smoke verification");
+  assertFreshTransition(candidateSmoke.checkedAt, authorization.authorizedAt,
+    "direct-chain candidate smoke and owner authorization");
+  assertFreshTransition(authorization.authorizedAt, currentProductionBinding.checkedAt,
+    "direct-chain authorization and final production-binding provider re-query");
+  assertFreshTransition(currentProductionBinding.checkedAt, input.confirmedAt,
+    "final direct-chain production-binding provider re-query and mutation readiness");
+  assertFreshTransition(currentProductionBinding.checkedAt, mutationControl.checkedAt,
+    "direct-chain production binding and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, input.confirmedAt,
+    "direct-chain Vercel mutation control and mutation readiness");
+  assertFreshTransition(authorization.authorizedAt, input.confirmedAt,
+    "direct-chain public mutation authorization readiness");
+  assertFreshTransition(candidateProtection.checkedAt, input.confirmedAt,
+    "direct-chain candidate protection and mutation readiness");
+  assertFreshTransition(candidateSmoke.checkedAt, input.confirmedAt,
+    "direct-chain candidate smoke and mutation readiness");
+  return withDigest(DIRECT_CHAIN_PUBLIC_MUTATION_READINESS_SCHEMA, {
+    schemaVersion: DIRECT_CHAIN_PUBLIC_MUTATION_READINESS_SCHEMA,
+    state: "fresh-direct-chain-mutation-boundary",
+    source: intent.source,
+    target: intent.target,
+    workflow: intent.workflow,
+    currentDeployment: current,
+    authorization,
+    authorizationDigest: authorization.authorizationDigest,
+    mutationIntentDigest: intent.mutationIntentDigest,
+    currentProductionBinding,
+    mutationControl,
+    mutationControlDigest: mutationControl.mutationControlDigest,
+    candidateDeployment: authorization.candidateDeployment,
+    candidateProtectionEvidence: candidateProtection,
+    candidateSmoke,
+    confirmedAt: input.confirmedAt,
+  }, "mutationReadinessDigest");
+}
+
+export function parseDirectChainPublicMutationReadiness(value, {
+  intent, authorization,
+} = {}) {
+  const readiness = exactKeys(value, [
+    "schemaVersion", "state", "source", "target", "workflow", "currentDeployment",
+    "authorization", "authorizationDigest", "mutationIntentDigest",
+    "currentProductionBinding", "mutationControl", "mutationControlDigest",
+    "candidateDeployment", "candidateProtectionEvidence", "candidateSmoke", "confirmedAt",
+    "mutationReadinessDigest",
+  ], "direct-chain public mutation readiness");
+  assert(readiness.schemaVersion === DIRECT_CHAIN_PUBLIC_MUTATION_READINESS_SCHEMA &&
+    readiness.state === "fresh-direct-chain-mutation-boundary",
+  "direct-chain public mutation readiness is invalid");
+  exactSha256(readiness.authorizationDigest,
+    "direct-chain public mutation readiness authorizationDigest");
+  exactSha256(readiness.mutationIntentDigest,
+    "direct-chain public mutation readiness mutationIntentDigest");
+  const source = exactSource(readiness.source, "direct-chain public mutation readiness source");
+  const target = exactTarget(readiness.target, "direct-chain public mutation readiness target");
+  const workflow = exactWorkflow(readiness.workflow,
+    "direct-chain public mutation readiness workflow");
+  const current = exactDeployment(readiness.currentDeployment,
+    "direct-chain public mutation readiness current deployment");
+  const parsedAuthorization = parseDirectChainDeployAuthorization(readiness.authorization);
+  assert(parsedAuthorization.mutation === "promote-candidate" &&
+    parsedAuthorization.authorizationDigest === readiness.authorizationDigest &&
+    canonicalEqual(parsedAuthorization.source, source) &&
+    canonicalEqual(parsedAuthorization.target, target) &&
+    canonicalEqual(parsedAuthorization.workflow, workflow) &&
+    sameImmutableDeployment(parsedAuthorization.currentDeployment, current),
+  "direct-chain public mutation readiness authorization differs");
+  const candidate = exactDeployment(readiness.candidateDeployment,
+    "direct-chain public mutation readiness candidate", { staged: true });
+  assert(sameImmutableDeployment(candidate, parsedAuthorization.candidateDeployment),
+    "direct-chain public mutation readiness candidate differs from its authorization");
+  const protection = parseStageProtectionEvidence(readiness.candidateProtectionEvidence, {
+    deployment: candidate,
+  });
+  const smoke = parseDirectChainSmokeReceipt(readiness.candidateSmoke);
+  assert(protection.projectProtection.projectId === target.projectId &&
+    smoke.origin === candidate.url &&
+    smoke.smokeDigest === parsedAuthorization.candidateSmokeDigest &&
+    smoke.manifestDigest === parsedAuthorization.manifestDigest &&
+    smoke.evidenceDigest === parsedAuthorization.evidenceDigest,
+  "direct-chain public mutation readiness candidate evidence differs");
+  const productionBinding = parseVercelProductionBinding(readiness.currentProductionBinding, {
+    deployment: current,
+    target,
+  });
+  const mutationControl = parseVercelMutationControlEvidence(readiness.mutationControl, {
+    target,
+  });
+  exactSha256(readiness.mutationControlDigest,
+    "direct-chain public mutation readiness mutationControlDigest");
+  assert(mutationControl.mutationAvailable &&
+    mutationControl.mutationControlDigest === readiness.mutationControlDigest,
+  "direct-chain public mutation readiness has unavailable Vercel mutation control");
+  assertMutationControlResolutionConsistency(mutationControl, productionBinding);
+  assert(sameProductionBindingIdentity(
+    productionBinding, parsedAuthorization.currentProductionBinding,
+  ), "direct-chain public mutation readiness binding differs from its authorization");
+  exactInstant(readiness.confirmedAt,
+    "direct-chain public mutation readiness confirmedAt");
+  assertFreshTransition(protection.checkedAt, smoke.checkedAt,
+    "parsed direct-chain candidate protection and smoke");
+  assertFreshTransition(smoke.checkedAt, parsedAuthorization.authorizedAt,
+    "parsed direct-chain candidate smoke and authorization");
+  assertFreshTransition(parsedAuthorization.authorizedAt, productionBinding.checkedAt,
+    "parsed direct-chain authorization and production-binding provider re-query");
+  assertFreshTransition(productionBinding.checkedAt, readiness.confirmedAt,
+    "parsed direct-chain production-binding provider re-query and readiness");
+  assertFreshTransition(productionBinding.checkedAt, mutationControl.checkedAt,
+    "parsed direct-chain production binding and Vercel mutation control");
+  assertFreshTransition(mutationControl.checkedAt, readiness.confirmedAt,
+    "parsed direct-chain Vercel mutation control and readiness");
+  assertFreshTransition(protection.checkedAt, readiness.confirmedAt,
+    "parsed direct-chain candidate protection and readiness");
+  assertFreshTransition(smoke.checkedAt, readiness.confirmedAt,
+    "parsed direct-chain candidate smoke and readiness");
+  const { mutationReadinessDigest, ...withoutDigest } = readiness;
+  assert(mutationReadinessDigest === canonicalSha256(
+    DIRECT_CHAIN_PUBLIC_MUTATION_READINESS_SCHEMA, withoutDigest,
+  ), "direct-chain public mutation readiness digest is invalid");
+  if (intent && authorization) {
+    const parsedIntent = parseDirectChainMutationIntent(intent);
+    const contextualAuthorization = parseDirectChainDeployAuthorization(authorization);
+    assert(contextualAuthorization.mutation === "promote-candidate" &&
+      readiness.authorizationDigest === contextualAuthorization.authorizationDigest &&
+      readiness.mutationIntentDigest === parsedIntent.mutationIntentDigest &&
+      sameImmutableDeployment(candidate, parsedIntent.targetDeployment) &&
+      canonicalEqual(contextualAuthorization.source, parsedIntent.source) &&
+      canonicalEqual(contextualAuthorization.target, parsedIntent.target) &&
+      canonicalEqual(contextualAuthorization.workflow, parsedIntent.workflow),
+    "direct-chain public mutation readiness differs from its intent or authorization");
+  }
+  return readiness;
+}
+
+
+export function createDirectChainDeployReceipt(input) {
+  const intent = parseDirectChainMutationIntent(input.intent);
+  const authorization = parseDirectChainDeployAuthorization(input.authorization);
+  const readiness = parseDirectChainPublicMutationReadiness(input.mutationReadiness,
+    { intent, authorization });
+  const deployment = exactDeployment(input.productionDeployment);
+  const binding = parseVercelProductionBinding(input.productionBinding,
+    { deployment, target: intent.target });
+  const smoke = parseDirectChainSmokeReceipt(input.productionSmoke);
+  assert(sameImmutableDeployment(deployment, intent.targetDeployment) &&
+    smoke.origin === PRODUCTION_ORIGIN &&
+    smoke.manifestDigest === intent.manifestDigest && smoke.evidenceDigest === intent.evidenceDigest &&
+    smoke.manifestDigest === readiness.candidateSmoke.manifestDigest &&
+    smoke.evidenceDigest === readiness.candidateSmoke.evidenceDigest,
+  "direct-chain public receipt differs from exact candidate or contract");
+  exactInstant(input.completedAt, "direct-chain receipt completedAt");
+  assertFreshTransition(readiness.confirmedAt, smoke.checkedAt, "direct-chain postmutation smoke");
+  assertFreshTransition(smoke.checkedAt, binding.checkedAt, "direct-chain postsmoke domain binding");
+  assertFreshTransition(binding.checkedAt, input.completedAt, "direct-chain receipt sealing");
+  assertFreshTransition(readiness.confirmedAt, input.completedAt, "direct-chain mutation completion");
+  return withDigest(DIRECT_CHAIN_DEPLOY_RECEIPT_SCHEMA, {
+    schemaVersion: DIRECT_CHAIN_DEPLOY_RECEIPT_SCHEMA, state: "direct-chain-public-verified",
+    publicWrites: false, hostedIndexer: "unavailable", source: intent.source, target: intent.target,
+    workflow: intent.workflow, deployment, productionBinding: binding,
+    previousDeployment: intent.currentDeployment, previousProductionBinding: intent.currentProductionBinding,
+    manifestDigest: intent.manifestDigest, evidenceDigest: intent.evidenceDigest,
+    authorizationDigest: authorization.authorizationDigest, mutationIntentDigest: intent.mutationIntentDigest,
+    mutationReadinessDigest: readiness.mutationReadinessDigest, productionSmoke: smoke,
+    completedAt: input.completedAt,
+  }, "directChainDeployReceiptDigest");
+}
+
+export function validateDirectChainRobinhoodManifest(manifest, stage) {
+  assert(manifest?.chainId === 4663 && manifest?.caip2 === CAIP2 && stage?.phase === "stage",
+    "direct-chain manifest requires chain 4663 and the closed source/finality stage evidence");
+  const direct = plainObject(manifest.directChainIntegration, "direct-chain integration");
+  const expectedFinality = {
+    mode: "rpc-finalized", canonicalReadBlock: "finalized-or-explicit-canonical-block",
+    explicitBlockRequiresFinalizedAncestor: true,
+  };
+  assert(direct.schemaVersion === "programmable.direct-chain-integration.v1" &&
+    direct.status === "live" && direct.platformId === "programmable" && direct.category === "custom" &&
+    direct.publicLabel === "Programmable Custom" && direct.indexing === "direct-chain" &&
+    direct.publicWrites === false && direct.hostedIndexer === "unavailable" &&
+    direct.evidenceUrl === `${PRODUCTION_ORIGIN}/deployments/robinhood-direct-chain-evidence-v1.json` &&
+    canonicalEqual(direct.finality, expectedFinality),
+  "direct-chain manifest changes its read-only external terminal capability");
+  assert(direct.chainDeploymentDescriptorDigest === stage.descriptorDigest &&
+    canonicalEqual(direct.finalityPolicy, stage.developers.finalityPolicy) &&
+    canonicalEqual(direct.profile, stage.bundle.consumerInputs.cli.profile),
+  "direct-chain source/profile/finality differs from closed source evidence");
+  const v4 = manifest.customLaunchV4;
+  assert(v4?.status === "planned" && v4?.api?.status === "planned" &&
+    v4?.cli?.status === "planned" && v4.chainDeploymentDescriptorDigest === null &&
+    v4.profile === null && v4.finalityPolicy === null,
+  "direct-chain publication may not promote the self-serve API or CLI");
+  const router = plainObject(manifest.launchStampRouter, "direct-chain Router");
+  const binding = plainObject(manifest.robinhoodCustomLaunchBinding, "direct-chain deployment binding");
+  assert(router.status === "live" && binding.state === "finalized-live" &&
+    canonicalEqual(binding.chainDeployment, stage.descriptor) &&
+    binding.deployment?.transactionHash === stage.finalizedBindings.deploymentTransactionHash &&
+    binding.deployment?.blockNumber === stage.startBlock &&
+    binding.deployment?.blockHash === stage.finalizedCheckpoint.blockHash &&
+    binding.deployment?.startBlock === stage.startBlock,
+  "direct-chain deployment differs from immutable finalized source evidence");
+  assert(router.startBlock === stage.startBlock &&
+    sameAddress(router.address, ROOTS.programmableLaunchStampRouter.address) &&
+    router.runtimeCodeHash === ROOTS.programmableLaunchStampRouter.runtimeCodeHash,
+  "direct-chain Router roots differ from immutable deployment evidence");
+  for (const [name, expected] of Object.entries(stage.developers.roots)) {
+    const root = binding.chainBindings?.[name];
+    assert(root && sameAddress(root.address, expected.address) &&
+      root.runtimeCodeHash === expected.runtimeCodeHash,
+    `direct-chain ${name} root differs from immutable deployment evidence`);
+  }
+  assert(binding.chainBindings.permit2.provenance === "genesis-allocation" &&
+    binding.chainBindings.permit2.startBlock === "0", "direct-chain Permit2 genesis binding differs");
+  for (const name of Object.keys(ROOTS).filter((name) => name !== "permit2"))
+    exactDecimal(binding.chainBindings[name].startBlock, `direct-chain ${name} start block`, true);
+  assert(router.deploymentEvidence?.deploymentTransactionHash === stage.finalizedBindings.deploymentTransactionHash &&
+    router.deploymentEvidence?.deploymentBlockNumber === stage.startBlock &&
+    router.deploymentEvidence?.deploymentBlockHash === stage.finalizedCheckpoint.blockHash,
+  "direct-chain Router deployment evidence differs from source closure");
+  assert(router.canaryEvidence && router.canaryEvidence !== null,
+    "direct-chain publication requires an existing finalized Router launch");
+  const chain = manifest.chains?.find(({ chainId }) => chainId === 4663);
+  assert(chain?.status === "live" && chain.readModelStatus === "planned" &&
+    manifest.extensions?.["programmable/read-model-v1"]?.status === "planned",
+  "direct-chain publication may not promote the hosted indexer");
+  return manifest;
+}
+
+export function validateDirectChainEvidence(evidence, manifest, stage) {
+  validateDirectChainRobinhoodManifest(manifest, stage);
+  const value = exactKeys(evidence, [
+    "schemaVersion", "observedAt", "chainId", "platformId", "category", "publicLabel",
+    "officialRpcUrl", "verificationProviders", "finality", "finalizedCheckpoint", "deployment",
+    "launch", "rootEvidence", "source", "checks",
+  ], "direct-chain evidence");
+  assert(value.schemaVersion === "programmable.robinhood-direct-chain-evidence.v1" &&
+    value.chainId === 4663 && value.platformId === "programmable" && value.category === "custom" &&
+    value.publicLabel === "Programmable Custom" &&
+    value.officialRpcUrl === "https://rpc.mainnet.chain.robinhood.com",
+  "direct-chain evidence identity differs");
+  exactInstant(value.observedAt, "direct-chain evidence observedAt");
+  const source = value.source;
+  assert(source?.repository === stage.sourceClosure.repository &&
+    source.revision === stage.sourceClosure.revision && source.tree === stage.sourceClosure.tree &&
+    source.sourceClosureDigest === stage.sourceClosure.sourceClosureDigest &&
+    source.sourceVerificationClosureDigest === stage.sourceClosure.sourceVerificationClosureDigest &&
+    canonicalEqual(source.entries, stage.sourceClosure.entries),
+  "direct-chain evidence source differs from protected source closure");
+  assert(value.finality?.mode === "rpc-finalized" &&
+    value.finality.explicitBlockRequiresFinalizedAncestor === true &&
+    value.finality.confirmationCountIsNotFinality === true &&
+    canonicalEqual(value.finality.stagePolicy, stage.developers.finalityPolicy),
+  "direct-chain evidence finality differs");
+  const finalized = value.finalizedCheckpoint;
+  exactDecimal(finalized?.blockNumber, "direct-chain finalized block", true);
+  exactHash(finalized?.blockHash, "direct-chain finalized hash");
+  assert(finalized.tag === "finalized", "direct-chain evidence requires a finalized RPC checkpoint");
+  const deployment = value.deployment;
+  const router = manifest.launchStampRouter;
+  assert(deployment?.finality === "finalized" && deployment.receiptStatus === 1 &&
+    deployment.transactionHash === stage.finalizedBindings.deploymentTransactionHash &&
+    deployment.blockNumber === stage.startBlock &&
+    deployment.blockHash === stage.finalizedCheckpoint.blockHash &&
+    sameAddress(deployment.routerAddress, router.address) &&
+    deployment.runtimeCodeHash === router.runtimeCodeHash &&
+    deployment.runtimeCodeBytes === router.deploymentEvidence.runtimeCodeBytes &&
+    deployment.runtimeCodeSha256 === router.deploymentEvidence.runtimeCodeSha256 &&
+    canonicalEqual(deployment.observedBindings, router.deploymentEvidence.observedBindings) &&
+    BigInt(deployment.previousBlockNumber) === BigInt(stage.startBlock) - 1n &&
+    deployment.previousRuntimeCode === "0x",
+  "direct-chain evidence deployment does not bind exact Router bytes and receipt");
+  const launch = value.launch;
+  assert(launch?.publicLaunchId === "b451a50f-026b-4e68-9c16-68e41c318076" &&
+    launch.finality === "finalized" && launch.launchKind === 1 &&
+    canonicalEqual(router.canaryEvidence, {
+      finality: launch.finality, transactionHash: launch.transactionHash,
+      blockNumber: launch.blockNumber, blockHash: launch.blockHash, launchId: launch.launchId,
+    }) && BigInt(launch.blockNumber) >= BigInt(stage.startBlock) &&
+    BigInt(launch.blockNumber) <= BigInt(finalized.blockNumber),
+  "direct-chain evidence canary is not the exact existing finalized Custom launch");
+  for (const key of ["transactionHash", "blockHash", "launchId", "stampHash"])
+    exactHash(launch[key], `direct-chain launch ${key}`);
+  assert(launch.launchStamp?.kind === "1" && launch.launchStamp.stampHash === launch.stampHash &&
+    sameAddress(launch.launchStamp.token, launch.components?.token) &&
+    sameAddress(launch.launchStamp.hook, launch.components?.hook) &&
+    launch.launchStamp.poolId === launch.pool?.poolId &&
+    launch.launchStamp.poolKeyHash === launch.pool?.poolKeyHash &&
+    sameAddress(launch.launchStamp.poolManager, launch.pool?.poolManager),
+  "direct-chain evidence stamp record differs from token/hook/pool identity");
+  assert(Array.isArray(launch.stampProofs) && launch.stampProofs.length === 3 &&
+    Object.values(launch.components).length === 3 &&
+    Object.values(launch.components).every((component) => launch.stampProofs.some((proof) =>
+      sameAddress(proof.component, component) && proof.launchId === launch.launchId &&
+      proof.stampHash === launch.stampHash)),
+  "direct-chain evidence must bind all three component stamp proofs");
+  assert(Array.isArray(value.rootEvidence) && value.rootEvidence.length === 4 &&
+    ["router", "permitAuthority", "graphFactory", "poolManager"].every((role) => {
+      const root = value.rootEvidence.find((entry) => entry.role === role);
+      const address = role === "router" ? router.address : deployment.observedBindings[role];
+      const codeHash = role === "router" ? router.runtimeCodeHash
+        : deployment.observedBindings[`${role}RuntimeCodeHash`];
+      return root && sameAddress(root.address, address) && root.runtimeCodeHash === codeHash;
+    }), "direct-chain evidence root inventory differs");
+  assert(Array.isArray(launch.events) && launch.events.length === 5 &&
+    launch.events.every((event) => sameAddress(event.address, router.address) &&
+      event.transactionHash === launch.transactionHash && event.blockHash === launch.blockHash &&
+      BigInt(event.blockNumber) === BigInt(launch.blockNumber) && event.removed === false &&
+      event.topics?.[1] === launch.launchId),
+  "direct-chain evidence Router event set differs");
+  const checks = exactKeys(value.checks, [
+    "chainId", "successfulDeploymentReceipt", "routerAbsentBeforeDeployment", "deploymentRuntimeMatches",
+    "launchReceiptCanonicalAndFinalized", "launchTransactionCallsCanonicalRouter", "launchKindCustomGraph",
+    "tokenPoolComponentGettersAgree", "allComponentStampProofsAgree", "componentCodeHashesAgree",
+    "routerBindingsAgree", "poolIdAndPoolKeyHashAgree", "routerStampEventAgrees",
+    "canonicalBlockHashUnchanged", "independentProviderRecordRuntimeAndBlockAgree",
+  ], "direct-chain captured checks");
+  assert(Object.values(checks).every((value) => value === true),
+    "direct-chain captured evidence contains a failed or unavailable check");
+  return evidence;
+}

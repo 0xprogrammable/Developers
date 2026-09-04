@@ -13,7 +13,7 @@ Use these docs to verify origin and decide which market features your product ca
 | Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
 | Verify a historical fee-enforced V2 resource | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
 | Integrate the active V3 general direct-hook lane | [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md), with exact graph binding, deterministic static admission and mandatory Router simulation |
-| Inspect the planned Robinhood Chain V4 contract | [V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json), for chain `4663` client preparation only; public writes and publication remain unavailable |
+| Inspect the planned Robinhood Chain V4 contract | [V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json), for chain `4663` write-client preparation; public writes remain unavailable while direct-chain provenance is published separately |
 | Keep a Revision 2 integration compatible | [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md), retained for exact 3–16-target graphs, all valid v4 masks and three funding modes |
 | Inspect the retained V3 preview | [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md), preserved unchanged for discovery compatibility |
 | Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) |
@@ -24,9 +24,9 @@ but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_RE
 reviews and signs an authorized exact transaction separately. The V1 and V2 schemas remain in their canonical OpenAPI
 contracts instead of being copied into this read/discovery repository. This
 fresh-write statement is chain-qualified: it applies to Ethereum Mainnet
-(`chainId: 1`). Robinhood Chain Mainnet (`chainId: 4663`) exposes only a
-planned V4 contract. Its public write lane, deployment publication, and
-authoritative read model are not released.
+(`chainId: 1`). Robinhood Chain Mainnet (`chainId: 4663`) publishes live
+direct-chain provenance through its canonical Router. Its V4 public write lane,
+CLI and hosted read model remain planned; no public writes are activated here.
 
 The versioned launch requirements likewise remain owned by Programmable Launch Policy instead of being duplicated here.
 
@@ -80,7 +80,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 
 On Ethereum (`chainId: 1`), Classic discovery is live for historical V3 and current V4 releases; Classic V1/V2 remain inactive manifest history and Stock is excluded from active v2 discovery. The hosted Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted through its schema, scope, evidence and identity commitments and currently reporting Envio deployment `production-6157d22`, not the retired source that returned HTTP `410`. Custom Registry generation 1 remains a separate `custom` path. Custom Launch API V1 and V2 retain historical reads, but authenticated POST is read-only and returns nonretryable HTTP 409; only Ethereum V3 profile `3.3.0` accepts fresh submissions. The active Direct Native Hook Graph Revision 3 accepts exact 3–16-target project token and hook graphs and all valid v4 permission masks. The API server, not a CLI, LLM, or client, decides authorization after the exact static admission baseline and pinned Router simulation. Missing or unavailable runtime behavior evidence keeps the related behavior, trading, liquidity, and fee claims unverified; only an authenticated executed negative blocks handoff. That does not make an arbitrary hook safe or prove universal fee enforcement. Legacy Registry and GitHub submission intake are closed. The separate Ethereum `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches, with finalized exact canaries for both route kinds; it is provenance and transport, not a third public category, and historical coins are not backfilled. Manifest-driven clients discover Ethereum Classic V4 by refreshing enabled release entries, without a code or pinned-address update. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
 
-Robinhood Chain (`chainId: 4663`) is a separate planned Custom Launch V4 lane. Its manifest deliberately keeps the public deployment roots null, `publicSubmissionsEnabled` false, and its launch and token feeds empty with `unavailable` quality and non-authoritative absence. Prepared addresses, source contracts, or a valid V4 schema do not prove deployment, API readiness, finality, exact source verification, indexing, public visibility, trading, or release.
+Robinhood Chain (`chainId: 4663`) publishes a live direct-chain Custom integration. Fetch its canonical Router, start block, runtime hash, deployment evidence, finality policy and existing finalized launch evidence from the chain manifest. An external terminal can independently verify and index future `CustomGraph` stamps, including individual custom hooks, as `Programmable Custom`. The hosted read model remains planned: launch and token feeds have `unavailable` quality and non-authoritative absence. Public writes and CLI activation remain unavailable. Finality, exact source verification, indexing and public visibility remain separate evidence axes, and none proves trading, liquidity or safety.
 
 For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
 

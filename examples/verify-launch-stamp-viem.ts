@@ -185,7 +185,10 @@ type ClassicV4Deployment = {
 };
 
 type RouterManifest = {
-  status: "prelaunch" | "live" | "retired";
+  status: "prelaunch" | "planned" | "live" | "retired";
+  supportsFutureCustom?: boolean;
+  supportsFutureClassic?: boolean;
+  deploymentEvidence?: { verificationStatus: string; deploymentTransactionHash: Hex; deploymentBlockNumber: string; deploymentBlockHash: Hex };
   address: Address | null;
   startBlock: string | null;
   endBlock: string | null;
@@ -209,16 +212,28 @@ type RouterManifest = {
 export async function verifyLaunchStampWithViem({
   query,
   rpcUrl,
+  chainId: selectedChainId = 1,
   discoveryUrl = DEFAULT_DISCOVERY_URL,
   block = "finalized",
 }: {
   query: Query;
   rpcUrl?: string;
+  chainId?: number;
   discoveryUrl?: string;
   block?: "finalized" | bigint;
 }) {
   const discovery = await fetchJson(discoveryUrl);
-  const manifest = await fetchJson(discovery.manifestUrl);
+  if (!Number.isSafeInteger(selectedChainId) || selectedChainId <= 0) {
+    return result("indeterminate", "chain-id-invalid", query);
+  }
+  const selected = discovery.chains?.find((chain: { chainId: number }) => chain.chainId === selectedChainId);
+  const manifestUrl = selected?.manifestUrl ?? (selectedChainId === 1 ? discovery.manifestUrl : null);
+  if (!manifestUrl) return result("unavailable", "chain-not-discovered", query);
+  const manifest = await fetchJson(manifestUrl);
+  if (manifest.chainId !== selectedChainId ||
+      (selectedChainId !== 1 && manifest.caip2 !== `eip155:${selectedChainId}`)) {
+    return result("indeterminate", "manifest-chain-mismatch", query);
+  }
   const router = manifest.launchStampRouter as RouterManifest | undefined;
 
   if (
@@ -250,12 +265,10 @@ export async function verifyLaunchStampWithViem({
     !router.getters.componentRuntimeCodeHash ||
     !router.getters.record ||
     !router.getters.stampProof ||
-    !completeCanaryEvidence(router.canaryEvidence, router) ||
-    !completeClassicCanaryEvidence(
-      router.classicCanaryEvidence,
-      router,
-      manifest,
-    )
+    !(manifest.chainId === 4663
+      ? completeRobinhoodCanary(router, manifest)
+      : completeCanaryEvidence(router.canaryEvidence, router) &&
+        completeClassicCanaryEvidence(router.classicCanaryEvidence, router, manifest))
   ) {
     return result("unavailable", "router-prelaunch-or-incomplete", query);
   }
@@ -282,7 +295,12 @@ export async function verifyLaunchStampWithViem({
         : await client.getBlock({ blockNumber: block });
     const blockNumber = canonicalBlock.number;
     const blockHash = canonicalBlock.hash;
-    if (block !== "finalized") {
+    if (block !== "finalized" && selectedChainId === 4663) {
+      const finalized = await client.getBlock({ blockTag: "finalized" });
+      if (!finalized.hash || blockNumber > finalized.number) {
+        return result("indeterminate", "block-not-finalized", query);
+      }
+    } else if (block !== "finalized") {
       const chainHead = await client.getBlockNumber({ cacheTime: 0 });
       const requiredConfirmations = BigInt(router.finalityConfirmations);
       if (
@@ -395,6 +413,9 @@ export async function verifyLaunchStampWithViem({
     }
 
     const classification = classifyLaunchKind(record.kind);
+    if (selectedChainId === 4663 && classification?.category !== "custom") {
+      return result("indeterminate", "launch-kind-not-supported-on-chain", query);
+    }
     if (!classification) {
       return result("indeterminate", "launch-kind-unknown", query);
     }
@@ -719,6 +740,26 @@ function completeBindings(
       nonzeroAddress(bindings?.poolManager) &&
       nonzeroHash32(bindings?.poolManagerRuntimeCodeHash),
   );
+}
+
+function completeRobinhoodCanary(router: RouterManifest, manifest: any) {
+  const direct = manifest.directChainIntegration;
+  const evidence = router.canaryEvidence;
+  const deployment = router.deploymentEvidence;
+  return direct?.schemaVersion === "programmable.direct-chain-integration.v1" &&
+    direct.status === "live" && direct.platformId === "programmable" &&
+    direct.category === "custom" && direct.publicLabel === "Programmable Custom" &&
+    direct.indexing === "direct-chain" && direct.publicWrites === false &&
+    direct.finality?.mode === "rpc-finalized" &&
+    direct.finality.explicitBlockRequiresFinalizedAncestor === true &&
+    router.supportsFutureCustom === true && router.supportsFutureClassic === false &&
+    deployment?.verificationStatus === "finalized-verified" &&
+    nonzeroHash32(deployment.deploymentTransactionHash) && nonzeroHash32(deployment.deploymentBlockHash) &&
+    decimal(deployment.deploymentBlockNumber) && deployment.deploymentBlockNumber === router.startBlock &&
+    evidence?.finality === "finalized" &&
+    nonzeroHash32(evidence.transactionHash) && nonzeroHash32(evidence.blockHash) &&
+    nonzeroHash32(evidence.launchId) && decimal(evidence.blockNumber) &&
+    BigInt(evidence.blockNumber) >= BigInt(router.startBlock);
 }
 
 function completeCanaryEvidence(

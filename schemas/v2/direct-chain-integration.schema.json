@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/direct-chain-integration.schema.json",
+  "title": "Programmable direct-chain Custom integration",
+  "description": "Read-only discovery and provenance support independent of hosted indexing, wallet writes and self-serve launch release. The RPC finalized boundary is mandatory; confirmation counts do not establish finality.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "status",
+    "platformId",
+    "category",
+    "publicLabel",
+    "indexing",
+    "publicWrites",
+    "hostedIndexer",
+    "evidenceUrl",
+    "chainDeploymentDescriptorDigest",
+    "profile",
+    "finalityPolicy",
+    "finality"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "programmable.direct-chain-integration.v1"
+    },
+    "status": {
+      "const": "live"
+    },
+    "platformId": {
+      "const": "programmable"
+    },
+    "category": {
+      "const": "custom"
+    },
+    "publicLabel": {
+      "const": "Programmable Custom"
+    },
+    "indexing": {
+      "const": "direct-chain"
+    },
+    "publicWrites": {
+      "const": false
+    },
+    "hostedIndexer": {
+      "const": "unavailable"
+    },
+    "evidenceUrl": {
+      "const": "https://developers.programmable.family/deployments/robinhood-direct-chain-evidence-v1.json"
+    },
+    "chainDeploymentDescriptorDigest": {
+      "$ref": "common.schema.json#/$defs/hash32"
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "structuralProfileId",
+        "businessProfileId",
+        "admissionDescriptorDigest",
+        "admissionPolicyDigest",
+        "admissionSchemaDigest",
+        "admissionBindingDigest",
+        "profileRevision",
+        "profileVersion",
+        "profileDigest"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-profile-ref.v4"
+        },
+        "structuralProfileId": {
+          "const": "programmable.custom-launch.robinhood-mainnet.v1"
+        },
+        "businessProfileId": {
+          "const": "robinhood-production-launch"
+        },
+        "admissionDescriptorDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "admissionPolicyDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "admissionSchemaDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "admissionBindingDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "profileRevision": {
+          "const": 1
+        },
+        "profileVersion": {
+          "const": "4.0.0"
+        },
+        "profileDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "finalityPolicy": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "policyId",
+        "policyRevision",
+        "policyDigest"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-finality-policy-ref.v1"
+        },
+        "policyId": {
+          "$ref": "common.schema.json#/$defs/openIdentifier"
+        },
+        "policyRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "policyDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "finality": {
+      "type": "object",
+      "required": [
+        "mode",
+        "canonicalReadBlock",
+        "explicitBlockRequiresFinalizedAncestor"
+      ],
+      "properties": {
+        "mode": {
+          "const": "rpc-finalized"
+        },
+        "canonicalReadBlock": {
+          "const": "finalized-or-explicit-canonical-block"
+        },
+        "explicitBlockRequiresFinalizedAncestor": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

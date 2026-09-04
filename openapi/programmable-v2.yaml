@@ -383,12 +383,15 @@ paths:
       summary: Resolve one chain-bound deployment manifest
       description: |
         Returns a manifest whose root `chainId` and `caip2` match the path.
-        Ethereum remains live through chain 1. Robinhood Chain 4663 is published
-        as `planned` until exact Programmable Router deployment, runtime, start
-        block, finalized canary, backend quality, CLI and OpenAPI release evidence
-        is available. Planned null deployment fields must never be replaced with
-        guessed addresses. A listed chain is discoverable; its feed quality and
-        promotion status determine whether absence is authoritative.
+        Ethereum remains live through chain 1. Robinhood Chain 4663 publishes
+        live canonical Router roots and `directChainIntegration` for external
+        terminal indexing: platformId=programmable, category=custom, publicLabel=
+        Programmable Custom. Verify the ABI, runtime, immutable bindings and stamp
+        record at a canonical finalized block. An explicit block must be at or below
+        the RPC finalized boundary; head confirmations alone are insufficient.
+        Hosted read-model, public submission and CLI release states remain separate.
+        A live Router does not make a planned hosted feed authoritative. Null
+        deployment fields must never be replaced with guessed addresses.
       parameters:
         - $ref: "#/components/parameters/ChainIdPath"
       responses:

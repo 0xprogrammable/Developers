@@ -24,8 +24,10 @@ Those write states apply to Ethereum Mainnet (`chainId: 1`): V1 and V2 are
 historical-read/write-fenced surfaces, while V3 profile `3.3.0` is the current
 fresh-write lane. Robinhood Chain Mainnet (`chainId: 4663`) has a separate
 [planned V4 OpenAPI contract](https://programmable.market/openapi/custom-launch-v4.json).
-Its public writes, deployment roots, authoritative feed, and release remain
-unavailable. The V4 source-verification contracts are the
+Public writes and the hosted read model remain unavailable. Its separate
+`directChainIntegration` is live and publishes the canonical Router, start
+block, runtime identity, deployment evidence and finalized launch evidence for
+external terminal verification and indexing. The V4 source-verification contracts are the
 [API status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
 and the separate
 [Developer projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json);
@@ -66,18 +68,24 @@ server-configured Privy-user/wallet allowlist; clients cannot self-authorize.
 | Legacy Registry and GitHub submission intake | `custom` | Ethereum | Closed | No legacy, V1, or V2 fresh-write path is open |
 | Custom Registry | `custom` | Ethereum | Live discovery | Generation 1 is active for finalized approved discovery; legacy intake is closed |
 | Stock-Paired records | — | Ethereum | Excluded | Not scanned or projected by active v2 discovery; frozen v1 compatibility semantics remain unchanged |
-| Custom Launch API V4 | `custom` | Robinhood Chain `4663` | Planned | No public writes; the chain manifest keeps public deployment roots null and returns an empty `unavailable` feed whose absence is not authoritative |
+| Direct-chain Router provenance | `custom` | Robinhood Chain `4663` | Live | Verify the manifest-bound Router and finalized launch evidence; independently index future `CustomGraph` stamps as `Programmable Custom` |
+| Custom Launch API V4 / CLI | `custom` | Robinhood Chain `4663` | Planned | No public writes are promoted by the direct-chain integration release |
+| Hosted launch and token feeds | `custom` | Robinhood Chain `4663` | Unavailable | The hosted read model remains planned; its empty feed has non-authoritative absence |
 | Basebit partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner source, recipient, accepted template, Registry record, or live fee path is published |
 | Aion partnership template | `custom` if activated | Not published | Unverified / prelaunch | No authoritative partner recipient, accepted template, Registry record, or live fee path is published; similarly named code is not evidence |
 | Other networks | — | — | Not declared | Support exists only when the canonical discovery and per-chain manifest publish it |
 
-For Robinhood Chain, a prepared address or source binding is not a public
-deployment root. Promotion requires a released manifest with non-null Router
-identity, start block, runtime identity, deployment evidence, finality policy,
-and canary evidence, followed by a current complete read model. Until then,
-`GET /api/v2/launches?chainId=4663` and the matching token list can return HTTP
-`200` with `status: "unavailable"` and no records; that empty result means
-"unknown", not "no launches exist".
+For Robinhood Chain, `directChainIntegration.status: "live"` and the complete
+live `launchStampRouter` entry authorize discovery of the published chain
+roots, subject to independent RPC verification. Follow
+`directChainIntegration.evidenceUrl` for the finalized launch vector and its
+`finality` policy for canonical reads. This release is independent of hosted
+Envio/indexer promotion and does not enable public writes. The service can
+remain `degraded` while this direct-chain path is live.
+
+`GET /api/v2/launches?chainId=4663` and the matching token list remain HTTP
+`200` with `status: "unavailable"` and no records until hosted promotion;
+that empty result means "unknown", not "no launches exist".
 
 ## What `custom` means today
 
@@ -87,7 +95,7 @@ After registry activation, different providers, factories, templates, token cont
 
 ## Router V1 status
 
-The manifest publishes Router V1 as `live`, with its exact address, start block, runtime hash, immutable bindings, finality policy, and separate finalized evidence for `CustomGraph` and Classic V4. Its route coverage therefore reports both `customGraphOnchainCanary: true` and `classicOnchainCanary: true`. Each launch still requires its own consistent stamp from that Router. This is origin evidence, not a safety, audit, liquidity, tradability, or terminal-support claim, and Router is not a public category.
+The Ethereum manifest publishes Router V1 as `live`, with its exact address, start block, runtime hash, immutable bindings, finality policy, and separate finalized evidence for `CustomGraph` and Classic V4. Its route coverage therefore reports both `customGraphOnchainCanary: true` and `classicOnchainCanary: true`. Each launch still requires its own consistent stamp from that Router. This is origin evidence, not a safety, audit, liquidity, tradability, or terminal-support claim, and Router is not a public category.
 
 ## Classic discovery source
 

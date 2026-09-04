@@ -634,10 +634,13 @@ export function serviceStatusV2(status, manifestOrStatus = "prelaunch") {
           "No chain-local Programmable Classic feed is active.",
       },
       custom: {
-        status: promotionStatus,
+        status: manifest.publicCategories.custom.discoveryStatus,
         note: manifest.publicCategories.custom.note,
       },
       ...(customLaunchV4 ? { customLaunchV4 } : {}),
+      ...(manifest.directChainIntegration
+        ? { directChainIntegration: structuredClone(manifest.directChainIntegration) }
+        : {}),
       feeds: {
         manifest: "ready",
         launches: launchFeedStatus,

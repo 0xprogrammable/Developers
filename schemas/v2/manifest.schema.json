@@ -573,6 +573,9 @@
     },
     "extensions": {
       "$ref": "common.schema.json#/$defs/extensions"
+    },
+    "directChainIntegration": {
+      "$ref": "direct-chain-integration.schema.json"
     }
   },
   "additionalProperties": false,
@@ -747,6 +750,47 @@
           ]
         }
       ]
+    },
+    {
+      "if": {
+        "required": [
+          "directChainIntegration"
+        ],
+        "properties": {
+          "directChainIntegration": true
+        }
+      },
+      "then": {
+        "properties": {
+          "chainId": {
+            "const": 4663
+          },
+          "launchStampRouter": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "const": "live"
+              }
+            }
+          },
+          "publicCategories": {
+            "type": "object",
+            "properties": {
+              "custom": {
+                "type": "object",
+                "properties": {
+                  "discoveryStatus": {
+                    "const": "live"
+                  },
+                  "publicSubmissionStatus": {
+                    "const": "planned"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {

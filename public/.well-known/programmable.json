@@ -2,7 +2,7 @@
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
   "name": "Programmable Developer Platform",
-  "description": "Canonical multi-chain discovery for Programmable Classic and Custom launches. Ethereum V1/V2/V3 behavior remains live; Robinhood Custom Launch V4 is advertised only as planned until its exact deployment and release evidence is published.",
+  "description": "Canonical multi-chain discovery for Programmable Classic and Custom launches. Robinhood chain 4663 publishes verified Custom Router roots for direct-chain terminal indexing. Hosted read models and public submission have separate release states.",
   "apiVersion": "2",
   "apiBaseUrl": "https://developers.programmable.family/api/v2",
   "statusUrl": "https://developers.programmable.family/api/v2/status",
@@ -28,7 +28,7 @@
       "caip2": "eip155:4663",
       "name": "Robinhood Chain Mainnet",
       "explorerUrl": "https://robinhoodchain.blockscout.com",
-      "status": "planned",
+      "status": "live",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
       "readModelStatus": "planned"
     }
@@ -1036,6 +1036,21 @@
       "status": "supported",
       "apiBaseUrl": "https://developers.programmable.family/api/v1",
       "migrationGuideUrl": "https://github.com/programmablehq/developers/blob/main/docs/migrations/v1-to-v2.md"
+    },
+    "programmable.direct-chain-integration": {
+      "schemaVersion": "programmable.direct-chain-integration.v1",
+      "chainId": 4663,
+      "caip2": "eip155:4663",
+      "status": "live",
+      "platformId": "programmable",
+      "category": "custom",
+      "publicLabel": "Programmable Custom",
+      "indexing": "direct-chain",
+      "publicWrites": false,
+      "hostedIndexer": "unavailable",
+      "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
+      "guideUrl": "https://developers.programmable.family/robinhood-terminal-indexer",
+      "evidenceUrl": "https://developers.programmable.family/deployments/robinhood-direct-chain-evidence-v1.json"
     }
   }
 }

@@ -30,7 +30,8 @@ export function createChainManifestHandler(loadManifest = developerManifestV2) {
       json(req, res, 200, manifest, {
         cacheControl:
           "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
-        apiStatus: manifest.customLaunchV4?.status === "live"
+        apiStatus: manifest.customLaunchV4?.status === "live" ||
+          manifest.directChainIntegration?.status === "live"
           ? "ready"
           : manifest.chainId === 1
             ? "ready"

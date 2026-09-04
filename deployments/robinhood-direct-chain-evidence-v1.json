@@ -1,0 +1,304 @@
+{
+  "schemaVersion": "programmable.robinhood-direct-chain-evidence.v1",
+  "observedAt": "2026-09-04T21:10:24.519Z",
+  "chainId": 4663,
+  "platformId": "programmable",
+  "category": "custom",
+  "publicLabel": "Programmable Custom",
+  "officialRpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+  "verificationProviders": [
+    {
+      "name": "QuickNode",
+      "access": "operator-configured archive RPC",
+      "role": "full hash-bound historical verification"
+    },
+    {
+      "name": "Alchemy",
+      "access": "operator-configured archive RPC",
+      "role": "independent historical record/runtime/block cross-check"
+    }
+  ],
+  "finality": {
+    "mode": "rpc-finalized",
+    "explicitBlockRequiresFinalizedAncestor": true,
+    "confirmationCountIsNotFinality": true,
+    "stagePolicy": {
+      "schemaVersion": "programmable.custom-launch-finality-policy-ref.v1",
+      "policyId": "robinhood-stage-finality-v1",
+      "policyRevision": 1,
+      "policyDigest": "sha256:537d531423d1285a3808556a57303ec68f1e6bdeea3c9aaf6320f9e5a0e47153"
+    }
+  },
+  "finalizedCheckpoint": {
+    "blockNumber": "54563376",
+    "blockHash": "0x4be649a47e29e3af2a31304cdba7b839dbf66393fbf0e92ade5b25e05d5e1268",
+    "tag": "finalized"
+  },
+  "deployment": {
+    "finality": "finalized",
+    "transactionHash": "0x30617f11ef467997bace3ab8b8d6048a19e42675fc101c73b1b216b5f8b0d08d",
+    "blockNumber": "50469365",
+    "blockHash": "0x6f3331471a5b96a23b951116be75f74a3cedf1c5f95f7d07d7f0e23f7b8493f0",
+    "receiptStatus": 1,
+    "routerAddress": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+    "runtimeCodeHash": "0x1dbbdaaad901ea3c6134dca0d4872a4789b3c071bf8ccfb44edd65d26d817388",
+    "runtimeCodeBytes": 23013,
+    "runtimeCodeSha256": "sha256:e35a4a340adf6d8550eed455aeaed6d3207b72e1c114aaaa0b202b1a52bb6a84",
+    "previousBlockNumber": "50469364",
+    "previousRuntimeCode": "0x",
+    "observedBindings": {
+      "chainId": 4663,
+      "permitAuthority": "0xed617ce7f82e2ab589adeffd319d1d872bc8de06",
+      "permitAuthorityRuntimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "graphFactory": "0x0b6b3f40f84df25d3bd69238f937096177dd09bd",
+      "graphFactoryRuntimeCodeHash": "0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8",
+      "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+      "poolManagerRuntimeCodeHash": "0xbd3881180b547f5fe817545743cfb4343e96b1bc6640dcd70c106b0066e95626"
+    }
+  },
+  "launch": {
+    "publicLaunchId": "b451a50f-026b-4e68-9c16-68e41c318076",
+    "finality": "finalized",
+    "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+    "blockNumber": "53888738",
+    "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+    "transactionIndex": 7,
+    "launchId": "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+    "stampHash": "0x23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4",
+    "launchKind": 1,
+    "components": {
+      "initializer": "0x91e1b0633d3c6efc89125e790380c21092000add",
+      "token": "0xc60ba256b44334a0cd2c7242e98b88f031abb006",
+      "hook": "0x720e649549f7bc2118acba9f4c9ae6fcc7586080"
+    },
+    "pool": {
+      "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+      "poolId": "0x3df16f271060e4941c0386047def159f42e629dc0455db623c5b363eeacbcc1d",
+      "poolKey": {
+        "currency0": "0x0000000000000000000000000000000000000000",
+        "currency1": "0xc60ba256b44334a0cd2c7242e98b88f031abb006",
+        "fee": 8388608,
+        "tickSpacing": 60,
+        "hooks": "0x720e649549f7bc2118acba9f4c9ae6fcc7586080"
+      },
+      "poolKeyHash": "0x811f3f67597a39d06874e0b0811096671fbecd95804a62561d77ec1e2270c649",
+      "initializeLogIndex": 86
+    },
+    "stampProofs": [
+      {
+        "component": "0x91e1b0633d3c6efc89125e790380c21092000add",
+        "launchId": "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+        "stampHash": "0x23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4"
+      },
+      {
+        "component": "0xc60ba256b44334a0cd2c7242e98b88f031abb006",
+        "launchId": "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+        "stampHash": "0x23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4"
+      },
+      {
+        "component": "0x720e649549f7bc2118acba9f4c9ae6fcc7586080",
+        "launchId": "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+        "stampHash": "0x23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4"
+      }
+    ],
+    "componentEvidence": [
+      {
+        "role": "initializer",
+        "address": "0x91e1b0633d3c6efc89125e790380c21092000add",
+        "runtimeCodeHash": "0x69c62040bd5d5ae5d2d940cbfb2af4b94e0f30b01ca55972f80736cefb86c02e",
+        "runtimeCodeBytes": 15446
+      },
+      {
+        "role": "token",
+        "address": "0xc60ba256b44334a0cd2c7242e98b88f031abb006",
+        "runtimeCodeHash": "0x3a59d82f4d4bce7c9f370476a284e1ef549ed3d20a3b9ec7af5560011c9c1458",
+        "runtimeCodeBytes": 1931
+      },
+      {
+        "role": "hook",
+        "address": "0x720e649549f7bc2118acba9f4c9ae6fcc7586080",
+        "runtimeCodeHash": "0xf3d3f472aa61c1a3bafd8e104c422feb8419adc6838472382b75c81f7f0de106",
+        "runtimeCodeBytes": 4585
+      }
+    ],
+    "launchStamp": {
+      "kind": "1",
+      "launchWallet": "0x245099e77f8f0cad9a75b1b56db8fde7c948d5b1",
+      "token": "0xc60ba256b44334a0cd2c7242e98b88f031abb006",
+      "hook": "0x720e649549f7bc2118acba9f4c9ae6fcc7586080",
+      "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+      "poolId": "0x3df16f271060e4941c0386047def159f42e629dc0455db623c5b363eeacbcc1d",
+      "poolKeyHash": "0x811f3f67597a39d06874e0b0811096671fbecd95804a62561d77ec1e2270c649",
+      "componentSetHash": "0xf55b0a599f862e059886bd4edf9b49c1dde195619ad2331f717591b565ddd377",
+      "routePayloadHash": "0x373d64712f5f624511cab65441df418dd510683219402700c420dbbb2e71d2e8",
+      "routeLauncher": "0x0b6b3f40f84df25d3bd69238f937096177dd09bd",
+      "routeLauncherRuntimeCodeHash": "0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8",
+      "expectedResultHash": "0xa351a5674e543f7af60e563b10edf996988d4b9d60a8b9fb68840e7af7837418",
+      "permitDigest": "0x53db746f109f533501299ef56c76b70d190a842b0a6cc894234400301c2aeab1",
+      "stampHash": "0x23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4"
+    },
+    "events": [
+      {
+        "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+        "topics": [
+          "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b",
+          "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+          "0x000000000000000000000000720e649549f7bc2118acba9f4c9ae6fcc7586080",
+          "0x0000000000000000000000000000000000000000000000000000000000000002"
+        ],
+        "data": "0xf3d3f472aa61c1a3bafd8e104c422feb8419adc6838472382b75c81f7f0de106",
+        "blockNumber": "0x33646e2",
+        "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+        "transactionIndex": "0x7",
+        "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+        "blockTimestamp": "0x6a9a249b",
+        "logIndex": "0x64",
+        "removed": false
+      },
+      {
+        "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+        "topics": [
+          "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b",
+          "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+          "0x00000000000000000000000091e1b0633d3c6efc89125e790380c21092000add",
+          "0x0000000000000000000000000000000000000000000000000000000000000000"
+        ],
+        "data": "0x69c62040bd5d5ae5d2d940cbfb2af4b94e0f30b01ca55972f80736cefb86c02e",
+        "blockNumber": "0x33646e2",
+        "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+        "transactionIndex": "0x7",
+        "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+        "blockTimestamp": "0x6a9a249b",
+        "logIndex": "0x65",
+        "removed": false
+      },
+      {
+        "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+        "topics": [
+          "0x8147265e7396d6400cee8d049456a1f7438fdfbe2a7c81c976d51ba67e52ff4b",
+          "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+          "0x000000000000000000000000c60ba256b44334a0cd2c7242e98b88f031abb006",
+          "0x0000000000000000000000000000000000000000000000000000000000000001"
+        ],
+        "data": "0x3a59d82f4d4bce7c9f370476a284e1ef549ed3d20a3b9ec7af5560011c9c1458",
+        "blockNumber": "0x33646e2",
+        "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+        "transactionIndex": "0x7",
+        "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+        "blockTimestamp": "0x6a9a249b",
+        "logIndex": "0x66",
+        "removed": false
+      },
+      {
+        "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+        "topics": [
+          "0x45e7cc355b63ca67d6278a0d8d23470ce2a0741a9c60283d7dee712df7a877a5",
+          "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "0x373d64712f5f624511cab65441df418dd510683219402700c420dbbb2e71d2e8"
+        ],
+        "data": "0xa351a5674e543f7af60e563b10edf996988d4b9d60a8b9fb68840e7af783741853db746f109f533501299ef56c76b70d190a842b0a6cc894234400301c2aeab1",
+        "blockNumber": "0x33646e2",
+        "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+        "transactionIndex": "0x7",
+        "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+        "blockTimestamp": "0x6a9a249b",
+        "logIndex": "0x67",
+        "removed": false
+      },
+      {
+        "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+        "topics": [
+          "0x6cf479a102f1eebc9244f48f8d68f6aa52b4c5a4516318df58ba46614a5b14f2",
+          "0x1c49434554df0c409ff80f4f12aae45268d236b4657b488f9d5534f85fb7c3ba",
+          "0x000000000000000000000000c60ba256b44334a0cd2c7242e98b88f031abb006",
+          "0x000000000000000000000000720e649549f7bc2118acba9f4c9ae6fcc7586080"
+        ],
+        "data": "0x0000000000000000000000008366a39cc670b4001a1121b8f6a443a643e409513df16f271060e4941c0386047def159f42e629dc0455db623c5b363eeacbcc1d23603d9abc916c20706c90a0fe60347d00cfa375c3fb63ab1a62a108ab8624d4",
+        "blockNumber": "0x33646e2",
+        "transactionHash": "0xd9e02ecae02106e7554567ed955e779ae84594d1e80bea44e7fff5e434c13842",
+        "transactionIndex": "0x7",
+        "blockHash": "0x026b7f3984ff43a845cdabb4b7d9d7bcf5eaca042d858f0cd8301026e9567cd5",
+        "blockTimestamp": "0x6a9a249b",
+        "logIndex": "0x68",
+        "removed": false
+      }
+    ]
+  },
+  "rootEvidence": [
+    {
+      "role": "router",
+      "address": "0x34965f2a2ee9254522232c32f02056e92be0c98a",
+      "runtimeCodeHash": "0x1dbbdaaad901ea3c6134dca0d4872a4789b3c071bf8ccfb44edd65d26d817388",
+      "runtimeCodeBytes": 23013,
+      "runtimeCodeSha256": "sha256:e35a4a340adf6d8550eed455aeaed6d3207b72e1c114aaaa0b202b1a52bb6a84"
+    },
+    {
+      "role": "permitAuthority",
+      "address": "0xed617ce7f82e2ab589adeffd319d1d872bc8de06",
+      "runtimeCodeHash": "0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c",
+      "runtimeCodeBytes": 171,
+      "runtimeCodeSha256": "sha256:a8a0fbd3cdf49e751346664e01b529a58322a814cf8df8d85deb20e63bd6415e"
+    },
+    {
+      "role": "graphFactory",
+      "address": "0x0b6b3f40f84df25d3bd69238f937096177dd09bd",
+      "runtimeCodeHash": "0xd23692fae59331592048e71a96d4963e170ee56e449683dc9f7fa3f9470018b8",
+      "runtimeCodeBytes": 7480,
+      "runtimeCodeSha256": "sha256:bf848fd04d0fc1bcb9d4d206a70ad7f6348c16b6127dadc97a09ad5f9a5c7fe6"
+    },
+    {
+      "role": "poolManager",
+      "address": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+      "runtimeCodeHash": "0xbd3881180b547f5fe817545743cfb4343e96b1bc6640dcd70c106b0066e95626",
+      "runtimeCodeBytes": 24009,
+      "runtimeCodeSha256": "sha256:6eb21c69298b064e37fcf8089a941ae096fe08c0f179b2d399567aef1b10585b"
+    }
+  ],
+  "source": {
+    "repository": "programmablehq/PROGRAMMABLE",
+    "revision": "cbcabd3cfc166124485c6f7e7c3951810cf60dc1",
+    "tree": "971fef2085ed6dae93b48e19d44d68a5427dcdc6",
+    "sourceClosureDigest": "sha256:7a7f0d3fd4945051fd17700482ec1b519b44a54a35ee60f342cb4d21f9018172",
+    "sourceVerificationClosureDigest": "sha256:e3904268f0943dac0ac7c24ed054ad8551d4a1da425dc579e9530230f025f28c",
+    "entries": [
+      {
+        "path": "contracts/spec/robinhood-custom-launch/standard-json/ProgrammableCreate2GraphDeployerV1.standard-input.json",
+        "byteLength": "22985",
+        "sha256": "sha256:8ab811a215d70b1d5aef0c71a47153173953ee78d7632725413833888369ec4d"
+      },
+      {
+        "path": "contracts/spec/robinhood-custom-launch/standard-json/ProgrammableLaunchStampRouterV1.standard-input.json",
+        "byteLength": "312700",
+        "sha256": "sha256:6abca24d06b013599f4ff63e049976419c3f17455fa9bc343b15ec0d6e6a078a"
+      },
+      {
+        "path": "contracts/src/ProgrammableCreate2GraphDeployerV1.sol",
+        "byteLength": "20603",
+        "sha256": "sha256:06a3acaf9beeb68647af231f5524c5a34dc013d99611a1b2d0a6c80895f595e9"
+      },
+      {
+        "path": "contracts/src/robinhood-custom-launch/ProgrammableLaunchStampRouterV1.sol",
+        "byteLength": "39809",
+        "sha256": "sha256:ef87aa9338c364634bffda64423bd3fb096c1630a45cc58ecf854d24959ff163"
+      }
+    ]
+  },
+  "checks": {
+    "chainId": true,
+    "successfulDeploymentReceipt": true,
+    "routerAbsentBeforeDeployment": true,
+    "deploymentRuntimeMatches": true,
+    "launchReceiptCanonicalAndFinalized": true,
+    "launchTransactionCallsCanonicalRouter": true,
+    "launchKindCustomGraph": true,
+    "tokenPoolComponentGettersAgree": true,
+    "allComponentStampProofsAgree": true,
+    "componentCodeHashesAgree": true,
+    "routerBindingsAgree": true,
+    "poolIdAndPoolKeyHashAgree": true,
+    "routerStampEventAgrees": true,
+    "canonicalBlockHashUnchanged": true,
+    "independentProviderRecordRuntimeAndBlockAgree": true
+  }
+}

@@ -13,6 +13,7 @@ const QUERY_KINDS = new Set(["token", "pool", "component"]);
 export async function verifyLaunchStamp({
   kind,
   values,
+  chainId = Number(process.env.PROGRAMMABLE_CHAIN_ID || 1),
   rpcUrl = process.env.PROGRAMMABLE_RPC_URL,
   discoveryUrl =
     process.env.PROGRAMMABLE_DISCOVERY_URL || DEFAULT_DISCOVERY_URL,
@@ -21,7 +22,14 @@ export async function verifyLaunchStamp({
   validateQuery(kind, values);
 
   const discovery = await fetchJson(discoveryUrl, "discovery document");
-  const manifest = await fetchJson(discovery.manifestUrl, "deployment manifest");
+  if (!Number.isSafeInteger(chainId) || chainId <= 0) fail("chain-id-invalid");
+  const selected = discovery.chains?.find((chain) => chain.chainId === chainId);
+  const manifestUrl = selected?.manifestUrl ?? (chainId === 1 ? discovery.manifestUrl : null);
+  if (!manifestUrl) fail("chain-not-discovered");
+  const manifest = await fetchJson(manifestUrl, "deployment manifest");
+  if (manifest.chainId !== chainId || (chainId !== 1 && manifest.caip2 !== `eip155:${chainId}`)) {
+    fail("manifest-chain-mismatch");
+  }
   const router = manifest.launchStampRouter;
   const unavailableReason = activationUnavailableReason(router, manifest);
 
@@ -73,7 +81,13 @@ async function verifyActiveRouter({
     fail("canonical-block-unavailable");
   }
   const blockNumber = parseQuantity(block.number, "block number");
-  if (requestedBlock !== "finalized") {
+  if (requestedBlock !== "finalized" && manifest.chainId === 4663) {
+    const finalized = await callRpc("eth_getBlockByNumber", ["finalized", false]);
+    if (!finalized || !isHash32(finalized.hash) || !isQuantity(finalized.number) ||
+        blockNumber > parseQuantity(finalized.number, "finalized block number")) {
+      fail("block-not-finalized");
+    }
+  } else if (requestedBlock !== "finalized") {
     const chainHead = parseQuantity(
       await callRpc("eth_blockNumber", []),
       "chain head",
@@ -157,6 +171,9 @@ async function verifyActiveRouter({
   });
   validateRecord(record, { kind, values });
   const classification = classifyLaunchKind(record.kind);
+  if (manifest.chainId === 4663 && classification.category !== "custom") {
+    fail("launch-kind-not-supported-on-chain");
+  }
   validateRouteRecord(record, classification, router.bindings);
 
   const currentRouteCode = await callRpc("eth_getCode", [
@@ -208,6 +225,7 @@ async function verifyActiveRouter({
 
   return outcome("stamped", "canonical-router-record", {
     chainId: manifest.chainId,
+    platformId: "programmable",
     router: router.address,
     routerStartBlock: router.startBlock,
     block: { number: blockNumber.toString(), hash: block.hash.toLowerCase() },
@@ -263,12 +281,10 @@ function activationUnavailableReason(router, manifest) {
     return "router-bindings-incomplete";
   }
   if (
-    !completeCanaryEvidence(router.canaryEvidence, router) ||
-    !completeClassicCanaryEvidence(
-      router.classicCanaryEvidence,
-      router,
-      manifest,
-    )
+    !(manifest.chainId === 4663
+      ? completeRobinhoodCanary(router, manifest)
+      : completeCanaryEvidence(router.canaryEvidence, router) &&
+        completeClassicCanaryEvidence(router.classicCanaryEvidence, router, manifest))
   ) {
     return "router-canary-evidence-incomplete";
   }
@@ -298,6 +314,26 @@ function activationUnavailableReason(router, manifest) {
     return "router-events-incomplete";
   }
   return null;
+}
+
+function completeRobinhoodCanary(router, manifest) {
+  const direct = manifest.directChainIntegration;
+  const evidence = router.canaryEvidence;
+  const deployment = router.deploymentEvidence;
+  return direct?.schemaVersion === "programmable.direct-chain-integration.v1" &&
+    direct.status === "live" && direct.platformId === "programmable" &&
+    direct.category === "custom" && direct.publicLabel === "Programmable Custom" &&
+    direct.indexing === "direct-chain" && direct.publicWrites === false &&
+    direct.finality?.mode === "rpc-finalized" &&
+    direct.finality.explicitBlockRequiresFinalizedAncestor === true &&
+    router.supportsFutureCustom === true && router.supportsFutureClassic === false &&
+    deployment?.verificationStatus === "finalized-verified" &&
+    nonzeroHash32(deployment.deploymentTransactionHash) && nonzeroHash32(deployment.deploymentBlockHash) &&
+    decimal(deployment.deploymentBlockNumber) && deployment.deploymentBlockNumber === router.startBlock &&
+    evidence?.finality === "finalized" &&
+    nonzeroHash32(evidence.transactionHash) && nonzeroHash32(evidence.blockHash) &&
+    nonzeroHash32(evidence.launchId) && decimal(evidence.blockNumber) &&
+    BigInt(evidence.blockNumber) >= BigInt(router.startBlock);
 }
 
 function completeCanaryEvidence(evidence, router) {

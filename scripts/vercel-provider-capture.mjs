@@ -60,12 +60,12 @@ function argumentsMap(argv) {
     fail("--selector must be the Vercel production origin or a Vercel deployment ID");
   }
   const releaseMode = values.get("--release-mode") ?? null;
-  if (releaseMode !== null && releaseMode !== "planned") {
-    fail("--release-mode may select only planned readback");
+  if (releaseMode !== null && !["planned", "direct-chain"].includes(releaseMode)) {
+    fail("--release-mode may select only planned or direct-chain readback");
   }
   const source = ["--source-revision", "--source-tree", "--stage-bundle-digest"]
     .map((key) => values.get(key));
-  if (releaseMode === "planned") {
+  if (["planned", "direct-chain"].includes(releaseMode)) {
     if (!source[0] || !source[1] || source[2]) {
       fail("planned readback requires source revision and tree without a phase bundle digest");
     }
@@ -215,9 +215,9 @@ const publicAliasBinding = providerReread
     checkedAt: publicAliasCheckedAt,
   })
   : undefined;
-if (releaseMode === "planned") {
+if (["planned", "direct-chain"].includes(releaseMode)) {
   if (DEPLOYMENT_ID.test(selector)) {
-    assertVercelStagedDeployment(deployment, "planned candidate");
+    assertVercelStagedDeployment(deployment, `${releaseMode} candidate`);
   }
   assertVercelDeploymentMetadata(api, {
     source: releaseSource(source[0], source[1]),

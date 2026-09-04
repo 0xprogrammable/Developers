@@ -7,7 +7,7 @@ on:
         description: Exact fail-closed release transition
         required: true
         type: choice
-        options: [verify-planned, deploy-planned, stage, promote, rollback]
+        options: [verify-planned, deploy-planned, deploy-direct-chain, stage, promote, rollback]
       stage_run_id:
         description: Successful stage run ID; promote only
         required: false
@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           decimal='^[1-9][0-9]*$'
           case "$OPERATION" in
-            verify-planned|deploy-planned|stage)
+            verify-planned|deploy-planned|deploy-direct-chain|stage)
               test -z "$STAGE_RUN_ID" && test -z "$PREVIOUS_RUN_ID" && test -z "$PROMOTION_RUN_ID"
               ;;
             promote)
@@ -150,6 +150,9 @@ jobs:
             verify-planned|deploy-planned)
               unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
               ;;
+            deploy-direct-chain)
+              unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
+              ;;
             stage)
               export ROBINHOOD_STAGE_BUNDLE_PATH="$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
               unset ROBINHOOD_PROMOTION_BUNDLE_PATH
@@ -174,6 +177,12 @@ jobs:
           case "$OPERATION" in
             verify-planned|deploy-planned)
               test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+              printf 'digest=\n' >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            deploy-direct-chain)
+              npm run release:vercel -- validate-direct-chain \
+                --output .release-evidence/source/direct-chain.json
               printf 'digest=\n' >> "$GITHUB_OUTPUT"
               exit 0
               ;;
@@ -803,6 +812,496 @@ jobs:
             printf -- '- Source revision: `%s`\n' "$GITHUB_SHA"
             printf -- '- Source tree: `%s`\n' "${{ needs.validate-source.outputs.source-tree }}"
             printf -- '- No Robinhood phase bundle was used\n'
+            printf -- '- The scoped bypass was used only for protected candidate smoke; public smoke used none\n'
+            printf -- '- `publicWrites:false`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-direct-chain:
+    name: Deploy source-bound direct-chain docs release
+    if: >-
+      inputs.operation == 'deploy-direct-chain' &&
+      github.repository == 'programmablehq/Developers' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true &&
+      github.actor == 'hazarxyz' &&
+      github.actor_id == '258789013' &&
+      github.triggering_actor == 'hazarxyz'
+    needs: validate-source
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          lfs: false
+          persist-credentials: false
+          submodules: false
+
+      - name: Require current detached protected main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Install audited locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm audit --ignore-scripts
+          test "$(./node_modules/.bin/vercel --version | tail -n 1)" = "59.10.0"
+
+      - name: Build and check exact direct-chain source
+        run: |
+          set -euo pipefail
+          unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
+          test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
+          npm run build
+          npm run check
+          git diff --exit-code
+          mkdir -p .release-evidence/source
+          npm run release:vercel -- validate-direct-chain \
+            --output .release-evidence/source/direct-chain.json
+
+      - name: Pull exact Vercel project binding
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
+          node scripts/vercel-project-scope.mjs pull --yes --environment=production \
+            --scope "$VERCEL_ORG_ID"
+
+      - name: Build exact production candidate bytes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: node scripts/vercel-project-scope.mjs build --prod --scope "$VERCEL_ORG_ID"
+
+      - name: Capture current public deployment before mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p .release-evidence/direct-chain-deploy
+          npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/direct-chain-deploy/previous-deployment.json
+
+      - name: Reconfirm current protected main before direct-chain candidate creation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Authorize protected direct-chain candidate creation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_ENVIRONMENT: production
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > .release-evidence/direct-chain-deploy/candidate-owner-dispatch-run.raw.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/environments/production" \
+            > .release-evidence/direct-chain-deploy/candidate-production-environment.raw.json
+          authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- authorize-direct-chain-deploy \
+            --mutation create-candidate \
+            --current-deployment .release-evidence/direct-chain-deploy/previous-deployment.json \
+            --workflow-run .release-evidence/direct-chain-deploy/candidate-owner-dispatch-run.raw.json \
+            --environment .release-evidence/direct-chain-deploy/candidate-production-environment.raw.json \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID" \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --authorized-at "$authorized_at" \
+            --output .release-evidence/direct-chain-deploy/candidate-creation-authorization.json
+          rm .release-evidence/direct-chain-deploy/candidate-owner-dispatch-run.raw.json \
+            .release-evidence/direct-chain-deploy/candidate-production-environment.raw.json
+
+      - name: Create source-bound direct-chain candidate without formal domains
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          node scripts/vercel-project-scope.mjs deploy --prebuilt --target=production \
+            --skip-domain --yes --json --scope "$VERCEL_ORG_ID" \
+            --meta "programmableSourceRevision=$GITHUB_SHA" \
+            --meta "programmableSourceTree=${{ needs.validate-source.outputs.source-tree }}" \
+            --meta "programmableReleaseMode=direct-chain" \
+            > .release-evidence/direct-chain-deploy/candidate-create.json
+
+      - name: Bind exact candidate without formal domains to direct-chain source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-create.json --path id)"
+          npm run capture:vercel-provider -- \
+            --selector "$candidate_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode direct-chain \
+            --output .release-evidence/direct-chain-deploy/candidate.json \
+            --protection-output .release-evidence/direct-chain-deploy/candidate-protection.json
+
+      - name: Smoke exact protected direct-chain candidate through scoped bypass
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          candidate_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate.json --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$candidate_url" node scripts/direct-chain-smoke.mjs \
+            --mode direct-chain --protection-bypass true \
+            --output .release-evidence/direct-chain-deploy/candidate-smoke.json
+
+      - name: Provider-requery exact candidate before alias mutation
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate.json --path deployment.id)"
+          npm run capture:vercel-provider -- \
+            --selector "$candidate_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode direct-chain \
+            --output .release-evidence/direct-chain-deploy/candidate-pre-mutation.json \
+            --protection-output \
+              .release-evidence/direct-chain-deploy/candidate-protection-pre-mutation.json
+          npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/direct-chain-deploy/previous-deployment-pre-mutation.json
+          previous_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/previous-deployment.json \
+            --path deployment.id)"
+          current_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/previous-deployment-pre-mutation.json \
+            --path deployment.id)"
+          test "$previous_id" = "$current_id"
+
+      - name: Fresh authenticated smoke of provider-verified direct-chain candidate
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          candidate_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-pre-mutation.json \
+            --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$candidate_url" node scripts/direct-chain-smoke.mjs \
+            --mode direct-chain --protection-bypass true \
+            --output .release-evidence/direct-chain-deploy/candidate-smoke-pre-mutation.json
+
+      - name: Reconfirm current protected main before Vercel mutation
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_REF_PROTECTED" = "true"
+          test "$(git rev-parse --abbrev-ref HEAD)" = "HEAD"
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Reauthorize protected direct-chain alias mutation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_ENVIRONMENT: production
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > .release-evidence/direct-chain-deploy/promotion-owner-dispatch-run.raw.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/environments/production" \
+            > .release-evidence/direct-chain-deploy/promotion-production-environment.raw.json
+          authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- authorize-direct-chain-deploy \
+            --mutation promote-candidate \
+            --current-deployment \
+              .release-evidence/direct-chain-deploy/previous-deployment-pre-mutation.json \
+            --candidate-deployment \
+              .release-evidence/direct-chain-deploy/candidate-pre-mutation.json \
+            --candidate-protection-evidence \
+              .release-evidence/direct-chain-deploy/candidate-protection-pre-mutation.json \
+            --candidate-smoke \
+              .release-evidence/direct-chain-deploy/candidate-smoke-pre-mutation.json \
+            --workflow-run \
+              .release-evidence/direct-chain-deploy/promotion-owner-dispatch-run.raw.json \
+            --environment \
+              .release-evidence/direct-chain-deploy/promotion-production-environment.raw.json \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID" \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --authorized-at "$authorized_at" \
+            --output .release-evidence/direct-chain-deploy/promotion-authorization.json
+          rm .release-evidence/direct-chain-deploy/promotion-owner-dispatch-run.raw.json \
+            .release-evidence/direct-chain-deploy/promotion-production-environment.raw.json
+
+      - name: Seal immutable direct-chain public mutation intent
+        run: |
+          set -euo pipefail
+          created_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- create-direct-chain-mutation-intent \
+            --operation deploy-direct-chain \
+            --authorization .release-evidence/direct-chain-deploy/promotion-authorization.json \
+            --selected-smoke \
+              .release-evidence/direct-chain-deploy/candidate-smoke-pre-mutation.json \
+            --created-at "$created_at" \
+            --output .release-evidence/direct-chain-deploy/public-mutation-intent.json
+
+      - name: Upload immutable direct-chain intent before public mutation
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-direct-chain-intent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/direct-chain-deploy
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Promote only the verified direct-chain candidate
+        env:
+          RELEASE_GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_ENVIRONMENT: production
+          RELEASE_SMOKE_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          RELEASE_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          github_token="$RELEASE_GITHUB_TOKEN"
+          vercel_token="$RELEASE_VERCEL_TOKEN"
+          smoke_bypass_secret="$RELEASE_SMOKE_BYPASS_SECRET"
+          unset RELEASE_GITHUB_TOKEN RELEASE_VERCEL_TOKEN RELEASE_SMOKE_BYPASS_SECRET
+          test -n "$github_token" && test -n "$vercel_token" && test -n "$smoke_bypass_secret"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse --verify HEAD^{commit})" = "$GITHUB_SHA"
+          test "$(git rev-parse --verify origin/main^{commit})" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/promotion-authorization.json \
+            --path candidateDeployment.id)"
+          VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/direct-chain-deploy/previous-deployment-final.json
+          VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
+            --selector "$candidate_id" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode direct-chain \
+            --output .release-evidence/direct-chain-deploy/candidate-final.json \
+            --protection-output .release-evidence/direct-chain-deploy/candidate-protection-final.json
+          candidate_url="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-final.json \
+            --path deployment.url)"
+          PROGRAMMABLE_API_BASE="$candidate_url" \
+            VERCEL_AUTOMATION_BYPASS_SECRET="$smoke_bypass_secret" \
+            node scripts/direct-chain-smoke.mjs \
+            --mode direct-chain --protection-bypass true \
+            --output .release-evidence/direct-chain-deploy/candidate-smoke-final.json
+          unset smoke_bypass_secret
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $github_token" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            > .release-evidence/direct-chain-deploy/final-owner-dispatch-run.raw.json
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $github_token" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/environments/production" \
+            > .release-evidence/direct-chain-deploy/final-production-environment.raw.json
+          authorized_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- authorize-direct-chain-deploy \
+            --mutation promote-candidate \
+            --current-deployment \
+              .release-evidence/direct-chain-deploy/previous-deployment-final.json \
+            --candidate-deployment .release-evidence/direct-chain-deploy/candidate-final.json \
+            --candidate-protection-evidence \
+              .release-evidence/direct-chain-deploy/candidate-protection-final.json \
+            --candidate-smoke .release-evidence/direct-chain-deploy/candidate-smoke-final.json \
+            --workflow-run \
+              .release-evidence/direct-chain-deploy/final-owner-dispatch-run.raw.json \
+            --environment \
+              .release-evidence/direct-chain-deploy/final-production-environment.raw.json \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --org-id "$VERCEL_ORG_ID" --project-id "$VERCEL_PROJECT_ID" \
+            --repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --actor "$GITHUB_ACTOR" --actor-id "$GITHUB_ACTOR_ID" \
+            --authorized-at "$authorized_at" \
+            --output .release-evidence/direct-chain-deploy/promotion-authorization-final.json
+          VERCEL_TOKEN="$vercel_token" npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --output .release-evidence/direct-chain-deploy/previous-deployment-readiness.json \
+            --mutation-control-output \
+              .release-evidence/direct-chain-deploy/mutation-control.json
+          confirmed_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- validate-direct-chain-mutation-readiness \
+            --authorization \
+              .release-evidence/direct-chain-deploy/promotion-authorization-final.json \
+            --current-deployment \
+              .release-evidence/direct-chain-deploy/previous-deployment-readiness.json \
+            --intent .release-evidence/direct-chain-deploy/public-mutation-intent.json \
+            --intent-authorization \
+              .release-evidence/direct-chain-deploy/promotion-authorization.json \
+            --intent-selected-smoke \
+              .release-evidence/direct-chain-deploy/candidate-smoke-pre-mutation.json \
+            --candidate-smoke \
+              .release-evidence/direct-chain-deploy/candidate-smoke-final.json \
+            --mutation-control .release-evidence/direct-chain-deploy/mutation-control.json \
+            --confirmed-at "$confirmed_at" \
+            --output .release-evidence/direct-chain-deploy/direct-chain-mutation-readiness.json
+          rm .release-evidence/direct-chain-deploy/final-owner-dispatch-run.raw.json \
+            .release-evidence/direct-chain-deploy/final-production-environment.raw.json
+          VERCEL_TOKEN="$vercel_token" node scripts/vercel-project-scope.mjs promote \
+            "$candidate_id" --yes --scope "$VERCEL_ORG_ID"
+          unset github_token vercel_token
+
+      - name: Bind public alias to the verified candidate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode direct-chain \
+            --output .release-evidence/direct-chain-deploy/public-deployment.json
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-pre-mutation.json \
+            --path deployment.id)"
+          public_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/public-deployment.json --path deployment.id)"
+          test "$candidate_id" = "$public_id"
+
+      - name: Smoke direct-chain public endpoints without bypass
+        run: |
+          set -euo pipefail
+          PROGRAMMABLE_API_BASE="$PRODUCTION_ORIGIN" node scripts/direct-chain-smoke.mjs \
+            --mode direct-chain --protection-bypass false \
+            --output .release-evidence/direct-chain-deploy/public-smoke.json
+
+      - name: Reconfirm public alias after smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          npm run capture:vercel-provider -- \
+            --selector "$VERCEL_PRODUCTION_ORIGIN" \
+            --source-revision "$GITHUB_SHA" \
+            --source-tree "${{ needs.validate-source.outputs.source-tree }}" \
+            --release-mode direct-chain \
+            --output .release-evidence/direct-chain-deploy/public-deployment-after-smoke.json
+          candidate_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-pre-mutation.json \
+            --path deployment.id)"
+          public_id="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/public-deployment-after-smoke.json \
+            --path deployment.id)"
+          test "$candidate_id" = "$public_id"
+          candidate_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/candidate-smoke-pre-mutation.json \
+            --path manifestDigest)"
+          public_manifest="$(npm run --silent release:vercel -- field \
+            --file .release-evidence/direct-chain-deploy/public-smoke.json --path manifestDigest)"
+          test "$candidate_manifest" = "$public_manifest"
+          rm .release-evidence/direct-chain-deploy/candidate-create.json
+
+      - name: Seal verified direct-chain deployment receipt
+        run: |
+          set -euo pipefail
+          completed_at="$(node -e 'process.stdout.write(new Date().toISOString())')"
+          npm run release:vercel -- create-direct-chain-deploy-receipt \
+            --intent .release-evidence/direct-chain-deploy/public-mutation-intent.json \
+            --authorization \
+              .release-evidence/direct-chain-deploy/promotion-authorization-final.json \
+            --mutation-readiness \
+              .release-evidence/direct-chain-deploy/direct-chain-mutation-readiness.json \
+            --production-deployment \
+              .release-evidence/direct-chain-deploy/public-deployment-after-smoke.json \
+            --production-smoke .release-evidence/direct-chain-deploy/public-smoke.json \
+            --completed-at "$completed_at" \
+            --output .release-evidence/direct-chain-deploy/direct-chain-deploy-receipt.json
+
+      - name: Upload immutable direct-chain deployment readback
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: developers-vercel-direct-chain-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-evidence/direct-chain-deploy
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report direct-chain deployment boundary
+        run: |
+          candidate=.release-evidence/direct-chain-deploy/candidate-pre-mutation.json
+          {
+            printf '### Direct-chain terminal integration deployed and read back\n\n'
+            printf -- '- Deployment: `%s`\n' "$(npm run --silent release:vercel -- field --file "$candidate" --path deployment.id)"
+            printf -- '- Source revision: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Source tree: `%s`\n' "${{ needs.validate-source.outputs.source-tree }}"
+            printf -- '- Closed stage source/finality evidence verified without inheriting self-serve or hosted-indexer authority\n'
             printf -- '- The scoped bypass was used only for protected candidate smoke; public smoke used none\n'
             printf -- '- `publicWrites:false`\n'
           } >> "$GITHUB_STEP_SUMMARY"

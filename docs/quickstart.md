@@ -1,6 +1,6 @@
 # Minimal API integration
 
-This guide fetches a chain-qualified deployment manifest and normalized launch feed. It is read-only and requires no SDK or API key. The client path is multi-chain: Ethereum Mainnet (`chainId: 1`) is live, while the checked Robinhood Chain Mainnet manifest (`chainId: 4663`) remains planned until its separate evidence-bound activation release.
+This guide fetches a chain-qualified deployment manifest and normalized launch feed. It is read-only and requires no SDK or API key. Ethereum Mainnet (`chainId: 1`) has a live hosted read model. Robinhood Chain Mainnet (`chainId: 4663`) has a live direct-chain Router integration; its hosted read model remains planned. Use the [Robinhood terminal guide](https://developers.programmable.family/robinhood-terminal-indexer) for independent stamp verification and indexing.
 
 ## 1. Discover the API
 
@@ -41,8 +41,12 @@ On Ethereum, active v2 Classic discovery is intentionally limited to the histori
 
 `https://developers.programmable.family/api/v2/manifest` is the canonical Developer integration inventory. The Website endpoint at `https://programmable.family/api/custom-launch/registry/v1/manifest` is an operational presentation mirror with its own schema; it must not override the Developer manifest. If the two disagree, retain the last trusted Developer manifest, stop accepting new deployment identities, and alert an operator.
 
-The Robinhood response currently has the following selected planned fields
-(this excerpt is not the complete manifest):
+The current Robinhood manifest publishes `directChainIntegration.status: "live"`
+and a live `launchStampRouter`, while `programmable/read-model-v1` remains
+planned. Read the complete manifest dynamically; never copy its roots into
+consumer examples. The following selected planned manifest is an illustrative
+negative example, not the current response. A client must reject these null
+roots for direct-chain scanning:
 
 ```json
 {
@@ -77,13 +81,40 @@ The Robinhood response currently has the following selected planned fields
 }
 ```
 
-Do not replace these null public roots with prepared addresses. The planned
+Do not replace null roots in a planned response with prepared addresses. Fetch
+the current manifest instead and validate its published direct-chain evidence.
+The planned
 [V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json),
 [V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json),
 and
 [Developer source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
 support client preparation; they do not activate public writes or prove a
 deployment, finality, exact source match, indexing, visibility, or release.
+
+## Verify the released Robinhood launch directly
+
+From a clone of this repository, use Node.js 20 or later to run the
+[Robinhood release verifier](../examples/verify-robinhood-release.mjs). No
+package installation is required:
+
+```bash
+PROGRAMMABLE_RPC_URL='<https-robinhood-rpc-url>' \
+  node examples/verify-robinhood-release.mjs
+```
+
+It starts at public discovery, fetches the chain-4663 manifest, derives the
+existing token from its finalized canary receipt, then checks the canonical
+Router stamp, runtime, immutable bindings and component proofs. Successful
+output includes `state: "stamped"`, `chainId: 4663`, `category: "custom"` and
+`publicLabel: "Programmable Custom"`. Provider or evidence failures return an
+indeterminate result instead of granting attribution.
+
+Use an RPC that serves canonical finalized and historical hash-bound reads;
+never substitute `latest`. For your own launch, the generic
+[Node verifier](../examples/verify-launch-stamp.mjs)
+supports `PROGRAMMABLE_CHAIN_ID=4663`; the
+[viem verifier](../examples/verify-launch-stamp-viem.ts) accepts `chainId: 4663`.
+These are read-only checks and require neither a wallet nor an API credential.
 
 ## 4. Fetch launches
 
@@ -137,7 +168,7 @@ The hosted Classic baseline is read from the canonical paginated `https://progra
 
 If canonical event-log coverage is incomplete, launch-list and token-list return the recognized bounded subset with `status: "degraded"` or `"unavailable"`. Process present records, but do not interpret absence as deletion or complete history.
 
-For the planned Robinhood lane, request the chain explicitly:
+For the Robinhood hosted read-model lane, request the chain explicitly:
 
 ```bash
 curl -fsSL 'https://developers.programmable.family/api/v2/launches?chainId=4663'
@@ -163,10 +194,10 @@ PROGRAMMABLE_TOKEN_ADDRESS='<tokenAddress>' \
   sh examples/curl-quickstart.sh
 ```
 
-The checked manifest intentionally makes both commands fail closed with
-non-authoritative Robinhood availability until the deployment digest and
-activation evidence are published. No client change is needed after that
-follow-up.
+These hosted-feed commands report non-authoritative Robinhood availability
+until the hosted read model is separately promoted. This does not block the
+live direct-chain integration. Its Router root, finality requirements and
+finalized launch vector come from the same chain-qualified manifest.
 
 For a short typed terminal integration, save this as `robinhood-read.ts` in the
 repository root and run `npx tsx robinhood-read.ts`:
@@ -183,7 +214,7 @@ for (const item of feed.items) {
 }
 ```
 
-This hosted V4 lane is deliberately narrow: it projects only finalized,
+When promoted, this hosted V4 lane is deliberately narrow: it projects only finalized,
 Router-stamped Programmable Custom resources accepted by the published chain
 binding. It is not a directory of arbitrary Uniswap v4 hooks.
 
@@ -370,7 +401,7 @@ Before shipping:
 - Keep unsupported Registry generations and provider paths inactive when their deployment evidence is absent. Legacy Registry and GitHub submission intake are closed; Custom Launch API V1 POST is read-only and returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`.
 - Treat Custom Launch API V2 as historical read-only: require `status: "read-only"`, `publiclyRoutable: false`, `productionLaunchAuthorized: false`, and authenticated POST `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions.
 - Partition checkpoints by API major version, chain, and filter scope.
-- Require a chain's manifest and feed quality to be promoted independently. A live Ethereum refresh cannot promote Robinhood, and an empty planned Robinhood feed is never an authoritative absence check.
+- Require a chain's manifest and feed quality to be promoted independently. A live Ethereum refresh cannot promote Robinhood, and an empty unavailable Robinhood hosted feed is never an authoritative absence check.
 - Track finality, exact source verification, indexing completeness, and public feed visibility as independent evidence. Do not infer one from another or infer trading support from any of them.
 - Display `Programmable Verified` only from an effective structured review bound to the deployed revision.
 - Keep partner attribution independent from fee state. A partner-attributed project without a verified fee path uses `no-qualifying-market` and zero shares; an active partnership-template fee path uses 20 bps split 15/5 with no extra Native Custom 10 bps.

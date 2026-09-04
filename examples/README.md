@@ -85,9 +85,27 @@ For a durable local indexer checkpoint, choose a path explicitly:
 PROGRAMMABLE_CURSOR_FILE=/tmp/programmable-cursor.json node examples/indexer-cursor.mjs
 ```
 
-Set `PROGRAMMABLE_CHAIN_ID=4663` to inspect the planned Robinhood lane. It
-currently returns empty `unavailable` quality and does not advance a durable
-checkpoint; omitting the variable preserves Ethereum behavior.
+Set `PROGRAMMABLE_CHAIN_ID=4663` for Robinhood. The hosted read-model examples
+still return `unavailable` quality and must not advance a durable checkpoint.
+The Router verifier supports the live direct-chain release independently:
+
+```sh
+PROGRAMMABLE_CHAIN_ID=4663 PROGRAMMABLE_RPC_URL=https://your-rpc.example \
+  node examples/verify-launch-stamp.mjs token <token-address>
+PROGRAMMABLE_RPC_URL=https://your-rpc.example \
+  node examples/verify-robinhood-release.mjs
+```
+
+The release example discovers the existing finalized canary from the chain
+manifest and derives its token from the exact Router receipt. It verifies the
+onchain bytes32 launch ID, stamp hash, token proof, runtime and immutable bindings.
+It never uses an API UUID as an onchain launch ID. No new launch is needed.
+Pass `chainId: 4663` to the viem variant. Omitting the chain preserves Ethereum.
+
+Use an archive-capable RPC for EIP-1898 hash-bound state reads (the default).
+An explicit Robinhood block
+must be at or below the RPC finalized boundary; head confirmations alone do not
+prove finality.
 
 The indexer sends the saved `resumeCursor` as `after` when polling. `nextCursor` is used only to continue the current
 page traversal; the two cursor roles are never substituted for one another.

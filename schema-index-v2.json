@@ -78,6 +78,14 @@
     {
       "name": "token-list",
       "url": "https://developers.programmable.family/schemas/v2/token-list.schema.json"
+    },
+    {
+      "name": "direct-chain-integration",
+      "url": "https://developers.programmable.family/schemas/v2/direct-chain-integration.schema.json"
+    },
+    {
+      "name": "robinhood-direct-chain-evidence",
+      "url": "https://developers.programmable.family/schemas/v2/robinhood-direct-chain-evidence.schema.json"
     }
   ]
 }

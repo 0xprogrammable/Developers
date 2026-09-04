@@ -34,7 +34,7 @@ function selectedManifestExample(source) {
 }
 
 describe("Robinhood V4 documentation contract", () => {
-  test("links the planned V4 and both source-verification contracts", async () => {
+  test("links the separate V4 write and both source-verification contracts", async () => {
     for (const relativePath of DOCUMENTS) {
       const source = await read(relativePath);
       for (const url of [V4_OPENAPI, V4_SOURCE_STATUS, V4_DEVELOPER_PROJECTION]) {
@@ -43,13 +43,16 @@ describe("Robinhood V4 documentation contract", () => {
     }
   });
 
-  test("keeps the selected planned manifest example fail-closed", async () => {
+  test("keeps illustrative planned negative examples fail-closed", async () => {
     for (const relativePath of [
       "docs/quickstart.md",
       "docs/concepts/multi-chain.md",
       "llms-full.txt",
     ]) {
-      const manifest = selectedManifestExample(await read(relativePath));
+      const source = await read(relativePath);
+      assert.match(source, /illustrative\s+negative example/iu, relativePath);
+      assert.match(source, /not the current/iu, relativePath);
+      const manifest = selectedManifestExample(source);
       assert.equal(manifest.chainId, 4663, relativePath);
       assert.equal(manifest.caip2, "eip155:4663", relativePath);
       assert.deepEqual(manifest.deployments, [], relativePath);
@@ -95,6 +98,8 @@ describe("Robinhood V4 documentation contract", () => {
       assert.match(source, /V1[\s\S]*V2[\s\S]*(?:read-only|write-fenced|write-fence)/iu);
       assert.match(source, /V3(?: profile)? `?3\.3\.0`?[\s\S]*fresh/iu);
       assert.match(source, /4663[\s\S]*planned/iu);
+      assert.match(source, /direct-chain[\s\S]*live|live[\s\S]*direct-chain/iu);
+      assert.match(source, /hosted[\s\S]*(?:planned|unavailable)/iu);
       assert.match(source, /4663[\s\S]*(?:no public writes|public writes[^.]*unavailable)/iu);
     }
 
@@ -114,7 +119,7 @@ describe("Robinhood V4 documentation contract", () => {
     assert.match(onchain, /empty[\s\S]*unavailable[\s\S]*non-authoritative/iu);
   });
 
-  test("publishes a chain-4663 terminal entry point without inventing live roots", async () => {
+  test("publishes a chain-4663 direct-chain terminal entry point with dynamic roots", async () => {
     const [page, home, sitemap, readme, docsIndex, llms, llmsFull] =
       await Promise.all([
         read("public/robinhood-terminal-indexer.html"),
@@ -133,8 +138,8 @@ describe("Robinhood V4 documentation contract", () => {
     assert.match(page, /category[\s\S]*custom/u);
     assert.match(page, /Programmable Custom/u);
     assert.match(page, /CustomGraph = 1/u);
-    assert.match(page, /runtime activation pending/iu);
-    assert.match(page, /do not scan while the Router is <code>planned<\/code>/iu);
+    assert.match(page, /direct-chain/iu);
+    assert.match(page, /hosted[\s\S]*(?:planned|unavailable)/iu);
     assert.match(page, /\/api\/v2\/manifests\/4663/u);
     assert.match(page, /programmable-launch-stamp-router-v1\.json/u);
     assert.doesNotMatch(page, /0x[0-9a-f]{40}/iu);

@@ -6,11 +6,34 @@ It does not universally prove that each Classic component was newly created. It 
 
 ## Deployment state
 
-The frozen Router V1 interface and one Ethereum deployment are published. Read the exact Router address and block range from the manifest. Its `deploymentEvidence` object pins the transaction, block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
+The frozen Router V1 interface and separate Ethereum and Robinhood deployment roots are published. Read the exact Router address and block range from the manifest. Its `deploymentEvidence` object pins the transaction, block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
 
-Router V1 is live on Ethereum for stamps written at or after block `25717612`. The manifest requires `64` confirmations for an explicit block-number read. Historical launches are not backfilled.
+Router V1 is live on Ethereum for stamps written at or after block `25717612`.
+The Ethereum manifest requires `64` confirmations for an explicit
+block-number read. Historical launches are not backfilled.
 
-### Active manifest tuple
+Robinhood chain `4663` publishes a separate live Router through
+`GET /api/v2/manifests/4663`. Require `directChainIntegration.status: "live"`,
+then resolve its Router address, start block, runtime hash, ABI hash and
+`evidenceUrl` dynamically. The published evidence binds its finalized
+deployment and an existing finalized `CustomGraph` launch. Follow
+`directChainIntegration.finality`: its `rpc-finalized` policy requires the
+canonical finalized boundary and an explicit block must be its finalized
+ancestor. Do not copy the Ethereum address, confirmation count or canary into
+Robinhood verification. See the
+[Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer).
+The Robinhood hosted read model and self-serve V4 API/CLI remain planned; they
+are not dependencies of a direct-chain stamp lookup.
+
+The [Robinhood release verifier](../../examples/verify-robinhood-release.mjs)
+runs with Node.js 20 or later from a repository clone, without a package
+install. Set `PROGRAMMABLE_RPC_URL` to the Robinhood HTTPS RPC and run
+`node examples/verify-robinhood-release.mjs`. It derives the existing token
+from the manifest canary receipt, then uses the chain-qualified generic stamp
+verifier. Use an RPC that serves canonical finalized and historical hash-bound
+reads; `latest` is never a substitute for finality.
+
+### Ethereum active manifest tuple
 
 | Field | Value |
 | --- | --- |
@@ -102,7 +125,7 @@ Consumers must refresh the manifest, resolve the single enabled current Classic 
 
 ### Guarantee and product boundary
 
-Only a launch with a consistent record written by the exact canonical Router on chain `1` at or after `startBlock` is Programmable through Router V1. The record proves that the Router atomically executed and stamped that launch, with the recorded pool uninitialized before route execution and initialized before the stamp. It does not universally prove that every Classic component was newly created. The same ABI, bytecode, event topics, metadata, logo, signer, or factory result from any other emitter does not qualify. Direct Classic launcher, Graph Factory, and Single Factory calls outside the Router do not qualify.
+Only a launch with a consistent record written by the exact canonical Router on the manifest-selected chain at or after its `startBlock` is Programmable through Router V1. The record proves that the Router atomically executed and stamped that launch, with the recorded pool uninitialized before route execution and initialized before the stamp. It does not universally prove that every Classic component was newly created. The same ABI, bytecode, event topics, metadata, logo, signer, or factory result from any other emitter does not qualify. Direct Classic launcher, Graph Factory, and Single Factory calls outside the Router do not qualify.
 
 Publication makes this verification contract available to terminals; it does not mean GMGN, Axiom, FOMO, or another named terminal has integrated it automatically. Custom Launch API V1 and V2 retain historical reads, but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions, and the closed GitHub approval flow must not be revived. These docs define read-only detection and verification; an API key is never wallet signing or broadcast authority.
 

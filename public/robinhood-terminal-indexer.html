@@ -110,7 +110,7 @@
           >
             <span class="status-dot" aria-hidden="true"></span>
             <span id="robinhood-runtime-status">
-              Integration contract published · runtime activation pending
+              Reading canonical Router release state…
             </span>
           </div>
         </div>
@@ -198,9 +198,9 @@
           <div>
             <h2 id="integration-title">Follow the manifest, not a copied address.</h2>
             <p>
-              The Robinhood lane is already discoverable. Your implementation can ship now and
-              begin ingestion automatically after the official manifest publishes complete live
-              trust roots.
+              Resolve the live Router roots from the Robinhood manifest and index finalized
+              stamps directly from the chain. Hosted read-model and public submission states
+              are separate; this integration does not depend on an Envio deployment.
             </p>
           </div>
         </div>
@@ -222,8 +222,9 @@
               <h3>Require complete live roots</h3>
               <p>
                 Do not scan while the Router is <code>planned</code>. Require a live Router,
-                non-null address and start block, runtime hash, finality policy, ABI hash and
-                finalized canary evidence.
+                non-null address and start block, runtime hash, finality policy, ABI hash,
+                deployment evidence and an existing finalized launch. Confirm that
+                <code>directChainIntegration.status</code> is <code>live</code>.
               </p>
             </div>
           </li>
@@ -234,7 +235,8 @@
               <p>
                 Read finalized Router logs from the manifest start block. Cross-check each launch
                 through its token or pool lookup, <code>launchStamp</code> and, for address-based
-                checks, <code>stampProof</code> at one canonical block.
+                checks, <code>stampProof</code> at one canonical finalized block. Each new
+                individual Custom hook is discovered from its stamp; no hook allowlist is needed.
               </p>
             </div>
           </li>
@@ -258,16 +260,18 @@
   const routerIsLive =
     manifest.chainId === 4663 &amp;&amp;
     manifest.caip2 === "eip155:4663" &amp;&amp;
+    manifest.directChainIntegration?.status === "live" &amp;&amp;
     router?.status === "live" &amp;&amp;
     /^0x[0-9a-f]{40}$/i.test(router.address ?? "") &amp;&amp;
     /^[0-9]+$/.test(router.startBlock ?? "") &amp;&amp;
     /^0x[0-9a-f]{64}$/i.test(router.runtimeCodeHash ?? "") &amp;&amp;
     router.abiUrl &amp;&amp;
     router.abiSha256 &amp;&amp;
-    router.canaryEvidence &amp;&amp;
-    router.finalityConfirmations;
+    router.deploymentEvidence?.verificationStatus === "finalized-verified" &amp;&amp;
+    router.canaryEvidence?.finality === "finalized" &amp;&amp;
+    manifest.directChainIntegration.finality.mode === "rpc-finalized";
 
-  // A published integration contract is not the same as a live Router.
+  // Validate the published schemas, then verify these roots through your RPC.
   return routerIsLive ? router : null;
 }
 
@@ -316,7 +320,7 @@ if (router) {
         <div class="status-ledger guide-status-ledger" id="robinhood-status-ledger" aria-busy="true">
           <div>
             <span>Router</span>
-            <strong id="robinhood-router-state">Planned</strong>
+            <strong id="robinhood-router-state">Checking…</strong>
           </div>
           <div>
             <span>Hosted read model</span>
@@ -329,6 +333,63 @@ if (router) {
           <p id="robinhood-status-updated">
             Reading the current chain manifest…
           </p>
+        </div>
+      </section>
+
+      <section class="guide-section" id="example" aria-labelledby="example-title">
+        <div class="guide-section-heading">
+          <p>Working example</p>
+          <div>
+            <h2 id="example-title">Verify an existing finalized launch.</h2>
+            <p>
+              The example reads discovery and the current manifest, fetches the published launch
+              receipt, derives its token from the exact Router event and verifies the onchain
+              record. It needs Node.js 20 or later. The command uses a public Robinhood RPC
+              verified with this release; use your own archive-capable provider for production indexing.
+            </p>
+          </div>
+        </div>
+        <div class="code-block guide-code">
+          <div class="code-heading">
+            <span>Run the public verifier</span>
+            <button type="button" data-copy-target="robinhood-example-code"><span>Copy</span></button>
+          </div>
+          <pre tabindex="0"><code id="robinhood-example-code">git clone https://github.com/programmablehq/Developers.git
+cd Developers
+PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
+  node examples/verify-robinhood-release.mjs
+
+# Verify any future stamped token with the same manifest:
+PROGRAMMABLE_CHAIN_ID=4663 \
+PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
+  node examples/verify-launch-stamp.mjs token &lt;token-address&gt;</code></pre>
+        </div>
+        <aside class="guide-note">
+          The expected result is <code>state: stamped</code>, <code>category: custom</code> and
+          <code>publicLabel: Programmable Custom</code>. The Router launch ID is a bytes32 value;
+          the API request UUID is a different identifier. Provider errors return
+          <code>indeterminate</code> and never mean that a launch is absent.
+        </aside>
+        <div class="signal-columns guide-explanation">
+          <section aria-labelledby="finality-title">
+            <h3 id="finality-title">Keep a finalized boundary</h3>
+            <p>
+              Use the RPC <code>finalized</code> block and pin its hash for all reads. An explicit
+              block must be at or below that finalized boundary. Robinhood head confirmations
+              alone do not establish finality. If your provider cannot serve a canonical historical
+              state, use an archive-capable RPC; keep the result indeterminate until every read succeeds.
+            </p>
+          </section>
+          <section aria-labelledby="future-title">
+            <h3 id="future-title">Follow future launches</h3>
+            <p>
+              Scan bounded log ranges from <code>startBlock</code>, using the exact Router address
+              and published topics. Dedupe by chain, block hash, transaction hash and log index.
+              Save a checkpoint only after the whole range verifies; retry smaller ranges on
+              provider limits. Refresh the manifest, honor any Router end block, and rewind
+              affected records after a canonical block mismatch.
+            </p>
+          </section>
         </div>
       </section>
 
@@ -367,6 +428,18 @@ if (router) {
               <strong>Chain-qualified status</strong>
               <small>/api/v2/status?chainId=4663</small>
             </span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a href="/deployments/robinhood-direct-chain-evidence-v1.json">
+            <code>JSON</code>
+            <span><strong>Finalized deployment and launch evidence</strong>
+              <small>Router roots, receipt and same-block stamp verification</small></span>
+            <span aria-hidden="true">↗</span>
+          </a>
+          <a href="https://github.com/programmablehq/Developers/blob/main/examples/verify-robinhood-release.mjs" rel="noreferrer">
+            <code>JS</code>
+            <span><strong>Runnable release verifier</strong>
+              <small>Discover and verify the existing finalized launch</small></span>
             <span aria-hidden="true">↗</span>
           </a>
           <a href="/openapi/programmable-v2.yaml">
