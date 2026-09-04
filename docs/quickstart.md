@@ -1,6 +1,6 @@
 # Minimal API integration
 
-This guide fetches a chain-qualified deployment manifest and normalized launch feed. It is read-only and requires no SDK or API key. Ethereum Mainnet (`chainId: 1`) is live; Robinhood Chain Mainnet (`chainId: 4663`) is discoverable as a planned lane only.
+This guide fetches a chain-qualified deployment manifest and normalized launch feed. It is read-only and requires no SDK or API key. The client path is multi-chain: Ethereum Mainnet (`chainId: 1`) is live, while the checked Robinhood Chain Mainnet manifest (`chainId: 4663`) remains planned until its separate evidence-bound activation release.
 
 ## 1. Discover the API
 
@@ -105,6 +105,7 @@ Each item contains:
 
 ```text
 schemaVersion  launch schema version
+platformId     programmable for every official normalized record
 launchId       stable identity derived from Classic provenance or committed by the Custom Registry
 category       classic or custom
 chainId        EVM chain ID
@@ -118,7 +119,13 @@ fees           verified fee disclosures
 extensions     bounded namespaced additions
 ```
 
-Registry-backed records can also include `platformId`, `publicLabel`, `caip2`, `projectId`, `model`, `template`, `partner`, `provider`, `builder`, `approvalBinding`, `deploymentBinding`, `verifiedReview`, `feePolicy`, `finalityEvidence`, `presentation`, `registryOrigin`, `launchingWallet`, `postLaunchAuthorityInventory`, `lifecycle`, and `mechanisms`. These are additive v2 fields, not a new API major version.
+Registry-backed records can also include `publicLabel`, `caip2`, `projectId`, `model`, `template`, `partner`, `provider`, `builder`, `approvalBinding`, `deploymentBinding`, `verifiedReview`, `feePolicy`, `finalityEvidence`, `presentation`, `registryOrigin`, `launchingWallet`, `postLaunchAuthorityInventory`, `lifecycle`, and `mechanisms`. These are additive v2 fields, not a new API major version.
+
+The hosted v2 projector always supplies `platformId: "programmable"`, and the
+typed client models that runtime guarantee as required. The additive v2 JSON
+schema keeps the field optional for older producer fixtures, but constrains it
+to the same constant whenever present. Consumers must still require it before
+showing a Programmable label.
 
 An empty `markets` array is valid. It means the launch currently has no registered market; it does not permit a client to fabricate a pool, price, liquidity, volume, chart, or swap action.
 
@@ -138,6 +145,47 @@ curl -fsSL 'https://developers.programmable.family/api/v2/launches?chainId=4663'
 
 The current empty `status: "unavailable"` response is non-authoritative. It
 means the chain read model is not released, not that the chain has no launches.
+
+The repository helper keeps the chain and category attached to discovery,
+status, every page cursor, and every later `after` poll:
+
+```bash
+PROGRAMMABLE_CHAIN_ID=4663 PROGRAMMABLE_CATEGORY=custom \
+  sh examples/curl-quickstart.sh
+```
+
+Once a token address is present in a published launch, the same helper can
+exercise the chain-qualified token lookup:
+
+```bash
+PROGRAMMABLE_CHAIN_ID=4663 PROGRAMMABLE_CATEGORY=custom \
+PROGRAMMABLE_TOKEN_ADDRESS='<tokenAddress>' \
+  sh examples/curl-quickstart.sh
+```
+
+The checked manifest intentionally makes both commands fail closed with
+non-authoritative Robinhood availability until the deployment digest and
+activation evidence are published. No client change is needed after that
+follow-up.
+
+For a short typed terminal integration, save this as `robinhood-read.ts` in the
+repository root and run `npx tsx robinhood-read.ts`:
+
+```ts
+import { ProgrammableClient } from "./examples/programmable-client.ts"
+
+const client = new ProgrammableClient()
+const feed = await client.launches({ chainId: 4663, category: "custom", limit: 25 })
+
+for (const item of feed.items) {
+  if (item.platformId !== "programmable" || item.category !== "custom") continue
+  console.log(item.chainId, item.launchId, item.token?.address ?? "project-only")
+}
+```
+
+This hosted V4 lane is deliberately narrow: it projects only finalized,
+Router-stamped Programmable Custom resources accepted by the published chain
+binding. It is not a directory of arbitrary Uniswap v4 hooks.
 
 ## 5. Consume the feed in JavaScript
 

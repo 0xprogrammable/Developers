@@ -46,6 +46,7 @@ export interface LaunchPartnerAttributionV1 {
 
 export interface LaunchRecord {
   schemaVersion: string
+  platformId: "programmable"
   launchId: string
   chainId: number
   category: Category
@@ -56,7 +57,6 @@ export interface LaunchRecord {
   markets: MarketRecord[]
   fees: unknown[]
   extensions: Record<string, unknown>
-  platformId?: "programmable"
   publicLabel?: "Programmable Classic" | "Programmable Custom"
   caip2?: string
   projectId?: string | null

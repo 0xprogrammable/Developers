@@ -58,4 +58,29 @@ describe("launch-provider documentation", () => {
       permanent: false,
     });
   });
+
+  test("pins API CORS at the CDN layer, including cache-generated 304 responses", async () => {
+    const vercel = JSON.parse(await read("vercel.json"));
+    for (const source of ["/api/(.*)", "/v1/(.*)", "/v2/(.*)"]) {
+      const route = vercel.headers.find((entry) => entry.source === source);
+      const headers = Object.fromEntries(
+        (route?.headers ?? []).map(({ key, value }) => [key, value]),
+      );
+
+      assert.equal(headers["Access-Control-Allow-Origin"], "*", source);
+      assert.equal(
+        headers["Access-Control-Allow-Methods"],
+        "GET, OPTIONS",
+        source,
+      );
+      assert.match(headers["Access-Control-Allow-Headers"], /If-None-Match/u);
+      assert.match(headers["Access-Control-Expose-Headers"], /ETag/u);
+      assert.match(
+        headers["Access-Control-Expose-Headers"],
+        /X-Programmable-Status/u,
+      );
+      assert.match(headers["Access-Control-Expose-Headers"], /X-Request-Id/u);
+      assert.match(headers["Access-Control-Expose-Headers"], /Retry-After/u);
+    }
+  });
 });

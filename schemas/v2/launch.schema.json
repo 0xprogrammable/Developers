@@ -357,9 +357,18 @@
             "programmable/backend-finalized-v4": {
               "type": "object",
               "required": [
+                "chainDeploymentDigest",
+                "finalityEvidence",
                 "sourceVerification"
               ],
               "properties": {
+                "chainDeployment": false,
+                "chainDeploymentDigest": {
+                  "$ref": "#/$defs/sha256Digest"
+                },
+                "finalityEvidence": {
+                  "$ref": "#/$defs/backendFinalizedV4Finality"
+                },
                 "sourceVerification": {
                   "$ref": "custom-launch-source-verification-v4.schema.json"
                 }
@@ -372,6 +381,258 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "backendFinalizedV4Finality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "checkpointType",
+        "l2Inclusion",
+        "l1Posting",
+        "l1FinalizedCheckpoint",
+        "evidenceDigest",
+        "terminal",
+        "observedAt"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.backend-finalized-v4-finality-projection.v1"
+        },
+        "checkpointType": {
+          "const": "ethereum_finalized"
+        },
+        "l2Inclusion": {
+          "$ref": "#/$defs/backendFinalizedV4L2Inclusion"
+        },
+        "l1Posting": {
+          "$ref": "#/$defs/backendFinalizedV4L1Posting"
+        },
+        "l1FinalizedCheckpoint": {
+          "$ref": "#/$defs/backendFinalizedV4L1FinalizedCheckpoint"
+        },
+        "evidenceDigest": {
+          "$ref": "#/$defs/sha256Digest"
+        },
+        "terminal": {
+          "const": true
+        },
+        "observedAt": {
+          "$ref": "common.schema.json#/$defs/isoDateTime"
+        }
+      }
+    },
+    "backendFinalizedV4L2Inclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "chainId",
+        "caip2",
+        "transactionHash",
+        "blockNumber",
+        "blockHash",
+        "blockTimestamp",
+        "receiptStatus",
+        "routeEventLogIndex",
+        "launchEventLogIndex"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-l2-inclusion.v1"
+        },
+        "chainId": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "caip2": {
+          "type": "string",
+          "pattern": "^eip155:[1-9][0-9]*$"
+        },
+        "transactionHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "blockNumber": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "blockTimestamp": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "receiptStatus": {
+          "const": "success"
+        },
+        "routeEventLogIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "launchEventLogIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "backendFinalizedV4L1Posting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "chainId",
+        "caip2",
+        "rollup",
+        "sequencerInbox",
+        "batchNumber",
+        "transactionHash",
+        "blockNumber",
+        "blockHash",
+        "logIndex"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-l1-posting.v1"
+        },
+        "chainId": {
+          "const": "1"
+        },
+        "caip2": {
+          "const": "eip155:1"
+        },
+        "rollup": {
+          "const": "0x23A19d23e89166adedbDcB432518AB01e4272D94"
+        },
+        "sequencerInbox": {
+          "const": "0xBd0D173EEb87D57A09521c24388a12789F33ba96"
+        },
+        "batchNumber": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "transactionHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "blockNumber": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "logIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "backendFinalizedV4L1FinalizedCheckpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "chainId",
+        "caip2",
+        "blockNumber",
+        "blockHash",
+        "providerReadbacks",
+        "consensusCheckpointTag"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.custom-launch-l1-finalized-checkpoint.v1"
+        },
+        "chainId": {
+          "const": "1"
+        },
+        "caip2": {
+          "const": "eip155:1"
+        },
+        "blockNumber": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "providerReadbacks": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/backendFinalizedV4DrpcReadback"
+            },
+            {
+              "$ref": "#/$defs/backendFinalizedV4QuicknodeReadback"
+            }
+          ],
+          "items": false
+        },
+        "consensusCheckpointTag": {
+          "const": "finalized"
+        }
+      }
+    },
+    "backendFinalizedV4DrpcReadback": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/backendFinalizedV4CheckpointReadback"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "providerId": {
+              "const": "drpc"
+            },
+            "trustDomain": {
+              "const": "drpc.org"
+            }
+          }
+        }
+      ]
+    },
+    "backendFinalizedV4QuicknodeReadback": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/backendFinalizedV4CheckpointReadback"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "providerId": {
+              "const": "quicknode"
+            },
+            "trustDomain": {
+              "const": "quicknode.com"
+            }
+          }
+        }
+      ]
+    },
+    "backendFinalizedV4CheckpointReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "providerId",
+        "trustDomain",
+        "blockNumber",
+        "blockHash"
+      ],
+      "properties": {
+        "providerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "trustDomain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "blockNumber": {
+          "$ref": "#/$defs/registryV3PositiveDecimal"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        }
+      }
+    },
     "registryV3PositiveDecimal": {
       "type": "string",
       "pattern": "^[1-9][0-9]*$"

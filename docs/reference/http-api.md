@@ -302,7 +302,12 @@ provenance.
 
 If the Robinhood V4 lane is promoted, its records preserve the backend's complete
 `sourceVerification` readback at
-`extensions["programmable/backend-finalized-v4"].sourceVerification`. Its
+`extensions["programmable/backend-finalized-v4"].sourceVerification`. The same
+extension exposes `chainDeploymentDigest` plus compact `finalityEvidence` with
+the Robinhood `l2Inclusion`, Ethereum `l1Posting`, and two-provider
+`l1FinalizedCheckpoint`; it never republishes the complete deployment
+descriptor. Public `launch` coordinates and ordering use the L2 inclusion,
+while the L1 checkpoint proves terminal finality. Its
 `queued`, `retrying`, `exact_match`, or `needs_attention` state is independent
 from both `launch.finality` and `verification.provenanceStatus`. An
 `exact_match` component carries three separate fields:
@@ -339,6 +344,15 @@ evidence that any Robinhood component has been deployed or verified, and their
 candidate URLs do not establish live public availability.
 
 `token` is an ERC-20 convenience view. It is `null` for a truthful project-only Custom launch. `assets` preserves the authenticated identity-first asset graph and its immutable launch-produced, protocol-external, or adopted-external provenance. Only a launch-produced primary token may populate `token`. `markets` is empty when no market is registered. Consumers must not manufacture a token, pair, or pool from the project launch identity. The token-list and token-address detail surfaces remain token-only projections and skip `token: null` records.
+
+For the backend V4 projection, the token address is selected only by an exact
+match between `projectMetadata.tokenMetadataBinding.tokenTargetId` and one
+`sourceVerification.components[].targetId`. The committed name and symbol may
+then appear with `identityStatus: "partial"`; decimals and supply remain null or
+unavailable. The chain-qualified token lookup can return that partial launch,
+but `/api/v2/token-list` continues to require a complete token identity. The
+adapter accepts only finalized Router-stamped Programmable resources on
+published chains, not arbitrary Uniswap v4 hooks.
 
 Registry `uniswap-v4-pool` evidence is mapped to the frozen public v1 market kind `uniswap-v4`, preserving the verifier and PoolManager authority bindings. Unknown authenticated market kinds remain visible with their pending verifier state as unsupported discovery data; they are never silently relabeled as a pair or executable market.
 

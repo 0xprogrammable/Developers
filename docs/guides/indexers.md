@@ -43,14 +43,33 @@ Router/PermitAuthority/GraphFactory/PoolManager runtime tuple, finality policy,
 deployment receipt, and canary evidence. A self-consistent or merely
 well-shaped manifest is not a trust root.
 
-When promoted, validate the V4 list schema, `chainId`, CAIP-2 identity, complete
-pagination and `quality` counts before accepting a snapshot. Publish only
-resources with status `finalized` and terminal `ethereum_finalized` evidence
-whose chain-deployment, profile, finality-policy, Router and runtime bindings
-match the selected manifest. Decode the exact Router transaction only to bind
-the stamped token, hook and PoolKey; do not infer those identities from names or
-metadata. A source failure can fall back only to the last accepted snapshot for
-the same chain and exact deployment binding, and that fallback is degraded.
+The staged adapter validates
+`programmable.custom-launch-onchain-evidence.v3`. When promoted, it accepts only
+resources with exact `platformId: "programmable"` and `category: "custom"`, a
+successful Robinhood L2 receipt after the Router start block, the route event
+before the launch event, the exact Ethereum rollup and sequencer inbox, and two
+matching finalized-checkpoint readbacks from the published trust domains. The
+top-level V3 block and hash are the Ethereum finalized checkpoint; ordering,
+`launch.*`, `asOfBlock`, and `asOfBlockHash` use the nested Robinhood
+`l2Inclusion` coordinates. A later evidence re-observation does not rewrite the
+original `finalizedAt`.
+
+Validate the V4 list schema, `chainId`, CAIP-2 identity, every opaque cursor and
+the final `quality` counts before accepting a snapshot. The public extension
+retains the deployment digest and compact L2-posting-finalized evidence, not the
+complete deployment descriptor. It projects a token address only when
+`projectMetadata.tokenMetadataBinding.tokenTargetId` matches exactly one
+authenticated source-verification component. Name and symbol remain
+creator-declared, identity stays `partial`, and supply stays unavailable until
+separate onchain evidence exists. The token-address detail route may return
+that partial record; the token list remains complete-identity-only.
+
+The overall Developer scope remains finalized, Router-stamped Programmable
+Classic and Custom launches on published chains. This backend V4 adapter is the
+Custom half of that scope; the existing Classic projectors remain unchanged.
+Neither path is an all-Uniswap-v4-hooks index. A source failure can fall back
+only to the last accepted snapshot for the same chain and exact deployment
+binding, and that fallback is degraded.
 
 A `degraded` feed still contains recognized events when canonical event coverage or enrichment is incomplete. Store partial provenance, null identity fields, unavailable supply, and null timestamps without dropping the record. Launch-list and token-list return the bounded recognized subset with HTTP `200` and explicit quality; never interpret an absent record in a degraded or unavailable response as deletion.
 
