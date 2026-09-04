@@ -6,6 +6,7 @@ import {activeFinalizedV4Binding} from '../server/finalized-v4-feed.js';
 import {createSchemaRegistry,assertValid} from '../scripts/lib/schema.mjs';
 import {validateManifestSemantics} from '../scripts/lib/semantics.mjs';
 import {parseStageBundle,validateDirectChainEvidence} from '../scripts/lib/vercel-release.mjs';
+import {getV2DatasetForChain,serviceStatusV2} from '../server/v2-dataset.js';
 
 const manifest=await developerManifestForChain(4663);
 const registry=await createSchemaRegistry('v2');
@@ -20,6 +21,14 @@ test('direct-chain roots are independently released without opening hosted index
  assert.equal(manifest.customLaunchV4.status,'planned');
  assert.equal(manifest.customLaunchV4.cli.status,'planned');
  assert.equal(activeFinalizedV4Binding(manifest),null);
+});
+
+test('unavailable hosted status retains the pinned manifest timestamp',async()=>{
+ const dataset=await getV2DatasetForChain(4663);
+ const status=serviceStatusV2(dataset.status,manifest);
+ assert.equal(status.checkedAt,manifest.generatedAt);
+ assert.equal(status.feeds.launches,'unavailable');
+ assert.equal(status.directChainIntegration.status,'live');
 });
 
 test('direct-chain publication rejects absent finality, switched roots, and accidental hosted activation',()=>{

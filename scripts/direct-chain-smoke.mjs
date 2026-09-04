@@ -22,6 +22,7 @@ const PUBLIC_ORIGIN = "https://developers.programmable.family";
 const FEED_URL = "https://api.programmable.market/v4/chains/4663/finalized-custom-launches";
 const PUBLIC_LAUNCH_ID = "b451a50f-026b-4e68-9c16-68e41c318076";
 const MAX_BYTES = 5 * 1024 * 1024;
+const FEED_PAGE_SIZE = 25;
 const TIMEOUT_MS = 15_000;
 const HASH = /^0x[0-9a-f]{64}$/iu;
 const ADDRESS = /^0x[0-9a-f]{40}$/iu;
@@ -136,13 +137,13 @@ async function readFinalizedLaunch({ manifest, evidence, readJson, now }) {
   const seen = new Set();
   for (let pageIndex = 0; pageIndex < 10; pageIndex += 1) {
     const url = new URL(FEED_URL);
-    url.searchParams.set("limit", "100");
+    url.searchParams.set("limit", String(FEED_PAGE_SIZE));
     if (cursor !== null) url.searchParams.set("cursor", cursor);
     const page = await readJson(url.href, { label: "finalized launch feed" });
     assert(page.schemaVersion === "programmable.custom-launch-list.v4" &&
       page.apiVersion === "v4" && page.chainId === "4663" && page.caip2 === "eip155:4663" &&
       page.quality?.status === "ready" && page.quality.quarantinedRowCount === 0 &&
-      Array.isArray(page.launches) && page.launches.length <= 100,
+      Array.isArray(page.launches) && page.launches.length <= FEED_PAGE_SIZE,
     "finalized launch feed is not ready and chain-scoped");
     recent(page.generatedAt, now(), "finalized launch feed");
     const launch = page.launches.find((entry) => entry.launchId === PUBLIC_LAUNCH_ID);
@@ -277,7 +278,11 @@ export async function runDirectChainSmoke({
   assert(same(manifest, expectedManifest), "public manifest differs from exact tracked source");
   assert(same(evidence, expectedEvidence), "public evidence differs from exact tracked source");
   validatePublication(manifest, status, evidence);
-  recent(status.checkedAt, now(), "public status");
+  // This unavailable hosted projection uses the pinned manifest timestamp.
+  // Current availability is proved separately by the fresh backend feed and RPC.
+  assert(status.checkedAt === manifest.generatedAt &&
+    Number.isFinite(Date.parse(status.checkedAt)) && Date.parse(status.checkedAt) <= now() + 60_000,
+  "public unavailable status timestamp differs from the pinned manifest");
   await readFinalizedLaunch({ manifest, evidence, readJson, now });
   checkedUrl(rpcUrl, "RPC URL");
   let id = 0;
