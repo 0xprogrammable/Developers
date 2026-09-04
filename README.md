@@ -57,7 +57,8 @@ accounting modes; the exact Programmable share is separately fixed at `1000`.
 | [Per-chain manifests](https://developers.programmable.family/api/v2/manifests/1) | Bind deployment and feed discovery to the selected `chainId`; chain 4663 is published separately and remains planned |
 | [Chain-neutral Router ABI](https://developers.programmable.family/abis/programmable-launch-stamp-router-v1.json) | Decode the published Router interface without implying that one chain's deployment address applies to another |
 | [Launch stamp specification](docs/reference/launch-stamp.md) | Implement backfill, live follow, reorg handling, and direct verification |
-| [Terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features |
+| [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer) | Implement chain-4663 discovery, activation gating, canonical Router verification and the `Programmable Custom` label |
+| [Full terminal guide](docs/guides/terminals-and-scanners.md) | Map verified launches to terminal labels and supported market features across supported chains |
 | [Onchain verification](docs/reference/onchain-verification.md) | Reproduce provenance without trusting the hosted launch feed |
 | [Protocol fee claim discovery](docs/reference/protocol-fee-claims.md) | Understand the operator claim inventory, refresh behavior, wallet boundary, and fail-closed Custom admission rules |
 | [Integration checklist](docs/integration-checklist.md) | Test failure states before production ingestion |

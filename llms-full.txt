@@ -794,6 +794,7 @@ Not allowed without separate evidence:
 
 ## Human documentation
 
+- Robinhood terminal integration: https://developers.programmable.family/robinhood-terminal-indexer
 - Overview: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/README.md
 - Quickstart: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/quickstart.md
 - Status: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/status.md
