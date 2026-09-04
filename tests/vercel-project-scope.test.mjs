@@ -144,12 +144,17 @@ test("build and prebuilt stage delegate only to the pinned CLI with explicit pro
   f.execute = (binary, args, options) => { calls.push({ binary, args, options }); return { status: 0 }; };
   f.environment = { ...environment, APP_PRINCIPAL_ENABLED: "unwanted" };
   await runProjectCommand(["build", "--prod", "--scope", context.orgId], f);
-  await runProjectCommand(["deploy", "--prebuilt", "--target=production", "--skip-domain",
+  const deployArgs = (mode) => ["deploy", "--prebuilt", "--target=production", "--skip-domain",
     "--yes", "--json", "--scope", context.orgId,
     "--meta", `programmableSourceRevision=${"a".repeat(40)}`,
     "--meta", `programmableSourceTree=${"b".repeat(40)}`,
-    "--meta", "programmableReleaseMode=planned"], f);
-  assert.equal(calls.length, 2);
+    "--meta", mode];
+  for (const mode of ["programmableReleaseMode=planned", "programmableReleaseMode=direct-chain",
+    `programmableStageBundleDigest=sha256:${"c".repeat(64)}`]) {
+    await runProjectCommand(deployArgs(mode), f);
+    assert.ok(calls.at(-1).args.includes(mode));
+  }
+  assert.equal(calls.length, 4);
   for (const { args, options } of calls) {
     assert.equal(args.includes("--scope"), false);
     assert.equal(args.some((arg) => arg.includes(context.token)), false);
@@ -157,7 +162,11 @@ test("build and prebuilt stage delegate only to the pinned CLI with explicit pro
     assert.equal(options.env.APP_PRINCIPAL_ENABLED, undefined);
   }
   await assert.rejects(runProjectCommand(["deploy", "--prod", "--yes"], f));
-  assert.equal(calls.length, 2);
+  for (const mode of ["programmableReleaseMode=live", "programmableReleaseMode=direct-chain-extra",
+    "programmableReleaseMode=", `programmableSourceTree=${"c".repeat(40)}`]) {
+    await assert.rejects(runProjectCommand(deployArgs(mode), f), /metadata/u);
+  }
+  assert.equal(calls.length, 4);
 });
 
 test("every V2 function must carry both byte-exact chain manifests", async (t) => {
