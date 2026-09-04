@@ -42,6 +42,7 @@ const V4_QUOTER_RUNTIME =
   "0xd707b1da8cb165e5ea35a3b4450d971eb562ec171e23492aa117036b78a868f6";
 const UNIVERSAL_ROUTER_RUNTIME =
   "0xbe8e8191bb42d843c2e948a5a55772eaab864ce01e54dcd47c9d089170b302d5";
+const TOKEN = "0x2222222222222222222222222222222222222222";
 const LAUNCH_ID = `0x${"a".repeat(64)}`;
 const HASH_B = `0x${"b".repeat(64)}`;
 const HASH_C = `0x${"c".repeat(64)}`;
@@ -720,6 +721,7 @@ function resealExternalRootEvidence(evidence) {
 }
 
 function promotionAnchorFor(manifest) {
+  const chainDeployment = chainDeploymentFor(manifest);
   return {
     chainId: manifest.chainId,
     caip2: manifest.caip2,
@@ -728,7 +730,11 @@ function promotionAnchorFor(manifest) {
       manifest.customLaunchV4.chainDeploymentDescriptorDigest,
     foundationSourceCommitment:
       manifest.customLaunchV4.foundationSourceCommitment,
-    chainDeployment: chainDeploymentFor(manifest),
+    chainDeploymentDigest: canonicalSha256(
+      "programmable.custom-launch-chain-deployment.v1",
+      chainDeployment,
+    ),
+    chainDeployment,
     profile: structuredClone(manifest.customLaunchV4.profile),
     finalityPolicy: structuredClone(manifest.customLaunchV4.finalityPolicy),
     router: {
@@ -764,6 +770,8 @@ function resourceFor(manifest, overrides = {}) {
   return {
     schemaVersion: "programmable.finalized-custom-launch-metadata.v4",
     apiVersion: "v4",
+    platformId: "programmable",
+    category: "custom",
     launchId: "123e4567-e89b-42d3-a456-426614174000",
     chainId: String(manifest.chainId),
     caip2: manifest.caip2,
@@ -787,7 +795,7 @@ function resourceFor(manifest, overrides = {}) {
     },
     sourceVerification: exactSourceVerification(manifest),
     onchain: {
-      schemaVersion: "programmable.custom-launch-onchain-evidence.v2",
+      schemaVersion: "programmable.custom-launch-onchain-evidence.v3",
       apiVersion: "v4",
       chainId: String(manifest.chainId),
       caip2: manifest.caip2,
@@ -800,10 +808,57 @@ function resourceFor(manifest, overrides = {}) {
       routerRuntimeCodeHash: ROUTER_RUNTIME,
       routerLaunchId: LAUNCH_ID,
       transactionHash: HASH_C,
-      blockNumber: "50000025",
+      blockNumber: "19000012",
       blockHash: HASH_D,
       logIndex: 7,
       checkpointType: "ethereum_finalized",
+      l2Inclusion: {
+        schemaVersion: "programmable.custom-launch-l2-inclusion.v1",
+        chainId: String(manifest.chainId),
+        caip2: manifest.caip2,
+        transactionHash: HASH_C,
+        blockNumber: "50000025",
+        blockHash: HASH_E,
+        blockTimestamp: "1788015600",
+        receiptStatus: "success",
+        routeEventLogIndex: 6,
+        launchEventLogIndex: 7,
+      },
+      l1Posting: {
+        schemaVersion: "programmable.custom-launch-l1-posting.v1",
+        chainId: "1",
+        caip2: "eip155:1",
+        rollup: "0x23A19d23e89166adedbDcB432518AB01e4272D94",
+        sequencerInbox: "0xBd0D173EEb87D57A09521c24388a12789F33ba96",
+        batchNumber: "123",
+        transactionHash: HASH_B,
+        blockNumber: "19000000",
+        blockHash: HASH_C,
+        logIndex: 7,
+      },
+      l1FinalizedCheckpoint: {
+        schemaVersion:
+          "programmable.custom-launch-l1-finalized-checkpoint.v1",
+        chainId: "1",
+        caip2: "eip155:1",
+        blockNumber: "19000012",
+        blockHash: HASH_D,
+        providerReadbacks: [
+          {
+            providerId: "drpc",
+            trustDomain: "drpc.org",
+            blockNumber: "19000012",
+            blockHash: HASH_D,
+          },
+          {
+            providerId: "quicknode",
+            trustDomain: "quicknode.com",
+            blockNumber: "19000012",
+            blockHash: HASH_D,
+          },
+        ],
+        consensusCheckpointTag: "finalized",
+      },
       finalityPolicy: structuredClone(manifest.customLaunchV4.finalityPolicy),
       commitments,
       evidenceDigest: SHA_2,
@@ -854,7 +909,7 @@ describe("Router-backed finalized V4 feed", () => {
     assert.equal(result.error.code, "CHAIN_READ_MODEL_PLANNED");
   });
 
-  test("accepts only terminal Ethereum-finalized resources and projects V2", async () => {
+  test("accepts only Router-stamped finalized V3 resources and projects token lookup identity", async () => {
     const manifest = await liveManifest();
     const result = await finalizedV4FeedTestOnly.read(
       manifest,
@@ -868,13 +923,51 @@ describe("Router-backed finalized V4 feed", () => {
     assert.equal(result.records.length, 1);
     assert.equal(result.records[0].chainId, 4663);
     assert.equal(result.records[0].launchId, LAUNCH_ID);
-    assert.equal(result.records[0].token, null);
+    assert.deepEqual(result.records[0].token, {
+      address: TOKEN,
+      identityStatus: "partial",
+      name: "Robinhood Fixture",
+      symbol: "RHF",
+      decimals: null,
+      totalSupplyRaw: null,
+      supplyStatus: "unavailable",
+      supplyAsOfBlock: null,
+      metadata: {
+        description: "A finalized chain-scoped fixture.",
+        imageUrl: "https://fixture.example/project.png",
+        links: {
+          website: "https://fixture.example/",
+          x: "https://x.com/fixture",
+        },
+        trustStatus: "creator-declared",
+      },
+    });
     assert.deepEqual(result.records[0].markets, []);
     assert.equal(result.records[0].launch.creatorAddress, null);
     assert.equal(result.records[0].launch.launchWallet, null);
     assert.equal(result.records[0].verification.approvalMatch, "unavailable");
     assert.equal(result.records[0].verification.provenanceStatus, "verified");
     assert.equal(result.records[0].launch.finality, "finalized");
+    assert.equal(result.records[0].launch.blockNumber, "50000025");
+    assert.equal(result.records[0].launch.blockHash, HASH_E);
+    assert.equal(result.records[0].launch.logIndex, 7);
+    assert.equal(
+      result.records[0].launch.timestamp,
+      "2026-08-29T15:00:00.000Z",
+    );
+    assert.equal(result.asOfBlock, "50000025");
+    assert.equal(result.asOfBlockHash, HASH_E);
+    const backendExtension =
+      result.records[0].extensions["programmable/backend-finalized-v4"];
+    assert.equal(
+      backendExtension.chainDeploymentDigest,
+      promotionAnchorFor(manifest).chainDeploymentDigest,
+    );
+    assert.equal(Object.hasOwn(backendExtension, "chainDeployment"), false);
+    assert.equal(
+      backendExtension.finalityEvidence.l1FinalizedCheckpoint.blockNumber,
+      "19000012",
+    );
     assert.deepEqual(
       result.records[0].extensions["programmable/backend-finalized-v4"]
         .sourceVerification,
@@ -889,6 +982,20 @@ describe("Router-backed finalized V4 feed", () => {
       registry.validator("launch.schema.json"),
       publicRecord,
       "projected finalized V4 launch",
+    );
+    const leakedDeployment = structuredClone(publicRecord);
+    leakedDeployment.extensions["programmable/backend-finalized-v4"]
+      .chainDeployment = {};
+    assert.equal(
+      registry.validator("launch.schema.json")(leakedDeployment),
+      false,
+    );
+    const reorderedProviders = structuredClone(publicRecord);
+    reorderedProviders.extensions["programmable/backend-finalized-v4"]
+      .finalityEvidence.l1FinalizedCheckpoint.providerReadbacks.reverse();
+    assert.equal(
+      registry.validator("launch.schema.json")(reorderedProviders),
+      false,
     );
     assertValid(
       registry.validator("custom-launch-source-verification-v4.schema.json"),
@@ -913,6 +1020,90 @@ describe("Router-backed finalized V4 feed", () => {
     nonCanonicalTimestamp.components[1].updatedAt = "2026-08-29T15:03:00Z";
     nonCanonicalTimestamp.updatedAt = "2026-08-29T15:03:00Z";
     assert.equal(validateSourceVerification(nonCanonicalTimestamp), false);
+  });
+
+  test("accepts a later V3 re-observation without rewriting finality time", async () => {
+    const manifest = await liveManifest();
+    const page = pageFor(manifest);
+    page.launches[0].onchain.observedAt = "2026-08-30T15:00:00.000Z";
+    const result = await finalizedV4FeedTestOnly.read(
+      manifest,
+      promotionAnchorFor(manifest),
+      { force: true, loadPage: async () => page },
+    );
+
+    assert.equal(result.status, "current", JSON.stringify(result.error));
+    assert.equal(
+      result.records[0].launch.finalizedAt,
+      "2026-08-29T15:00:00.000Z",
+    );
+    assert.equal(
+      result.records[0].launch.observedAt,
+      "2026-08-30T15:00:00.000Z",
+    );
+  });
+
+  test("rejects inconsistent V3 L2 inclusion and Ethereum finality relationships", async () => {
+    const manifest = await liveManifest();
+    const anchor = promotionAnchorFor(manifest);
+    const mutations = [
+      (resource) => { resource.platformId = "untrusted"; },
+      (resource) => { resource.category = "classic"; },
+      (resource) => { resource.onchain.l2Inclusion.chainId = "1"; },
+      (resource) => { resource.onchain.l2Inclusion.transactionHash = HASH_F; },
+      (resource) => { resource.onchain.l2Inclusion.blockNumber = "49999999"; },
+      (resource) => { resource.onchain.l2Inclusion.receiptStatus = "reverted"; },
+      (resource) => {
+        resource.onchain.l2Inclusion.routeEventLogIndex =
+          resource.onchain.l2Inclusion.launchEventLogIndex;
+      },
+      (resource) => { resource.onchain.l1Posting.chainId = "4663"; },
+      (resource) => { resource.onchain.l1Posting.rollup = OTHER; },
+      (resource) => { resource.onchain.l1Posting.sequencerInbox = OTHER; },
+      (resource) => { resource.onchain.l1Posting.blockNumber = "19000013"; },
+      (resource) => {
+        resource.onchain.l1FinalizedCheckpoint.consensusCheckpointTag =
+          "safe";
+      },
+      (resource) => {
+        resource.onchain.l1FinalizedCheckpoint.providerReadbacks.reverse();
+      },
+      (resource) => {
+        resource.onchain.l1FinalizedCheckpoint.providerReadbacks[0].blockHash =
+          HASH_F;
+      },
+      (resource) => { resource.onchain.transactionHash = HASH_F; },
+      (resource) => { resource.onchain.blockNumber = "19000011"; },
+      (resource) => { resource.onchain.blockHash = HASH_F; },
+      (resource) => { resource.onchain.logIndex = 8; },
+    ];
+
+    for (const mutate of mutations) {
+      const page = pageFor(manifest);
+      mutate(page.launches[0]);
+      const result = await finalizedV4FeedTestOnly.read(manifest, anchor, {
+        force: true,
+        loadPage: async () => page,
+      });
+      assert.equal(result.status, "unavailable");
+      assert.deepEqual(result.records, []);
+    }
+  });
+
+  test("keeps token projection null when no authenticated token target exists", async () => {
+    const manifest = await liveManifest();
+    const page = pageFor(manifest);
+    page.launches[0].sourceVerification.components.pop();
+    page.launches[0].sourceVerification.updatedAt =
+      page.launches[0].sourceVerification.components[0].updatedAt;
+    const result = await finalizedV4FeedTestOnly.read(
+      manifest,
+      promotionAnchorFor(manifest),
+      { force: true, loadPage: async () => page },
+    );
+
+    assert.equal(result.status, "current", JSON.stringify(result.error));
+    assert.equal(result.records[0].token, null);
   });
 
   test("keeps queued source verification separate from Router provenance and finality", async () => {
@@ -1473,7 +1664,7 @@ describe("Router-backed finalized V4 feed", () => {
       (anchor) => { anchor.finalityPolicy.policyId = "synthetic-other-finality"; },
       (anchor) => { anchor.finalityPolicy.policyDigest = SHA_6; },
       (anchor) => { anchor.foundationSourceCommitment = HASH_F; },
-      (anchor) => { anchor.chainDeployment = null; },
+      (anchor) => { anchor.chainDeploymentDigest = SHA_6; },
       (anchor) => {
         anchor.chainDeployment.contracts.programmableLaunchStampRouter.address =
           OTHER;

@@ -5200,8 +5200,8 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.equal(canonicalSha256(
     "programmable.developers.vercel-routing-defaults.v1",
     frozenRoutingDefaults,
-  ), "sha256:c7f50c104e54e4c0496abce63bb218c4f2edb3ebf71d8b640b09166c06fe1074",
-  "V1/V2 routes, asset defaults, redirects, and security headers must remain byte-semantic stable");
+  ), "sha256:5f8b44540d077773701a86dd1192b3d0bcae3783958b0f52c78d8346551218a7",
+  "V1/V2 routes, asset defaults, redirects, security and API CORS headers must remain byte-semantic stable");
   const releaseCliSource = await readFile(path.resolve("scripts/vercel-release.mjs"), "utf8");
   assert.match(releaseCliSource,
     /exactTrackedJson[\s\S]*metadata\.size > MAX_JSON_BYTES/u,

@@ -41,6 +41,69 @@
       ]
     },
     {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Accept, Content-Type, If-None-Match"
+        },
+        {
+          "key": "Access-Control-Expose-Headers",
+          "value": "ETag, Retry-After, X-Programmable-Status, X-Request-Id"
+        }
+      ]
+    },
+    {
+      "source": "/v1/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Accept, Content-Type, If-None-Match"
+        },
+        {
+          "key": "Access-Control-Expose-Headers",
+          "value": "ETag, Retry-After, X-Programmable-Status, X-Request-Id"
+        }
+      ]
+    },
+    {
+      "source": "/v2/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Accept, Content-Type, If-None-Match"
+        },
+        {
+          "key": "Access-Control-Expose-Headers",
+          "value": "ETag, Retry-After, X-Programmable-Status, X-Request-Id"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {

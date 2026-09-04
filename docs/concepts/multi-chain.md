@@ -120,10 +120,19 @@ For V4, accept only `programmable.custom-launch-list.v4` pages whose quality is
 `ready`, exhaust every opaque cursor, and require the published row count to
 match the complete traversal. Every resource must remain internally bound to
 the manifest's chain deployment digest, profile digest, finality-policy digest,
-Router address and runtime hash. Only terminal `ethereum_finalized` onchain
-evidence is projected. A failed refresh may reuse the last accepted snapshot
-for that same chain and exact deployment binding, but the response becomes
-`last-known-good`/degraded and its absence is not authoritative.
+Router address and runtime hash. The V3 evidence model separately carries the
+Robinhood L2 inclusion, Ethereum batch posting, and Ethereum finalized
+checkpoint. Only a successful Router-stamped L2 launch with terminal
+`ethereum_finalized` evidence is projected; the public launch position comes
+from L2, while the compact extension retains the L1 finality proof. A failed
+refresh may reuse the last accepted snapshot for that same chain and exact
+deployment binding, but the response becomes `last-known-good`/degraded and its
+absence is not authoritative.
+
+The adapter is not a general Uniswap v4 hook crawler. A hook enters this lane
+only as part of a finalized Programmable resource stamped by the manifest-bound
+Router on a published chain. Arbitrary v4 hooks remain outside the Developer
+launch classification.
 
 Promotion is code-pinned, not shape-based. Robinhood binds foundation source
 commitment

@@ -214,9 +214,14 @@ function mockResponse() {
   };
 }
 
-async function call(handler, query = {}, url = "/api/v2/launches") {
+async function call(
+  handler,
+  query = {},
+  url = "/api/v2/launches",
+  headers = {},
+) {
   const response = mockResponse();
-  await handler({ method: "GET", query, headers: {}, url }, response);
+  await handler({ method: "GET", query, headers, url }, response);
   return {
     status: response.statusCode,
     headers: response.headers,
@@ -598,6 +603,47 @@ describe("v2 API contract", () => {
     assert.equal(response.body.code, "index-coverage-incomplete");
   });
 
+  test("token lookup publishes partial chain-4663 identity while token list stays complete-only", async () => {
+    const record = launch(4663, { category: "custom", chainId: 4663 });
+    Object.assign(record.token, {
+      identityStatus: "partial",
+      decimals: null,
+      totalSupplyRaw: null,
+      supplyStatus: "unavailable",
+      supplyAsOfBlock: null,
+      metadata: {
+        description: "Creator-declared metadata",
+        imageUrl: null,
+        links: null,
+        trustStatus: "creator-declared",
+      },
+    });
+    const current = dataset([record], {
+      chainId: 4663,
+      supportedChainIds: [1, 4663],
+    });
+    const lookup = await call(
+      createLaunchDetailHandler(async () => current),
+      { chainId: "4663", tokenAddress: record.token.address },
+      `/api/v2/launches/4663/${record.token.address}`,
+    );
+
+    assert.equal(lookup.status, 200);
+    assert.equal(lookup.body.platformId, "programmable");
+    assert.equal(lookup.body.category, "custom");
+    assert.equal(lookup.body.chainId, 4663);
+    assert.equal(lookup.body.token.address, record.token.address);
+    assert.equal(lookup.body.token.identityStatus, "partial");
+
+    const tokenList = await call(
+      createTokenListHandler(async () => current),
+      { chainId: "4663", category: "custom" },
+      "/api/v2/token-list?chainId=4663&category=custom",
+    );
+    assert.equal(tokenList.status, 200);
+    assert.deepEqual(tokenList.body.tokens, []);
+  });
+
   test("never invents a default Programmable fee in the token list", async () => {
     const record = launch(10, { fees: [] });
     const payload = tokenListPayload([record], "2026-08-06T00:00:00.000Z");
@@ -661,6 +707,25 @@ describe("v2 API contract", () => {
       response.body,
       "v2 problem response",
     );
+  });
+
+  test("preserves CORS and observability headers on an application 304", async () => {
+    const current = dataset([launch(10)]);
+    const handler = createLaunchesHandler(async () => current);
+    const first = await call(handler);
+    const cached = await call(
+      handler,
+      {},
+      "/api/v2/launches",
+      { "if-none-match": first.headers.get("etag") },
+    );
+
+    assert.equal(cached.status, 304);
+    assert.equal(cached.body, null);
+    assert.equal(cached.headers.get("access-control-allow-origin"), "*");
+    assert.match(cached.headers.get("access-control-expose-headers"), /ETag/u);
+    assert.ok(cached.headers.get("x-request-id"));
+    assert.equal(cached.headers.get("x-programmable-status"), "ready");
   });
 
   test("exposes Retry-After for a transient response-production failure", async () => {

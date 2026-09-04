@@ -18,7 +18,12 @@ const PROHIBITED_TEXT =
   /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u;
 const LIST_SCHEMA = "programmable.custom-launch-list.v4";
 const RESOURCE_SCHEMA = "programmable.finalized-custom-launch-metadata.v4";
-const ONCHAIN_SCHEMA = "programmable.custom-launch-onchain-evidence.v2";
+const ONCHAIN_SCHEMA = "programmable.custom-launch-onchain-evidence.v3";
+const L2_INCLUSION_SCHEMA =
+  "programmable.custom-launch-l2-inclusion.v1";
+const L1_POSTING_SCHEMA = "programmable.custom-launch-l1-posting.v1";
+const L1_FINALIZED_CHECKPOINT_SCHEMA =
+  "programmable.custom-launch-l1-finalized-checkpoint.v1";
 const CHAIN_DEPLOYMENT_SCHEMA =
   "programmable.custom-launch-chain-deployment.v1";
 const DEPLOYMENT_EVIDENCE_SCHEMA =
@@ -62,6 +67,9 @@ const CACHE_MS = 15_000;
 const TRUSTED_FINALIZED_V4_RECORD = Symbol("trusted-finalized-v4-record");
 const ROBINHOOD_FOUNDATION_SOURCE_COMMITMENT =
   "0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730";
+const ROBINHOOD_ROLLUP = "0x23A19d23e89166adedbDcB432518AB01e4272D94";
+const ROBINHOOD_SEQUENCER_INBOX =
+  "0xBd0D173EEb87D57A09521c24388a12789F33ba96";
 const EMPTY_RUNTIME_CODE_HASH =
   "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
 const SAFE_SOURCE_SUBJECT = Object.freeze({
@@ -194,6 +202,7 @@ const ROBINHOOD_FINALIZED_V4_PROMOTION_ANCHOR = Object.freeze({
   caip2: "eip155:4663",
   chainDeploymentId: "robinhood-mainnet-custom-launch-v1",
   chainDeploymentDescriptorDigest: null,
+  chainDeploymentDigest: null,
   chainDeployment: null,
   foundationSourceCommitment: ROBINHOOD_FOUNDATION_SOURCE_COMMITMENT,
   profile: Object.freeze({
@@ -399,6 +408,7 @@ function promotionAnchorReady(anchor) {
       anchor.caip2 === `eip155:${anchor.chainId}` &&
       safeText(anchor.chainDeploymentId, 128) !== null &&
       HASH32.test(anchor.chainDeploymentDescriptorDigest ?? "") &&
+      SHA256.test(anchor.chainDeploymentDigest ?? "") &&
       HASH32.test(anchor.foundationSourceCommitment ?? "") &&
       validProfile(anchor.profile) && validFinalityPolicy(anchor.finalityPolicy) &&
       validChainDeployment(anchor.chainDeployment, {
@@ -411,6 +421,7 @@ function promotionAnchorReady(anchor) {
         chainDeployment: anchor.chainDeployment,
         routerStartBlock: anchor.router.startBlock,
         routerDeploymentEvidence: anchor.router.deploymentEvidence,
+        chainDeploymentDigest: anchor.chainDeploymentDigest,
       }) &&
       ADDRESS.test(anchor.router?.address ?? "") &&
       HASH32.test(anchor.router?.runtimeCodeHash ?? "") &&
@@ -420,6 +431,8 @@ function promotionAnchorReady(anchor) {
       anchor.router?.artifact !== null &&
       exactDeploymentEvidence(anchor.router?.deploymentEvidence, anchor.router) &&
       exactFinalizedCanary(anchor.router?.canaryEvidence) &&
+      canonicalSha256(CHAIN_DEPLOYMENT_SCHEMA, anchor.chainDeployment) ===
+        anchor.chainDeploymentDigest &&
       ADDRESS.test(anchor.bindings?.permitAuthority ?? "") &&
       HASH32.test(anchor.bindings?.permitAuthorityRuntimeCodeHash ?? "") &&
       ADDRESS.test(anchor.bindings?.graphFactory ?? "") &&
@@ -544,6 +557,7 @@ function bindingAgainstPromotionAnchor(manifest, anchor) {
     chainDeploymentId: manifest.customLaunchV4.chainDeploymentId,
     chainDeploymentDescriptorDigest: descriptorDigest.toLowerCase(),
     foundationSourceCommitment: anchor.foundationSourceCommitment,
+    chainDeploymentDigest: anchor.chainDeploymentDigest,
     chainDeployment: structuredClone(anchor.chainDeployment),
     profile: structuredClone(profile),
     finalityPolicy: structuredClone(finalityPolicy),
@@ -717,6 +731,64 @@ function projectedPresentation(projectMetadata) {
   };
 }
 
+function projectedTokenMetadata(projectMetadata) {
+  const presentation = projectMetadata.presentation;
+  const description = presentation.description.length > 0 &&
+      presentation.description.length <= 2_000
+    ? presentation.description
+    : null;
+  const imageUrl = presentation.image &&
+      canonicalHttpsUrl(presentation.image.uri)
+    ? presentation.image.uri
+    : null;
+  const links = {};
+  const ambiguous = new Set();
+  const mapped = new Map([
+    ["website", "website"], ["x", "x"], ["telegram", "telegram"],
+    ["documentation", "documentation"], ["github", "github"],
+  ]);
+  for (const link of presentation.links) {
+    const key = mapped.get(link.kind);
+    if (!key) continue;
+    if (Object.hasOwn(links, key)) {
+      delete links[key];
+      ambiguous.add(key);
+    } else if (!ambiguous.has(key)) {
+      links[key] = link.uri;
+    }
+  }
+  const projectedLinks = Object.keys(links).length > 0 ? links : null;
+  return {
+    description,
+    imageUrl,
+    links: projectedLinks,
+    trustStatus: description !== null || imageUrl !== null ||
+        projectedLinks !== null
+      ? "creator-declared"
+      : "unavailable",
+  };
+}
+
+function projectedToken(resource) {
+  const targetId = resource.projectMetadata.tokenMetadataBinding.tokenTargetId;
+  if (targetId !== "token") return null;
+  const targets = resource.sourceVerification.components.filter(
+    (component) => component.targetId === targetId,
+  );
+  if (targets.length !== 1 || /^0x0{40}$/u.test(targets[0].address)) return null;
+  return {
+    address: targets[0].address,
+    identityStatus: "partial",
+    name: resource.projectMetadata.token.name,
+    symbol: resource.projectMetadata.token.symbol,
+    decimals: null,
+    totalSupplyRaw: null,
+    supplyStatus: "unavailable",
+    supplyAsOfBlock: null,
+    metadata: projectedTokenMetadata(resource.projectMetadata),
+  };
+}
+
 function validCommitments(value) {
   return exactKeys(value, [
     "fundingPermit", "graph", "launchIntent", "metadata", "sourceBuild",
@@ -732,6 +804,16 @@ function validContractBinding(value) {
 
 function positiveDecimal(value) {
   return DECIMAL.test(value ?? "") && BigInt(value) > 0n;
+}
+
+function validUnixTimestamp(value) {
+  return positiveDecimal(value) && BigInt(value) <= 253_402_300_799n;
+}
+
+function unixTimestampToIso(value) {
+  return validUnixTimestamp(value)
+    ? new Date(Number(value) * 1_000).toISOString()
+    : null;
 }
 
 function nonzeroHash32(value) {
@@ -1271,7 +1353,9 @@ function validChainDeployment(value, binding) {
       programmable.transactionHash,
     ) || !sameHex(routerReceipt?.deploymentBlockHash, programmable.blockHash)
   ) return false;
-  return canonicalizeJson(value) === canonicalizeJson(binding.chainDeployment);
+  return canonicalizeJson(value) === canonicalizeJson(binding.chainDeployment) &&
+    canonicalSha256(CHAIN_DEPLOYMENT_SCHEMA, value) ===
+      binding.chainDeploymentDigest;
 }
 
 function validFunding(value) {
@@ -1407,12 +1491,77 @@ function validSourceVerification(value, binding) {
     value.updatedAt === latestUpdatedAt;
 }
 
+function validL2Inclusion(value, binding) {
+  return exactKeys(value, [
+    "blockHash", "blockNumber", "blockTimestamp", "caip2", "chainId",
+    "launchEventLogIndex", "receiptStatus", "routeEventLogIndex",
+    "schemaVersion", "transactionHash",
+  ]) && value.schemaVersion === L2_INCLUSION_SCHEMA &&
+    value.chainId === String(binding.chainId) && value.caip2 === binding.caip2 &&
+    nonzeroHash32(value.transactionHash) && positiveDecimal(value.blockNumber) &&
+    BigInt(value.blockNumber) >= BigInt(binding.routerStartBlock) &&
+    nonzeroHash32(value.blockHash) && validUnixTimestamp(value.blockTimestamp) &&
+    value.receiptStatus === "success" &&
+    Number.isSafeInteger(value.routeEventLogIndex) &&
+    value.routeEventLogIndex >= 0 &&
+    Number.isSafeInteger(value.launchEventLogIndex) &&
+    value.launchEventLogIndex >= 0 &&
+    value.routeEventLogIndex < value.launchEventLogIndex;
+}
+
+function validL1Posting(value) {
+  return exactKeys(value, [
+    "batchNumber", "blockHash", "blockNumber", "caip2", "chainId",
+    "logIndex", "rollup", "schemaVersion", "sequencerInbox",
+    "transactionHash",
+  ]) && value.schemaVersion === L1_POSTING_SCHEMA &&
+    value.chainId === "1" && value.caip2 === "eip155:1" &&
+    value.rollup === ROBINHOOD_ROLLUP &&
+    value.sequencerInbox === ROBINHOOD_SEQUENCER_INBOX &&
+    isChecksummedAddress(value.rollup) &&
+    isChecksummedAddress(value.sequencerInbox) &&
+    positiveDecimal(value.batchNumber) && nonzeroHash32(value.transactionHash) &&
+    positiveDecimal(value.blockNumber) && nonzeroHash32(value.blockHash) &&
+    Number.isSafeInteger(value.logIndex) && value.logIndex >= 0;
+}
+
+function validFinalizedProviderReadback(
+  value,
+  providerId,
+  trustDomain,
+  checkpoint,
+) {
+  return exactKeys(value, [
+    "blockHash", "blockNumber", "providerId", "trustDomain",
+  ]) && value.providerId === providerId && value.trustDomain === trustDomain &&
+    value.blockNumber === checkpoint.blockNumber &&
+    sameHex(value.blockHash, checkpoint.blockHash);
+}
+
+function validL1FinalizedCheckpoint(value) {
+  return exactKeys(value, [
+    "blockHash", "blockNumber", "caip2", "chainId",
+    "consensusCheckpointTag", "providerReadbacks", "schemaVersion",
+  ]) && value.schemaVersion === L1_FINALIZED_CHECKPOINT_SCHEMA &&
+    value.chainId === "1" && value.caip2 === "eip155:1" &&
+    positiveDecimal(value.blockNumber) && nonzeroHash32(value.blockHash) &&
+    value.consensusCheckpointTag === "finalized" &&
+    Array.isArray(value.providerReadbacks) &&
+    value.providerReadbacks.length === 2 &&
+    validFinalizedProviderReadback(
+      value.providerReadbacks[0], "drpc", "drpc.org", value,
+    ) && validFinalizedProviderReadback(
+      value.providerReadbacks[1], "quicknode", "quicknode.com", value,
+    );
+}
+
 function validOnchainEvidence(onchain, resource, binding) {
   return exactKeys(onchain, [
     "apiVersion", "blockHash", "blockNumber", "caip2", "chainDeployment",
     "chainDeploymentDescriptorDigest", "chainDeploymentId", "chainId",
     "checkpointType", "commitments", "evidenceDigest", "finalityPolicy",
-    "logIndex", "observedAt", "profile", "router", "routerLaunchId",
+    "l1FinalizedCheckpoint", "l1Posting", "l2Inclusion", "logIndex",
+    "observedAt", "profile", "router", "routerLaunchId",
     "routerRuntimeCodeHash", "schemaVersion", "terminal", "transactionHash",
   ]) && onchain.schemaVersion === ONCHAIN_SCHEMA && onchain.apiVersion === "v4" &&
     onchain.chainId === String(binding.chainId) && onchain.caip2 === binding.caip2 &&
@@ -1425,13 +1574,20 @@ function validOnchainEvidence(onchain, resource, binding) {
     profileMatches(onchain.profile, binding.profile) &&
     sameHex(onchain.router, binding.router) &&
     sameHex(onchain.routerRuntimeCodeHash, binding.routerRuntimeCodeHash) &&
-    HASH32.test(onchain.routerLaunchId ?? "") &&
-    HASH32.test(onchain.transactionHash ?? "") &&
-    DECIMAL.test(onchain.blockNumber ?? "") &&
-    BigInt(onchain.blockNumber ?? "0") >= BigInt(binding.routerStartBlock) &&
-    HASH32.test(onchain.blockHash ?? "") &&
+    nonzeroHash32(onchain.routerLaunchId) &&
+    nonzeroHash32(onchain.transactionHash) &&
+    positiveDecimal(onchain.blockNumber) && nonzeroHash32(onchain.blockHash) &&
     Number.isSafeInteger(onchain.logIndex) && onchain.logIndex >= 0 &&
     onchain.checkpointType === "ethereum_finalized" &&
+    validL2Inclusion(onchain.l2Inclusion, binding) &&
+    validL1Posting(onchain.l1Posting) &&
+    validL1FinalizedCheckpoint(onchain.l1FinalizedCheckpoint) &&
+    sameHex(onchain.transactionHash, onchain.l2Inclusion.transactionHash) &&
+    onchain.blockNumber === onchain.l1FinalizedCheckpoint.blockNumber &&
+    sameHex(onchain.blockHash, onchain.l1FinalizedCheckpoint.blockHash) &&
+    onchain.logIndex === onchain.l1Posting.logIndex &&
+    BigInt(onchain.l1FinalizedCheckpoint.blockNumber) >=
+      BigInt(onchain.l1Posting.blockNumber) &&
     finalityMatches(onchain.finalityPolicy, binding.finalityPolicy) &&
     validCommitments(onchain.commitments) &&
     canonicalizeJson(onchain.commitments) === canonicalizeJson(resource.commitments) &&
@@ -1442,12 +1598,14 @@ function validOnchainEvidence(onchain, resource, binding) {
 function validateResource(resource, binding) {
   const onchain = resource?.onchain;
   if (!exactKeys(resource, [
-    "apiVersion", "caip2", "chainDeployment", "chainDeploymentDescriptorDigest",
-    "chainDeploymentId", "chainId", "commitments", "createdAt", "finalizedAt",
-    "funding", "launchId", "liquidityModel", "onchain", "profile",
-    "projectMetadata", "schemaVersion", "sourceVerification",
+    "apiVersion", "caip2", "category", "chainDeployment",
+    "chainDeploymentDescriptorDigest", "chainDeploymentId", "chainId",
+    "commitments", "createdAt", "finalizedAt", "funding", "launchId",
+    "liquidityModel", "onchain", "platformId", "profile", "projectMetadata",
+    "schemaVersion", "sourceVerification",
   ]) ||
     resource.schemaVersion !== RESOURCE_SCHEMA || resource.apiVersion !== "v4" ||
+    resource.platformId !== "programmable" || resource.category !== "custom" ||
     !UUID.test(resource.launchId ?? "") ||
     resource.chainId !== String(binding.chainId) ||
     resource.caip2 !== binding.caip2 ||
@@ -1467,29 +1625,29 @@ function validateResource(resource, binding) {
     !validFunding(resource.funding) ||
     !validLiquidityModel(resource.liquidityModel) ||
     !validSourceVerification(resource.sourceVerification, binding) ||
-    !validOnchainEvidence(onchain, resource, binding) ||
-    Date.parse(onchain.observedAt) > Date.parse(resource.finalizedAt)) {
+    !validOnchainEvidence(onchain, resource, binding)) {
     throw new TypeError("Finalized V4 resource binding is invalid");
   }
   return Object.freeze({ resource });
 }
 
-function sortKey(onchain, resourceId) {
-  return `${onchain.blockNumber.padStart(24, "0")}:0000000000:${String(
-    onchain.logIndex,
-  ).padStart(10, "0")}:${onchain.transactionHash.toLowerCase()}:${resourceId}`;
+function sortKey(l2Inclusion, resourceId) {
+  return `${l2Inclusion.blockNumber.padStart(24, "0")}:0000000000:${String(
+    l2Inclusion.launchEventLogIndex,
+  ).padStart(10, "0")}:${l2Inclusion.transactionHash.toLowerCase()}:${resourceId}`;
 }
 
 function projectResource(validated, binding) {
   const { resource } = validated;
   const onchain = resource.onchain;
+  const l2Inclusion = onchain.l2Inclusion;
   const extension = {
     schemaVersion: "programmable.backend-finalized-v4-projection.v1",
     sourceUrl: binding.sourceUrl,
     resourceId: resource.launchId,
     chainDeploymentId: binding.chainDeploymentId,
     chainDeploymentDescriptorDigest: binding.chainDeploymentDescriptorDigest,
-    chainDeployment: structuredClone(resource.chainDeployment),
+    chainDeploymentDigest: binding.chainDeploymentDigest,
     foundationSourceCommitment: binding.foundationSourceCommitment,
     profile: structuredClone(binding.profile),
     router: binding.router,
@@ -1497,6 +1655,17 @@ function projectResource(validated, binding) {
     routerLaunchId: onchain.routerLaunchId.toLowerCase(),
     finalityPolicy: structuredClone(binding.finalityPolicy),
     finalityEvidenceDigest: onchain.evidenceDigest,
+    finalityEvidence: {
+      schemaVersion:
+        "programmable.backend-finalized-v4-finality-projection.v1",
+      checkpointType: onchain.checkpointType,
+      l2Inclusion: structuredClone(l2Inclusion),
+      l1Posting: structuredClone(onchain.l1Posting),
+      l1FinalizedCheckpoint: structuredClone(onchain.l1FinalizedCheckpoint),
+      evidenceDigest: onchain.evidenceDigest,
+      terminal: onchain.terminal,
+      observedAt: onchain.observedAt,
+    },
     commitments: structuredClone(resource.commitments),
     projectMetadata: structuredClone(resource.projectMetadata),
     funding: structuredClone(resource.funding),
@@ -1513,7 +1682,7 @@ function projectResource(validated, binding) {
     caip2: binding.caip2,
     projectId: resource.launchId,
     model: { id: "custom-graph", version: binding.profile.profileVersion },
-    token: null,
+    token: projectedToken(resource),
     launch: {
       status: "live",
       origin: "first-party",
@@ -1521,12 +1690,12 @@ function projectResource(validated, binding) {
       modelVersion: binding.profile.profileVersion,
       publicSubmission: true,
       creatorAddress: null,
-      transactionHash: onchain.transactionHash.toLowerCase(),
-      blockNumber: onchain.blockNumber,
-      blockHash: onchain.blockHash.toLowerCase(),
+      transactionHash: l2Inclusion.transactionHash.toLowerCase(),
+      blockNumber: l2Inclusion.blockNumber,
+      blockHash: l2Inclusion.blockHash.toLowerCase(),
       transactionIndex: null,
-      logIndex: onchain.logIndex,
-      timestamp: null,
+      logIndex: l2Inclusion.launchEventLogIndex,
+      timestamp: unixTimestampToIso(l2Inclusion.blockTimestamp),
       finality: "finalized",
       launchWallet: null,
       observedAt: onchain.observedAt,
@@ -1552,7 +1721,7 @@ function projectResource(validated, binding) {
     extensions: {
       "programmable/backend-finalized-v4": extension,
     },
-    sortKey: sortKey(onchain, resource.launchId),
+    sortKey: sortKey(l2Inclusion, resource.launchId),
   };
   Object.defineProperty(record, TRUSTED_FINALIZED_V4_RECORD, {
     value: true,

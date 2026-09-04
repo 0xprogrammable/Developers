@@ -27,6 +27,12 @@ Stock launches are excluded from active v2 discovery and are not Programmable Cu
 
 Every recognized Custom launch uses the same `custom` category even when its token, hook, factory, provider, market and template contracts differ from every prior launch. Those values stay on the individual record. Registry records derive the classification from the accepted Registry event; Router records derive it from a consistent finalized `CustomGraph` stamp. Neither lane may infer the label from metadata.
 
+This is a Programmable launch integration, not an all-hooks index. Include only
+finalized records produced by the manifest-listed Registry or stamped by the
+manifest-bound Programmable Router on a published chain. The existence of
+Uniswap v4 bytecode, callbacks, a pool, or a hook address alone is never a
+classification signal.
+
 The baseline integration discovers every recognized launch. Charting, quotes, simulation, and execution are separate per-market capabilities and may be unavailable.
 
 ## Chain selection and release state

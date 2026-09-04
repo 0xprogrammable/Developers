@@ -11,7 +11,7 @@ const FEE_RECIPIENT = "0x4957f49620AFf3Adbbe8195a4f633E49cc93376c";
 describe("documentation contract", () => {
   test("pins the additive v2 launch and compatibility contracts byte-identically", async () => {
     for (const [file, expected] of [
-      ["schemas/v2/launch.schema.json", "d47618dbe35ded3ee00517e47988a712faf6927790d72ea4b20a5fd26bd3e59b"],
+      ["schemas/v2/launch.schema.json", "7c67ec7615dcca38e2305483a64d337d64b3537cd0a6c35a11b07d674e789b99"],
       [
         "schemas/v2/custom-launch-source-verification-v4.schema.json",
         "8644c494738f043218798c13093a42b66195661db490e796c2a394be47570385",
