@@ -18,7 +18,7 @@ lookalikes or third-party downloads.
 - Source: `Programmable/public/og/programmable-night-garden-og-1200x630.png`
 - SHA-256: `52163fb3d92e54e04151d9e1cc2131e960c2a9c586e7b36a1810b8b437569804`
 
-## README cover
+## Previous README cover
 
 - Public file: `programmable-developers-readme.png`
 - Type: Documented derivative
@@ -32,3 +32,11 @@ lookalikes or third-party downloads.
 - Type: Exact copy
 - Source: `Programmable/public/brand/loop/programmable-loop-mark-32.svg`
 - SHA-256: `48a2ac96e6c9041b5f7a4b9fe491e7eb4eedf488ea666499125582a4b7f78aab`
+
+## GitHub README animation
+
+- Public file: `programmable-github-mark-loop.gif`
+- Type: Exact copy of the user-supplied asset
+- Source: `programmable-github-mark-loop-1920x1080-v1.gif`
+- Dimensions: `1920 × 1080`
+- SHA-256: `c02d6120ac00fd78b8e8bd8e27af4a1a3bf5253ac21a36b5e64eb1b9ca9d4e2b`

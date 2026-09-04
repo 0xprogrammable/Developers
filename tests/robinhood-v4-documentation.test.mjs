@@ -45,7 +45,7 @@ describe("Robinhood V4 documentation contract", () => {
 
   test("keeps illustrative planned negative examples fail-closed", async () => {
     for (const relativePath of [
-      "docs/quickstart.md",
+      "docs/reference/hosted-feed.md",
       "docs/concepts/multi-chain.md",
       "llms-full.txt",
     ]) {

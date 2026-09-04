@@ -1,199 +1,73 @@
-# Programmable Developer Platform
+# Programmable developer documentation
 
-> Public, unauthenticated read and discovery contract for Programmable Classic and Programmable Custom launches.
+Read-only integration contracts for Programmable Classic and Custom launches.
+Start with discovery, select a chain, and read its manifest before using a deployment.
 
-Canonical site: https://developers.programmable.family
 Source repository: https://github.com/programmablehq/Developers
-Read API base: https://developers.programmable.family/api/v2
-Full agent context: https://developers.programmable.family/llms-full.txt
-Robinhood terminal reference (Markdown): https://developers.programmable.family/robinhood-terminal-indexer.md
-Custom Launch API base: https://api.programmable.market
-Custom Launch API guide: https://programmable.market/docs/developers/custom-launch
-Custom Launch V3 OpenAPI: https://programmable.market/openapi/custom-launch-v3.json
-Planned Robinhood Custom Launch V4 OpenAPI: https://programmable.market/openapi/custom-launch-v4.json
-Custom Launch V4 source-verification status contract: https://programmable.market/schemas/custom-launch/v4/source-verification-status.json
-Developer V4 source-verification projection schema: https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json
-Custom Launch V2 OpenAPI: https://programmable.market/openapi/custom-launch-v2.json
-Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/custom-launch-v1.json
-API key management: https://programmable.market/developers/api-keys
-Launch policy: https://github.com/programmablehq/Launch-Policy
-
-## API surface boundary
-
-- Use the Developer read API without authentication to discover launches and verify provenance.
-- Use the separately hosted Custom Launch API V3 profile `3.3.0` with a bearer API credential for fresh Ethereum Mainnet submissions. V1 and V2 historical reads remain compatible, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`. Existing wallet keys remain compatible. Approved partner roots and bounded one-level subkeys use the same V3 routes, scopes, server admission, and Router simulation.
-- Keep write status chain-qualified. Ethereum (`chainId: 1`) has the V1/V2 historical read and write-fence contracts plus the current V3.3 fresh-write lane. Robinhood Chain (`chainId: 4663`) publishes live direct-chain Router provenance; its self-serve V4 API/CLI and hosted read model remain planned, public writes are unavailable, and its empty `unavailable` hosted feed is non-authoritative.
-- An API key is not wallet signing authority. The controller wallet reviews and signs the exact prepared transaction separately; the API never signs or broadcasts it.
-- Resolve `partnerCredentials` from the active V3 descriptor or capabilities. Only a root holding `partner-subkeys:manage` manages its own children; children cannot manage credentials, exceed root scopes, budgets, or expiry, or delegate again. Root history aggregates attributed root and child launches; child history is stable-lineage only, rotation preserves lineage, and a distinct child starts an isolated lineage. Partner metadata policy matches wallet keys. Wallet keys bind the controller to the key wallet; partner requests select the controller in the exact request. Partner roots require the authenticated Website BFF and server allowlist; clients cannot self-authorize. Secrets are delivered only by issue or rotation responses. Attribution is immutable, server-derived, and not a safety or verification claim. No credential bypasses security or approval.
-- The canonical V2 Custom Launch historical request and response schemas remain in the V2 Custom Launch OpenAPI contract. Do not infer them from or copy them into this read/discovery repository.
-- Resolve the active write entry from discovery `extensions["programmable.custom-launch-api"].currentCreate` or status `currentCustomLaunchCreate`, then read live V3 capabilities, OpenAPI, and `directNativeHookGraphProfileV3.platformAdmissionPolicy`. An exact versioned Programmable Launch Policy commit or release may provide authored source; an unversioned repository branch does not select the live API or decide a request. A CLI, LLM, or client-side report is preparatory only. The API server alone decides authorization after the exact static admission baseline and pinned Router simulation. Under active profile `3.3.0`, missing, not-configured, or unavailable runtime behavior evidence keeps behavior, trading, liquidity, and fee claims unverified and does not itself block handoff; an authenticated executed negative blocks with `BEHAVIOR_EVIDENCE_NOT_VERIFIED`. A worker-private exact permit may exist only for the pinned simulation; public `simulating` and `failed` output keeps permit and wallet-transaction fields null. This is not an arbitrary-hook safety or universal fee-enforcement claim.
-- Legacy Registry and GitHub submission intake are closed. V1 and V2 historical reads remain independently available, but neither API major accepts fresh writes.
-- Custom Fee-Enforced Launch Profile V2 publishes one exact retained historical revision/hash and its 1,000 ppm semantics; it is read-only for writes and does not describe arbitrary hooks.
-- Direct Native Hook Graph Profile V1 is only a retained optional preview descriptor. Its candidate V3 mapping remains gated and must not be used; fresh clients use the active Revision 3 descriptor while Revision 2 remains historical-read/exact-retry only.
-- Direct Native Hook Graph Profile V3 is the active Custom Launch API V3 general lane: only metadata-bound profile `3.3.0` accepts fresh admission; exact `3.2.0`, `3.1.0`, `3.0.0`, and `2.0.0` bytes remain readable and retryable byte-for-byte only; exact 3–16-target project graphs, all valid v4 masks, deterministic exact-source/compiler/graph admission, and mandatory exact Router launch simulation remain bound.
-- Profile `3.3.0` retains exactly seven objective hard-block codes: runtime `CALLCODE`, runtime or source self-destruct, definitively missing or invalid PoolManager callback authentication, a literal wrong PoolManager, and a missing enabled callback. Proxy or upgrade surfaces, `DELEGATECALL`, mint, tax, pause, liquidity custody, transfer deltas, and return-delta/custom-accounting designs require exact evidence instead of categorical rejection.
-- Existing-project agents resolve `directNativeHookGraphProfileV3.api.agentIntegration`. Its canonical remediation catalog is `https://programmable.market/policies/custom-launch-agent-remediation-v1.json`; its pack-config schema is `https://programmable.market/schemas/custom-launch/v3/pack-config.json`. `action_required` means repair the exact source or configuration, repack, validate, and submit a new request, not seek a project allowlist or use legacy GitHub intake. New EIP-3009 configs use `programmable.eip3009-authorization-patch.v2` with static `nonceArgumentPath`, `rArgumentPath`, `sArgumentPath`, and `vArgumentPath`; v1 remains compatible only for exact retries.
-- New profile `3.3.0` packs require `projectMetadata` using `programmable.project-metadata.v1`: token `name` and `symbol`, meaningful description, a non-null image with immutable digest and media facts, and canonical HTTPS `website` and `x` links. The CLI returns `projectMetadataHash`, raw `unboundGraphBundleHash`, metadata-bound `graphBundleHash`, and `programmable.project-token-metadata-binding.v1`; the same declaration is bound through the prepared resource, `launchId`, and wallet-reviewed Router transaction. This proves the reviewed declaration, not the deployed token readback. Finalized name and symbol require `postDeploymentReadback: required`; images and links remain untrusted display data and never authorize execution. Every V3 resource carries required immutable `launchProfileVersion`; `projectMetadata` and `projectMetadataHash` are non-null for metadata-bound `3.2.0` and `3.3.0`, and null for retained `2.0.0`, `3.0.0`, and `3.1.0` resources. Profile `3.2.0` keeps its legacy nullable-image metadata contract; fresh `3.3.0` packs use the stricter complete policy.
-- Unauthenticated `GET https://api.programmable.market/v3/finalized-custom-launches?limit=1..25&cursor=<opaque>` returns the cursor-paginated `programmable.finalized-custom-launch-metadata-list.v1` snapshot backed by `finalized-v3-project-metadata-ledger`. Complete every page. Required top-level fields are `schemaVersion`, `generatedAt`, `launches`, `nextCursor`, and `quality`; quality is `complete` or `partial`, and its published plus quarantined counts equal the source count. Its `launches` array contains finalized metadata-bearing V3 rows under their original contracts, including retained `3.2.0` and current `3.3.0` rows. Each launch binds Router identity, exact project metadata and hashes, declared-versus-observed token metadata, and persisted finality evidence. It never exposes pending requests, metadata-absent historical resources, controllers, API keys, or request bytes. `resourceId` is not Router identity; key and join by `routerLaunchId` plus matching Router event token, hook, and pool evidence. Presentation remains untrusted and does not prove safety or tradeability.
-- Current launch metadata requires name, symbol, non-empty description, an image with immutable byte digest and media facts, one website, and one canonical X profile without restricting project mechanics. Historical incomplete finalized records remain visible. Optional server-derived `partnerAttribution` is projected as `launchedVia`; it cannot be caller-supplied and does not prove fees, provider status, safety, liquidity, third-party indexing, or a `safe` label.
-- V3 self-serve starts with public `GET /v3/capabilities` and authenticated quota-free `POST /v3/custom-launches/preflight`. The `programmable.custom-launch-preflight.v1` response separates `supported`, `supported_with_warnings`, `needs_evidence`, and `unsupported`; keeps hard-block, needs-evidence, and warning codes distinct; returns typed remediations, exact request hash, platform-owned risk and behavior evidence, and six product truth axes; and fixes `quotaConsumed`, `nonceAllocated`, `persisted`, and `walletBroadcastByService` to false while requiring a later wallet signature. The support request ID is in `X-Request-Id`. Honor `Retry-After` on `429` or `503`.
-- Preflight `deployable`, `routable`, and `featured` eligibility is not deployment, production trading, fee-behavior verification, exact source/runtime verification, finalized indexing, or featured-placement evidence. Only the API server may authorize after static admission and pinned Router simulation; runtime evidence retains the current unverified-versus-executed-negative semantics above. Its optional `lifecycleQueue` is bounded single-resource polling metadata, not launch finality and not a Developer feed field.
-- V3 resource statuses are `received`, `validating`, `pending_review`, `action_required`, `prepared`, `simulating`, `awaiting_funding_authorization`, `funding_authorization_verified`, `authorized`, `submitted`, `finalized`, `failed`, and `cancelled`. `action_required` means repair, repack, and submit new exact bytes; `authorized` is not signed or broadcast; `submitted` is not finalized; only `finalized`, `failed`, and `cancelled` are terminal. `lifecycleQueue.state` is worker progress, not resource status.
-- Direct Native Hook Graph Profile V2 remains readable and exact-byte retryable under its historical graph, funding, liquidity, and per-launch conformance contract; it cannot admit a fresh request.
-
-## Current status
-
-- Classic launch discovery is live on Ethereum for historical V3 and current V4 only. Classic V1 and V2 remain inactive manifest history and are not scanned. Manifest-following consumers receive V4 through a normal manifest refresh without a client code or address change.
-- The hosted Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, validated through schema, scope, evidence and identity commitments. It currently reports Envio deployment `production-6157d22`; legitimate deployment revisions do not require code changes. The retired legacy source returns HTTP 410 and is no longer used.
-- Custom Registry generation 1 discovery is live on Ethereum; legacy Registry and GitHub submission intake are closed.
-- Custom Launch API V1 and V2 historical reads are live on Ethereum Mainnet; authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`.
-- Direct Native Hook Graph Profile V3 is live through API V3 and public CLI `3.3.9`, with exactly `pack`, `validate`, `submit`, and `status`. Fresh packs default to profile `3.3.0`; explicit `3.4.0` output remains preparatory and is rejected until independent activation. Resolve the immutable release and current V3 OpenAPI from the active descriptor. Revision 2 remains historical-read/exact-retry only and the V1 descriptor remains gated.
-- Additive profile `3.4.0` is pending and fail-closed. It must not be packed, submitted, or described as active until live capabilities and OpenAPI select it after the same-app runner and observation ABI are deployed and read back and a separately signed exact settlement-dataflow closure validates against its pinned authority trust root. Its pending strict evidence gate and canonical fee-vault auto-injection do not reinterpret `3.3.0`.
-- Custom Registry Generation 2 remains a separate unavailable release candidate. It does not activate the public fee-enforced profile, and neither creates a third public category.
-- The v2 Custom feed publishes finalized approved Custom Registry launches, including project-only records with no market.
-- Stock-Paired records are excluded from active v2 discovery. Their immutable v1 compatibility records remain readable without reactivating Stock scanning.
-- Ethereum Mainnet has live hosted and direct-chain discovery. Robinhood Chain Mainnet (`4663` / `eip155:4663`) has live direct-chain provenance with a planned hosted read model; evaluate each capability independently.
-- Robinhood publishes `directChainIntegration.status: "live"` and a live `launchStampRouter`; fetch its exact address, start block, runtime hash, ABI, deployment proof and finalized launch vector dynamically from `/api/v2/manifests/4663` and `directChainIntegration.evidenceUrl`. Its `rpc-finalized` policy requires a canonical finalized boundary; explicit blocks must be finalized ancestors. `customRegistry.publicSubmissionsEnabled` stays false and `customLaunchV4` remains planned.
-- Robinhood hosted launch and token feeds return an empty `unavailable` projection with non-authoritative absence. Direct-chain indexing remains available independently of Envio/indexer promotion; do not translate hosted unavailability to “no launch exists”.
-- No Basebit or Aion partner source, recipient, accepted template, Registry record, or live fee path is currently verified by the public v2 manifest.
-- `provider` is optional secondary attribution. Only `registry-bound` with its evidence hash is authenticated provider provenance; unfamiliar or `display-only` provider data never upgrades origin, fees, review, or execution.
-- Every registered launch is discoverable.
-- Charting, quote, simulation, and execution support are explicit per market and require a verified adapter.
-- The v2 API is strictly read-only. Support states are `available | unavailable | unknown`; the API returns no transaction payloads and authorizes no action.
-- The separate operator console at `https://claimhazard.vercel.app` applies its own read-only claim policy to reviewed Classic and finalized standard Custom Registry V1 fee sources. It does not expand the Developer API into a transaction API.
-- Canonical catalog records can still have partial enrichment. Recognized onchain events stay visible when metadata, supply, or block-timestamp enrichment is unavailable; the feed can be degraded and affected fields remain partial, unavailable, or null.
-- Launch-list and token-list return recognized bounded records with `degraded` or `unavailable` quality when canonical coverage is incomplete; missing enrichment never hides a recognized identity.
-- Finalized canonical-Router Custom token identities remain in v2 launches and token-list independently from Registry freshness. Router provenance does not invent current market support, supply, or a fee policy. Router is provenance and transport, never a public category.
-- On Ethereum, `launchStampRouter.canaryEvidence.routeCoverage.classicOnchainCanary` is true. The exact finalized Classic V4 canary proof is published in the manifest's `launchStampRouter.classicCanaryEvidence` object.
-- Do not claim that launches are unconditionally safe, audited, or unruggable.
-- Do not claim that any named terminal or partner has integrated Programmable without confirmation.
+Canonical site: https://developers.programmable.family
+Full agent reference: https://developers.programmable.family/llms-full.txt
 
 ## Start here
 
-- [Documentation index](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/README.md): Human documentation map and current state.
-- [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch): Wallet and approved partner authentication, fresh V3.3 preparation, status polling and separate wallet signing.
-- [Custom Launch V3 OpenAPI](https://programmable.market/openapi/custom-launch-v3.json): Canonical public general project-hook graph machine contract.
-- [Planned Robinhood Custom Launch V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json): Chain `4663` client-preparation contract; it does not activate public writes or publication.
-- [Custom Launch V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json): API-owned component and aggregate status contract.
-- [Developer V4 source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json): Separate public read-model projection contract.
-- [Custom Launch V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json): Historical V2 reads and authenticated read-only POST contract.
-- [Custom Launch V1 compatibility OpenAPI](https://programmable.market/openapi/custom-launch-v1.json): Existing V1 reads/status and read-only POST contract.
-- [Custom Fee-Enforced Launch Profile V2](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/custom-fee-enforced-launch-profile-v2.md): Exact retained 1,000 ppm historical semantics, pinned artifacts, read-only write boundary, and unsupported claims.
-- [Direct Native Hook Graph Profile V1](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v1.md): Gated Custom Launch API V3 preview for profile version `1.0.0`, published through the separate `programmable.direct-native-hook-graph-profile-discovery.v1` descriptor; 3–16 targets over the Router's 2–16 and GraphFactory's 1–16 limits, constrained v4 permissions, ERC-20/native pools, two-stage `fundingIntentHash` signing and an inclusive selected-total fee split; not a live launch route.
-- [Direct Native Hook Graph Profile V3](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v3.md): Active general lane with exact source/compiler/graph binding, blocking-versus-warning static indicators, mandatory Router simulation, and explicit non-guarantees.
-- [Direct Native Hook Graph Profile V2](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v2.md): Retained historical-read/exact-retry descriptor for 3–16 exact targets, all valid v4 masks, `none`, wallet-value or EIP-3009 funding, and per-launch conformance.
-- [API key management](https://programmable.market/developers/api-keys): Create or revoke a wallet-bound Custom Launch API key; approved partner roots manage bounded children through the partner routes.
-- [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy): Current versioned requirements and machine-readable policy contracts.
-- [Minimal API integration](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/quickstart.md): Discovery, status, manifest, feed, cursor, and JavaScript example.
-- [Integration status](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/status.md): Live Classic and Custom discovery, V1/V2 historical read-only boundaries, active V3.3 fresh submissions, and closed legacy intake.
-- [Launch data model](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/data-model.md): Identity, provenance, capabilities, markets, fees, extensions, and metadata trust.
-- [v2 compatibility](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/compatibility.md): Additive evolution and unknown-type fallback.
-- [Production operations](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/operations.md): Freshness, finality, reorgs, pagination, retries, and recovery.
-- [Programmable Verified](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/programmable-verified.md): Exact-review and deployed-revision binding without a blanket safety claim.
-- [Multi-chain discovery](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/concepts/multi-chain.md): Chain activation, identity, registry generations, and cursor partitioning.
-- [Direct onchain verification](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/onchain-verification.md): Manifest, event, runtime, finality, impersonation, correction, and revocation checks.
-- [Launch stamp Router](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/launch-stamp.md): Direct Router verification for Router-stamped Classic and Custom token, v4 pool, and exclusive-component provenance.
-- [Production checklist](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/integration-checklist.md): Release-ready consumer checklist.
-- [Protocol fee claim discovery](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/protocol-fee-claims.md): Operator wallet boundary, atomic batching, source inventory, refresh behavior, and fail-closed Custom admission.
-- [FAQ](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/faq.md): Common product and integration questions.
+- [Documentation index](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/README.md): Guides grouped by task.
+- [Quickstart](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/quickstart.md): First read or stamp verification.
+- [Integration status](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/status.md): Chain-specific availability and evidence states.
+- [Examples](https://github.com/programmablehq/Developers/tree/main/examples): Runnable read-only consumers.
 
-## Integration guides
+## By task
 
-- [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer): Live chain-4663 direct-chain integration with the canonical label contract, manifest-bound finalized evidence and independent Router verification/indexing path.
-- [Trading terminals and scanners](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/terminals-and-scanners.md): New-launch display, market support, charts, and safe fallback.
-- [Launch providers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/launch-providers.md): Prelaunch atomic or finalized staged registration, provider handoff, registry invariants and activation gates.
-- [Wallets and explorers](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/wallets.md): Token identity, metadata, provenance, and price availability.
-- [Indexers and data platforms](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/indexers.md): Hosted feed, direct onchain path, cursors, finality, and reconciliation.
-- [Apps, games, and bots](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/apps-and-games.md): Capabilities, unusual products, external dependencies, and read-only boundaries.
+- [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer): Verify and index chain-4663 Custom stamps.
+- [Robinhood guide as Markdown](https://developers.programmable.family/robinhood-terminal-indexer.md): The same maintained guide in plain text.
+- [Trading terminals](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/terminals-and-scanners.md): Labels and per-market feature support.
+- [Hosted feed integration](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/hosted-feed.md): Complete traversal, retries, durable cursors and partial data.
+- [Launch stamp Router](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/launch-stamp.md): Events, getters, runtime bindings, proofs and finalized test vectors.
+- [HTTP API](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/http-api.md): Endpoints, fields and compatibility.
+- [Platform fees](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/fees.md): Fee scope, accounting and evidence.
+- [Protocol fee claim discovery](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/protocol-fee-claims.md): Independent claim eligibility and wallet boundary.
+- [Custom Launch V3 profile guide](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/guides/direct-native-hook-graph-profile-v3.md): Current Ethereum launch contract and detailed admission rules.
 
-## Reference
+## Live discovery
 
-- [HTTP API](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/http-api.md): Endpoint behavior, queries, cursors, errors, and caching.
-- [Platform fees](https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/fees.md): Classic included-fee semantics, public Custom V2 additive 1,000 ppm semantics, the live Direct Native V3 additive-or-inclusive selection, the retained gated V1 preview, partnership-template 20/15/5 policy, evidence, claims, and scope.
-- [OpenAPI 3.1](https://raw.githubusercontent.com/programmablehq/Developers/main/openapi/programmable-v2.yaml): Normative HTTP contract.
-- [JSON Schemas](https://github.com/programmablehq/Developers/tree/main/schemas/v2): Normative public response schemas.
-- [Examples](https://github.com/programmablehq/Developers/tree/main/examples): Read-only curl, JavaScript, and TypeScript consumers.
+- [Discovery](https://developers.programmable.family/.well-known/programmable.json): Select the chain's manifest and current API pointers.
+- [Ethereum manifest](https://developers.programmable.family/api/v2/manifests/1): Chain 1 deployment inventory.
+- [Robinhood manifest](https://developers.programmable.family/api/v2/manifests/4663): Chain 4663 deployment inventory.
+- Status: `GET /api/v2/status?chainId={chainId}`.
+- Launch feed: `GET /api/v2/launches?chainId={chainId}`.
+- Launch detail: `GET /api/v2/chains/{chainId}/launches/{launchId}`.
+- Token detail: `GET /api/v2/launches/{chainId}/{tokenAddress}`.
+- Token list: `GET /api/v2/token-list?chainId={chainId}`.
 
-## Live discovery and API
+## Current chain state
 
-- [Discovery document](https://developers.programmable.family/.well-known/programmable.json): Stable bootstrap document.
-- [Status](https://developers.programmable.family/api/v2/status): Service and feed lifecycle.
-- [Manifest](https://developers.programmable.family/api/v2/manifest): Deployments, start blocks, Custom Registry state, fee policy, endpoints, and compatibility.
-- Chain manifest: `GET /api/v2/manifests/{chainId}`. `/api/v2/manifest` remains the Ethereum chain-1 alias; `/api/v2/manifests/4663` publishes live direct-chain Router roots while its hosted read model remains planned.
-- The Developer v2 manifest above is the canonical integration inventory. `https://programmable.family/api/custom-launch/registry/v1/manifest` is a Website operational mirror and never overrides or supplements it.
-- [Launch feed](https://developers.programmable.family/api/v2/launches): Cursor-paginated Classic and Custom launch records.
-- Chain-qualified launch detail: `GET /api/v2/chains/{chainId}/launches/{launchId}` for project-only, token-backed, and multi-asset records. `/api/v2/launches/{launchId}` remains an Ethereum-only compatibility alias.
-- Token detail: `GET /api/v2/launches/{chainId}/{tokenAddress}` for token-backed records.
-- [Token list](https://developers.programmable.family/api/v2/token-list): Wallet-friendly compatibility projection.
+Ethereum (`chainId: 1`) publishes Classic and Custom discovery. Custom Launch
+API V1 and V2 retain historical reads; authenticated POST is read-only.
+V3 profile `3.3.0` accepts fresh submissions under its separate server admission
+and wallet-signing contract.
 
-## Core agent rules
+Robinhood (`chainId: 4663`) has live direct-chain Router provenance. Its hosted
+read model and public self-serve V4 API/CLI remain planned; public writes are
+unavailable. An empty unavailable feed is not authoritative absence.
 
-1. Fetch the discovery document, status, and manifest before reasoning about current deployments.
-2. Never hard-code deployment arrays; read them from the manifest.
-3. Use `chainId + launchId` for normalized launch deduplication and `chainId + Router address + launchId` for exact Router provenance. Use `chainId + token.address` when a primary token exists; for `token: null`, preserve `projectId` and the authenticated `assets` graph.
-4. `launchId` is derived from canonical Classic event provenance or committed by the Custom Registry.
-5. Public category is exactly `classic | custom`; a full Registry-backed Custom record uses `platformId: programmable`, `category: custom`, and `publicLabel: Programmable Custom` from the trusted projection.
-6. Accept `markets: []`, multiple markets, and markets without a pool.
-7. Never fabricate a pool, pair, price, liquidity, volume, chart, quote, or execution route.
-8. Unknown fields, capabilities, market kinds, and namespaced extensions must not hide a launch. Preserve the known core and disable unsupported behavior.
-9. `page.nextCursor` continues the current traversal. Persist `page.resumeCursor` only after the traversal is durably applied, then pass it as `after` for incremental polling. Repeat the exact chain and category scope on every cursor or after request. Never parse cursors.
-10. Preserve `launch.timestamp`; do not replace it with first observation time.
-11. Treat `observed` and `confirmed` as non-final, `finalized` as finalized, and reconcile `orphaned` or absent non-final records idempotently.
-12. Treat creator metadata and links as untrusted display data. Provenance does not verify external services or economic outcomes.
-13. The Developer v2 API is read-only. Support states do not authorize or construct transactions. On Ethereum, V1 and V2 historical reads remain available but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions. Robinhood self-serve V4 remains planned with no public writes; direct-chain provenance is live.
-14. Read fee behavior from verified records. Do not infer it from category.
-15. A partial or unavailable enrichment field is not a reason to drop a recognized launch or replace null with a guess.
-16. Production cursors are HMAC-signed. Keep `PROGRAMMABLE_CURSOR_SIGNING_KEY` private and stable; rotation invalidates outstanding cursors and requires coordinated migration handling.
-17. Partner API responses and webhooks are not canonical provenance. Future provider registration must be authenticated and either atomic with the launch or emitted only after a verified staged workflow is finalized.
-18. Resolve the live Custom Registry address and start block from the manifest. Keep legacy Registry and GitHub submission intake closed. Treat unapproved provider examples as prelaunch unless their exact approval and Registry evidence are published. The Custom Launch API publishes its own live status and readiness URL.
-19. Assign `Programmable Custom` only from manifest-listed Custom Registry evidence or a consistent canonical Router `CustomGraph` stamp. Provider metadata, hook addresses and API responses cannot self-assign the label.
-20. For a Router stamp check, bind `chainId + Router address + launchId`, resolve the Router and start block from top-level `launchStampRouter`, use one finalized or explicit canonical block, and reject copied emitters. Router V1 covers launches stamped at or after its published start block only. Detect by token or `(PoolManager, PoolId)`, then map `CustomGraph = 1` or `Classic = 2`; never classify Classic by its shared hook. Use `stampProof` only for address-based token or exclusive-component corroboration. Treat Router as provenance and transport, not as a third category; active Classic discovery scans only manifest-enabled V3 and V4 releases.
-21. `Programmable Verified` requires an effective structured review cryptographically bound to the exact deployed revision; registry inclusion alone is insufficient.
-22. Partition cursors, checkpoints, finality, and reorg recovery by API major version, chain, and filter scope.
-23. Partner/template attribution is independent from fee state. Without a verified fee path, use no-qualifying-market and zero shares; an active fee-bearing partnership path must be exactly 20 bps on one basis: 15 partner plus 5 Programmable, with no additional Native Custom 10 bps.
-24. Full Registry-backed records can add platform, public label, CAIP-2, project, model, template, partner, builder, asset graph, approval, deployment, review, fee-policy, finality-evidence, presentation, Registry-origin, launching-wallet, authority, lifecycle, and mechanism fields without creating a new API major version.
-25. Keep launch visibility separate from claim eligibility. The claim console must independently verify its published launcher, Registry, runtime, fee, recipient, lifecycle, and finality boundary; a visible launch is not automatically claimable.
-26. Keep API availability, fee enforcement, fee accrual, exact-source match, simulation, finality, tradability, claim support, buybacks, and audit status separate. A descriptor is discovery, not authorization; only the API server may authorize an exact fresh V3.3 request after its required evidence passes.
-27. Treat the `programmable.direct-native-hook-graph-profile-discovery.v1` object at `directNativeHookGraphProfileV1` as a gated preview while `productionLaunchAuthorized` and `api.publiclyRoutable` are false. It is separate from the V3 request profile schema. Its planned V3 API/CLI vocabulary, graph contract, funding challenge and extension IDs do not create a request route, authorize either wallet signature, create a launch record or add a token-list entry.
-28. Treat `directNativeHookGraphProfileV3` as the active V3 general-lane descriptor and `directNativeHookGraphProfileV2` as historical-read/exact-retry discovery, never as wallet authority. Revision 3 admission is launch-admission-only: it is not an audit or a safety, honeypot, liquidity, tradeability, or fee-behavior guarantee. Pool initialization creates no liquidity; zero classical LP is valid only when the exact custom-accounting graph supplies and settles its own inventory or backing. Only finalized consistent Router evidence creates a launch record.
-29. Keep finality, exact source verification, indexing completeness, and public visibility as independent chain-qualified evidence axes. A positive result on one does not prove another, and none alone proves trading, liquidity, fee behavior, or safety. Robinhood publishes finalized deployment and launch evidence for direct-chain verification; hosted indexing, public feed visibility and component source verification retain independent states.
+Read live state instead of inferring availability from a published schema:
 
-## Robinhood direct-chain consumer rules
+- [Robinhood V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json)
+- [V4 source-verification status](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
+- [Developer source-verification projection](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
+- [Read API OpenAPI](https://developers.programmable.family/openapi/programmable-v2.yaml)
+- [Response schemas](https://github.com/programmablehq/Developers/tree/main/schemas/v2)
 
-From a clone of https://github.com/programmablehq/Developers with Node.js 20 or
-later, run the following without a package install:
+## Consumer rules
 
-```bash
-PROGRAMMABLE_RPC_URL='<https-robinhood-rpc-url>' node examples/verify-robinhood-release.mjs
-```
+1. Resolve deployment identities from the selected chain manifest. Never infer them from token metadata or third-party labels.
+2. Public categories are exactly `classic` and `custom`. Custom requires accepted Registry evidence or a consistent canonical Router CustomGraph stamp.
+3. Read Router events and proofs at the same canonical finalized block. Check the exact emitter, runtime and immutable bindings; reject copied events.
+4. Keep recognized launches visible when metadata, markets or adapters are unavailable. Preserve unknown fields and nulls; do not invent prices, liquidity, fees or execution support.
+5. Scope normalized IDs by chain. Scope Router launch IDs by chain and Router. API resource IDs and onchain bytes32 launch IDs are different identifiers.
+6. Complete page traversal before committing its durable resume cursor. Preserve API version, chain and filters on every cursor and after request; handle replay and reorgs idempotently.
+7. Treat creator metadata, images and links as untrusted display data. A stamp establishes provenance, not safety, an audit or trading support.
+8. Keep finality, exact source verification, indexing completeness and public visibility separate. None establishes another or proves fee accrual.
+9. The Developer v2 API is read-only. API launch admission is separate; the controller wallet reviews, signs and broadcasts separately.
 
-It discovers the manifest and derives the existing token from its finalized
-canary receipt. Use an RPC that serves canonical finalized and historical
-hash-bound reads; never use `latest`. The generic Node stamp verifier supports
-`PROGRAMMABLE_CHAIN_ID=4663`, and the viem helper accepts `chainId: 4663`.
-
-
-- Bootstrap from discovery, fetch `/api/v2/manifests/4663`, require the live direct-chain and Router entries, validate ABI bytes and runtime hashes, and read the finalized launch evidence from the manifest's `evidenceUrl`.
-- Backfill every advertised Router event topic from its `startBlock` in bounded `eth_getLogs` ranges. Match exact emitter and topic; verify each candidate through token/pool/component getters, `launchStamp`, `stampProof` and recorded component runtime identities at one canonical finalized block.
-- Deduplicate events by chain/transaction/log index and launches by chain/Router/launch ID. Commit records before checkpoints, replay an overlap when following new blocks, and rewind on block-hash disagreement. Subscriptions alone do not prove provenance.
-- A consistent `CustomGraph = 1` stamp assigns `platformId: programmable`, `category: custom`, `publicLabel: Programmable Custom`. Future individual custom hooks need no hardcoded allowlist or new public category. Unknown behavior does not erase verified provenance.
-- Preserve recognized no-pool/project-only launches under their own accepted contracts; do not manufacture a pool or assume every route supports poolless stamping. Router V1's market-bearing route must satisfy its recorded pool invariant.
-- Optional Robinhood metadata comes from `/v4/chains/4663/finalized-custom-launches`, never Ethereum `/v3/finalized-custom-launches`. Join it to the exact chain-bound Router stamp; metadata is untrusted presentation and a failed feed does not negate onchain provenance.
-- The Robinhood official API fee policy requires 20 bps to `0xD88539d3c4C460136a733A3Fd60cf6BF269079da`; this is not an immutable onchain enforcement claim. Provenance alone proves neither fees nor safety, liquidity, trading support or third-party indexing.
-
-## Fee summary
-
-- Rate: 10 bps = 0.1% = 1,000 ppm.
-- Recipient: `0x4957f49620AFf3Adbbe8195a4f633E49cc93376c`.
-- V2 historical identity: resolve the exact profile revision and `launchProfileHash` from the manifest; contract policy `0xb7ff874d418bc714d0ec6c36a2df03ea6251bc8b6eb125adc4f5b6b4899d2517`, permission mask `0x2044`; authenticated POST is read-only.
-- Current Classic official paths: the platform share is included within the configured trading fee.
-- Retained Custom Fee-Enforced V2 profile: additive 1,000 ppm on the gross unspecified pool-currency amount for each successful swap through the exact bound pool; exact input uses output currency and exact output uses input currency. PoolManager ERC-6909 claims remain in the sealed vault and only the fixed reward wallet can claim them. This is historical profile semantics, not a fresh route or an arbitrary-hook fee claim.
-- Direct Native Hook Graph V1: retained gated preview with 1,000 hundredths of a bip inside the selected total. It does not authorize the live V3 route and is not accrual or launchability evidence.
-- Direct Native Hook Graph V2: retained historical resources bind 1,000 hundredths of a bip under their exact selected additive or inclusive accounting mode and assessment pair; this does not admit a fresh request or prove fee accrual or claimability.
-- Direct Native Hook Graph V3.3: for both directions and both accounting modes, `applicantSelectedHundredthsOfBip` is capped at `100000`; the Programmable share is separately fixed at `1000`. The API server enforces the cap.
-- Liquidity-provider, protocol, creator or custom-module, Programmable profile, and network-gas components remain separate.
-- Active fee-bearing partnership-template paths: exactly 20 bps total, split 15 bps partner and 5 bps Programmable on the same evidenced basis, with no additional Native Custom 10 bps. Partner-attributed projects without a qualifying fee path use zero shares.
-- The fee applies to verified official market volume, not ordinary transfers, rewards, or independently created third-party pools.
-- Revision 3 admission does not add generic tradability, claiming, creator rewards, or buybacks. FADE's current claim adapter is FADE-specific.
-- Claim console: https://claimhazard.vercel.app
-- Read-only claim discovery policy: https://claimhazard.vercel.app/claim-discovery.json
+Use the [full agent reference](https://developers.programmable.family/llms-full.txt)
+and the versioned profile guides for authentication, metadata binding, fee policy,
+historical profiles and detailed failure handling.

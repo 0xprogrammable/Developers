@@ -1,119 +1,121 @@
-# Reference consumers
+# Examples
 
-These dependency-free Node.js examples show the smallest safe integration with the Programmable developer API. They
-discover current deployment information from the manifest, preserve unknown fields and open asset, capability, or market
-types, and treat a missing token or market differently from a missing launch.
+Read-only consumers for launch discovery, hosted feeds and onchain stamp
+verification. The `.mjs` examples require Node.js 20 or later and no package
+installation. The TypeScript stamp verifier uses `viem`.
 
-They do not quote, simulate, construct, sign, or submit transactions. A feed verification state is provenance data, not
-an audit or a recommendation.
+Run commands from the repository root. Choose the chain explicitly when using
+a chain-aware consumer; omitting it preserves the Ethereum default.
 
-The shared client retries transient network, rate-limit, and server failures up to three times. It honors a bounded
-`Retry-After` value and never changes an opaque cursor between attempts. Override the per-attempt timeout with
-`PROGRAMMABLE_REQUEST_TIMEOUT_MS` or the retry count with `PROGRAMMABLE_RETRY_ATTEMPTS`.
-
-Launch-list and token-list can return HTTP `200` with `degraded` or `unavailable` quality. Process recognized records,
-keep their unavailable fields explicit, and do not treat an absent record in such a response as deletion.
-
-## Run against the public API
-
-Node.js 20 or later is required.
+## Verify the published Robinhood launch
 
 ```sh
-node examples/terminal-scanner.mjs
-node examples/wallet-provenance.mjs 0x0000000000000000000000000000000000000000 1
-node examples/indexer-cursor.mjs
-node examples/app-capabilities.mjs
-node examples/app-capabilities.mjs uniswap-v4:swap
-node examples/profile-discovery.mjs
-node examples/finalized-metadata-indexer.mjs
-sh examples/curl-quickstart.sh
-```
-
-The zero address above is only command syntax. Replace it with the token address you want to inspect. No deployment or
-registry address is hardcoded by any example.
-
-## Run against local fixtures
-
-Point every consumer at a local HTTP fixture server without changing source code:
-
-```sh
-PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 node examples/terminal-scanner.mjs
-PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 node examples/app-capabilities.mjs
-PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 sh examples/curl-quickstart.sh
-```
-
-The server only needs to expose `GET /api/v2/manifest` and `GET /api/v2/launches`.
-
-## Examples
-
-| File | Integration pattern |
-| --- | --- |
-| [`lib/programmable-client.mjs`](lib/programmable-client.mjs) | Dependency-free JavaScript fetch, retry, normalization, and provenance helpers used by the runnable examples |
-| [`programmable-client.ts`](programmable-client.ts) | Small typed client for discovery, status, manifest, feed pagination, launch-ID lookup, token lookup, and token-list access |
-| [`terminal-scanner.mjs`](terminal-scanner.mjs) | Shows token and project-only Classic or Custom launches with zero, one, or several markets |
-| [`wallet-provenance.mjs`](wallet-provenance.mjs) | Finds a token and compares its declared registry with the live manifest |
-| [`indexer-cursor.mjs`](indexer-cursor.mjs) | Selects a per-chain manifest, separates page traversal from a chain-scoped durable high-water cursor, and avoids checkpointing degraded data |
-| [`app-capabilities.mjs`](app-capabilities.mjs) | Detects declared capabilities and preserves project assets plus unknown future types |
-| [`profile-discovery.mjs`](profile-discovery.mjs) | Reads the live Direct Native Hook Graph V2 descriptor without constructing a request or wallet transaction |
-| [`finalized-metadata-indexer.mjs`](finalized-metadata-indexer.mjs) | Completes the external finalized-metadata cursor, preserves legacy missing fields, separates declared metadata from onchain name/symbol readback, validates partner attribution, and emits exact Router evidence without price, liquidity, safety, or provider-index claims |
-| [`verify-launch-stamp.mjs`](verify-launch-stamp.mjs) | Dependency-light JSON-RPC verification for a Router-stamped Classic or Custom token, v4 pool, or exclusive component at the manifest-listed Router |
-| [`verify-launch-stamp-viem.ts`](verify-launch-stamp-viem.ts) | Equivalent Router point lookup with viem and the same concrete-block, runtime, and record checks |
-| [`curl-quickstart.sh`](curl-quickstart.sh) | Fetches the manifest, explicit status and paginated launch feed with curl |
-
-## Live Router lookup
-
-Verify a token or primary contract stamped at or after Router start block `25717612` directly through Ethereum JSON-RPC:
-
-```sh
-PROGRAMMABLE_RPC_URL=https://your-rpc.example \
-  node examples/verify-launch-stamp.mjs token 0x1111111111111111111111111111111111111111
-```
-
-The examples discover the canonical Router address, start block, runtime hash, ABI hash, finality policy, finalized canary evidence, immutable bindings, event layouts, atomic selector, and getter descriptors from top-level `launchStampRouter`. They contain no Programmable deployment address and return `unavailable` when the Router is inactive or its required manifest evidence is incomplete. Token and exclusive-component lookups take one address; a v4 pool lookup takes its PoolManager plus PoolId. Historical launches are outside Router V1.
-
-Both public labels use the same Router stamp. `LaunchKindV1.CustomGraph = 1` maps to `Programmable Custom`; `LaunchKindV1.Classic = 2` maps to `Programmable Classic`; `Invalid = 0` is rejected. Universal detection uses token or `(PoolManager, PoolId)`. The shared Classic hook never identifies one Classic launch, and the examples never infer a class from metadata, a hook, or a factory call. Address-based lookups also cross-check `stampProof`. The published finalized canary covers `CustomGraph`; no separate Classic onchain canary is published. A future Classic label still requires a consistent live Router stamp.
-
-Install `viem` in an existing TypeScript project to use the typed variant:
-
-```sh
-npm install viem
-```
-
-For a durable local indexer checkpoint, choose a path explicitly:
-
-```sh
-PROGRAMMABLE_CURSOR_FILE=/tmp/programmable-cursor.json node examples/indexer-cursor.mjs
-```
-
-Set `PROGRAMMABLE_CHAIN_ID=4663` for Robinhood. The hosted read-model examples
-still return `unavailable` quality and must not advance a durable checkpoint.
-The Router verifier supports the live direct-chain release independently:
-
-```sh
-PROGRAMMABLE_CHAIN_ID=4663 PROGRAMMABLE_RPC_URL=https://your-rpc.example \
-  node examples/verify-launch-stamp.mjs token <token-address>
-PROGRAMMABLE_RPC_URL=https://your-rpc.example \
+PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
   node examples/verify-robinhood-release.mjs
 ```
 
-The release example discovers the existing finalized canary from the chain
-manifest and derives its token from the exact Router receipt. It verifies the
-onchain bytes32 launch ID, stamp hash, token proof, runtime and immutable bindings.
-It never uses an API UUID as an onchain launch ID. No new launch is needed.
-Pass `chainId: 4663` to the viem variant. Omitting the chain preserves Ethereum.
+[verify-robinhood-release.mjs](verify-robinhood-release.mjs) discovers the chain
+manifest and derives the existing token from its finalized Router receipt.
+It verifies the Router runtime, immutable bindings, launch ID, stamp hash and
+component proofs. No new launch, API key or wallet is required.
 
-Use an archive-capable RPC for EIP-1898 hash-bound state reads (the default).
-An explicit Robinhood block
-must be at or below the RPC finalized boundary; head confirmations alone do not
-prove finality.
+Use an RPC that serves canonical finalized and historical block-hash reads.
+An incomplete verification returns `indeterminate`; it does not grant attribution
+or establish that the token is absent.
 
-The indexer sends the saved `resumeCursor` as `after` when polling. `nextCursor` is used only to continue the current
-page traversal; the two cursor roles are never substituted for one another.
+## Verify a token or pool
 
-Store the complete launch record, not only the fields your current interface renders. New optional fields then remain
-available without forcing an immediate consumer release. Treat a stale or degraded response as incomplete: retain
-existing records, retry, and do not interpret absence as deletion.
+Replace `<token-address>` with the address to inspect:
 
-`programmable-client.ts` deliberately types the stable core and preserves additive fields as `unknown`. Compile it with
-your application's TypeScript configuration and validate returned documents against the published JSON Schemas before
-persisting them.
+```sh
+PROGRAMMABLE_CHAIN_ID=4663 \
+PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
+  node examples/verify-launch-stamp.mjs token '<token-address>'
+```
+
+Use `PROGRAMMABLE_CHAIN_ID=1` and an Ethereum RPC for Ethereum.
+The [generic verifier](verify-launch-stamp.mjs) also accepts a pool query:
+
+```sh
+PROGRAMMABLE_CHAIN_ID=4663 \
+PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
+  node examples/verify-launch-stamp.mjs pool '<pool-manager>' '<pool-id>'
+```
+
+Resolve the PoolManager and pool ID from verified launch evidence. The verifier
+resolves Router addresses, start blocks, ABI hashes, runtime identities and
+finality policy from the selected chain manifest.
+
+CustomGraph (`1`) maps to `Programmable Custom`; Classic (`2`) maps to
+`Programmable Classic`. Invalid or inconsistent records receive no label.
+The shared Classic hook cannot identify an individual launch. Address-based
+lookups also require the matching `stampProof`.
+
+Ethereum publishes finalized Custom and Classic V4 examples; Robinhood publishes
+a finalized Custom example. Router V1 covers only launches stamped within its
+published block range. See the [Router reference](../docs/reference/launch-stamp.md).
+
+For an existing TypeScript project, use
+[verify-launch-stamp-viem.ts](verify-launch-stamp-viem.ts) with `viem` installed.
+Pass `chainId: 4663` for Robinhood and an archive-capable RPC. These helpers
+perform reads only.
+
+## Read a hosted feed
+
+```sh
+PROGRAMMABLE_CHAIN_ID=1 sh examples/curl-quickstart.sh
+PROGRAMMABLE_CHAIN_ID=1 node examples/indexer-cursor.mjs
+node examples/terminal-scanner.mjs
+```
+
+The hosted Robinhood read model remains planned. Requests for chain `4663`
+can return `unavailable` quality and must not advance a durable checkpoint.
+Use direct stamp verification for the live Robinhood integration.
+
+For a persistent checkpoint, select a writable path:
+
+```sh
+PROGRAMMABLE_CHAIN_ID=1 \
+PROGRAMMABLE_CURSOR_FILE=/tmp/programmable-cursor.json \
+  node examples/indexer-cursor.mjs
+```
+
+`nextCursor` continues a page traversal. Commit its records before persisting
+`resumeCursor`, then send that value as `after` when polling. Keep chain and
+filter scope unchanged. See the [hosted feed reference](../docs/reference/hosted-feed.md)
+for the complete algorithm.
+
+## Example directory
+
+| File | Purpose |
+| --- | --- |
+| [verify-robinhood-release.mjs](verify-robinhood-release.mjs) | Verify the Robinhood launch referenced by the live manifest |
+| [verify-launch-stamp.mjs](verify-launch-stamp.mjs) | Verify a token, pool or exclusive component through JSON-RPC |
+| [verify-launch-stamp-viem.ts](verify-launch-stamp-viem.ts) | TypeScript stamp-verification helper using viem |
+| [curl-quickstart.sh](curl-quickstart.sh) | Fetch chain status, manifest and a paginated feed |
+| [indexer-cursor.mjs](indexer-cursor.mjs) | Follow a chain-scoped feed with a durable checkpoint |
+| [terminal-scanner.mjs](terminal-scanner.mjs) | Display recognized launches and their available markets |
+| [wallet-provenance.mjs](wallet-provenance.mjs) | Resolve token metadata and compare Registry provenance |
+| [app-capabilities.mjs](app-capabilities.mjs) | Read declared capabilities and preserve unknown types |
+| [finalized-metadata-indexer.mjs](finalized-metadata-indexer.mjs) | Follow the separate Ethereum V3 finalized-metadata ledger |
+| [profile-discovery.mjs](profile-discovery.mjs) | Inspect the historical, read-only Direct Native Hook Graph V2 descriptor |
+| [programmable-client.ts](programmable-client.ts) | Typed read API client for use in an existing TypeScript project |
+| [lib/programmable-client.mjs](lib/programmable-client.mjs) | Fetch, retry and normalization helpers used by the JavaScript examples |
+
+## Run against fixtures
+
+Override the API base to use a local fixture server:
+
+```sh
+PROGRAMMABLE_API_BASE=http://127.0.0.1:8787 \
+PROGRAMMABLE_CHAIN_ID=1 sh examples/curl-quickstart.sh
+```
+
+Serve the routes used by the selected consumer: discovery, the chain-qualified
+manifest, status and launch feed, plus any requested token or launch detail.
+Fixtures do not establish live deployment or feed availability.
+
+The shared client bounds retries and honors `Retry-After`. Configure
+`PROGRAMMABLE_REQUEST_TIMEOUT_MS` and `PROGRAMMABLE_RETRY_ATTEMPTS` when needed.
+Preserve unknown fields, null metadata and recognized launches with no market.
+A degraded response does not establish deletion.

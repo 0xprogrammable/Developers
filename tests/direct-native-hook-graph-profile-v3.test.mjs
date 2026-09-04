@@ -901,8 +901,8 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
     assert.match(guide, /GET|curl[\s\S]+\/v3\/finalized-custom-launches/iu);
     assert.match(guide, /programmable\.finalized-custom-launch-metadata-list\.v1/u);
     assert.match(guide, /resourceId` is a pagination\/resource coordinate, not\s+Router identity/iu);
-    assert.match(readme, /metadata-bound\s+`graphBundleHash`/iu);
-    assert.match(llms, /images and links remain untrusted display data/iu);
+    assert.match(llmsFull, /metadata-bound\s+`graphBundleHash`/iu);
+    assert.match(llmsFull, /images, websites, and social links as untrusted display data/iu);
     assert.match(llmsFull, /meaningful description, a non-null image with immutable byte digest and media facts/iu);
     assert.match(readOpenApi, /programmable\.project-metadata\.v1/u);
     assert.match(readOpenApi, /post-deployment readback/iu);
@@ -911,11 +911,11 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       readOpenApi,
       /FinalizedCustomLaunchMetadataListV1/u,
     );
-    assert.match(readme, /programmable\.custom-launch-preflight\.v1/u);
-    assert.match(llms, /quota-free `POST \/v3\/custom-launches\/preflight`/u);
+    assert.match(guide, /programmable\.custom-launch-preflight\.v1/u);
+    assert.match(llmsFull, /quota-free `POST \/v3\/custom-launches\/preflight`/u);
     assert.match(llmsFull, /all 14 Uniswap v4 permissions/iu);
-    assert.match(llms, /custom-launch-agent-remediation-v1\.json/u);
-    assert.match(llms, /programmable\.eip3009-authorization-patch\.v2/u);
+    assert.match(guide, /custom-launch-agent-remediation-v1\.json/u);
+    assert.match(guide, /programmable\.eip3009-authorization-patch\.v2/u);
     assert.match(llmsFull, /not a manual approval queue/iu);
     assert.match(guide, /releaseLocatorStatus: published/iu);
     assert.match(guide, /supportStatus: live/iu);
@@ -926,8 +926,9 @@ describe("Direct Native Hook Graph Profile V3 discovery", () => {
       readme,
       /\[V3 profile guide\]\(docs\/guides\/direct-native-hook-graph-profile-v3\.md\)/u,
     );
-    assert.match(llms, /launch-admission-only/iu);
-    assert.match(llms, /CLI `3\.3\.9`/u);
+    assert.match(llms, /direct-native-hook-graph-profile-v3\.md/u);
+    assert.match(guide, /launch-admission-only/iu);
+    assert.match(guide, /CLI `3\.3\.9`/u);
     assert.match(llmsFull, /CLI `3\.3\.9`/u);
     assert.match(guide, /Pending additive profile 3\.4\.0 \(not active\)/u);
     assert.match(guide, /finalized-v3-project-metadata-ledger/u);

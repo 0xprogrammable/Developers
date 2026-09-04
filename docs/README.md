@@ -1,88 +1,91 @@
-# Programmable Developer Platform documentation
+# Documentation
 
-Programmable exposes one versioned, unauthenticated integration surface for discovering Classic and Custom launches.
-Use these docs to verify origin and decide which market features your product can safely expose.
+Choose a guide for your task. Use the references for field definitions and the
+chain manifest for current deployment data.
 
-## Choose the API surface
+## Get started
 
-| Goal | Surface |
+- [Quickstart](quickstart.md) — choose a chain and make the first read-only request.
+- [Integration status](status.md) — direct verification, hosted feeds and launch-API availability.
+- [Examples](../examples/README.md) — runnable consumers and stamp verifiers.
+
+## Integrate launches
+
+| Task | Guide |
 | --- | --- |
-| Discover launches and verify provenance | [Developer read API](../README.md), no API key required |
-| Prepare and track a public Custom launch | [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch), using a wallet key from [API key management](https://programmable.market/developers/api-keys) or an approved partner root/subkey credential; wallet signing stays separate |
-| Build a partner or agent launch frontend | [Launch providers](guides/launch-providers.md), keeping the bounded one-level partner credential server-side, using the same V3 policy, and accepting only immutable server-derived attribution |
-| Generate a Custom Launch V1 client | [Canonical V1 OpenAPI](https://programmable.market/openapi/custom-launch-v1.json), preserving the read-only POST boundary |
-| Verify a historical fee-enforced V2 resource | [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md) and its [V2 OpenAPI](https://programmable.market/openapi/custom-launch-v2.json) |
-| Integrate the active V3 general direct-hook lane | [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md), with exact graph binding, deterministic static admission and mandatory Router simulation |
-| Inspect the planned Robinhood Chain V4 contract | [V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json), for chain `4663` write-client preparation; public writes remain unavailable while direct-chain provenance is published separately |
-| Keep a Revision 2 integration compatible | [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md), retained for exact 3–16-target graphs, all valid v4 masks and three funding modes |
-| Inspect the retained V3 preview | [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md), preserved unchanged for discovery compatibility |
-| Resolve the current launch requirements | [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) |
+| Index Robinhood Custom launches | [Robinhood terminal integration](guides/robinhood-terminal-indexer.md) |
+| Add launch labels and market features | [Trading terminals and scanners](guides/terminals-and-scanners.md) |
+| Store and follow launch records | [Indexers and data platforms](guides/indexers.md) |
+| Display token identity and provenance | [Wallets and explorers](guides/wallets.md) |
+| Read capabilities for an application | [Apps, games and bots](guides/apps-and-games.md) |
+| Build a launch provider integration | [Launch providers](guides/launch-providers.md) |
 
-The Custom Launch API is separately hosted at `https://api.programmable.market`. V1 and V2 retain historical reads,
-but their authenticated POST routes return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or
-`409 CUSTOM_LAUNCH_V2_READ_ONLY`. Only V3 profile `3.3.0` accepts fresh submissions while the controller wallet
-reviews and signs an authorized exact transaction separately. The V1 and V2 schemas remain in their canonical OpenAPI
-contracts instead of being copied into this read/discovery repository. This
-fresh-write statement is chain-qualified: it applies to Ethereum Mainnet
-(`chainId: 1`). Robinhood Chain Mainnet (`chainId: 4663`) publishes live
-direct-chain provenance through its canonical Router. Its V4 public write lane,
-CLI and hosted read model remain planned; no public writes are activated here.
+The Robinhood guide is also available on the
+[developer site](https://developers.programmable.family/robinhood-terminal-indexer)
+and as [plain Markdown](https://developers.programmable.family/robinhood-terminal-indexer.md).
 
-The versioned launch requirements likewise remain owned by Programmable Launch Policy instead of being duplicated here.
+## Understand the records
 
-## Start here
-
-1. [Current integration status](status.md)
-2. [Minimal API integration](quickstart.md)
-3. [The launch data model](concepts/data-model.md)
-4. [v2 compatibility rules](concepts/compatibility.md)
-5. [Programmable Verified](concepts/programmable-verified.md)
-6. [Direct onchain verification](reference/onchain-verification.md)
-7. [Launch stamp Router verification](reference/launch-stamp.md)
-8. [Protocol fee claim discovery](reference/protocol-fee-claims.md)
-9. [Production operations](operations.md)
-10. [Production integration checklist](integration-checklist.md)
-
-## Choose an integration path
-
-- [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer)
-- [Robinhood terminal integration source](guides/robinhood-terminal-indexer.md)
-- [Trading terminals and scanners](guides/terminals-and-scanners.md)
-- [Launch providers](guides/launch-providers.md)
-- [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)
-- [Direct Native Hook Graph Profile V3](guides/direct-native-hook-graph-profile-v3.md)
-- [Direct Native Hook Graph Profile V2](guides/direct-native-hook-graph-profile-v2.md)
-- [Direct Native Hook Graph Profile V1](guides/direct-native-hook-graph-profile-v1.md)
-- [Wallets and explorers](guides/wallets.md)
-- [Indexers and data platforms](guides/indexers.md)
-- [Apps, games, and bots](guides/apps-and-games.md)
+- [Data model](concepts/data-model.md) — launches, tokens, assets, markets and capabilities.
+- [Multi-chain discovery](concepts/multi-chain.md) — chain selection and deployment identity.
+- [Programmable Verified](concepts/programmable-verified.md) — the scope of a structured review.
+- [Compatibility](concepts/compatibility.md) — additive fields and unknown values.
+- [FAQ](faq.md) — common integration questions.
 
 ## Reference
 
-- [HTTP API](reference/http-api.md)
-- [Platform fees](reference/fees.md)
-- [Protocol fee claim discovery](reference/protocol-fee-claims.md)
-- [Direct onchain verification](reference/onchain-verification.md)
-- [Launch stamp Router verification](reference/launch-stamp.md)
-- [Multi-chain discovery](concepts/multi-chain.md)
-- [Programmable Verified](concepts/programmable-verified.md)
-- [OpenAPI 3.1 contract](../openapi/programmable-v2.yaml)
-- [Planned Custom Launch V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json)
-- [Custom Launch V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
-- [Developer V4 source-verification projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
-- [JSON Schemas](../schemas/v2/)
-- [Read-only examples](../examples/)
-- [FAQ](faq.md)
-- [Preview and Live post drafts](social-posts.md)
-- [`llms.txt`](../llms.txt)
-- [`llms-full.txt`](../llms-full.txt)
+| Reference | Contents |
+| --- | --- |
+| [HTTP API](reference/http-api.md) | Endpoints, filters, response fields, errors and caching |
+| [Hosted feed integration](reference/hosted-feed.md) | Complete traversal, durable cursors, retries and partial data |
+| [Launch stamp Router](reference/launch-stamp.md) | Canonical stamps, getters, proofs, finality and test vectors |
+| [Onchain verification](reference/onchain-verification.md) | Deployment, event and runtime verification |
+| [Platform fees](reference/fees.md) | Fee policies, accounting and evidence |
+| [Protocol fee claim discovery](reference/protocol-fee-claims.md) | Claim inventory, eligibility and wallet boundary |
 
-## Product status in one paragraph
+Machine-readable contracts: [OpenAPI](../openapi/), [JSON Schemas](../schemas/),
+[ABIs](../abis/README.md) and [deployment evidence](../deployments/).
 
-On Ethereum (`chainId: 1`), Classic discovery is live for historical V3 and current V4 releases; Classic V1/V2 remain inactive manifest history and Stock is excluded from active v2 discovery. The hosted Classic baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted through its schema, scope, evidence and identity commitments and currently reporting Envio deployment `production-6157d22`, not the retired source that returned HTTP `410`. Custom Registry generation 1 remains a separate `custom` path. Custom Launch API V1 and V2 retain historical reads, but authenticated POST is read-only and returns nonretryable HTTP 409; only Ethereum V3 profile `3.3.0` accepts fresh submissions. The active Direct Native Hook Graph Revision 3 accepts exact 3–16-target project token and hook graphs and all valid v4 permission masks. The API server, not a CLI, LLM, or client, decides authorization after the exact static admission baseline and pinned Router simulation. Missing or unavailable runtime behavior evidence keeps the related behavior, trading, liquidity, and fee claims unverified; only an authenticated executed negative blocks handoff. That does not make an arbitrary hook safe or prove universal fee enforcement. Legacy Registry and GitHub submission intake are closed. The separate Ethereum `launchStampRouter` trust root is live for Router-stamped Classic and Custom launches, with finalized exact canaries for both route kinds; it is provenance and transport, not a third public category, and historical coins are not backfilled. Manifest-driven clients discover Ethereum Classic V4 by refreshing enabled release entries, without a code or pinned-address update. Every recognized v2 launch remains discoverable through one envelope even when coverage or enrichment quality is degraded; charts, quotes, simulation and execution are present only when a verified adapter declares support.
+## Launch API
 
-Robinhood Chain (`chainId: 4663`) publishes a live direct-chain Custom integration. Fetch its canonical Router, start block, runtime hash, deployment evidence, finality policy and existing finalized launch evidence from the chain manifest. An external terminal can independently verify and index future `CustomGraph` stamps, including individual custom hooks, as `Programmable Custom`. The hosted read model remains planned: launch and token feeds have `unavailable` quality and non-authoritative absence. Public writes and CLI activation remain unavailable. Finality, exact source verification, indexing and public visibility remain separate evidence axes, and none proves trading, liquidity or safety.
+The Custom Launch API is hosted separately from the Developer read API.
+Start with the [launch guide](https://programmable.market/docs/developers/custom-launch)
+and the [current availability](status.md#launch-api-versions).
+An API credential does not sign or broadcast a wallet transaction.
 
-For live machine-readable state, read `GET https://developers.programmable.family/api/v2/status` and the deployment manifest instead of relying on prose.
+| Contract | Use |
+| --- | --- |
+| [Direct Native Hook Graph V3](guides/direct-native-hook-graph-profile-v3.md) | Current Ethereum profile `3.3.0` |
+| [Robinhood V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) | Planned chain-4663 API contract |
+| [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) | Versioned launch requirements |
 
-Files under `proposals/` are non-normative design inputs, not deployed ABIs or integration endpoints.
+Robinhood source verification has a separate
+[API status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
+and [Developer projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json).
+Their publication does not prove an exact source match for a deployment.
+
+## Operate an integration
+
+- [Production checklist](integration-checklist.md)
+- [Operations](operations.md)
+- [Support](../SUPPORT.md) and [security reporting](../SECURITY.md)
+
+## Compatibility and historical profiles
+
+Use these references for existing integrations and resources. Their publication
+does not enable a fresh launch through a retired or preview profile.
+
+- [Developer API v1 to v2 migration](migrations/v1-to-v2.md)
+- [Custom Launch API V1](https://programmable.market/developers/custom-launch-api-v1.md)
+- [Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)
+- [Direct Native Hook Graph V2](guides/direct-native-hook-graph-profile-v2.md)
+- [Direct Native Hook Graph V1 preview](guides/direct-native-hook-graph-profile-v1.md)
+
+## Repository maintenance
+
+- [Contributing](../CONTRIBUTING.md), [versioning](../VERSIONING.md) and [changelog](../CHANGELOG.md)
+- [Vercel release procedure](vercel-release-control.md)
+- [Announcement drafts](social-posts.md)
+- [Agent index](../llms.txt) and [full agent reference](../llms-full.txt)
+
+Files under [proposals/](../proposals/) are design proposals, not deployed contracts.
