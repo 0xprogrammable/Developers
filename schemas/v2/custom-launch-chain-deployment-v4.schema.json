@@ -873,9 +873,32 @@
           "type": "string",
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
         },
+        "captureClosureDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "postingEventDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "l1EvidenceDigest": {
+          "$ref": "#/$defs/sha256"
+        },
         "evidenceDigest": {
           "$ref": "#/$defs/sha256"
         }
+      },
+      "dependentRequired": {
+        "captureClosureDigest": [
+          "postingEventDigest",
+          "l1EvidenceDigest"
+        ],
+        "postingEventDigest": [
+          "captureClosureDigest",
+          "l1EvidenceDigest"
+        ],
+        "l1EvidenceDigest": [
+          "captureClosureDigest",
+          "postingEventDigest"
+        ]
       },
       "additionalProperties": false
     },

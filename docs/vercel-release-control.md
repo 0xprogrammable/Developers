@@ -52,7 +52,9 @@ subsequent independent two-domain public verification remain mandatory.
 `operation: verify-planned` is the non-mutating path for a docs or planned/null release. It locally
 builds and checks the exact current protected `main`, but it never creates a Vercel deployment,
 changes an alias, enables a write route, or selects a Robinhood stage or promotion bundle. The
-canonical stage and promotion files must both remain absent.
+canonical promotion file must remain absent. A tracked canonical Phase-A bundle is tolerated only
+when the repository check parses its complete closed evidence and the Robinhood manifest remains
+planned/null. The planned operation emits no stage digest and inherits no Phase-A authority.
 
 The operation runs only after an intentionally selected public deployment already exists. That
 deployment must bind the exact protected source using these Vercel metadata fields:
@@ -87,8 +89,10 @@ promotion_run_id: <blank>
 ```
 
 The job checks the exact current protected `main` revision and tree, clears both phase selectors,
-requires both canonical phase files to be absent, and repeats the locked build and repository
-checks. It then builds Vercel production bytes from that checkout and creates one production-target
+requires the canonical promotion file to be absent, and repeats the locked build and repository
+checks. If the closed canonical Phase-A bundle is tracked, the repository check validates it while
+the planned-deploy path deliberately does not select it or copy its digest into deployment metadata.
+The job then builds Vercel production bytes from that checkout and creates one production-target
 candidate with `--skip-domain` and only the three planned source metadata fields above. Before that
 first provider mutation, the job freshly reads the current GitHub `workflow_dispatch` run and
 `production` environment and seals the exact canonical owner, run, attempt, source revision/tree,
@@ -217,7 +221,14 @@ publicAuthorization: false
 publicWrites: false
 ```
 
-Phase A can create one production-target Vercel deployment only with `--skip-domain`. The deployment
+Tracking and validating that bundle is an evidence-admission step, not an activation. While the
+checked chain-4663 manifest remains planned or the exact finalized Router canary is absent,
+`operation: stage` remains fail-closed: no live smoke, live stage receipt, or `live`/`ready` claim may
+be substituted with the deployment checkpoint. Planned verification or planned deployment may
+continue to ignore the bundle after validating it, without inheriting its digest or authority.
+
+Once the exact live manifest and finalized Router canary are separately present, Phase A can create
+one production-target Vercel deployment only with `--skip-domain`. The deployment
 must have neither formal production domain, must be protected by Vercel Authentication, and pass the
 exact chain-4663 smoke through the scoped
 automation bypass. Immediately before sealing the receipt, the workflow independently resolves the

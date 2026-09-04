@@ -834,13 +834,17 @@ function validSafeProvider(value, providerId, trustDomain) {
 }
 
 function validEthereumFinalityEvidence(value, profile) {
-  if (!exactKeys(value, [
+  const legacyKeys = [
     "batchNumber", "ethereumFinalizedCheckpoint", "ethereumProviders",
     "evidenceDigest", "l2Checkpoint", "l2Providers", "observedAt",
     "postingBlockHash", "postingBlockNumber", "postingLogIndex",
     "postingTransactionHash", "profile", "rollup", "schemaVersion",
     "sequencerInbox",
-  ]) || value.schemaVersion !== ETHEREUM_FINALITY_EVIDENCE_SCHEMA ||
+  ];
+  const closureKeys = ["captureClosureDigest", "l1EvidenceDigest", "postingEventDigest"];
+  const hasClosure = exactKeys(value, [...legacyKeys, ...closureKeys]);
+  if ((!exactKeys(value, legacyKeys) && !hasClosure) ||
+    value.schemaVersion !== ETHEREUM_FINALITY_EVIDENCE_SCHEMA ||
     !profileMatches(value.profile, profile) ||
     !exactKeys(value.l2Checkpoint, ["blockHash", "blockNumber"]) ||
     !positiveDecimal(value.l2Checkpoint.blockNumber) ||
@@ -878,6 +882,7 @@ function validEthereumFinalityEvidence(value, profile) {
     ) || value.ethereumFinalizedCheckpoint.tag !== "finalized" ||
     safeInstant(value.observedAt) === null ||
     !SHA256.test(value.evidenceDigest ?? "") ||
+    (hasClosure && closureKeys.some((key) => !SHA256.test(value[key] ?? ""))) ||
     BigInt(value.ethereumFinalizedCheckpoint.blockNumber) <
       BigInt(value.postingBlockNumber)) {
     return false;
@@ -1997,6 +2002,7 @@ export async function readFinalizedCustomLaunchesV4(manifest, options = {}) {
 
 export const finalizedV4FeedTestOnly = Object.freeze({
   bindingAgainstPromotionAnchor,
+  validEthereumFinalityEvidence,
   read(manifest, promotionAnchor, options = {}) {
     return readWithResolvedBinding(
       manifest,

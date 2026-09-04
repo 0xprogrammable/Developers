@@ -145,12 +145,18 @@ const LIVE_DEPLOYMENT_PATH =
   "contracts/deployments/robinhood-custom-launch-v1.json";
 const CLI_RELEASE_BINDING_PATH =
   "docs/operations/releases/custom-launch-v4/cli-release-binding.json";
-const SOURCE_VERIFICATION_SCHEMA =
+const LEGACY_SOURCE_VERIFICATION_SCHEMA =
   "programmable.robinhood-custom-launch.source-verification-closure.v2";
+const SOURCE_VERIFICATION_SCHEMA =
+  "programmable.robinhood-custom-launch.source-verification-closure.v6";
+const EXACT_SOURCE_BINDING_SCHEMA =
+  "programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v2";
 const SOURCE_CLOSURE_SCHEMA =
   "programmable.launch-cli-v4-source-closure.v1";
-const CAPTURE_AUTHORIZATION_SCHEMA =
+const LEGACY_CAPTURE_AUTHORIZATION_SCHEMA =
   "programmable.robinhood-custom-launch.capture-authorization.v1";
+const CAPTURE_AUTHORIZATION_SCHEMA =
+  "programmable.robinhood-custom-launch.capture-authorization.v2";
 const CAPTURE_SUBJECT_PATH =
   "release/robinhood-chain-4663/programmable-postdeployment-capture.json";
 const CAPTURE_ATTESTATION_PATH =
@@ -163,14 +169,25 @@ const CAPTURE_CLOSURE_SCHEMA =
   "programmable.robinhood-custom-launch.capture-closure.v3";
 const CAPTURE_PROFILE_DIGEST =
   "sha256:a3149f6a013eae1ca0fd932e0da0ddb8b8796d880ef53800830bfaaf49fe56c4";
-const CAPTURE_RPC_INVENTORY_SCHEMA =
+const ETHEREUM_FINALITY_EVIDENCE_SCHEMA =
+  "programmable.robinhood-l2-checkpoint-ethereum-finality.v1";
+const ROBINHOOD_ROLLUP = "0x23A19d23e89166adedbDcB432518AB01e4272D94";
+const ROBINHOOD_SEQUENCER_INBOX =
+  "0xBd0D173EEb87D57A09521c24388a12789F33ba96";
+const LEGACY_CAPTURE_RPC_INVENTORY_SCHEMA =
   "programmable.robinhood-custom-launch.rpc-inventory.v2";
+const CAPTURE_RPC_INVENTORY_SCHEMA =
+  "programmable.robinhood-custom-launch.rpc-inventory.v3";
 const CAPTURE_NORMALIZED_L2_STATE_SCHEMA =
   "programmable.robinhood-custom-launch.normalized-l2-state.v1";
-const CAPTURE_INVENTORY_SCHEMA =
+const LEGACY_CAPTURE_INVENTORY_SCHEMA =
   "programmable.robinhood-custom-launch.capture-inventory.v3";
-const CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA =
+const CAPTURE_INVENTORY_SCHEMA =
+  "programmable.robinhood-custom-launch.capture-inventory.v4";
+const LEGACY_CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA =
   "programmable.robinhood-custom-launch.sourcify-response-closure.v2";
+const CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA =
+  "programmable.robinhood-custom-launch.sourcify-response-closure.v6";
 const BACKEND_RELEASE_ASSETS_SCHEMA =
   "programmable.robinhood-custom-launch.backend-release-assets.v1";
 const BACKEND_PROMOTION_BINDING_SCHEMA =
@@ -210,6 +227,8 @@ const MULTICALL3_SELECTOR = "0x82ad56cb";
 const OWNER_CALLDATA_HASH =
   "0x3ba04469085b17e12843a94c154a335c9c384837f8f6531f179cb4915fd237d9";
 const OWNER_CALLDATA_BYTES = 33_412;
+const PHASE_A_HOSTED_REPRODUCTION_COMPILER_SHA256 =
+  "0xd5f23436f443edb85d8e76906d12f0a86ce0490e7663a9e608efeb7a93f149ef";
 const SAFE_PROXY_FACTORY = "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67";
 const SAFE_SINGLETON = "0x41675C099F32341bf84BFc5382aF534df5C7461a";
 const SAFE_SINGLETON_RUNTIME_CODE_HASH =
@@ -398,6 +417,13 @@ const SOURCE_ROOTS = Object.freeze({
       "contracts/spec/robinhood-custom-launch/standard-json/ProgrammableCreate2GraphDeployerV1.standard-input.json",
     standardJsonInputSha256:
       "sha256:8ab811a215d70b1d5aef0c71a47153173953ee78d7632725413833888369ec4d",
+    sourcePath: "contracts/src/ProgrammableCreate2GraphDeployerV1.sol",
+    sourceSha256:
+      "sha256:06a3acaf9beeb68647af231f5524c5a34dc013d99611a1b2d0a6c80895f595e9",
+    creationCodeHash:
+      "0x84f7cb8e9e445d3322249dbc2b9efc65bb9c7a8ba26902aafef9b0552f4bc208",
+    compilerSettingsDigest:
+      "sha256:0ae76a7ec92d6bb3c4612261fb06ccffe41fa34dfdd2fb1c3362f7a0b7d7b3ac",
   }),
   programmableLaunchStampRouter: Object.freeze({
     ...ROOTS.programmableLaunchStampRouter,
@@ -408,8 +434,22 @@ const SOURCE_ROOTS = Object.freeze({
       "contracts/spec/robinhood-custom-launch/standard-json/ProgrammableLaunchStampRouterV1.standard-input.json",
     standardJsonInputSha256:
       "sha256:6abca24d06b013599f4ff63e049976419c3f17455fa9bc343b15ec0d6e6a078a",
+    sourcePath:
+      "contracts/src/robinhood-custom-launch/ProgrammableLaunchStampRouterV1.sol",
+    sourceSha256:
+      "sha256:ef87aa9338c364634bffda64423bd3fb096c1630a45cc58ecf854d24959ff163",
+    creationCodeHash:
+      "0xf4176bf15de19a93b76cd138d6525a30d68efdad356e831f6d8449659959eb39",
+    compilerSettingsDigest:
+      "sha256:0ae76a7ec92d6bb3c4612261fb06ccffe41fa34dfdd2fb1c3362f7a0b7d7b3ac",
   }),
 });
+const PREPARED_ROOT_PROVIDER_PROFILE_DIGEST =
+  "sha256:c03afd37c077e78bea30f69d1ce139d026cb4fad86fa74122257bba8f5e9a910";
+const PHASE_A_CLI_TEMPLATE_SHA256 =
+  "sha256:5b9b1c34a2378185b142db205860f98fc19d21587797a42930c3fd998024bf9f";
+const PHASE_A_CLI_TEMPLATE_DIGEST =
+  "sha256:f6d068b3a9f3dc9960881b4ceb6f67a9a1dc087c557ff71d67530846eaf0d820";
 
 const FROZEN_V3_IDENTITY = Object.freeze({
   repository: "https://github.com/programmablehq/PROGRAMMABLE",
@@ -662,12 +702,12 @@ function validateArtifact(value, expectedPath, label) {
   return artifact;
 }
 
-function validateSourceVerification(value) {
+function validateLegacySourceVerification(value) {
   const source = exactKeys(value, [
     "schemaVersion", "provider", "graphFactory", "programmableLaunchStampRouter",
     "permitAuthority", "sourceVerificationClosureDigest", "evidenceDigest",
   ], "release bundle sourceVerification");
-  assert(source.schemaVersion === SOURCE_VERIFICATION_SCHEMA &&
+  assert(source.schemaVersion === LEGACY_SOURCE_VERIFICATION_SCHEMA &&
     source.provider === "sourcify-v2",
   "release bundle sourceVerification must use the exact Sourcify V2 closure");
   for (const [name, expected] of Object.entries(SOURCE_ROOTS)) {
@@ -717,9 +757,151 @@ function validateSourceVerification(value) {
   exactSha256(source.sourceVerificationClosureDigest,
     "release bundle sourceVerification.sourceVerificationClosureDigest");
   const { evidenceDigest, ...withoutDigest } = source;
+  assert(evidenceDigest === canonicalSha256(LEGACY_SOURCE_VERIFICATION_SCHEMA, withoutDigest),
+    "release bundle sourceVerification digest is invalid");
+  return source;
+}
+
+function validateCurrentSourceVerification(value) {
+  const source = exactKeys(value, [
+    "schemaVersion", "provider", "providerReleaseAuthority", "exactSourceAuthority",
+    "graphFactory", "programmableLaunchStampRouter", "exactSourceBinding",
+    "permitAuthority", "sourceVerificationClosureDigest", "evidenceDigest",
+  ], "release bundle sourceVerification");
+  assert(source.schemaVersion === SOURCE_VERIFICATION_SCHEMA &&
+    source.provider === "sourcify-v2" && source.providerReleaseAuthority === false &&
+    source.exactSourceAuthority ===
+      "protected-hosted-build-finalized-transaction-bytecode",
+  "release bundle sourceVerification must bind the protected exact-byte authority");
+
+  for (const [name, expected] of Object.entries(SOURCE_ROOTS)) {
+    const entry = exactKeys(source[name], [
+      "chainId", "address", "match", "creationMatch", "runtimeMatch", "observedAt",
+      "providerClassification", "providerReleaseAuthority", "providerMatchId",
+      "providerVerifiedAt", "providerCompiler", "providerSourceFilesDigest",
+      "providerStandardJsonInputDigest", "providerDeployment", "urlPath", "httpStatus",
+      "contentType", "normalizedVerificationDigest",
+    ], `release bundle sourceVerification.${name}`);
+    assert(entry.chainId === CHAIN_ID && sameAddress(entry.address, expected.address) &&
+      entry.match === "match" && entry.creationMatch === "match" &&
+      entry.runtimeMatch === "match" &&
+      entry.providerClassification === "PARTIAL_NO_CBOR_EXACT_BYTES" &&
+      entry.providerReleaseAuthority === false && /^[1-9][0-9]*$/u.test(entry.providerMatchId) &&
+      entry.urlPath === `/server/v2/contract/${CHAIN_ID}/${expected.address}?fields=all` &&
+      entry.httpStatus === 200 && entry.contentType === "application/json",
+    `release bundle sourceVerification.${name} differs from the normalized provider match`);
+    exactInstant(entry.observedAt, `release bundle sourceVerification.${name}.observedAt`);
+    assert(typeof entry.providerVerifiedAt === "string" &&
+      !Number.isNaN(Date.parse(entry.providerVerifiedAt)),
+    `release bundle sourceVerification.${name}.providerVerifiedAt is invalid`);
+    const compiler = exactKeys(entry.providerCompiler, [
+      "language", "compiler", "compilerVersion", "name", "fullyQualifiedName",
+      "compilerSettingsDigest",
+    ], `release bundle sourceVerification.${name}.providerCompiler`);
+    assert(compiler.language === "Solidity" && compiler.compiler === "solc" &&
+      compiler.compilerVersion === "0.8.26+commit.8a97fa7a" &&
+      compiler.name === expected.compilerName &&
+      compiler.fullyQualifiedName.endsWith(`:${expected.compilerName}`),
+    `release bundle sourceVerification.${name}.providerCompiler differs`);
+    exactSha256(compiler.compilerSettingsDigest,
+      `release bundle sourceVerification.${name}.providerCompiler.compilerSettingsDigest`);
+    exactSha256(entry.providerSourceFilesDigest,
+      `release bundle sourceVerification.${name}.providerSourceFilesDigest`);
+    exactSha256(entry.providerStandardJsonInputDigest,
+      `release bundle sourceVerification.${name}.providerStandardJsonInputDigest`);
+    exactSha256(entry.normalizedVerificationDigest,
+      `release bundle sourceVerification.${name}.normalizedVerificationDigest`);
+    const deployment = exactKeys(entry.providerDeployment, [
+      "transactionHash", "blockNumber", "transactionIndex", "deployer",
+    ], `release bundle sourceVerification.${name}.providerDeployment`);
+    exactHash32(deployment.transactionHash,
+      `release bundle sourceVerification.${name}.providerDeployment.transactionHash`);
+    exactDecimal(deployment.blockNumber,
+      `release bundle sourceVerification.${name}.providerDeployment.blockNumber`, true);
+    exactDecimal(deployment.transactionIndex,
+      `release bundle sourceVerification.${name}.providerDeployment.transactionIndex`);
+    exactChecksumAddress(deployment.deployer,
+      `release bundle sourceVerification.${name}.providerDeployment.deployer`);
+  }
+
+  const permitAuthority = exactKeys(source.permitAuthority,
+    ["address", "kind", "sourceCommitment"],
+    "release bundle sourceVerification.permitAuthority");
+  assert(sameAddress(permitAuthority.address, ROOTS.permitAuthority.address) &&
+    permitAuthority.kind === "official-source-pinned" &&
+    permitAuthority.sourceCommitment === SAFE_SOURCE_COMMITMENT,
+  "release bundle permitAuthority source provenance differs");
+
+  const binding = exactKeys(source.exactSourceBinding, [
+    "schemaVersion", "authority", "coveredContracts", "sourceRevision", "sourceTree",
+    "sourceClosureDigest", "captureAuthorizationDigest", "productionVerifyProofSha256",
+    "productionVerifyArtifactDigest", "compilerVersion", "hostedReproductionCompilerSha256",
+    "deploymentTransactionHash", "deploymentBlockNumber", "deploymentBlockHash",
+    "ownerTransactionDataHash", "contracts", "bindingDigest",
+  ], "release bundle sourceVerification.exactSourceBinding");
+  assert(binding.schemaVersion === EXACT_SOURCE_BINDING_SCHEMA &&
+    binding.authority === source.exactSourceAuthority &&
+    canonicalEqual(binding.coveredContracts,
+      ["programmableLaunchStampRouter", "graphFactory"]) &&
+    COMMIT.test(binding.sourceRevision) && COMMIT.test(binding.sourceTree) &&
+    binding.compilerVersion === "0.8.26+commit.8a97fa7a" &&
+    binding.ownerTransactionDataHash === OWNER_CALLDATA_HASH,
+  "release bundle exact source binding identity differs");
+  assert(binding.hostedReproductionCompilerSha256 ===
+    PHASE_A_HOSTED_REPRODUCTION_COMPILER_SHA256,
+  "release bundle protected Phase-A compiler differs");
+  for (const key of [
+    "sourceClosureDigest", "captureAuthorizationDigest", "productionVerifyProofSha256",
+    "productionVerifyArtifactDigest",
+  ]) exactSha256(binding[key], `release bundle exactSourceBinding.${key}`);
+  for (const key of [
+    "hostedReproductionCompilerSha256", "deploymentTransactionHash", "deploymentBlockHash",
+  ]) exactHash32(binding[key], `release bundle exactSourceBinding.${key}`);
+  exactDecimal(binding.deploymentBlockNumber,
+    "release bundle exactSourceBinding.deploymentBlockNumber", true);
+  assert(Array.isArray(binding.contracts) && binding.contracts.length === 2,
+    "release bundle exact source binding requires both protected build targets");
+  const expectedOrder = ["programmableLaunchStampRouter", "graphFactory"];
+  binding.contracts.forEach((raw, index) => {
+    const contract = exactKeys(raw, [
+      "contract", "name", "fullyQualifiedName", "standardJsonInputPath", "sourcePath",
+      "sourceSha256", "address", "standardJsonInputSha256", "creationCodeHash",
+      "runtimeCodeHash", "compilerSettingsDigest",
+    ], `release bundle exactSourceBinding.contracts[${index}]`);
+    const expected = SOURCE_ROOTS[expectedOrder[index]];
+    assert(contract.contract === expectedOrder[index] && contract.name === expected.compilerName &&
+      contract.fullyQualifiedName === expected.fullyQualifiedName &&
+      contract.standardJsonInputPath === expected.standardJsonInputPath &&
+      contract.sourcePath === expected.sourcePath &&
+      contract.sourceSha256 === expected.sourceSha256 &&
+      sameAddress(contract.address, expected.address) &&
+      contract.standardJsonInputSha256 === expected.standardJsonInputSha256 &&
+      contract.creationCodeHash === expected.creationCodeHash &&
+      contract.runtimeCodeHash === expected.runtimeCodeHash &&
+      contract.compilerSettingsDigest === expected.compilerSettingsDigest,
+    `release bundle protected Phase-A build target differs at contracts[${index}]`);
+    exactSha256(contract.sourceSha256,
+      `release bundle exactSourceBinding.contracts[${index}].sourceSha256`);
+    exactHash32(contract.creationCodeHash,
+      `release bundle exactSourceBinding.contracts[${index}].creationCodeHash`);
+    exactSha256(contract.compilerSettingsDigest,
+      `release bundle exactSourceBinding.contracts[${index}].compilerSettingsDigest`);
+  });
+  const bindingPreimage = { ...binding, bindingDigest: null };
+  assert(binding.bindingDigest === canonicalSha256(EXACT_SOURCE_BINDING_SCHEMA, bindingPreimage),
+    "release bundle exact source binding digest is invalid");
+  exactSha256(source.sourceVerificationClosureDigest,
+    "release bundle sourceVerification.sourceVerificationClosureDigest");
+  const { evidenceDigest, ...withoutDigest } = source;
   assert(evidenceDigest === canonicalSha256(SOURCE_VERIFICATION_SCHEMA, withoutDigest),
     "release bundle sourceVerification digest is invalid");
   return source;
+}
+
+function validateSourceVerification(value) {
+  return value?.schemaVersion === LEGACY_SOURCE_VERIFICATION_SCHEMA
+    ? validateLegacySourceVerification(value)
+    : validateCurrentSourceVerification(value);
 }
 
 function validateSourceClosure(value, sourceVerification) {
@@ -762,13 +944,27 @@ function validateSourceClosure(value, sourceVerification) {
   const { sourceClosureDigest, ...withoutDigest } = closure;
   assert(sourceClosureDigest === canonicalSha256(SOURCE_CLOSURE_SCHEMA, withoutDigest),
     "release bundle sourceClosure digest is invalid");
-  assert(sourceVerification.graphFactory.standardJsonInputSha256 ===
-    closure.entries.find(({ path: entryPath }) =>
-      entryPath === SOURCE_ROOTS.graphFactory.standardJsonInputPath)?.sha256 &&
-    sourceVerification.programmableLaunchStampRouter.standardJsonInputSha256 ===
-    closure.entries.find(({ path: entryPath }) =>
-      entryPath === SOURCE_ROOTS.programmableLaunchStampRouter.standardJsonInputPath)?.sha256,
-  "release bundle source verification is not closed over the source entries");
+  if (sourceVerification.schemaVersion === LEGACY_SOURCE_VERIFICATION_SCHEMA) {
+    assert(sourceVerification.graphFactory.standardJsonInputSha256 ===
+      closure.entries.find(({ path: entryPath }) =>
+        entryPath === SOURCE_ROOTS.graphFactory.standardJsonInputPath)?.sha256 &&
+      sourceVerification.programmableLaunchStampRouter.standardJsonInputSha256 ===
+      closure.entries.find(({ path: entryPath }) =>
+        entryPath === SOURCE_ROOTS.programmableLaunchStampRouter.standardJsonInputPath)?.sha256,
+    "release bundle source verification is not closed over the source entries");
+  } else {
+    const binding = sourceVerification.exactSourceBinding;
+    assert(binding.sourceRevision === closure.revision && binding.sourceTree === closure.tree &&
+      binding.sourceClosureDigest === closure.sourceClosureDigest,
+    "release bundle exact source binding differs from the protected source closure");
+    for (const contract of binding.contracts) {
+      assert(closure.entries.find(({ path: entryPath }) =>
+        entryPath === contract.standardJsonInputPath)?.sha256 === contract.standardJsonInputSha256 &&
+        closure.entries.find(({ path: entryPath }) =>
+          entryPath === contract.sourcePath)?.sha256 === contract.sourceSha256,
+      `release bundle exact source binding lacks ${contract.contract} source bytes`);
+    }
+  }
   return closure;
 }
 
@@ -786,7 +982,7 @@ function validateRoots(value, label) {
 // Atomic Phase-A capture-schema swap boundary. Refresh the authorization, ordered RPC
 // inventory, Sourcify projection, and closure digest checks together when the producer contract
 // freezes; never make legacy raw response fields optional beside the public normalized shape.
-function validateCaptureAuthorization(value, sourceClosure) {
+function validateLegacyCaptureAuthorization(value, sourceClosure) {
   const authorization = exactKeys(value, [
     "schemaVersion", "trustClass", "subjectPath", "subjectByteLength", "subjectSha256",
     "attestationBundlePath", "attestationBundleByteLength", "attestationBundleSha256",
@@ -799,7 +995,7 @@ function validateCaptureAuthorization(value, sourceClosure) {
     "productionVerifyArtifactDigest", "repository", "repositoryId", "workflow", "sourceRef",
     "sourceRevision", "sourceTree", "sourceClosureDigest", "verifiedAt", "verificationDigest",
   ], "release bundle captureAuthorization");
-  assert(authorization.schemaVersion === CAPTURE_AUTHORIZATION_SCHEMA &&
+  assert(authorization.schemaVersion === LEGACY_CAPTURE_AUTHORIZATION_SCHEMA &&
     authorization.trustClass === "github-artifact-attestation" &&
     authorization.subjectPath === CAPTURE_SUBJECT_PATH &&
     authorization.attestationBundlePath === CAPTURE_ATTESTATION_PATH &&
@@ -829,9 +1025,60 @@ function validateCaptureAuthorization(value, sourceClosure) {
     "release bundle captureAuthorization.verifiedAt");
   const preimage = { ...authorization, verificationDigest: null };
   assert(authorization.verificationDigest ===
+    canonicalSha256(LEGACY_CAPTURE_AUTHORIZATION_SCHEMA, preimage),
+  "release bundle capture authorization digest is invalid");
+  return authorization;
+}
+
+function validateCurrentCaptureAuthorization(value, sourceClosure) {
+  const authorization = exactKeys(value, [
+    "schemaVersion", "trustClass", "subjectPath", "subjectSha256",
+    "attestationBundlePath", "attestationBundleSha256", "trustedRootSource",
+    "trustedRootSha256", "productionVerifyProofPath", "productionVerifyProofByteLength",
+    "productionVerifyProofSha256", "productionVerifyAttestationBundlePath",
+    "productionVerifyAttestationBundleByteLength", "productionVerifyAttestationBundleSha256",
+    "productionVerifyRunId", "productionVerifyRunAttempt", "productionVerifyArtifactId",
+    "productionVerifyArtifactDigest", "repository", "repositoryId", "workflow", "sourceRef",
+    "sourceRevision", "sourceTree", "sourceClosureDigest", "verifiedAt", "verificationDigest",
+  ], "release bundle captureAuthorization");
+  assert(authorization.schemaVersion === CAPTURE_AUTHORIZATION_SCHEMA &&
+    authorization.trustClass === "github-artifact-attestation" &&
+    authorization.subjectPath === CAPTURE_SUBJECT_PATH &&
+    authorization.attestationBundlePath === CAPTURE_ATTESTATION_PATH &&
+    authorization.trustedRootSource === "github-cli-embedded-tuf" &&
+    authorization.productionVerifyProofPath === PRODUCTION_VERIFY_PROOF_PATH &&
+    authorization.productionVerifyAttestationBundlePath ===
+      PRODUCTION_VERIFY_ATTESTATION_PATH &&
+    authorization.repository === PROGRAMMABLE_REPOSITORY &&
+    authorization.repositoryId === PROGRAMMABLE_REPOSITORY_ID &&
+    authorization.workflow === CAPTURE_WORKFLOW &&
+    authorization.sourceRef === PROGRAMMABLE_PROTECTED_REF &&
+    authorization.sourceRevision === sourceClosure.revision &&
+    authorization.sourceTree === sourceClosure.tree &&
+    authorization.sourceClosureDigest === sourceClosure.sourceClosureDigest,
+  "release bundle capture authorization is not the protected PROGRAMMABLE attestation");
+  for (const key of [
+    "productionVerifyProofByteLength", "productionVerifyAttestationBundleByteLength",
+    "productionVerifyRunId", "productionVerifyRunAttempt", "productionVerifyArtifactId",
+  ]) exactDecimal(authorization[key], `release bundle captureAuthorization.${key}`, true);
+  for (const key of [
+    "subjectSha256", "attestationBundleSha256", "trustedRootSha256",
+    "productionVerifyProofSha256", "productionVerifyAttestationBundleSha256",
+    "productionVerifyArtifactDigest",
+  ]) exactSha256(authorization[key], `release bundle captureAuthorization.${key}`);
+  exactInstant(authorization.verifiedAt,
+    "release bundle captureAuthorization.verifiedAt");
+  const preimage = { ...authorization, verificationDigest: null };
+  assert(authorization.verificationDigest ===
     canonicalSha256(CAPTURE_AUTHORIZATION_SCHEMA, preimage),
   "release bundle capture authorization digest is invalid");
   return authorization;
+}
+
+function validateCaptureAuthorization(value, sourceClosure) {
+  return value?.schemaVersion === LEGACY_CAPTURE_AUTHORIZATION_SCHEMA
+    ? validateLegacyCaptureAuthorization(value, sourceClosure)
+    : validateCurrentCaptureAuthorization(value, sourceClosure);
 }
 
 function validateCaptureProviderIdentity(value, expected, label) {
@@ -846,7 +1093,9 @@ function validateCaptureProviderIdentity(value, expected, label) {
   return identity;
 }
 
-function validateCaptureInventory(value, layer, expected, expectedOrder, label) {
+function validateCaptureInventory(
+  value, layer, expected, expectedOrder, currentCapture, label,
+) {
   const inventory = exactKeys(value, [
     "layer", "providerId", "trustDomain", "entries", "inventoryDigest",
   ], label);
@@ -854,19 +1103,33 @@ function validateCaptureInventory(value, layer, expected, expectedOrder, label) 
     inventory.trustDomain === expected.trustDomain && Array.isArray(inventory.entries) &&
     inventory.entries.length === expectedOrder.length,
   `${label} differs from the exact ordered provider inventory`);
+  const normalizedOnly = inventory.entries.every((entry) =>
+    !Object.hasOwn(entry, "responseSha256"));
+  const legacyRawResponses = inventory.entries.every((entry) =>
+    Object.hasOwn(entry, "responseSha256"));
+  assert(currentCapture ? normalizedOnly : legacyRawResponses,
+    currentCapture
+      ? "capture authorization v2 requires normalized RPC inventory v3"
+      : "capture authorization v1 requires legacy RPC inventory v2");
   const entries = inventory.entries.map((raw, index) => {
-    const entry = exactKeys(raw, [
-      "key", "method", "paramsSha256", "requestSha256", "responseSha256",
-      "normalizedResultSha256",
-    ], `${label}.entries[${index}]`);
+    const entry = exactKeys(raw, currentCapture
+      ? ["key", "method", "paramsSha256", "requestSha256", "normalizedResultSha256"]
+      : [
+          "key", "method", "paramsSha256", "requestSha256", "responseSha256",
+          "normalizedResultSha256",
+        ], `${label}.entries[${index}]`);
     assert(entry.key === expectedOrder[index] && /^eth_[A-Za-z0-9]+$/u.test(entry.method ?? ""),
       `${label}.entries[${index}] is missing or reorders ${expectedOrder[index]}`);
     for (const key of [
-      "paramsSha256", "requestSha256", "responseSha256", "normalizedResultSha256",
+      "paramsSha256", "requestSha256", "normalizedResultSha256",
+      ...(currentCapture ? [] : ["responseSha256"]),
     ]) exactSha256(entry[key], `${label}.entries[${index}].${key}`);
     return entry;
   });
-  assert(inventory.inventoryDigest === canonicalSha256(CAPTURE_RPC_INVENTORY_SCHEMA, entries),
+  const inventorySchema = currentCapture
+    ? CAPTURE_RPC_INVENTORY_SCHEMA
+    : LEGACY_CAPTURE_RPC_INVENTORY_SCHEMA;
+  assert(inventory.inventoryDigest === canonicalSha256(inventorySchema, entries),
     `${label}.inventoryDigest differs from its exact entries`);
   return inventory;
 }
@@ -1073,13 +1336,57 @@ function validateCapturePostingEvent(value, label) {
 }
 
 function validateCaptureSourcify(value, contract, label) {
+  const expected = SOURCE_ROOTS[contract];
+  if (Object.hasOwn(value ?? {}, "providerClassification")) {
+    const entry = exactKeys(value, [
+      "contract", "provider", "chainId", "address", "match", "creationMatch",
+      "runtimeMatch", "providerClassification", "providerReleaseAuthority", "observedAt",
+      "providerMatchId", "providerVerifiedAt", "providerCompiler",
+      "providerSourceFilesDigest", "providerStandardJsonInputDigest", "providerDeployment",
+      "urlPath", "httpStatus", "contentType", "normalizedVerificationDigest",
+    ], label);
+    assert(entry.contract === contract && entry.provider === "sourcify-v2" &&
+      entry.chainId === CHAIN_ID && sameAddress(entry.address, expected.address) &&
+      entry.match === "match" && entry.creationMatch === "match" &&
+      entry.runtimeMatch === "match" &&
+      entry.providerClassification === "PARTIAL_NO_CBOR_EXACT_BYTES" &&
+      entry.providerReleaseAuthority === false && /^[1-9][0-9]*$/u.test(entry.providerMatchId) &&
+      entry.urlPath === `/server/v2/contract/${CHAIN_ID}/${expected.address}?fields=all` &&
+      entry.httpStatus === 200 && entry.contentType === "application/json",
+    `${label} differs from the normalized no-CBOR provider match`);
+    exactInstant(entry.observedAt, `${label}.observedAt`);
+    assert(typeof entry.providerVerifiedAt === "string" &&
+      !Number.isNaN(Date.parse(entry.providerVerifiedAt)), `${label}.providerVerifiedAt is invalid`);
+    const compiler = exactKeys(entry.providerCompiler, [
+      "language", "compiler", "compilerVersion", "name", "fullyQualifiedName",
+      "compilerSettingsDigest",
+    ], `${label}.providerCompiler`);
+    assert(compiler.language === "Solidity" && compiler.compiler === "solc" &&
+      compiler.compilerVersion === "0.8.26+commit.8a97fa7a" &&
+      compiler.name === expected.compilerName &&
+      compiler.fullyQualifiedName.endsWith(`:${expected.compilerName}`),
+    `${label}.providerCompiler differs from the normalized provider match`);
+    exactSha256(compiler.compilerSettingsDigest,
+      `${label}.providerCompiler.compilerSettingsDigest`);
+    for (const key of [
+      "providerSourceFilesDigest", "providerStandardJsonInputDigest",
+      "normalizedVerificationDigest",
+    ]) exactSha256(entry[key], `${label}.${key}`);
+    const deployment = exactKeys(entry.providerDeployment, [
+      "transactionHash", "blockNumber", "transactionIndex", "deployer",
+    ], `${label}.providerDeployment`);
+    exactHash32(deployment.transactionHash, `${label}.providerDeployment.transactionHash`);
+    exactDecimal(deployment.blockNumber, `${label}.providerDeployment.blockNumber`, true);
+    exactDecimal(deployment.transactionIndex, `${label}.providerDeployment.transactionIndex`);
+    exactChecksumAddress(deployment.deployer, `${label}.providerDeployment.deployer`);
+    return entry;
+  }
   const entry = exactKeys(value, [
     "contract", "provider", "chainId", "address", "match", "creationMatch",
     "runtimeMatch", "matchId", "verifiedAt", "compiler", "sourceFilesDigest",
     "standardJsonInputPath", "standardJsonInputSha256", "metadataDigest", "urlPath",
     "httpStatus", "contentType", "responseByteLength", "responseSha256",
   ], label);
-  const expected = SOURCE_ROOTS[contract];
   assert(entry.contract === contract && entry.provider === "sourcify-v2" &&
     entry.chainId === CHAIN_ID && entry.address === expected.address &&
     entry.match === "exact_match" && entry.creationMatch === "exact_match" &&
@@ -1112,9 +1419,11 @@ function validateCaptureSourcify(value, contract, label) {
 }
 
 function validateCaptureClosure(value, authorization, sourceClosure, sourceVerification) {
+  const currentCapture = authorization.schemaVersion === CAPTURE_AUTHORIZATION_SCHEMA;
   const closure = exactKeys(value, [
     "schemaVersion", "captureId", "observedAt", "expiresAt", "profileDigest",
     "sourceOrigin", "authorization", "l2Checkpoint", "l2ProviderReadbacks",
+    ...(currentCapture ? ["l2ProviderEndpointCommitments"] : []),
     "batchNumber", "postingEvent", "ethereumProviderReadbacks",
     "ethereumFinalizedCheckpoint", "sourcify", "sourceVerificationClosureDigest",
     "captureInventoryDigest", "captureSubjectSha256", "captureClosureDigest",
@@ -1136,6 +1445,15 @@ function validateCaptureClosure(value, authorization, sourceClosure, sourceVerif
     Date.parse(closure.observedAt);
   assert(captureAuthorizationDelay >= 0 && captureAuthorizationDelay <= 20 * 60_000,
     "release bundle capture authorization is outside the capture validity window");
+  if (currentCapture) {
+    assert(Array.isArray(closure.l2ProviderEndpointCommitments) &&
+      closure.l2ProviderEndpointCommitments.length === 2 &&
+      new Set(closure.l2ProviderEndpointCommitments).size === 2,
+    "release bundle capture closure requires two distinct reviewed L2 endpoint commitments");
+    closure.l2ProviderEndpointCommitments.forEach((digest, index) =>
+      exactSha256(digest,
+        `release bundle captureClosure.l2ProviderEndpointCommitments[${index}]`));
+  }
   const sourceOrigin = exactKeys(closure.sourceOrigin, [
     "repository", "repositoryId", "protectedRef", "revision", "tree", "sourceClosureDigest",
   ], "release bundle captureClosure.sourceOrigin");
@@ -1193,10 +1511,14 @@ function validateCaptureClosure(value, authorization, sourceClosure, sourceVerif
     ), `${label}.normalizedStateDigest differs from its verified state`);
     const inventory = validateCaptureInventory(
       provider.inventory, "robinhood", expected, CAPTURE_L2_ENTRY_ORDER,
+      currentCapture,
       `${label}.inventory`,
     );
     const inventoryByKey = new Map(inventory.entries.map((entry) => [entry.key, entry]));
-    assert(provider.receiptDigest === inventoryByKey.get("receipt")?.responseSha256,
+    const receiptInventory = inventoryByKey.get("receipt");
+    assert(provider.receiptDigest === (currentCapture
+      ? receiptInventory?.normalizedResultSha256
+      : receiptInventory?.responseSha256),
       `${label}.receiptDigest differs from the attested receipt response`);
     for (const root of state.externalRoots) {
       const title = `${root.contract[0].toUpperCase()}${root.contract.slice(1)}`;
@@ -1272,16 +1594,17 @@ function validateCaptureClosure(value, authorization, sourceClosure, sourceVerif
       `${label}.finalizedCheckpoint.rereadDigest`);
     const inventory = validateCaptureInventory(
       provider.inventory, "ethereum", expected, CAPTURE_ETHEREUM_ENTRY_ORDER,
+      currentCapture,
       `${label}.inventory`,
     );
     const inventoryByKey = new Map(inventory.entries.map((entry) => [entry.key, entry]));
-    assert(provider.postingReceiptDigest ===
-        inventoryByKey.get("postingReceipt")?.responseSha256 &&
-      provider.postingBlockDigest === inventoryByKey.get("postingBlock")?.responseSha256 &&
-      providerFinalized.firstReadDigest ===
-        inventoryByKey.get("finalizedTag")?.responseSha256 &&
-      providerFinalized.rereadDigest ===
-        inventoryByKey.get("finalizedReread")?.responseSha256,
+    const inventoryDigest = (key) => currentCapture
+      ? inventoryByKey.get(key)?.normalizedResultSha256
+      : inventoryByKey.get(key)?.responseSha256;
+    assert(provider.postingReceiptDigest === inventoryDigest("postingReceipt") &&
+      provider.postingBlockDigest === inventoryDigest("postingBlock") &&
+      providerFinalized.firstReadDigest === inventoryDigest("finalizedTag") &&
+      providerFinalized.rereadDigest === inventoryDigest("finalizedReread"),
     `${label} response digests differ from its ordered Ethereum inventory`);
     return { provider, inventory };
   });
@@ -1299,51 +1622,86 @@ function validateCaptureClosure(value, authorization, sourceClosure, sourceVerif
     entry, sourcifyOrder[index], `release bundle captureClosure.sourcify[${index}]`,
   ));
   const sourcifyClosureDigest = canonicalSha256(
-    CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA, sourcify,
+    currentCapture
+      ? CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA
+      : LEGACY_CAPTURE_SOURCIFY_RESPONSE_CLOSURE_SCHEMA,
+    sourcify,
   );
   assert(closure.sourceVerificationClosureDigest === sourcifyClosureDigest,
     "release bundle capture closure Sourcify digest differs from its exact responses");
   for (const [index, contract] of sourcifyOrder.entries()) {
     const entry = sourcify[index];
-    const projected = {
-      chainId: entry.chainId,
-      address: entry.address,
-      match: entry.match,
-      creationMatch: entry.creationMatch,
-      runtimeMatch: entry.runtimeMatch,
-      matchId: entry.matchId,
-      verifiedAt: entry.verifiedAt,
-      compiler: structuredClone(entry.compiler),
-      sourceFilesDigest: entry.sourceFilesDigest,
-      metadataDigest: entry.metadataDigest,
-      urlPath: entry.urlPath,
-      httpStatus: entry.httpStatus,
-      contentType: entry.contentType,
-      responseByteLength: entry.responseByteLength,
-      standardJsonInputPath: entry.standardJsonInputPath,
-      standardJsonInputSha256: entry.standardJsonInputSha256,
-      verificationResponseDigest: entry.responseSha256,
-    };
+    const projected = currentCapture
+      ? Object.fromEntries(Object.entries(entry).filter(([key]) =>
+          !["contract", "provider"].includes(key)))
+      : {
+          chainId: entry.chainId,
+          address: entry.address,
+          match: entry.match,
+          creationMatch: entry.creationMatch,
+          runtimeMatch: entry.runtimeMatch,
+          matchId: entry.matchId,
+          verifiedAt: entry.verifiedAt,
+          compiler: structuredClone(entry.compiler),
+          sourceFilesDigest: entry.sourceFilesDigest,
+          metadataDigest: entry.metadataDigest,
+          urlPath: entry.urlPath,
+          httpStatus: entry.httpStatus,
+          contentType: entry.contentType,
+          responseByteLength: entry.responseByteLength,
+          standardJsonInputPath: entry.standardJsonInputPath,
+          standardJsonInputSha256: entry.standardJsonInputSha256,
+          verificationResponseDigest: entry.responseSha256,
+        };
     assert(canonicalEqual(projected, sourceVerification[contract]),
       `release bundle capture Sourcify ${contract} differs from sourceVerification`);
   }
   const captureInventorySubject = [
     ...l2Providers.map(({ inventory }) => inventory),
     ...ethereumProviders.map(({ inventory }) => inventory),
-    ...sourcify.map((entry) => ({
-      layer: "sourcify",
-      contract: entry.contract,
-      responseSha256: entry.responseSha256,
-      responseByteLength: entry.responseByteLength,
-    })),
+    ...sourcify.map((entry) => currentCapture
+      ? {
+          layer: "sourcify",
+          contract: entry.contract,
+          normalizedVerificationDigest: entry.normalizedVerificationDigest,
+        }
+      : {
+          layer: "sourcify",
+          contract: entry.contract,
+          responseSha256: entry.responseSha256,
+          responseByteLength: entry.responseByteLength,
+        }),
   ];
   assert(closure.captureInventoryDigest === canonicalSha256(
-    CAPTURE_INVENTORY_SCHEMA, captureInventorySubject,
+    currentCapture ? CAPTURE_INVENTORY_SCHEMA : LEGACY_CAPTURE_INVENTORY_SCHEMA,
+    captureInventorySubject,
   ), "release bundle capture inventory digest differs from the exact provider closure");
   for (const key of [
     "sourceVerificationClosureDigest", "captureInventoryDigest", "captureSubjectSha256",
     "captureClosureDigest",
   ]) exactSha256(closure[key], `release bundle captureClosure.${key}`);
+  if (currentCapture) {
+    const binding = sourceVerification.exactSourceBinding;
+    const foundationTransaction = l2Providers[0].state.transaction;
+    for (const name of ["programmableLaunchStampRouter", "graphFactory"]) {
+      const deployment = sourceVerification[name].providerDeployment;
+      assert(deployment.transactionHash === foundationTransaction.hash &&
+        deployment.blockNumber === foundationTransaction.blockNumber &&
+        deployment.transactionIndex === foundationTransaction.transactionIndex &&
+        sameAddress(deployment.deployer, foundationTransaction.from),
+      `release bundle ${name} provider deployment differs from the finalized L2 transaction`);
+    }
+    assert(binding.captureAuthorizationDigest === authorization.verificationDigest &&
+      binding.productionVerifyProofSha256 === authorization.productionVerifyProofSha256 &&
+      binding.productionVerifyArtifactDigest === authorization.productionVerifyArtifactDigest &&
+      binding.sourceRevision === sourceClosure.revision &&
+      binding.sourceTree === sourceClosure.tree &&
+      binding.sourceClosureDigest === sourceClosure.sourceClosureDigest &&
+      binding.deploymentTransactionHash === l2Providers[0].provider.transactionHash &&
+      binding.deploymentBlockNumber === checkpoint.blockNumber &&
+      binding.deploymentBlockHash === checkpoint.blockHash,
+    "release bundle exact source binding differs from its protected capture");
+  }
   return closure;
 }
 
@@ -1401,6 +1759,248 @@ function validateBackendReleaseAssets(value, descriptorDigest) {
     canonicalSha256(BACKEND_RELEASE_ASSETS_SCHEMA, withoutDigest),
   "release bundle backend asset closure digest is invalid");
   return assets;
+}
+
+function validateCurrentDescriptorFinalityClosure(
+  descriptor, authorization, captureClosure, postingEventDigest, profile,
+) {
+  if (authorization.schemaVersion !== CAPTURE_AUTHORIZATION_SCHEMA) return;
+  const postingEvent = captureClosure.postingEvent;
+  const withoutDigest = {
+    schemaVersion: ETHEREUM_FINALITY_EVIDENCE_SCHEMA,
+    profile,
+    l2Checkpoint: structuredClone(captureClosure.l2Checkpoint),
+    batchNumber: captureClosure.batchNumber,
+    l2Providers: captureClosure.l2ProviderReadbacks.map((entry) => ({
+      providerId: entry.identity.providerId,
+      trustDomain: entry.identity.trustDomain,
+      l1Confirmations: entry.l1Confirmations,
+    })),
+    ethereumProviders: captureClosure.ethereumProviderReadbacks.map((entry) => ({
+      providerId: entry.identity.providerId,
+      trustDomain: entry.identity.trustDomain,
+    })),
+    rollup: ROBINHOOD_ROLLUP,
+    sequencerInbox: ROBINHOOD_SEQUENCER_INBOX,
+    postingTransactionHash: postingEvent.transactionHash,
+    postingBlockNumber: postingEvent.blockNumber,
+    postingBlockHash: postingEvent.blockHash,
+    postingLogIndex: postingEvent.logIndex,
+    ethereumFinalizedCheckpoint:
+      structuredClone(captureClosure.ethereumFinalizedCheckpoint),
+    observedAt: captureClosure.observedAt,
+    captureClosureDigest: captureClosure.captureClosureDigest,
+    postingEventDigest,
+    l1EvidenceDigest: canonicalSha256(
+      "programmable.robinhood-custom-launch.ethereum-finality-readbacks.v1",
+      captureClosure.ethereumProviderReadbacks,
+    ),
+  };
+  const expected = {
+    ...withoutDigest,
+    evidenceDigest: canonicalSha256(
+      ETHEREUM_FINALITY_EVIDENCE_SCHEMA,
+      withoutDigest,
+    ),
+  };
+  const finalityEvidence = [
+    descriptor?.deploymentEvidence?.ethereumFinalityEvidence,
+    descriptor?.permitAuthoritySourceProvenance?.configurationEvidence
+      ?.ethereumFinalityEvidence,
+  ];
+  assert(finalityEvidence.every((evidence) => canonicalEqual(evidence, expected)),
+  "Phase-A capture-v2 descriptor finality closure differs from its protected capture");
+}
+
+function validateCurrentBackendSourceArtifacts({
+  authorization,
+  preparedSourceManifest,
+  standardJsonInputs,
+  descriptor,
+  descriptorDigest,
+  sourceVerification,
+  sourceClosure,
+  captureClosure,
+}) {
+  if (authorization.schemaVersion !== CAPTURE_AUTHORIZATION_SCHEMA) return;
+  const exactBinding = sourceVerification.exactSourceBinding;
+  const exactByContract = new Map(exactBinding.contracts.map((entry) =>
+    [entry.contract, entry]));
+  const sourceEntries = new Map(sourceClosure.entries.map((entry) =>
+    [entry.path, entry]));
+  const targets = [
+    {
+      contract: "router",
+      bindingKey: "programmableLaunchStampRouter",
+      targetId: "robinhood-v4-programmable-launch-stamp-router",
+      backendPath:
+        "release/assets/robinhood-v4/ProgrammableLaunchStampRouterV1.standard-input.json",
+      constructorArguments: `0x${[
+        descriptor.contracts.permitAuthority.address,
+        descriptor.contracts.graphFactory.address,
+        descriptor.contracts.poolManager.address,
+      ].map((address) => address.slice(2).toLowerCase().padStart(64, "0")).join("")}`,
+    },
+    {
+      contract: "graphFactory",
+      bindingKey: "graphFactory",
+      targetId: "robinhood-v4-programmable-create2-graph-deployer",
+      backendPath:
+        "release/assets/robinhood-v4/ProgrammableCreate2GraphDeployerV1.standard-input.json",
+      constructorArguments: "0x",
+    },
+  ];
+  const jobs = targets.map((target, index) => {
+    const exact = exactByContract.get(target.bindingKey);
+    const embedded = standardJsonInputs[index];
+    const bytes = Buffer.from(embedded.bytesBase64, "base64");
+    const standardJson = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    const compilerSourcePath = exact?.fullyQualifiedName.split(":", 1)[0];
+    const sourceContent = standardJson?.sources?.[compilerSourcePath]?.content;
+    const standardJsonSource = sourceEntries.get(exact?.standardJsonInputPath);
+    const sourceFile = sourceEntries.get(exact?.sourcePath);
+    assert(exact !== undefined && embedded.path === target.backendPath &&
+      embedded.sha256 === exact.standardJsonInputSha256 &&
+      embedded.byteLength === standardJsonSource?.byteLength &&
+      standardJsonSource?.sha256 === exact.standardJsonInputSha256 &&
+      sourceFile?.sha256 === exact.sourceSha256 &&
+      typeof sourceContent === "string" &&
+      sha256Bytes(Buffer.from(sourceContent, "utf8")) === exact.sourceSha256 &&
+      canonicalSha256(
+        "programmable.robinhood-custom-launch.sourcify-compiler-settings.v1",
+        standardJson.settings,
+      ) === exact.compilerSettingsDigest,
+    `Phase-A backend Standard JSON input ${index} differs from the protected source closure`);
+    return {
+      contract: target.contract,
+      verificationJobId:
+        `robinhood-v4-${target.contract}-${captureClosure.captureId.slice(0, 16)}`,
+      requestId: captureClosure.captureId,
+      attemptNumber: 1,
+      targetId: target.targetId,
+      address: exact.address,
+      expectedRuntimeCodeHash: descriptor.contracts[target.bindingKey].runtimeCodeHash,
+      compilerVersion: exactBinding.compilerVersion,
+      standardJsonInputPath: target.backendPath.slice("release/".length),
+      standardJsonInputSha256: exact.standardJsonInputSha256,
+      sourcePath: compilerSourcePath,
+      contractName: exact.name,
+      constructorArguments: target.constructorArguments,
+      artifactHash: canonicalSha256(
+        "programmable.robinhood-custom-launch.backend-source-job-artifact.v1",
+        {
+          chainDeploymentDescriptorDigest: descriptorDigest,
+          contract: target.contract,
+          address: exact.address,
+          runtimeCodeHash: descriptor.contracts[target.bindingKey].runtimeCodeHash,
+          standardJsonInputSha256: exact.standardJsonInputSha256,
+        },
+      ),
+      verificationBundleHash: captureClosure.sourceVerificationClosureDigest,
+      finalizedBlockNumber: captureClosure.l2Checkpoint.blockNumber,
+      creationTransactionHash: captureClosure.l2ProviderReadbacks[0].transactionHash,
+    };
+  });
+  assert(canonicalEqual(preparedSourceManifest.value, {
+    schemaVersion: "programmable.robinhood-prepared-root-source-manifest.v1",
+    providerProfileDigest: PREPARED_ROOT_PROVIDER_PROFILE_DIGEST,
+    jobs,
+  }), "Phase-A prepared source manifest differs from Phase A");
+}
+
+function validateCurrentCliReleaseBinding({
+  authorization,
+  cliArtifact,
+  descriptor,
+  descriptorDigest,
+  sourceClosure,
+}) {
+  if (authorization.schemaVersion !== CAPTURE_AUTHORIZATION_SCHEMA) return;
+  assert(cliArtifact.replacesSha256 === PHASE_A_CLI_TEMPLATE_SHA256,
+    "Phase-A CLI release binding differs from its protected template bytes");
+  const binding = exactKeys(cliArtifact.value, [
+    "$schema", "schemaVersion", "releaseReady", "releaseIdentity", "chain",
+    "machineContracts", "evidence", "blockers",
+  ], "Phase-A CLI release binding");
+  const templateDigest = canonicalSha256(
+    "programmable.developers.robinhood-phase-a-cli-template.v1",
+    {
+      $schema: binding.$schema,
+      schemaVersion: binding.schemaVersion,
+      releaseIdentity: binding.releaseIdentity,
+      machineContracts: binding.machineContracts,
+    },
+  );
+  const deploymentWithoutDigest = {
+    schemaVersion: "programmable.launch-cli-v4-chain-deployment-binding.v1",
+    descriptor,
+    descriptorDigest,
+  };
+  const deployment = {
+    ...deploymentWithoutDigest,
+    bindingDigest: canonicalSha256(
+      deploymentWithoutDigest.schemaVersion,
+      deploymentWithoutDigest,
+    ),
+  };
+  const profileWithoutDigest = {
+    schemaVersion: "programmable.launch-cli-v4-profile-evidence.v1",
+    profile: binding.releaseIdentity?.profile,
+    chainDeploymentDescriptorDigest: descriptorDigest,
+    fundingModes: ["none", "wallet-transaction-value"],
+    capabilities: {
+      feeBehaviorClaim: false,
+      universalFeeBehaviorClaim: false,
+      genericClaimingLive: false,
+      buybacksLive: false,
+    },
+  };
+  const profile = {
+    ...profileWithoutDigest,
+    profileEvidenceDigest: canonicalSha256(
+      profileWithoutDigest.schemaVersion,
+      profileWithoutDigest,
+    ),
+  };
+  const atomic = descriptor.deploymentEvidence;
+  const finalityWithoutDigest = {
+    schemaVersion: "programmable.launch-cli-v4-finality-evidence.v1",
+    chainDeploymentDescriptorDigest: descriptorDigest,
+    deploymentTransactionHash: atomic.transactionHash,
+    l2Checkpoint: {
+      blockNumber: atomic.blockNumber,
+      blockHash: atomic.blockHash,
+    },
+    ethereumFinalityEvidence: atomic.ethereumFinalityEvidence,
+  };
+  const finality = {
+    ...finalityWithoutDigest,
+    finalityEvidenceDigest: canonicalSha256(
+      finalityWithoutDigest.schemaVersion,
+      finalityWithoutDigest,
+    ),
+  };
+  assert(binding.$schema === "./cli-release-binding.schema.json" &&
+    binding.schemaVersion === "programmable.launch-cli-v4-release-binding.v1" &&
+    binding.releaseReady === false && templateDigest === PHASE_A_CLI_TEMPLATE_DIGEST &&
+    canonicalEqual(binding.releaseIdentity.finalityPolicy, descriptor.finality) &&
+    canonicalEqual(binding.chain, {
+      chainId: CHAIN_ID,
+      caip2: CAIP2,
+      chainDeploymentId: CHAIN_DEPLOYMENT_ID,
+      chainDeploymentDescriptorDigest: descriptorDigest,
+    }) &&
+    canonicalEqual(binding.evidence, {
+      chainDeployment: deployment,
+      profile,
+      manifest: null,
+      source: sourceClosure,
+      finality,
+      backend: null,
+    }) &&
+    canonicalEqual(binding.blockers,
+      ["releaseManifestEvidence", "backendReleaseEvidence"]),
+  "Phase-A CLI release binding differs from its source/deployment evidence");
 }
 
 export function parseStageBundle(value) {
@@ -1485,6 +2085,8 @@ export function parseStageBundle(value) {
     preparedSourceManifest.byteLength ===
       backendReleaseAssets.preparedRootSourceManifest.byteLength,
   "Phase-A backend artifacts differ from their closure descriptors");
+  assert(canonicalEqual(backendChainDeployment.value, liveDeployment.value),
+    "Phase-A backend chain deployment differs from the live deployment");
   assert(Array.isArray(backendArtifacts.standardJsonInputs) &&
     backendArtifacts.standardJsonInputs.length === 2,
   "Phase-A backend artifacts require both Standard JSON inputs");
@@ -1502,6 +2104,23 @@ export function parseStageBundle(value) {
       sha256Bytes(bytes) === artifact.sha256,
     `Phase-A backend Standard JSON artifact ${index} bytes differ`);
   }
+  validateCurrentBackendSourceArtifacts({
+    authorization,
+    preparedSourceManifest,
+    standardJsonInputs: backendArtifacts.standardJsonInputs,
+    descriptor: liveDeployment.value,
+    descriptorDigest,
+    sourceVerification,
+    sourceClosure,
+    captureClosure,
+  });
+  validateCurrentCliReleaseBinding({
+    authorization,
+    cliArtifact: cliRaw,
+    descriptor: liveDeployment.value,
+    descriptorDigest,
+    sourceClosure,
+  });
 
   const consumers = exactKeys(bundle.consumerInputs,
     ["indexer", "cli", "developers", "backend"], "Phase-A bundle consumerInputs");
@@ -1552,6 +2171,10 @@ export function parseStageBundle(value) {
   const postingEventDigest = canonicalSha256(
     "programmable.robinhood-custom-launch.sequencer-posting-event.v1",
     captureClosure.postingEvent,
+  );
+  validateCurrentDescriptorFinalityClosure(
+    liveDeployment.value, authorization, captureClosure, postingEventDigest,
+    cliReleaseBinding.value.releaseIdentity.profile,
   );
   assert(developers.sourceVerificationEvidenceDigest === sourceVerification.evidenceDigest &&
     developers.sourceVerificationClosureDigest ===
