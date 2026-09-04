@@ -178,13 +178,24 @@ if (configuredStageBundlePath && configuredPromotionBundlePath) {
   throw new Error("Robinhood checks may select only one release phase");
 }
 if (robinhoodV2Manifest.customLaunchV4?.status === "planned") {
-  if (configuredStageBundlePath || configuredPromotionBundlePath || stageBundlePresent ||
-    promotionBundlePresent) {
+  if (configuredStageBundlePath) {
     throw new Error(
-      "A Robinhood stage or promotion bundle may not exist for a planned/null read model",
+      "Phase A cannot be selected while the Robinhood read model is planned",
+    );
+  }
+  if (configuredPromotionBundlePath || promotionBundlePresent) {
+    throw new Error(
+      "A Robinhood Phase-B bundle may not exist for a planned/null read model",
     );
   }
   validatePlannedRobinhoodManifest(robinhoodV2Manifest);
+  if (stageBundlePresent) {
+    const stageBundle = await readJson(path.join(
+      REPOSITORY_ROOT,
+      CANONICAL_STAGE_BUNDLE_PATH,
+    ));
+    parseStageBundle(stageBundle);
+  }
 } else {
   const releasePhase = configuredStageBundlePath
     ? "stage"

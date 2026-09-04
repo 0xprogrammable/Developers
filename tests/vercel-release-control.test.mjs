@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -2638,6 +2639,587 @@ function indexerEvidence(bundle) {
   };
 }
 
+test("accepts the tracked Phase-A bundle from the protected PROGRAMMABLE capture", async () => {
+  const bytes = await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH));
+  assert.equal(
+    sha256Bytes(bytes),
+    "sha256:764e3bb2bd942c60e7d691b102f7ac02707dd76e94c5e5c291065a0ab97bcff6",
+  );
+
+  const stage = parseStageBundle(JSON.parse(bytes));
+  assert.equal(
+    stage.stageBundleDigest,
+    "sha256:dcac0923eca1b6b680f1f0eb50a79215557d27dca05b2de41c527d459bd0183e",
+  );
+  assert.equal(stage.sourceClosure.revision, "cbcabd3cfc166124485c6f7e7c3951810cf60dc1");
+  assert.equal(stage.sourceClosure.tree, "971fef2085ed6dae93b48e19d44d68a5427dcdc6");
+  assert.equal(stage.startBlock, "50469365");
+});
+
+test("rejects a self-resealed capture-v2 descriptor without finality closure bindings", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const replaceDeep = (value, expected, replacement) => {
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (value[index] === expected) value[index] = replacement;
+        else replaceDeep(value[index], expected, replacement);
+      }
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const key of Object.keys(value)) {
+      if (value[key] === expected) value[key] = replacement;
+      else replaceDeep(value[key], expected, replacement);
+    }
+  };
+  const stripFinalityClosure = (descriptor) => {
+    const atomic = descriptor.deploymentEvidence;
+    const safe = descriptor.permitAuthoritySourceProvenance.configurationEvidence;
+    for (const finality of [
+      atomic.ethereumFinalityEvidence,
+      safe.ethereumFinalityEvidence,
+    ]) {
+      delete finality.captureClosureDigest;
+      delete finality.postingEventDigest;
+      delete finality.l1EvidenceDigest;
+      reseal(finality, finality.schemaVersion, "evidenceDigest");
+    }
+    reseal(atomic, atomic.schemaVersion, "evidenceDigest");
+    reseal(safe, safe.schemaVersion, "evidenceDigest");
+  };
+
+  const previousDescriptorDigest =
+    candidate.consumerInputs.developers.chainDeploymentDescriptorDigest;
+  const previousBackendAssetsDigest =
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest;
+  for (const descriptor of [
+    candidate.artifacts.liveDeployment.value,
+    candidate.artifacts.backendRelease.chainDeployment.value,
+  ]) stripFinalityClosure(descriptor);
+  const liveDescriptor = candidate.artifacts.liveDeployment.value;
+  const liveArtifact = artifact(candidate.artifacts.liveDeployment.path, liveDescriptor);
+  const backendArtifact = artifact(
+    candidate.artifacts.backendRelease.chainDeployment.path,
+    candidate.artifacts.backendRelease.chainDeployment.value,
+  );
+  Object.assign(candidate.artifacts.liveDeployment, liveArtifact);
+  Object.assign(candidate.artifacts.backendRelease.chainDeployment, backendArtifact);
+  const descriptorDigest = keccak256(
+    new TextEncoder().encode(canonicalizeJson(liveDescriptor)),
+  );
+  replaceDeep(candidate, previousDescriptorDigest, descriptorDigest);
+  const cliValue = candidate.artifacts.cliReleaseBinding.value;
+  cliValue.evidence.chainDeployment.descriptor = structuredClone(liveDescriptor);
+  reseal(
+    cliValue.evidence.chainDeployment,
+    cliValue.evidence.chainDeployment.schemaVersion,
+    "bindingDigest",
+  );
+  reseal(
+    cliValue.evidence.profile,
+    cliValue.evidence.profile.schemaVersion,
+    "profileEvidenceDigest",
+  );
+  cliValue.evidence.finality.ethereumFinalityEvidence = structuredClone(
+    liveDescriptor.deploymentEvidence.ethereumFinalityEvidence,
+  );
+  reseal(
+    cliValue.evidence.finality,
+    cliValue.evidence.finality.schemaVersion,
+    "finalityEvidenceDigest",
+  );
+  const manifest = candidate.artifacts.backendRelease.preparedRootSourceManifest;
+  for (const job of manifest.value.jobs) {
+    job.artifactHash = canonicalSha256(
+      "programmable.robinhood-custom-launch.backend-source-job-artifact.v1",
+      {
+        chainDeploymentDescriptorDigest: descriptorDigest,
+        contract: job.contract,
+        address: job.address,
+        runtimeCodeHash: job.expectedRuntimeCodeHash,
+        standardJsonInputSha256: job.standardJsonInputSha256,
+      },
+    );
+  }
+  Object.assign(manifest, artifact(manifest.path, manifest.value));
+  for (const descriptor of [
+    candidate.backendReleaseAssets.chainDeployment,
+    candidate.consumerInputs.backend.chainDeployment,
+  ]) {
+    descriptor.sha256 = backendArtifact.sha256;
+    descriptor.byteLength = backendArtifact.byteLength;
+  }
+  for (const descriptor of [
+    candidate.backendReleaseAssets.preparedRootSourceManifest,
+    candidate.consumerInputs.backend.preparedRootSourceManifest,
+  ]) {
+    descriptor.sha256 = manifest.sha256;
+    descriptor.byteLength = manifest.byteLength;
+  }
+  reseal(
+    candidate.backendReleaseAssets,
+    candidate.backendReleaseAssets.schemaVersion,
+    "backendReleaseAssetsDigest",
+  );
+  replaceDeep(
+    candidate,
+    previousBackendAssetsDigest,
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest,
+  );
+  const cliArtifact = artifact(
+    candidate.artifacts.cliReleaseBinding.path,
+    candidate.artifacts.cliReleaseBinding.value,
+  );
+  candidate.artifacts.cliReleaseBinding.sha256 = cliArtifact.sha256;
+  candidate.artifacts.cliReleaseBinding.byteLength = cliArtifact.byteLength;
+  reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /capture-v2 descriptor finality closure differs/u,
+  );
+});
+
+test("rejects self-resealed descriptor finality that differs from the capture closure", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const replaceDeep = (value, expected, replacement) => {
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (value[index] === expected) value[index] = replacement;
+        else replaceDeep(value[index], expected, replacement);
+      }
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const key of Object.keys(value)) {
+      if (value[key] === expected) value[key] = replacement;
+      else replaceDeep(value[key], expected, replacement);
+    }
+  };
+  const previousDescriptorDigest =
+    candidate.consumerInputs.developers.chainDeploymentDescriptorDigest;
+  const previousBackendAssetsDigest =
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest;
+  for (const descriptor of [
+    candidate.artifacts.liveDeployment.value,
+    candidate.artifacts.backendRelease.chainDeployment.value,
+  ]) {
+    const atomic = descriptor.deploymentEvidence;
+    const authority = descriptor.permitAuthoritySourceProvenance;
+    const safe = authority.configurationEvidence;
+    for (const finality of [
+      atomic.ethereumFinalityEvidence,
+      safe.ethereumFinalityEvidence,
+    ]) {
+      finality.postingTransactionHash = hash("f");
+      reseal(finality, finality.schemaVersion, "evidenceDigest");
+    }
+    reseal(atomic, atomic.schemaVersion, "evidenceDigest");
+    reseal(safe, safe.schemaVersion, "evidenceDigest");
+    reseal(authority, authority.schemaVersion, "evidenceDigest");
+  }
+  const live = candidate.artifacts.liveDeployment.value;
+  const liveArtifact = artifact(candidate.artifacts.liveDeployment.path, live);
+  Object.assign(candidate.artifacts.liveDeployment, liveArtifact);
+  const backendArtifact = artifact(
+    candidate.artifacts.backendRelease.chainDeployment.path,
+    candidate.artifacts.backendRelease.chainDeployment.value,
+  );
+  Object.assign(candidate.artifacts.backendRelease.chainDeployment, backendArtifact);
+  const descriptorDigest = keccak256(
+    new TextEncoder().encode(canonicalizeJson(live)),
+  );
+  replaceDeep(candidate, previousDescriptorDigest, descriptorDigest);
+  const manifest = candidate.artifacts.backendRelease.preparedRootSourceManifest;
+  for (const job of manifest.value.jobs) {
+    job.artifactHash = canonicalSha256(
+      "programmable.robinhood-custom-launch.backend-source-job-artifact.v1",
+      {
+        chainDeploymentDescriptorDigest: descriptorDigest,
+        contract: job.contract,
+        address: job.address,
+        runtimeCodeHash: job.expectedRuntimeCodeHash,
+        standardJsonInputSha256: job.standardJsonInputSha256,
+      },
+    );
+  }
+  Object.assign(manifest, artifact(manifest.path, manifest.value));
+  for (const descriptor of [
+    candidate.backendReleaseAssets.chainDeployment,
+    candidate.consumerInputs.backend.chainDeployment,
+  ]) {
+    descriptor.sha256 = backendArtifact.sha256;
+    descriptor.byteLength = backendArtifact.byteLength;
+  }
+  for (const descriptor of [
+    candidate.backendReleaseAssets.preparedRootSourceManifest,
+    candidate.consumerInputs.backend.preparedRootSourceManifest,
+  ]) {
+    descriptor.sha256 = manifest.sha256;
+    descriptor.byteLength = manifest.byteLength;
+  }
+  reseal(
+    candidate.backendReleaseAssets,
+    candidate.backendReleaseAssets.schemaVersion,
+    "backendReleaseAssetsDigest",
+  );
+  replaceDeep(
+    candidate,
+    previousBackendAssetsDigest,
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest,
+  );
+  const cli = candidate.artifacts.cliReleaseBinding;
+  cli.value.evidence.chainDeployment.descriptor = structuredClone(live);
+  reseal(
+    cli.value.evidence.chainDeployment,
+    cli.value.evidence.chainDeployment.schemaVersion,
+    "bindingDigest",
+  );
+  reseal(
+    cli.value.evidence.profile,
+    cli.value.evidence.profile.schemaVersion,
+    "profileEvidenceDigest",
+  );
+  const atomic = live.deploymentEvidence;
+  Object.assign(cli.value.evidence.finality, {
+    chainDeploymentDescriptorDigest: descriptorDigest,
+    deploymentTransactionHash: atomic.transactionHash,
+    l2Checkpoint: { blockNumber: atomic.blockNumber, blockHash: atomic.blockHash },
+    ethereumFinalityEvidence: structuredClone(atomic.ethereumFinalityEvidence),
+  });
+  reseal(
+    cli.value.evidence.finality,
+    cli.value.evidence.finality.schemaVersion,
+    "finalityEvidenceDigest",
+  );
+  const cliArtifact = artifact(cli.path, cli.value);
+  cli.sha256 = cliArtifact.sha256;
+  cli.byteLength = cliArtifact.byteLength;
+  reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /capture-v2 descriptor finality closure differs/u,
+  );
+});
+
+test("rejects a self-resealed backend descriptor that differs from the live descriptor", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const replaceDeep = (value, expected, replacement) => {
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (value[index] === expected) value[index] = replacement;
+        else replaceDeep(value[index], expected, replacement);
+      }
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const key of Object.keys(value)) {
+      if (value[key] === expected) value[key] = replacement;
+      else replaceDeep(value[key], expected, replacement);
+    }
+  };
+  const previousBackendAssetsDigest =
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest;
+  candidate.artifacts.backendRelease.chainDeployment.value.auditInjectedUnboundField = true;
+  const backendArtifact = artifact(
+    candidate.artifacts.backendRelease.chainDeployment.path,
+    candidate.artifacts.backendRelease.chainDeployment.value,
+  );
+  Object.assign(candidate.artifacts.backendRelease.chainDeployment, backendArtifact);
+  for (const descriptor of [
+    candidate.backendReleaseAssets.chainDeployment,
+    candidate.consumerInputs.backend.chainDeployment,
+  ]) {
+    descriptor.sha256 = backendArtifact.sha256;
+    descriptor.byteLength = backendArtifact.byteLength;
+  }
+  reseal(
+    candidate.backendReleaseAssets,
+    candidate.backendReleaseAssets.schemaVersion,
+    "backendReleaseAssetsDigest",
+  );
+  replaceDeep(
+    candidate,
+    previousBackendAssetsDigest,
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest,
+  );
+  reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /backend chain deployment differs from the live deployment/u,
+  );
+});
+
+test("rejects a self-resealed prepared source manifest without Phase-A bindings", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const replaceDeep = (value, expected, replacement) => {
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (value[index] === expected) value[index] = replacement;
+        else replaceDeep(value[index], expected, replacement);
+      }
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const key of Object.keys(value)) {
+      if (value[key] === expected) value[key] = replacement;
+      else replaceDeep(value[key], expected, replacement);
+    }
+  };
+  const previousBackendAssetsDigest =
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest;
+  const manifest = candidate.artifacts.backendRelease.preparedRootSourceManifest;
+  manifest.value.auditInjectedUnboundField = true;
+  Object.assign(manifest, artifact(manifest.path, manifest.value));
+  for (const descriptor of [
+    candidate.backendReleaseAssets.preparedRootSourceManifest,
+    candidate.consumerInputs.backend.preparedRootSourceManifest,
+  ]) {
+    descriptor.sha256 = manifest.sha256;
+    descriptor.byteLength = manifest.byteLength;
+  }
+  reseal(
+    candidate.backendReleaseAssets,
+    candidate.backendReleaseAssets.schemaVersion,
+    "backendReleaseAssetsDigest",
+  );
+  replaceDeep(
+    candidate,
+    previousBackendAssetsDigest,
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest,
+  );
+  reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /prepared source manifest differs from Phase A/u,
+  );
+});
+
+test("rejects self-resealed Standard JSON bytes outside the Phase-A source closure", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const replaceDeep = (value, expected, replacement) => {
+    if (Array.isArray(value)) {
+      for (let index = 0; index < value.length; index += 1) {
+        if (value[index] === expected) value[index] = replacement;
+        else replaceDeep(value[index], expected, replacement);
+      }
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const key of Object.keys(value)) {
+      if (value[key] === expected) value[key] = replacement;
+      else replaceDeep(value[key], expected, replacement);
+    }
+  };
+  const previousBackendAssetsDigest =
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest;
+  const embedded = candidate.artifacts.backendRelease.standardJsonInputs[0];
+  const substitutedBytes = Buffer.concat([
+    Buffer.from(embedded.bytesBase64, "base64"),
+    Buffer.from(" ", "utf8"),
+  ]);
+  embedded.bytesBase64 = substitutedBytes.toString("base64");
+  embedded.sha256 = sha256Bytes(substitutedBytes);
+  embedded.byteLength = String(substitutedBytes.byteLength);
+  for (const descriptor of [
+    candidate.backendReleaseAssets.standardJsonInputs[0],
+    candidate.consumerInputs.backend.standardJsonInputs[0],
+  ]) {
+    descriptor.sha256 = embedded.sha256;
+    descriptor.byteLength = embedded.byteLength;
+  }
+  reseal(
+    candidate.backendReleaseAssets,
+    candidate.backendReleaseAssets.schemaVersion,
+    "backendReleaseAssetsDigest",
+  );
+  replaceDeep(
+    candidate,
+    previousBackendAssetsDigest,
+    candidate.backendReleaseAssets.backendReleaseAssetsDigest,
+  );
+  reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /Standard JSON input 0 differs from the protected source closure/u,
+  );
+});
+
+test("rejects self-resealed substitutions across the current Phase-A CLI binding", async () => {
+  const original = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const substitutions = [
+    (binding) => { binding.machineContracts[0].url = "https://example.invalid/openapi.json"; },
+    (binding) => { binding.chain.chainId = "1"; },
+    (binding) => { binding.evidence.chainDeployment.descriptor.chainId = "1"; },
+    (binding) => { binding.evidence.source.revision = "0".repeat(40); },
+    (binding) => { binding.evidence.finality.deploymentTransactionHash = hash("0"); },
+    (binding) => { binding.releaseIdentity.package.repository = "example/invalid"; },
+    (binding) => { binding.auditInjectedUnboundField = true; },
+  ];
+
+  for (const substitute of substitutions) {
+    const candidate = structuredClone(original);
+    const cli = candidate.artifacts.cliReleaseBinding;
+    substitute(cli.value);
+    const resealed = artifact(cli.path, cli.value);
+    cli.sha256 = resealed.sha256;
+    cli.byteLength = resealed.byteLength;
+    reseal(candidate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+    assert.throws(
+      () => parseStageBundle(candidate),
+      /Phase-A CLI release binding (?:differs|has an unsupported)/u,
+    );
+  }
+  const replacedTemplate = structuredClone(original);
+  replacedTemplate.artifacts.cliReleaseBinding.replacesSha256 = sha("f");
+  reseal(replacedTemplate, STAGE_BUNDLE_SCHEMA, "stageBundleDigest");
+  assert.throws(
+    () => parseStageBundle(replacedTemplate),
+    /CLI release binding differs from its protected template bytes/u,
+  );
+});
+
+test("rejects self-resealed substitutions for the protected Phase-A build targets", async () => {
+  const original = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const sourceSchema =
+    "programmable.robinhood-custom-launch.source-verification-closure.v6";
+  const bindingSchema =
+    "programmable.robinhood-custom-launch.exact-byte-source-build-transaction-binding.v2";
+  const substitutions = [
+    (binding) => { binding.hostedReproductionCompilerSha256 = hash("f"); },
+    (binding) => { binding.contracts[0].sourcePath = "contracts/src/Substitute.sol"; },
+    (binding) => { binding.contracts[0].sourceSha256 = sha("f"); },
+    (binding) => { binding.contracts[0].creationCodeHash = hash("f"); },
+    (binding) => { binding.contracts[0].compilerSettingsDigest = sha("f"); },
+    (binding) => { binding.contracts[1].sourcePath = "contracts/src/Substitute.sol"; },
+    (binding) => { binding.contracts[1].sourceSha256 = sha("f"); },
+    (binding) => { binding.contracts[1].creationCodeHash = hash("f"); },
+    (binding) => { binding.contracts[1].compilerSettingsDigest = sha("f"); },
+  ];
+
+  for (const substitute of substitutions) {
+    const candidate = structuredClone(original);
+    const sourceVerification = candidate.sourceVerification;
+    const binding = sourceVerification.exactSourceBinding;
+    substitute(binding);
+    binding.bindingDigest = canonicalSha256(bindingSchema, {
+      ...binding,
+      bindingDigest: null,
+    });
+    const { evidenceDigest: _evidenceDigest, ...sourceWithoutDigest } = sourceVerification;
+    sourceVerification.evidenceDigest = canonicalSha256(sourceSchema, sourceWithoutDigest);
+    assert.throws(
+      () => parseStageBundle(candidate),
+      /protected Phase-A (compiler|build target) differs/u,
+    );
+  }
+});
+
+test("rejects a self-resealed legacy RPC inventory under capture authorization v2", async () => {
+  const candidate = JSON.parse(await readFile(path.resolve(CANONICAL_STAGE_BUNDLE_PATH)));
+  const closure = candidate.captureClosure;
+  const inventories = [
+    ...closure.l2ProviderReadbacks.map(({ inventory }) => inventory),
+    ...closure.ethereumProviderReadbacks.map(({ inventory }) => inventory),
+  ];
+  for (const inventory of inventories) {
+    inventory.entries = inventory.entries.map((entry) => ({
+      ...entry,
+      responseSha256: entry.normalizedResultSha256,
+    }));
+    inventory.inventoryDigest = canonicalSha256(
+      "programmable.robinhood-custom-launch.rpc-inventory.v2",
+      inventory.entries,
+    );
+  }
+  closure.captureInventoryDigest = canonicalSha256(
+    "programmable.robinhood-custom-launch.capture-inventory.v4",
+    [
+      ...inventories,
+      ...closure.sourcify.map((entry) => ({
+        layer: "sourcify",
+        contract: entry.contract,
+        normalizedVerificationDigest: entry.normalizedVerificationDigest,
+      })),
+    ],
+  );
+  const { stageBundleDigest: _stageBundleDigest, ...withoutDigest } = candidate;
+  candidate.stageBundleDigest = canonicalSha256(STAGE_BUNDLE_SCHEMA, withoutDigest);
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /capture authorization v2 requires normalized RPC inventory v3/u,
+  );
+});
+
+test("rejects normalized RPC inventory v3 under legacy capture authorization v1", () => {
+  const candidate = stageFixture();
+  const closure = candidate.captureClosure;
+  const inventories = [
+    ...closure.l2ProviderReadbacks.map(({ inventory }) => inventory),
+    ...closure.ethereumProviderReadbacks.map(({ inventory }) => inventory),
+  ];
+  for (const inventory of inventories) {
+    inventory.entries = inventory.entries.map((entry) => {
+      const { responseSha256: _responseSha256, ...normalized } = entry;
+      return normalized;
+    });
+    inventory.inventoryDigest = canonicalSha256(
+      "programmable.robinhood-custom-launch.rpc-inventory.v3",
+      inventory.entries,
+    );
+  }
+  closure.captureInventoryDigest = canonicalSha256(
+    "programmable.robinhood-custom-launch.capture-inventory.v3",
+    [
+      ...inventories,
+      ...closure.sourcify.map((entry) => ({
+        layer: "sourcify",
+        contract: entry.contract,
+        responseSha256: entry.responseSha256,
+        responseByteLength: entry.responseByteLength,
+      })),
+    ],
+  );
+  const { stageBundleDigest: _stageBundleDigest, ...withoutDigest } = candidate;
+  candidate.stageBundleDigest = canonicalSha256(STAGE_BUNDLE_SCHEMA, withoutDigest);
+
+  assert.throws(
+    () => parseStageBundle(candidate),
+    /capture authorization v1 requires legacy RPC inventory v2/u,
+  );
+});
+
+test("validates tracked Phase A while rejecting its selection under a planned manifest", () => {
+  const environment = { ...process.env };
+  delete environment.ROBINHOOD_STAGE_BUNDLE_PATH;
+  delete environment.ROBINHOOD_PROMOTION_BUNDLE_PATH;
+  const unselected = spawnSync(process.execPath, ["scripts/check.mjs"], {
+    cwd: path.resolve("."),
+    encoding: "utf8",
+    env: environment,
+  });
+  assert.equal(unselected.status, 0, unselected.stderr || unselected.stdout);
+
+  const selected = spawnSync(process.execPath, ["scripts/check.mjs"], {
+    cwd: path.resolve("."),
+    encoding: "utf8",
+    env: {
+      ...environment,
+      ROBINHOOD_STAGE_BUNDLE_PATH: CANONICAL_STAGE_BUNDLE_PATH,
+    },
+  });
+  assert.notEqual(selected.status, 0);
+  assert.match(
+    `${selected.stdout}\n${selected.stderr}`,
+    /Phase A cannot be selected while the Robinhood read model is planned/u,
+  );
+});
+
 test("keeps Phase A closed and accepts Phase B only through its distinct parser", () => {
   const stageBundle = stageFixture();
   const stage = parseStageBundle(stageBundle);
@@ -4920,6 +5502,23 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
     CANONICAL_STAGE_BUNDLE_PATH);
   assert.equal(document.env.CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH,
     CANONICAL_PROMOTION_BUNDLE_PATH);
+  const selectedContractStep = document.jobs["validate-source"].steps.find(
+    ({ name }) => name === "Validate exact selected release contract without inferring public authority",
+  ).run;
+  assert.match(selectedContractStep,
+    /verify-planned\|deploy-planned\)[\s\S]*test ! -e "\$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"[\s\S]*printf 'digest=\\n'/u,
+    "planned operations must reject Phase B and emit no phase digest");
+  const plannedContractCase = selectedContractStep.match(
+    /verify-planned\|deploy-planned\)[\s\S]*?;;/u,
+  )[0];
+  assert.doesNotMatch(plannedContractCase, /CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH/u,
+    "planned operations may validate but must not select the closed Phase-A bundle");
+  const plannedBuildStep = document.jobs["deploy-planned"].steps.find(
+    ({ name }) => name === "Build and check exact planned source",
+  ).run;
+  assert.match(plannedBuildStep,
+    /unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH[\s\S]*test ! -e "\$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"/u);
+  assert.doesNotMatch(plannedBuildStep, /test ! -e "\$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"/u);
   assert.equal(document.env.INDEXER_RELEASE_IDENTITY_PATH,
     CANONICAL_INDEXER_RELEASE_IDENTITY_PATH);
   assert.equal(document.env.INDEXER_DEPLOYMENT_RECEIPT_PATH,
@@ -5282,6 +5881,10 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   assert.match(repositoryCheck, /Phase A cannot be selected after.*Phase-B bundle exists/u,
     "release checks must not let Phase A inherit Phase-B public authority");
   const runbook = await readFile(path.resolve("docs/vercel-release-control.md"), "utf8");
+  assert.match(runbook,
+    /Tracking and validating that bundle is an evidence-admission step, not an activation/u);
+  assert.match(runbook,
+    /operation: stage[^\n]*remains fail-closed/u);
   for (const required of [
     "`production`", "@hazarxyz", "258789013", "protected branches only",
     "administrator bypass disabled", "VERCEL_TOKEN", "VERCEL_ORG_ID",

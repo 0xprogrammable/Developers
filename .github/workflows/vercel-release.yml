@@ -173,7 +173,6 @@ jobs:
           mkdir -p .release-evidence/source
           case "$OPERATION" in
             verify-planned|deploy-planned)
-              test ! -e "$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
               test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
               printf 'digest=\n' >> "$GITHUB_OUTPUT"
               exit 0
@@ -377,7 +376,6 @@ jobs:
         run: |
           set -euo pipefail
           unset ROBINHOOD_STAGE_BUNDLE_PATH ROBINHOOD_PROMOTION_BUNDLE_PATH
-          test ! -e "$CANONICAL_ROBINHOOD_STAGE_BUNDLE_PATH"
           test ! -e "$CANONICAL_ROBINHOOD_PROMOTION_BUNDLE_PATH"
           npm run build
           npm run check

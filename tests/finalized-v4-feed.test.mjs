@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { beforeEach, describe, test } from "node:test";
 
 import { developerManifestForChain } from "../server/chain-manifests.js";
@@ -1569,6 +1570,64 @@ describe("Router-backed finalized V4 feed", () => {
       });
       assert.equal(result.status, "unavailable");
       assert.deepEqual(result.records, []);
+    }
+  });
+
+  test("accepts the exact Phase-A deployment finality closure", async () => {
+    const bundle = JSON.parse(await readFile(new URL(
+      "../release/robinhood-chain-4663/programmable-stage-bundle.json",
+      import.meta.url,
+    )));
+    const registry = await createSchemaRegistry("v2");
+    const validateDeployment = registry.validator(
+      "custom-launch-chain-deployment-v4.schema.json",
+    );
+    const deployment = bundle.artifacts.liveDeployment.value;
+    assertValid(
+      validateDeployment,
+      deployment,
+      "Phase-A chain deployment",
+    );
+
+    const evidenceAt = (value, location) => location === "atomic"
+      ? value.deploymentEvidence.ethereumFinalityEvidence
+      : value.permitAuthoritySourceProvenance.configurationEvidence
+        .ethereumFinalityEvidence;
+    const closureKeys = [
+      "captureClosureDigest", "postingEventDigest", "l1EvidenceDigest",
+    ];
+    for (const location of ["atomic", "safe"]) {
+      const evidence = evidenceAt(deployment, location);
+      assert.equal(
+        finalizedV4FeedTestOnly.validEthereumFinalityEvidence(
+          evidence,
+          evidence.profile,
+        ),
+        true,
+        `${location} full Phase-A finality closure must pass the runtime validator`,
+      );
+      for (let retained = 1; retained < 2 ** closureKeys.length - 1; retained += 1) {
+        const candidate = structuredClone(deployment);
+        const partial = evidenceAt(candidate, location);
+        closureKeys.forEach((key, index) => {
+          if ((retained & (1 << index)) === 0) delete partial[key];
+        });
+        const { evidenceDigest: _evidenceDigest, ...withoutDigest } = partial;
+        partial.evidenceDigest = canonicalSha256(partial.schemaVersion, withoutDigest);
+        assert.equal(
+          validateDeployment(candidate),
+          false,
+          `${location} partial closure subset ${retained} must fail JSON Schema`,
+        );
+        assert.equal(
+          finalizedV4FeedTestOnly.validEthereumFinalityEvidence(
+            partial,
+            partial.profile,
+          ),
+          false,
+          `${location} partial closure subset ${retained} must fail runtime validation`,
+        );
+      }
     }
   });
 
