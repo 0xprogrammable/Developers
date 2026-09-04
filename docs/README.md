@@ -46,6 +46,7 @@ The versioned launch requirements likewise remain owned by Programmable Launch P
 ## Choose an integration path
 
 - [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer)
+- [Robinhood terminal integration source](guides/robinhood-terminal-indexer.md)
 - [Trading terminals and scanners](guides/terminals-and-scanners.md)
 - [Launch providers](guides/launch-providers.md)
 - [Custom Fee-Enforced Launch Profile V2](guides/custom-fee-enforced-launch-profile-v2.md)

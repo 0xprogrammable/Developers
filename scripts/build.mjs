@@ -1,6 +1,7 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderRobinhoodReference } from "./lib/reference-page.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const publicRoot = resolve(repositoryRoot, "public");
@@ -40,4 +41,8 @@ for (const version of schemaIndexes) {
   );
 }
 
-console.log("Static developer resources copied to public/.");
+const reference = await readFile(resolve(repositoryRoot, "docs/guides/robinhood-terminal-indexer.md"), "utf8");
+await writeFile(resolve(publicRoot, "robinhood-terminal-indexer.html"), renderRobinhoodReference(reference));
+await writeFile(resolve(publicRoot, "robinhood-terminal-indexer.md"), reference);
+
+console.log("Static developer resources and Markdown reference built in public/.");
