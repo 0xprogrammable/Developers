@@ -1,4 +1,5 @@
 import path from "node:path";
+import assert from "node:assert/strict";
 import { assertCanonicalJson, listFiles, readJson, REPOSITORY_ROOT } from "./lib/files.mjs";
 import { createSchemaRegistry, assertValid } from "./lib/schema.mjs";
 import {
@@ -19,6 +20,7 @@ import {
   parsePromotionBundle,
   parseStageBundle,
   validateLiveRobinhoodManifest,
+  validateDirectChainRobinhoodManifest,
   validatePlannedRobinhoodManifest,
 } from "./lib/vercel-release.mjs";
 import { execFileSync } from "node:child_process";
@@ -177,7 +179,43 @@ if (configuredPromotionBundlePath &&
 if (configuredStageBundlePath && configuredPromotionBundlePath) {
   throw new Error("Robinhood checks may select only one release phase");
 }
-if (robinhoodV2Manifest.customLaunchV4?.status === "planned") {
+if (robinhoodV2Manifest.directChainIntegration?.status === "live") {
+  if (configuredStageBundlePath || configuredPromotionBundlePath || promotionBundlePresent) {
+    throw new Error("Direct-chain publication cannot select the hosted-read-model release phase");
+  }
+  if (!stageBundlePresent) {
+    throw new Error("Direct-chain publication requires the canonical closed deployment bundle");
+  }
+  const stage = parseStageBundle(await readJson(path.join(
+    REPOSITORY_ROOT, CANONICAL_STAGE_BUNDLE_PATH,
+  )));
+  validateDirectChainRobinhoodManifest(robinhoodV2Manifest, stage);
+  const evidence = await readJson(path.join(
+    REPOSITORY_ROOT, "deployments/robinhood-direct-chain-evidence-v1.json",
+  ));
+  assertValid(v2Registry.validator("robinhood-direct-chain-evidence.schema.json"),
+    evidence, "Robinhood direct-chain evidence");
+  const router = robinhoodV2Manifest.launchStampRouter;
+  for (const key of ["transactionHash", "blockNumber", "blockHash", "launchId"]) {
+    assert.equal(evidence.launch[key], router.canaryEvidence[key],
+      `Direct-chain finalized launch ${key} differs from the manifest`);
+  }
+  assert.equal(evidence.deployment.transactionHash,
+    router.deploymentEvidence.deploymentTransactionHash);
+  assert.equal(evidence.deployment.blockNumber, router.startBlock);
+  assert.equal(evidence.deployment.runtimeCodeHash, router.runtimeCodeHash);
+  assert.equal(evidence.deployment.runtimeCodeBytes, router.deploymentEvidence.runtimeCodeBytes);
+  assert.equal(evidence.deployment.runtimeCodeSha256, router.deploymentEvidence.runtimeCodeSha256);
+  assert.equal(evidence.finalizedCheckpoint.blockNumber,
+    router.deploymentEvidence.finalizedBlockNumber);
+  assert.equal(evidence.finalizedCheckpoint.blockHash,
+    router.deploymentEvidence.finalizedBlockHash);
+  assert.ok(BigInt(evidence.finalizedCheckpoint.blockNumber) >=
+    BigInt(evidence.launch.blockNumber), "Launch evidence exceeds the finalized boundary");
+  assert.equal(evidence.source.sourceClosureDigest, stage.sourceClosure.sourceClosureDigest);
+  assert.equal(evidence.source.sourceVerificationClosureDigest,
+    stage.bundle.sourceVerification.sourceVerificationClosureDigest);
+} else if (robinhoodV2Manifest.customLaunchV4?.status === "planned") {
   if (configuredStageBundlePath) {
     throw new Error(
       "Phase A cannot be selected while the Robinhood read model is planned",

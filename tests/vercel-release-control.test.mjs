@@ -10,6 +10,18 @@ import { parse as parseYaml } from "yaml";
 import { canonicalSha256, canonicalizeJson } from "../server/canonical.js";
 import { keccak256 } from "../server/keccak.js";
 import {
+  DIRECT_CHAIN_SMOKE_SCHEMA,
+  DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA,
+  DIRECT_CHAIN_MUTATION_INTENT_SCHEMA,
+  DIRECT_CHAIN_DEPLOY_RECEIPT_SCHEMA,
+  createDirectChainDeployAuthorization,
+  parseDirectChainDeployAuthorization,
+  parseDirectChainSmokeReceipt,
+  createDirectChainMutationIntent,
+  parseDirectChainMutationIntent,
+  validateDirectChainPublicMutationReadiness,
+  parseDirectChainPublicMutationReadiness,
+  createDirectChainDeployReceipt,
   CANONICAL_INDEXER_DEPLOYMENT_RECEIPT_PATH,
   CANONICAL_INDEXER_RELEASE_AUDIT_PATH,
   CANONICAL_INDEXER_RELEASE_IDENTITY_PATH,
@@ -3194,7 +3206,7 @@ test("rejects normalized RPC inventory v3 under legacy capture authorization v1"
   );
 });
 
-test("validates tracked Phase A while rejecting its selection under a planned manifest", () => {
+test("validates tracked Phase A while rejecting hosted phase selection for direct-chain publication", () => {
   const environment = { ...process.env };
   delete environment.ROBINHOOD_STAGE_BUNDLE_PATH;
   delete environment.ROBINHOOD_PROMOTION_BUNDLE_PATH;
@@ -3216,7 +3228,7 @@ test("validates tracked Phase A while rejecting its selection under a planned ma
   assert.notEqual(selected.status, 0);
   assert.match(
     `${selected.stdout}\n${selected.stderr}`,
-    /Phase A cannot be selected while the Robinhood read model is planned/u,
+    /Direct-chain publication cannot select the hosted-read-model release phase/u,
   );
 });
 
@@ -5490,7 +5502,7 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   const text = await readFile(workflowPath, "utf8");
   const document = parseYaml(text);
   assert.deepEqual(Object.keys(document.jobs), [
-    "validate-source", "verify-planned", "deploy-planned", "stage", "prepare-promotion",
+    "validate-source", "verify-planned", "deploy-planned", "deploy-direct-chain", "stage", "prepare-promotion",
     "promote", "prepare-rollback", "rollback",
   ]);
   assert.deepEqual(document.permissions, { contents: "read", actions: "read" });
@@ -6023,4 +6035,162 @@ test("hashes build output deterministically and rejects symlinks", async () => {
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+
+function directChainSmoke(origin, checkedAt = "2026-08-29T15:02:00.000Z", overrides = {}) {
+  const payload = {
+    schemaVersion: DIRECT_CHAIN_SMOKE_SCHEMA, mode: "direct-chain", origin,
+    chainId: "4663", caip2: "eip155:4663", manifestDigest: sha("a"), evidenceDigest: sha("b"),
+    publicWrites: false, hostedIndexer: "unavailable", finalizedFeedStatus: "ready",
+    launchId: "b451a50f-026b-4e68-9c16-68e41c318076", checkedAt, ...overrides,
+  };
+  return { ...payload, smokeDigest: canonicalSha256(DIRECT_CHAIN_SMOKE_SCHEMA, payload) };
+}
+
+function directChainFlow() {
+  const old = deployment("dpl_directold123", "https://developers-direct-old.vercel.app/",
+    vercelProductionAliases);
+  const candidate = deployment("dpl_directtarget123", "https://developers-direct-target.vercel.app/");
+  const selectedSmoke = directChainSmoke(candidate.url);
+  const base = {
+    mutation: "promote-candidate", source, target, workflow,
+    manifestDigest: sha("a"), evidenceDigest: sha("b"), currentDeployment: old,
+    currentProductionBinding: productionBinding(old, "2026-08-29T15:00:30.000Z"),
+    candidateDeployment: candidate,
+    candidateProtectionEvidence: protectionEvidence(candidate, "2026-08-29T15:01:00.000Z"),
+    candidateSmoke: selectedSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization("2026-08-29T15:03:00.000Z", { source }),
+    authorizedAt: "2026-08-29T15:03:00.000Z",
+  };
+  const authorization = createDirectChainDeployAuthorization(base);
+  const intent = createDirectChainMutationIntent({ operation: "deploy-direct-chain", authorization,
+    selectedSmoke, createdAt: "2026-08-29T15:03:30.000Z" });
+  const finalSmoke = directChainSmoke(candidate.url, "2026-08-29T15:03:50.000Z");
+  const finalAuthorization = createDirectChainDeployAuthorization({ ...base,
+    currentProductionBinding: productionBinding(old, "2026-08-29T15:03:40.000Z"),
+    candidateProtectionEvidence: protectionEvidence(candidate, "2026-08-29T15:03:45.000Z"),
+    candidateSmoke: finalSmoke,
+    ownerDispatchAuthorization: ownerDispatchAuthorization("2026-08-29T15:04:00.000Z", { source }),
+    authorizedAt: "2026-08-29T15:04:00.000Z",
+  });
+  const readinessInput = {
+    intent, intentAuthorization: authorization, intentSelectedSmoke: selectedSmoke,
+    authorization: finalAuthorization, candidateSmoke: finalSmoke, currentDeployment: old,
+    currentProductionBinding: productionBinding(old, "2026-08-29T15:04:10.000Z"),
+    mutationControl: mutationControl("2026-08-29T15:04:15.000Z"),
+    confirmedAt: "2026-08-29T15:04:20.000Z",
+  };
+  return { old, candidate, base, authorization, selectedSmoke, finalAuthorization, intent, readinessInput };
+}
+
+test("direct-chain publication seals exact source, read-only contract, owner and two-domain evidence", () => {
+  const f = directChainFlow();
+  assert.equal(parseDirectChainDeployAuthorization(f.authorization).schemaVersion,
+    DIRECT_CHAIN_DEPLOY_AUTHORIZATION_SCHEMA);
+  assert.equal(parseDirectChainMutationIntent(f.intent, { operation: "deploy-direct-chain",
+    authorization: f.authorization, selectedSmoke: f.selectedSmoke }).schemaVersion,
+  DIRECT_CHAIN_MUTATION_INTENT_SCHEMA);
+  const readiness = validateDirectChainPublicMutationReadiness(f.readinessInput);
+  assert.equal(parseDirectChainPublicMutationReadiness(readiness, {
+    intent: f.intent, authorization: f.finalAuthorization,
+  }).mutationIntentDigest, f.intent.mutationIntentDigest);
+  const receipt = createDirectChainDeployReceipt({ intent: f.intent,
+    authorization: f.finalAuthorization, mutationReadiness: readiness,
+    productionDeployment: f.candidate,
+    productionBinding: productionBinding(f.candidate, "2026-08-29T15:04:40.000Z"),
+    productionSmoke: directChainSmoke(PRODUCTION_ORIGIN, "2026-08-29T15:04:30.000Z"),
+    completedAt: "2026-08-29T15:04:50.000Z",
+  });
+  assert.equal(receipt.schemaVersion, DIRECT_CHAIN_DEPLOY_RECEIPT_SCHEMA);
+  assert.equal(receipt.publicWrites, false);
+  assert.equal(receipt.hostedIndexer, "unavailable");
+  assert.equal(receipt.manifestDigest, sha("a"));
+  assert.equal(receipt.evidenceDigest, sha("b"));
+  assert.throws(() => parsePlannedDeployAuthorization(f.authorization), /field set|invalid/);
+  assert.throws(() => parsePublicMutationIntent(f.intent), /field set|invalid/);
+  assert.throws(() => createPromotionPlan({ stageReceipt: f.intent }), /./);
+});
+
+test("direct-chain authorization rejects capability, source-contract and planned-smoke substitution", () => {
+  const f = directChainFlow();
+  for (const override of [{ publicWrites: true }, { hostedIndexer: "ready" },
+    { finalizedFeedStatus: "unavailable" }, { launchId: "unrecognized" }, { mode: "planned" }]) {
+    assert.throws(() => parseDirectChainSmokeReceipt(directChainSmoke(f.candidate.url, undefined, override)),
+      /wrong capability/);
+  }
+  assert.throws(() => createDirectChainDeployAuthorization({ ...f.base,
+    candidateSmoke: smoke("planned", f.candidate.url, undefined) }), /field set|wrong capability/);
+  assert.throws(() => createDirectChainDeployAuthorization({ ...f.base,
+    evidenceDigest: sha("c") }), /exact checked source contract/);
+  assert.throws(() => createDirectChainDeployAuthorization({ ...f.base,
+    manifestDigest: sha("c") }), /exact checked source contract/);
+  assert.throws(() => createDirectChainDeployAuthorization({ ...f.base,
+    ownerDispatchAuthorization: ownerDispatchAuthorization("2026-08-29T15:03:00.000Z", {
+      source: promotionSource,
+    }) }), /different source/);
+  assert.throws(() => createDirectChainMutationIntent({ operation: "deploy-planned",
+    authorization: f.authorization, selectedSmoke: f.selectedSmoke,
+    createdAt: "2026-08-29T15:03:30.000Z" }), /differs/);
+});
+
+test("direct-chain mutation rejects domain drift, stale proof, pending mutation and changed public bytes", () => {
+  const f = directChainFlow();
+  const pending = mutationControl("2026-08-29T15:04:15.000Z", {
+    lastAliasRequest: { jobStatus: "pending", requestedAt: Date.parse("2026-08-29T15:04:14.000Z"),
+      toDeploymentId: f.candidate.id, type: "promote" },
+  });
+  assert.throws(() => validateDirectChainPublicMutationReadiness({ ...f.readinessInput,
+    mutationControl: pending }), /pending or in-progress/);
+  assert.throws(() => validateDirectChainPublicMutationReadiness({ ...f.readinessInput,
+    currentDeployment: f.candidate }), /routing drift/);
+  assert.throws(() => validateDirectChainPublicMutationReadiness({ ...f.readinessInput,
+    confirmedAt: "2026-08-29T15:10:00.000Z" }), /fresh|five|window|stale/);
+  const readiness = validateDirectChainPublicMutationReadiness(f.readinessInput);
+  assert.throws(() => createDirectChainDeployReceipt({ intent: f.intent,
+    authorization: f.finalAuthorization, mutationReadiness: readiness,
+    productionDeployment: f.candidate,
+    productionBinding: productionBinding(f.candidate, "2026-08-29T15:04:40.000Z"),
+    productionSmoke: directChainSmoke(PRODUCTION_ORIGIN, "2026-08-29T15:04:30.000Z", { evidenceDigest: sha("c") }),
+    completedAt: "2026-08-29T15:04:50.000Z",
+  }), /differs from exact candidate/);
+});
+
+test("direct-chain provider metadata cannot inherit planned or hosted phase identity", () => {
+  const meta = { programmableSourceRevision: source.revision, programmableSourceTree: source.tree,
+    programmableReleaseMode: "direct-chain" };
+  assert.doesNotThrow(() => assertVercelDeploymentMetadata({ meta }, { source, releaseMode: "direct-chain" }));
+  assert.throws(() => assertVercelDeploymentMetadata({ meta }, { source, releaseMode: "planned" }), /differs/);
+  for (const override of [{ programmableReleaseMode: "planned" },
+    { programmableStageBundleDigest: sha("a") }, { programmablePromotionBundleDigest: sha("a") },
+    { programmableSourceRevision: promotionSource.revision }]) {
+    assert.throws(() => assertVercelDeploymentMetadata({ meta: { ...meta, ...override } },
+      { source, releaseMode: "direct-chain" }), /differs/);
+  }
+});
+
+test("direct-chain workflow keeps protected owner, exact evidence, bounded intent and fresh alias controls", async () => {
+  const raw = await readFile(new URL("../.github/workflows/vercel-release.yml", import.meta.url), "utf8");
+  const workflowValue = parseYaml(raw);
+  const job = workflowValue.jobs["deploy-direct-chain"];
+  assert.equal(job.environment, "production");
+  assert.match(job.if, /github.ref_protected == true/);
+  assert.match(job.if, /github.actor_id == '258789013'/);
+  const runs = job.steps.map((step) => step.run ?? "").join("\n");
+  assert.match(runs, /validate-direct-chain/);
+  assert.match(runs, /authorize-direct-chain-deploy/);
+  assert.match(runs, /create-direct-chain-mutation-intent/);
+  assert.match(runs, /validate-direct-chain-mutation-readiness/);
+  assert.match(runs, /create-direct-chain-deploy-receipt/);
+  assert.match(runs, /--skip-domain/);
+  assert.match(runs, /programmableReleaseMode=direct-chain/);
+  assert.match(runs, /--mode direct-chain --protection-bypass false/);
+  assert.doesNotMatch(runs, /--indexer-|parseIndexerPromotionEvidence|create-promotion-plan/);
+  const boundary = job.steps.find((step) => step.name === "Promote only the verified direct-chain candidate").run;
+  assert.match(boundary, /origin\/main\^\{commit\}/);
+  assert.ok(boundary.indexOf("validate-direct-chain-mutation-readiness") < boundary.indexOf("vercel-project-scope.mjs promote"));
+  const phaseB = workflowValue.jobs["prepare-promotion"].steps.map((step) => step.run ?? "").join("\n");
+  assert.match(phaseB, /--indexer-release-identity/);
+  assert.match(phaseB, /--indexer-deployment-receipt/);
+  assert.match(phaseB, /--indexer-release-audit/);
 });

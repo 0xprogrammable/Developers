@@ -424,3 +424,50 @@ environments, deploy the backend or indexer, change Vercel project settings, pus
 an owner dispatch. Those are separate owner/control-plane actions. Missing protected provenance,
 backend readiness, Fly receipt, indexer evidence, stage protection, exact owner-dispatch evidence,
 or smoke evidence stops the transition closed.
+
+## External terminal direct-chain publication
+
+`operation: deploy-direct-chain` publishes the separate read-only external terminal contract for
+chain 4663: `platformId=programmable`, `category=custom`, public label `Programmable Custom`.
+It requires the canonical tracked manifest and
+`deployments/robinhood-direct-chain-evidence-v1.json`, byte-identical to the checked protected
+source, plus the existing closed Phase-A source, deployment and finality evidence. The closed
+bundle supplies immutable contract roots; its backend, CLI and hosted-indexer release blockers
+remain closed. Ethereum V3 release identity remains frozen.
+
+This operation leaves `customLaunchV4`, its API and CLI planned, leaves the hosted read model
+planned and unavailable, and retains `publicWrites:false`. It independently publishes verified
+Router roots and an existing finalized Router launch. The direct-chain manifest identifies the
+canonical finalized feed as a convenience for external integrators, while direct event and getter
+verification establishes Programmable provenance. A finalized stamp does not certify safety,
+liquidity, sellability or an execution adapter.
+
+The existing `stage`, `promote` and `rollback` operations retain every Envio release-identity,
+deployment-receipt, audit and exact four-file evidence-only transition requirement. No direct-chain
+receipt can stand in for those artifacts. `deploy-planned` still requires planned/null roots and
+cannot publish the direct-chain contract.
+
+The protected manual dispatch accepts no deployment, evidence path or provider selected by a
+caller. It builds the exact protected `main`, validates tracked evidence before provider access,
+reconfirms the owner dispatch and protected production environment, creates one protected
+production-target candidate with `--skip-domain`, and records only exact source revision/tree and
+`programmableReleaseMode=direct-chain` metadata. It requires complete two-domain provider binding,
+project-scoped Vercel access, an authenticated candidate smoke and a separately uploaded immutable
+direct-chain mutation intent before alias mutation. The final boundary rechecks protected `main`,
+owner dispatch, source/evidence digests, candidate protection, smoke, current production routing,
+and absence of an in-progress Vercel alias mutation. Both production domains must select the exact
+candidate afterward; the public smoke runs without a bypass and must return the same manifest and
+evidence digests as the candidate.
+
+Direct-chain authorization, smoke, mutation intent, readiness and deployment receipt each have a
+separate versioned schema. The smoke retrieves the published manifest and evidence, checks the
+ready finalized-launch feed and revalidates the existing launch's Router provenance at a finalized
+canonical chain block. Provider or archive failures fail closed. HTTP success alone does not
+satisfy any of these checks. The operation cannot be supplied with a Phase-B promotion bundle or
+claim a deployed Envio indexer.
+
+The existing recovery workflow intentionally rejects direct-chain intents. An interrupted
+publication requires read-only inspection of the retained direct-chain intent, candidate and both
+formal production domains before a new protected dispatch. It must not be continued through
+planned or hosted-indexer recovery, and an unknown provider mutation result must not be retried as
+an unreviewed raw Vercel command.

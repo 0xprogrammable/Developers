@@ -4,16 +4,22 @@ Use this path when your indexer must reproduce Programmable provenance without t
 
 ## Current boundary
 
-Ethereum (`chainId: 1`) is the only active chain in the current discovery contract. Active Classic discovery consists only of historical V3 and current V4; Classic V1/V2 remain inactive manifest history. Custom Registry generation 1 is published separately in the v2 manifest. Deployment addresses and start blocks must be read from that manifest; public submissions remain disabled. Stock is not an active v2 discovery source. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
+Ethereum (`chainId: 1`) has an active hosted read model and direct-chain discovery. Active Classic discovery consists only of historical V3 and current V4; Classic V1/V2 remain inactive manifest history. Custom Registry generation 1 is published separately in the v2 manifest. Deployment addresses and start blocks must be read from that manifest; public submissions remain disabled. Stock is not an active v2 discovery source. The v2 Custom feed contains only finalized approved Registry records, beginning with the project-only genesis canary.
 
-Robinhood Chain (`chainId: 4663`) is discoverable only as a planned V4 lane.
-Its manifest keeps the public Router address, start block, runtime identity,
-deployment evidence, profile, and finality-policy roots null, keeps
-`publicSubmissionsEnabled` false, and exposes no public write path. Its empty
-`unavailable` feed is non-authoritative until an exact release promotes the
-deployment and complete read model. Prepared bindings and the
-[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) are not
-onchain deployment evidence.
+Robinhood Chain (`chainId: 4663`) publishes live direct-chain provenance.
+Require the chain manifest's live `directChainIntegration` and canonical
+`launchStampRouter`, validate their runtime and evidence bindings, then follow
+its finality policy. Its existing finalized launch vector is resolved through
+`directChainIntegration.evidenceUrl`. The
+[terminal guide](https://developers.programmable.family/robinhood-terminal-indexer)
+defines the discovery and independent indexing path for every future
+`CustomGraph` stamp, including individual custom hooks.
+
+Robinhood's hosted read model and self-serve V4 API/CLI remain planned, with no
+public write path promoted here. Its empty `unavailable` hosted feed remains
+non-authoritative. A prepared binding or the
+[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) alone is
+not onchain deployment evidence; use the actual released manifest roots.
 
 Generation 1 is the manifest-published Custom Registry trust root and its finalized project-only genesis canary is the immutable discovery baseline. Legacy Registry and GitHub submission intake are closed. Custom Launch API V1 and V2 retain historical reads, but authenticated POST returns nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY` or `409 CUSTOM_LAUNCH_V2_READ_ONLY`; only V3 profile `3.3.0` accepts fresh submissions. An unreleased Generation 2 release candidate exists for Registry conformance testing, but it has no manifest-published Registry address, start block, or live topic set. Do not scan candidate ABIs, candidate events, or the draft interface in `proposals/custom-registry/` as though Generation 2 were deployed. Activate Generation 2 indexing only after the manifest publishes its evidenced deployment; until then, direct verification remains bound to the published Generation 1 entry.
 
@@ -188,8 +194,10 @@ grants `exact_match`. The API resource follows the
 while the public feed follows the separate
 [Developer V4 projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json).
 The Developer feed retains this status separately from canonical-Router
-provenance and Ethereum finality. These are planned contracts for chain `4663`;
-they do not claim a deployed or exactly verified Robinhood component.
+provenance and finality. These contracts describe a separately gated hosted
+read model for chain `4663`; publishing them does not grant exact source
+verification to any component. The live direct-chain Router evidence has its
+own deployment and finality boundary.
 
 ## Separate Custom Registry verification
 
@@ -275,7 +283,7 @@ Use the public lifecycle distinctly:
 Persist block hashes, not only heights. On disagreement, stop advancing the durable cursor, rewind to a common finalized boundary, and replay.
 
 Apply this table per chain. A finalized Ethereum record does not promote the
-Robinhood lane, and Robinhood's planned empty feed cannot establish absence.
+Robinhood lane, and Robinhood's unavailable hosted feed cannot establish absence.
 
 ## Router impersonation-resistant checklist
 

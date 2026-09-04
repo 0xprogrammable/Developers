@@ -956,7 +956,17 @@ function robinhoodCustomLaunchBindingFindings(manifest) {
   if (manifest.chainId !== 4663) return [];
   const binding = manifest.robinhoodCustomLaunchBinding;
   const router = manifest.launchStampRouter;
-  const v4 = manifest.customLaunchV4;
+  // Direct-chain provenance publishes its own immutable roots without asserting
+  // that the independently gated self-serve API or hosted read model is live.
+  const direct = manifest.directChainIntegration;
+  const v4 = direct?.status === "live"
+    ? {
+        ...manifest.customLaunchV4,
+        chainDeploymentDescriptorDigest: direct.chainDeploymentDescriptorDigest,
+        profile: direct.profile,
+        finalityPolicy: direct.finalityPolicy,
+      }
+    : manifest.customLaunchV4;
   if (!binding) {
     return [finding(
       "ROBINHOOD_CUSTOM_LAUNCH_BINDING",
@@ -1592,6 +1602,38 @@ export function validateManifestSemantics(manifest) {
     ));
   }
   const readModel = manifest.extensions?.["programmable/read-model-v1"];
+  if (manifest.directChainIntegration !== undefined) {
+    const direct = manifest.directChainIntegration;
+    const chainProfile = manifest.chains?.find(({ chainId }) => chainId === 4663);
+    if (
+      manifest.chainId !== 4663 || direct.status !== "live" ||
+      direct.schemaVersion !== "programmable.direct-chain-integration.v1" ||
+      direct.platformId !== PLATFORM_ID || direct.category !== "custom" ||
+      direct.publicLabel !== "Programmable Custom" ||
+      direct.indexing !== "direct-chain" || direct.publicWrites !== false ||
+      direct.hostedIndexer !== "unavailable" ||
+      direct.evidenceUrl !==
+        "https://developers.programmable.family/deployments/robinhood-direct-chain-evidence-v1.json" ||
+      direct.finality?.mode !== "rpc-finalized" ||
+      direct.finality?.canonicalReadBlock !== "finalized-or-explicit-canonical-block" ||
+      direct.finality?.explicitBlockRequiresFinalizedAncestor !== true ||
+      manifest.launchStampRouter?.status !== "live" ||
+      manifest.launchStampRouter?.supportsFutureClassic !== false ||
+      manifest.robinhoodCustomLaunchBinding?.state !== "finalized-live" ||
+      manifest.publicCategories?.custom?.discoveryStatus !== "live" ||
+      manifest.publicCategories?.custom?.publicSubmissionStatus !== "planned" ||
+      chainProfile?.status !== "live" || chainProfile.readModelStatus !== "planned" ||
+      readModel?.status !== "planned" || readModel.absenceAuthoritative !== false ||
+      v4?.status !== "planned" || v4.api?.status !== "planned" ||
+      v4.cli?.status !== "planned"
+    ) {
+      findings.push(finding(
+        "DIRECT_CHAIN_INTEGRATION_BOUNDARY",
+        "/directChainIntegration",
+        "Direct-chain publication requires finalized Custom Router roots and RPC finality while hosted indexing, public submission and the self-serve release remain independently planned",
+      ));
+    }
+  }
   if (v4?.status === "live" && (
     typeof v4.chainDeploymentDescriptorDigest !== "string" ||
     v4.profile === null || v4.finalityPolicy === null ||

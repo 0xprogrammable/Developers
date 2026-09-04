@@ -1,6 +1,6 @@
 # Indexers and data platforms
 
-The hosted API is the simplest integration. Teams that need independent verification can reproduce the same normalized records from the deployments and contract events published by the manifest.
+Use the hosted API when the selected chain has a released read model. Independent indexers derive recognized records from the deployments and contract events published by the manifest. On Robinhood chain 4663, direct-chain verification and indexing are live while the hosted read model remains planned.
 
 Both paths must use the same identities and lifecycle rules.
 
@@ -28,20 +28,25 @@ For applicant ingestion, require `customRegistryPublication.expectedSourceId ===
 
 Router Custom discovery is an independent lane. Require `routerCustom.status === "current"` and equal verified and published identity counts before treating absence as authoritative. A `last-known-good` Router snapshot remains ingestible, but it must not be merged into Registry applicant coverage or used to produce a final deletion or 404 conclusion.
 
-Robinhood chain 4663 currently advertises `planned` quality. Its separate V4
-finalized route is
-`GET https://api.programmable.market/v4/chains/4663/finalized-custom-launches`,
-but the URL is a release projection, not evidence that the route or indexer is
-live. Until the chain manifest contains the exact finalized Router deployment
-and both API/read-model status are promoted, keep the feed empty and
-non-authoritative. Never substitute the Ethereum V3 finalized ledger.
+Robinhood chain 4663 publishes a live `directChainIntegration` and canonical
+`launchStampRouter`. Resolve the Router address, start block, runtime hash,
+ABI, deployment evidence and finalized launch vector from its chain manifest.
+Its direct-chain path does not depend on a Programmable hosted indexer. The
+Developer read model remains planned and returns non-authoritative
+`unavailable` quality until its separate promotion.
 
-The planned descriptor already publishes the exact foundation source
-commitment, but no deployment address. Promotion additionally requires the
-code-pinned finalized descriptor digest, profile digest, start block, complete
-Router/PermitAuthority/GraphFactory/PoolManager runtime tuple, finality policy,
-deployment receipt, and canary evidence. A self-consistent or merely
-well-shaped manifest is not a trust root.
+The separate backend V4 finalized metadata route is
+`GET https://api.programmable.market/v4/chains/4663/finalized-custom-launches`.
+Use it only as optional metadata enrichment after validating its current
+response and joining each item to canonical Router evidence. Follow every
+opaque cursor. A successful backend response does not promote the Developer
+hosted read model, and a failure does not invalidate an independently verified
+stamp. Never substitute the Ethereum V3 finalized ledger.
+
+Hosted promotion additionally requires its code-pinned finalized deployment
+descriptor, profile, complete Router/PermitAuthority/GraphFactory/PoolManager
+runtime tuple, finality policy and source/indexer evidence. A merely
+well-shaped manifest is not release authority for that hosted projection.
 
 The staged adapter validates
 `programmable.custom-launch-onchain-evidence.v3`. When promoted, it accepts only
@@ -75,9 +80,11 @@ A `degraded` feed still contains recognized events when canonical event coverage
 
 ## Finalized metadata and partner-attribution join
 
-GMGN-, Dexscreener-, FOMO-, and explorer-style consumers that need the public
-project card can read the separate unauthenticated
-`GET https://api.programmable.market/v3/finalized-custom-launches` route.
+Consumers that need the public project card can read the separate
+unauthenticated Ethereum metadata route,
+`GET https://api.programmable.market/v3/finalized-custom-launches`. Robinhood
+uses `/v4/chains/4663/finalized-custom-launches` and its V4 schema; never mix
+those chain-bound ledgers.
 Follow every opaque `nextCursor` until it is null; a single page is not a
 complete snapshot. Store the canonical declaration fields separately:
 
@@ -119,7 +126,39 @@ from Programmable provenance.
 
 ## Direct onchain path
 
-Use the manifest's enabled deployment arrays and start blocks. Do not assume one launcher or registry represents all versions. For Classic, scan only the enabled historical V3 and current V4 deployment ranges; do not revive inactive V1/V2 or any Stock range.
+Use the manifest's enabled deployment arrays and the separate live
+`launchStampRouter` entry, each with its own start block. An empty Classic
+`deployments` array on Robinhood does not disable its live Router source. Do
+not assume one launcher or Registry represents all versions. For Ethereum
+Classic, scan only enabled historical V3 and current V4 deployment ranges; do
+not revive inactive V1/V2 or any Stock range.
+
+For Robinhood, require `directChainIntegration.status: "live"`, verify its
+published deployment and existing finalized launch vector, then backfill the
+exact Router emitter and all advertised event topics with bounded
+`eth_getLogs` ranges. Resolve a canonical `finalized` block once; never use the
+latest head as durable finality. Verify candidate records and their token,
+pool and exclusive-component getters at the same block, with matching
+`stampProof` and recorded component runtime hashes. Prefer hash-bound
+EIP-1898 reads; otherwise re-read the block hash after the complete check.
+An explicit block must be a finalized ancestor under the published policy.
+
+Future individual custom hooks need no allowlist or per-hook integration:
+verify each launch's canonical `CustomGraph = 1` stamp and retain its exact
+component set. The terminal label is `Programmable Custom`, with
+`platformId: "programmable"` and `category: "custom"`. Unknown hook behavior
+keeps market capabilities unavailable without erasing provenance. Poolless
+recognized Registry/project records stay discoverable, while this Router V1
+market-bearing route must satisfy its recorded pool invariant. Never invent a
+pool for a different recognized launch shape.
+
+Persist the finalized checkpoint only after all records and event coordinates
+are durable. Deduplicate events by chain ID, transaction hash and log index;
+deduplicate Router launches by chain ID, Router and launch ID. Replay an
+overlap when switching from backfill to polling or subscriptions, and rewind
+to the last common canonical boundary on any block-hash disagreement. The
+[Robinhood terminal guide](https://developers.programmable.family/robinhood-terminal-indexer)
+provides the public verification sequence.
 
 For each recognized event, retain enough evidence to reproduce ordering and detect reorgs:
 

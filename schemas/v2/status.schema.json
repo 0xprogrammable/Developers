@@ -140,6 +140,9 @@
     },
     "routerCustom": {
       "$ref": "#/$defs/routerCustom"
+    },
+    "directChainIntegration": {
+      "$ref": "direct-chain-integration.schema.json"
     }
   },
   "additionalProperties": true,

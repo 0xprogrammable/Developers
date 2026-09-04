@@ -1,0 +1,637 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://developers.programmable.family/schemas/v2/robinhood-direct-chain-evidence.schema.json",
+  "title": "Robinhood direct-chain deployment and finalized launch evidence",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "observedAt",
+    "chainId",
+    "platformId",
+    "category",
+    "publicLabel",
+    "officialRpcUrl",
+    "verificationProviders",
+    "finality",
+    "finalizedCheckpoint",
+    "deployment",
+    "launch",
+    "rootEvidence",
+    "source",
+    "checks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "programmable.robinhood-direct-chain-evidence.v1"
+    },
+    "observedAt": {
+      "$ref": "common.schema.json#/$defs/isoDateTime"
+    },
+    "chainId": {
+      "const": 4663
+    },
+    "platformId": {
+      "const": "programmable"
+    },
+    "category": {
+      "const": "custom"
+    },
+    "publicLabel": {
+      "const": "Programmable Custom"
+    },
+    "officialRpcUrl": {
+      "const": "https://rpc.mainnet.chain.robinhood.com"
+    },
+    "verificationProviders": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "access",
+          "role"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "access": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "finality": {
+      "type": "object",
+      "required": [
+        "mode",
+        "explicitBlockRequiresFinalizedAncestor",
+        "confirmationCountIsNotFinality",
+        "stagePolicy"
+      ],
+      "properties": {
+        "mode": {
+          "const": "rpc-finalized"
+        },
+        "explicitBlockRequiresFinalizedAncestor": {
+          "const": true
+        },
+        "confirmationCountIsNotFinality": {
+          "const": true
+        },
+        "stagePolicy": {
+          "$ref": "direct-chain-integration.schema.json#/properties/finalityPolicy"
+        }
+      },
+      "additionalProperties": false
+    },
+    "finalizedCheckpoint": {
+      "type": "object",
+      "required": [
+        "blockNumber",
+        "blockHash",
+        "tag"
+      ],
+      "properties": {
+        "blockNumber": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "tag": {
+          "const": "finalized"
+        }
+      },
+      "additionalProperties": false
+    },
+    "deployment": {
+      "type": "object",
+      "required": [
+        "finality",
+        "transactionHash",
+        "blockNumber",
+        "blockHash",
+        "receiptStatus",
+        "routerAddress",
+        "runtimeCodeHash",
+        "runtimeCodeBytes",
+        "runtimeCodeSha256",
+        "previousBlockNumber",
+        "previousRuntimeCode",
+        "observedBindings"
+      ],
+      "properties": {
+        "finality": {
+          "const": "finalized"
+        },
+        "transactionHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "blockNumber": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "receiptStatus": {
+          "const": 1
+        },
+        "routerAddress": {
+          "$ref": "common.schema.json#/$defs/evmAddress"
+        },
+        "runtimeCodeHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "runtimeCodeBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "runtimeCodeSha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "previousBlockNumber": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "previousRuntimeCode": {
+          "const": "0x"
+        },
+        "observedBindings": {
+          "type": "object",
+          "required": [
+            "chainId",
+            "permitAuthority",
+            "permitAuthorityRuntimeCodeHash",
+            "graphFactory",
+            "graphFactoryRuntimeCodeHash",
+            "poolManager",
+            "poolManagerRuntimeCodeHash"
+          ],
+          "properties": {
+            "chainId": {
+              "const": 4663
+            },
+            "permitAuthority": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "permitAuthorityRuntimeCodeHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "graphFactory": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "graphFactoryRuntimeCodeHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "poolManager": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "poolManagerRuntimeCodeHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "launch": {
+      "type": "object",
+      "required": [
+        "publicLaunchId",
+        "finality",
+        "transactionHash",
+        "blockNumber",
+        "blockHash",
+        "transactionIndex",
+        "launchId",
+        "stampHash",
+        "launchKind",
+        "components",
+        "pool",
+        "stampProofs",
+        "componentEvidence",
+        "launchStamp",
+        "events"
+      ],
+      "properties": {
+        "publicLaunchId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "finality": {
+          "const": "finalized"
+        },
+        "transactionHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "blockNumber": {
+          "$ref": "common.schema.json#/$defs/decimalString"
+        },
+        "blockHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "transactionIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "launchId": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "stampHash": {
+          "$ref": "common.schema.json#/$defs/hash32"
+        },
+        "launchKind": {
+          "const": 1
+        },
+        "components": {
+          "type": "object",
+          "required": [
+            "initializer",
+            "token",
+            "hook"
+          ],
+          "properties": {
+            "initializer": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "token": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "hook": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            }
+          },
+          "additionalProperties": false
+        },
+        "pool": {
+          "type": "object",
+          "required": [
+            "poolManager",
+            "poolId",
+            "poolKey",
+            "poolKeyHash",
+            "initializeLogIndex"
+          ],
+          "properties": {
+            "poolManager": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "poolId": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "poolKey": {
+              "type": "object",
+              "required": [
+                "currency0",
+                "currency1",
+                "fee",
+                "tickSpacing",
+                "hooks"
+              ],
+              "properties": {
+                "currency0": {
+                  "$ref": "common.schema.json#/$defs/evmAddress"
+                },
+                "currency1": {
+                  "$ref": "common.schema.json#/$defs/evmAddress"
+                },
+                "fee": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 16777215
+                },
+                "tickSpacing": {
+                  "type": "integer",
+                  "minimum": -8388608,
+                  "maximum": 8388607
+                },
+                "hooks": {
+                  "$ref": "common.schema.json#/$defs/evmAddress"
+                }
+              },
+              "additionalProperties": false
+            },
+            "poolKeyHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "initializeLogIndex": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "stampProofs": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "component",
+              "launchId",
+              "stampHash"
+            ],
+            "properties": {
+              "component": {
+                "$ref": "common.schema.json#/$defs/evmAddress"
+              },
+              "launchId": {
+                "$ref": "common.schema.json#/$defs/hash32"
+              },
+              "stampHash": {
+                "$ref": "common.schema.json#/$defs/hash32"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "componentEvidence": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "role",
+              "address",
+              "runtimeCodeHash",
+              "runtimeCodeBytes"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "initializer",
+                  "token",
+                  "hook"
+                ]
+              },
+              "address": {
+                "$ref": "common.schema.json#/$defs/evmAddress"
+              },
+              "runtimeCodeHash": {
+                "$ref": "common.schema.json#/$defs/hash32"
+              },
+              "runtimeCodeBytes": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "launchStamp": {
+          "type": "object",
+          "required": [
+            "kind",
+            "launchWallet",
+            "token",
+            "hook",
+            "poolManager",
+            "poolId",
+            "poolKeyHash",
+            "componentSetHash",
+            "routePayloadHash",
+            "routeLauncher",
+            "routeLauncherRuntimeCodeHash",
+            "expectedResultHash",
+            "permitDigest",
+            "stampHash"
+          ],
+          "properties": {
+            "kind": {
+              "const": "1"
+            },
+            "launchWallet": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "token": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "hook": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "poolManager": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "poolId": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "poolKeyHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "componentSetHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "routePayloadHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "routeLauncher": {
+              "$ref": "common.schema.json#/$defs/evmAddress"
+            },
+            "routeLauncherRuntimeCodeHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "expectedResultHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "permitDigest": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            },
+            "stampHash": {
+              "$ref": "common.schema.json#/$defs/hash32"
+            }
+          },
+          "additionalProperties": false
+        },
+        "events": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "rootEvidence": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "address",
+          "runtimeCodeHash",
+          "runtimeCodeBytes",
+          "runtimeCodeSha256"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "router",
+              "permitAuthority",
+              "graphFactory",
+              "poolManager"
+            ]
+          },
+          "address": {
+            "$ref": "common.schema.json#/$defs/evmAddress"
+          },
+          "runtimeCodeHash": {
+            "$ref": "common.schema.json#/$defs/hash32"
+          },
+          "runtimeCodeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "runtimeCodeSha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "repository",
+        "revision",
+        "tree",
+        "sourceClosureDigest",
+        "sourceVerificationClosureDigest",
+        "entries"
+      ],
+      "properties": {
+        "repository": {
+          "const": "programmablehq/PROGRAMMABLE"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "tree": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "sourceClosureDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "sourceVerificationClosureDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "byteLength",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "byteLength": {
+                "$ref": "common.schema.json#/$defs/decimalString"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "object",
+      "required": [
+        "chainId",
+        "successfulDeploymentReceipt",
+        "routerAbsentBeforeDeployment",
+        "deploymentRuntimeMatches",
+        "launchReceiptCanonicalAndFinalized",
+        "launchTransactionCallsCanonicalRouter",
+        "launchKindCustomGraph",
+        "tokenPoolComponentGettersAgree",
+        "allComponentStampProofsAgree",
+        "componentCodeHashesAgree",
+        "routerBindingsAgree",
+        "poolIdAndPoolKeyHashAgree",
+        "routerStampEventAgrees",
+        "canonicalBlockHashUnchanged",
+        "independentProviderRecordRuntimeAndBlockAgree"
+      ],
+      "properties": {
+        "chainId": {
+          "const": true
+        },
+        "successfulDeploymentReceipt": {
+          "const": true
+        },
+        "routerAbsentBeforeDeployment": {
+          "const": true
+        },
+        "deploymentRuntimeMatches": {
+          "const": true
+        },
+        "launchReceiptCanonicalAndFinalized": {
+          "const": true
+        },
+        "launchTransactionCallsCanonicalRouter": {
+          "const": true
+        },
+        "launchKindCustomGraph": {
+          "const": true
+        },
+        "tokenPoolComponentGettersAgree": {
+          "const": true
+        },
+        "allComponentStampProofsAgree": {
+          "const": true
+        },
+        "componentCodeHashesAgree": {
+          "const": true
+        },
+        "routerBindingsAgree": {
+          "const": true
+        },
+        "poolIdAndPoolKeyHashAgree": {
+          "const": true
+        },
+        "routerStampEventAgrees": {
+          "const": true
+        },
+        "canonicalBlockHashUnchanged": {
+          "const": true
+        },
+        "independentProviderRecordRuntimeAndBlockAgree": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

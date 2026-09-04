@@ -525,6 +525,8 @@ function finalizeRobinhoodChainBinding(live, hash, sha) {
 
 function syntheticLiveRobinhood(manifest) {
   const live = structuredClone(manifest);
+  // The full hosted release fixture is independent from the direct-chain release.
+  delete live.directChainIntegration;
   const hash = (character) => `0x${character.repeat(64)}`;
   const sha = (character) => `sha256:${character.repeat(64)}`;
   live.customLaunchV4.status = "live";
@@ -676,16 +678,21 @@ describe("chain-bound Developer read model", () => {
     });
     assert.equal(robinhood.customLaunchV4.profile, null);
     assert.equal(robinhood.customLaunchV4.finalityPolicy, null);
-    assert.equal(robinhood.launchStampRouter.status, "planned");
+    assert.equal(robinhood.launchStampRouter.status, "live");
     assert.equal(robinhood.launchStampRouter.supportsFutureClassic, false);
-    assert.equal(robinhood.launchStampRouter.address, null);
-    assert.equal(robinhood.launchStampRouter.startBlock, null);
-    assert.equal(robinhood.launchStampRouter.runtimeCodeHash, null);
-    assert.equal(robinhood.launchStampRouter.deploymentEvidence, null);
+    assert.equal(robinhood.launchStampRouter.address,
+      "0x34965F2A2ee9254522232C32F02056E92BE0C98a");
+    assert.equal(robinhood.launchStampRouter.startBlock, "50469365");
+    assert.equal(robinhood.launchStampRouter.runtimeCodeHash,
+      "0x1dbbdaaad901ea3c6134dca0d4872a4789b3c071bf8ccfb44edd65d26d817388");
+    assert.equal(robinhood.launchStampRouter.deploymentEvidence.verificationStatus,
+      "finalized-verified");
+    assert.equal(robinhood.directChainIntegration.status, "live");
+    assert.equal(robinhood.directChainIntegration.publicWrites, false);
     assert.deepEqual(robinhood.deployments, []);
     assert.deepEqual(index.map(({ chainId, status }) => ({ chainId, status })), [
       { chainId: 1, status: "live" },
-      { chainId: 4663, status: "planned" },
+      { chainId: 4663, status: "live" },
     ]);
 
     const registry = await createSchemaRegistry("v2");
@@ -694,7 +701,7 @@ describe("chain-bound Developer read model", () => {
     assertValid(validateManifest, robinhood, "Robinhood per-chain manifest");
   });
 
-  test("serves planned Robinhood discovery without contacting a live source", async () => {
+  test("serves live direct-chain discovery while the hosted read model stays unavailable", async () => {
     const manifestHandler = createChainManifestHandler();
     const manifestResponse = await call(
       manifestHandler,
@@ -705,7 +712,7 @@ describe("chain-bound Developer read model", () => {
     assert.equal(manifestResponse.body.chainId, 4663);
     assert.equal(
       manifestResponse.headers.get("x-programmable-status"),
-      "unavailable",
+      "ready",
     );
 
     const dataset = await getV2DatasetForChain(4663);
@@ -719,14 +726,16 @@ describe("chain-bound Developer read model", () => {
     const status = serviceStatusV2(dataset.status, manifest);
     assert.equal(status.chainId, 4663);
     assert.equal(status.caip2, "eip155:4663");
-    assert.equal(status.custom.status, "planned");
+    assert.equal(status.custom.status, "live");
+    assert.equal(status.directChainIntegration.indexing, "direct-chain");
+    assert.equal(status.service, "degraded");
     assert.equal(status.feeds.launches, "unavailable");
 
     const registry = await createSchemaRegistry("v2");
     assertValid(
       registry.validator("status.schema.json"),
       status,
-      "planned Robinhood status",
+      "Robinhood direct-chain status",
     );
   });
 
@@ -750,6 +759,7 @@ describe("chain-bound Developer read model", () => {
     syntacticLive.robinhoodCustomLaunchBinding = structuredClone(
       plannedRobinhood.robinhoodCustomLaunchBinding,
     );
+    syntacticLive.robinhoodCustomLaunchBinding.state = "prepared-not-broadcast";
     assert.equal(validate(syntacticLive), false);
 
     const semanticSubstitution = structuredClone(liveRobinhood);

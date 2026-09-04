@@ -37,9 +37,21 @@ The baseline integration discovers every recognized launch. Charting, quotes, si
 
 ## Chain selection and release state
 
-Ethereum Mainnet (`chainId: 1`) is the active Developer read lane. Robinhood Chain Mainnet (`chainId: 4663`) is advertised only as planned until its manifest publishes the exact deployment roots and both its API and read model are promoted. A planned manifest or an HTTP `200` with `unavailable` quality is not evidence of a live Router, pool, token, indexer, or trading path.
+Ethereum Mainnet (`chainId: 1`) has an active Developer read model. Robinhood
+Chain Mainnet (`chainId: 4663`) publishes live direct-chain Router provenance,
+with its hosted read model still planned. Require the exact manifest's live
+`directChainIntegration` and Router deployment evidence to start independent
+scanning. A hosted HTTP `200` with `unavailable` quality does not establish
+index completeness or negate a directly verified launch.
 
-Select a chain from `/.well-known/programmable.json`, then use `/api/v2/manifests/{chainId}`, `/api/v2/status?chainId={chainId}`, and `/api/v2/launches?chainId={chainId}`. Keep the same chain and category on every cursor continuation and later `after` poll. For a planned or unavailable chain, retain any recognized bounded records, but do not start Router scanning, enable charting or trading, or treat an absent record as authoritative. See [Indexers and data platforms](indexers.md) for cursor and checkpoint rules.
+Select a chain from `/.well-known/programmable.json`, then fetch its manifest
+and chain-qualified status. Follow the
+[Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer)
+for chain 4663. Keep chain and category attached to every hosted cursor
+continuation or `after` poll. A planned Router cannot be scanned as live; an
+unavailable hosted feed cannot establish absence. Neither live provenance nor
+feed health alone enables charting or trading. See
+[Indexers and data platforms](indexers.md) for cursor and checkpoint rules.
 
 ## Minimum integration
 
@@ -52,14 +64,19 @@ Select a chain from `/.well-known/programmable.json`, then use `/api/v2/manifest
 
 Do not hard-code launcher or registry addresses. The manifest is what allows compatible deployments to appear without a client release.
 
-For direct onchain consumers, keep the enabled deployment sources and the live launch-stamp Router source separate. The manifest publishes exact finalized canary evidence for both `CustomGraph` and Classic, with `classicOnchainCanary: true`. Verify the corresponding evidence object and canonical chain boundary; the boolean alone is not proof.
+For direct onchain consumers, keep the enabled deployment sources and the live
+launch-stamp Router source separate. Ethereum publishes exact finalized canary
+evidence for both `CustomGraph` and Classic. Robinhood publishes its own
+Custom finalized launch evidence at `directChainIntegration.evidenceUrl`.
+Verify the exact chain-bound evidence and canonical boundary; never copy
+Ethereum route-coverage claims to Robinhood.
 
 1. Existing and historical `Programmable Classic` records require a launch event from an enabled Classic launcher in the v2 manifest.
 2. Registry-backed `Programmable Custom` records require the published Custom Registry evidence described by the current v2 feed contract.
 3. Router V1 launches require a nonzero direct lookup or a valid launch event from the exact top-level `launchStampRouter` address in the v2 manifest. Router V1 does not backfill historical launches.
 4. Router-stamped `Programmable Classic` and `Programmable Custom` labels share that one Router trust root. Read the stamp record after a token or `(PoolManager, PoolId)` lookup: `LaunchKindV1.CustomGraph = 1` maps to Custom and `LaunchKindV1.Classic = 2` maps to Classic; reject `Invalid = 0`. Do not guess the class from token metadata, a hook, or a factory call.
 
-The hosted v2 launch feed also projects finalized canonical-Router Custom token identities through the Website's bounded Router snapshot, after recomputing its canonical identity commitment and validating its manifest binding, ordering, uniqueness, and finality boundary. A separate digest-pinned last-known-good snapshot survives source outages. This projection is independent from Custom Registry freshness. It preserves token and recorded pool identity when enrichment is missing, but leaves current market support, supply, and fee policy unavailable unless another exact evidence source establishes them. While only last-known-good data is available, the feed stays degraded and absence is not authoritative.
+The Ethereum hosted v2 launch feed also projects finalized canonical-Router Custom token identities through the Website's bounded Router snapshot, after recomputing its canonical identity commitment and validating its manifest binding, ordering, uniqueness, and finality boundary. A separate digest-pinned last-known-good snapshot survives source outages. This projection is independent from Custom Registry freshness. It preserves token and recorded pool identity when enrichment is missing, but leaves current market support, supply, and fee policy unavailable unless another exact evidence source establishes them. While only last-known-good data is available, the feed stays degraded and absence is not authoritative.
 
 For an interoperable Router point lookup, use the manifest-advertised getter for a token or `PoolManager + PoolId`. Scope every nonzero launch ID with the manifest chain ID and Router address. The Classic hook is shared, so its address must never identify or classify one Classic launch. `launchIdByComponent` may corroborate an exclusive component; for every address-based lookup, require `stampProof` to return the same launch ID and stamp hash. Resolve one finalized or caller-supplied canonical block to a number and hash. Prefer EIP-1898 hash-bound reads with `requireCanonical: true`; otherwise re-read that height after the complete verification and require the hash to be unchanged. Use HTTPS for a remote RPC endpoint; plaintext HTTP is suitable only for loopback development. The lookup needs no Programmable server, database, Registry, or indexer. See [Launch stamp Router verification](../reference/launch-stamp.md).
 

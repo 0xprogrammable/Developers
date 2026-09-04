@@ -150,8 +150,10 @@ async function loadRobinhoodReleaseStatus() {
       /^0x[0-9a-f]{64}$/i.test(router.runtimeCodeHash ?? "") &&
       Boolean(router.abiUrl) &&
       Boolean(router.abiSha256) &&
-      Boolean(router.canaryEvidence) &&
-      Boolean(router.finalityConfirmations);
+      router.deploymentEvidence?.verificationStatus === "finalized-verified" &&
+      router.canaryEvidence?.finality === "finalized" &&
+      manifest.directChainIntegration?.status === "live" &&
+      manifest.directChainIntegration.finality?.mode === "rpc-finalized";
     const readModelReady =
       readModel?.status === "ready" && readModel.absenceAuthoritative === true;
     const writeApiLive = manifest.customLaunchV4?.api?.status === "live";

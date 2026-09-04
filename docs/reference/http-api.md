@@ -95,18 +95,20 @@ The manifest is the canonical integration inventory for active and prelaunch dep
 
 Returns the manifest bound to the numeric path chain. The root `chainId` and
 `caip2` must match the request. Chain `1` is Ethereum Mainnet. Chain `4663` is
-Robinhood Chain Mainnet and is currently `planned`; any other unpublished chain
-returns `CHAIN_NOT_SUPPORTED`.
+Robinhood Chain Mainnet with live direct-chain provenance; any other
+unpublished chain returns `CHAIN_NOT_SUPPORTED`.
 
-The Robinhood manifest intentionally publishes `deployments: []`,
-`customRegistry.publicSubmissionsEnabled: false`, and null public Router
-address, start block, runtime identity, deployment evidence, profile, and
-finality-policy roots. Its planned API descriptor points to the
-[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json), but
-that contract does not make the API endpoint or public write path live.
-Prepared address bindings must not be substituted for the null public roots.
+The Robinhood manifest publishes `directChainIntegration.status: "live"`, a
+live `launchStampRouter` and `directChainIntegration.evidenceUrl` for its
+finalized deployment and launch vector. Require their exact chain, runtime,
+ABI and evidence bindings before direct-chain indexing. The direct-chain
+`finality` policy is independent of the separately gated hosted V4 policy.
+`customRegistry.publicSubmissionsEnabled` remains false; `customLaunchV4`, its
+API/CLI and `programmable/read-model-v1` remain planned. The
+[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) does
+not activate public writes.
 
-Until a reviewed release promotes the exact manifest and read model,
+Until a reviewed release independently promotes the hosted read model,
 `GET /api/v2/launches?chainId=4663` and the matching token-list request return
 an empty `unavailable` projection. `absenceAuthoritative: false` means clients
 must treat a missing record as unknown, not as proof that no launch exists.
@@ -300,7 +302,7 @@ description, image, and links `creator-declared`. Missing, malformed, or
 mismatched metadata remains null without hiding or weakening the raw Router
 provenance.
 
-If the Robinhood V4 lane is promoted, its records preserve the backend's complete
+If the Robinhood hosted V4 read model is promoted, its records preserve the backend's complete
 `sourceVerification` readback at
 `extensions["programmable/backend-finalized-v4"].sourceVerification`. The same
 extension exposes `chainDeploymentDigest` plus compact `finalityEvidence` with
@@ -339,9 +341,9 @@ Validate the API-owned object against the
 [Custom Launch V4 source-verification status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
 and the public read projection against the separate
 [Developer V4 source-verification schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json).
-The planned contract set defines both validation boundaries. Neither is
-evidence that any Robinhood component has been deployed or verified, and their
-candidate URLs do not establish live public availability.
+These contracts define both validation boundaries for the planned hosted
+projection. Neither schema alone proves deployment or exact source
+verification; direct-chain evidence is published separately by the manifest.
 
 `token` is an ERC-20 convenience view. It is `null` for a truthful project-only Custom launch. `assets` preserves the authenticated identity-first asset graph and its immutable launch-produced, protocol-external, or adopted-external provenance. Only a launch-produced primary token may populate `token`. `markets` is empty when no market is registered. Consumers must not manufacture a token, pair, or pool from the project launch identity. The token-list and token-address detail surfaces remain token-only projections and skip `token: null` records.
 
@@ -434,14 +436,15 @@ The launch feed supports:
 
 Treat server limits and cursor contents as opaque. The token-list endpoint supports `chainId`.
 
-The current discovery contract lists live Ethereum Mainnet and planned
-Robinhood Chain Mainnet. A numeric `chainId` parameter does not make any other
-chain supported, and a listed planned chain is not a live source. See
+The current discovery contract lists Ethereum Mainnet and Robinhood Chain
+Mainnet. Robinhood has live direct-chain provenance and a planned hosted read
+model. A numeric `chainId` parameter does not make any other chain supported,
+and a live Router does not make a hosted feed complete. See
 [Multi-chain discovery](../concepts/multi-chain.md).
 
 ## Read-only boundary
 
-v2 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions. On Ethereum, the separately hosted V1 and V2 Custom Launch POST routes are write-fenced and V3 profile `3.3.0` is the current fresh-write lane. Robinhood V4 remains planned with no public writes.
+v2 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions. On Ethereum, the separately hosted V1 and V2 Custom Launch POST routes are write-fenced and V3 profile `3.3.0` is the current fresh-write lane. Robinhood V4 self-serve remains planned with no public writes; its direct-chain provenance is live.
 
 Finality, exact source verification, indexing completeness, and public
 visibility through the feed are separate evidence axes. A finalized transaction can remain

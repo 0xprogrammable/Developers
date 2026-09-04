@@ -7,6 +7,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  CANONICAL_DIRECT_CHAIN_EVIDENCE_PATH,
+  createDirectChainDeployAuthorization,
+  createDirectChainDeployReceipt,
+  createDirectChainMutationIntent,
+  parseDirectChainSmokeReceipt,
+  parseDirectChainMutationIntent,
+  validateDirectChainPublicMutationReadiness,
+  validateDirectChainRobinhoodManifest,
+  validateDirectChainEvidence,
   CANONICAL_INDEXER_DEPLOYMENT_RECEIPT_PATH,
   CANONICAL_INDEXER_RELEASE_AUDIT_PATH,
   CANONICAL_INDEXER_RELEASE_IDENTITY_PATH,
@@ -70,6 +79,7 @@ import {
 import { assertValid, createSchemaRegistry } from "./lib/schema.mjs";
 import { assertNoFindings, validateManifestSemantics } from "./lib/semantics.mjs";
 import { parseJsonStrict } from "./lib/files.mjs";
+import { canonicalSha256 } from "../server/canonical.js";
 
 const REPOSITORY_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -1325,8 +1335,162 @@ async function fieldCommand(options) {
   process.stdout.write(`${String(selected)}\n`);
 }
 
+
+async function exactDirectChainContract() {
+  const entries = [
+    ["manifest", "deployments/robinhood-v2.json"],
+    ["evidence", CANONICAL_DIRECT_CHAIN_EVIDENCE_PATH],
+    ["stageBundle", CANONICAL_STAGE_BUNDLE_PATH],
+    ["ethereum", "deployments/ethereum-v2.json"],
+  ];
+  const contract = {};
+  for (const [name, file] of entries) {
+    contract[name] = (await exactTrackedJson(new Map([
+      ["--repository-root", REPOSITORY_ROOT], ["--file", file],
+    ]), "--file", file, `direct-chain ${name}`)).value;
+  }
+  await validateManifest(contract.manifest);
+  validateDirectChainEvidence(contract.evidence, contract.manifest, parseStageBundle(contract.stageBundle));
+  frozenEthereumV3Identity(contract.ethereum);
+  return {
+    manifestDigest: canonicalSha256("programmable.developers.chain-4663-direct-chain-manifest.v1", contract.manifest),
+    evidenceDigest: canonicalSha256("programmable.developers.chain-4663-direct-chain-evidence.v1", contract.evidence),
+  };
+}
+
+async function validateDirectChainCommand(options) {
+  assertOnly(options, ["--output"]);
+  const contract = await exactDirectChainContract();
+  await writeJson(required(options, "--output"), {
+    state: "validated-direct-chain-read-only", publicWrites: false,
+    hostedIndexer: "unavailable", ...contract,
+  });
+}
+
+async function authorizeDirectChainDeployCommand(options) {
+  assertOnly(options, [
+    "--mutation", "--workflow-run", "--environment", "--authorized-at",
+    "--source-revision", "--source-tree", "--org-id", "--project-id",
+    "--current-deployment", "--candidate-deployment", "--candidate-protection-evidence",
+    "--candidate-smoke", "--output",
+    ...workflowFlags(),
+  ]);
+  if (process.env.GITHUB_ACTIONS !== "true" ||
+    process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
+    process.env.GITHUB_REF_PROTECTED !== "true" ||
+    process.env.RELEASE_CONTROL_ENVIRONMENT !== "production") {
+    fail("direct-chain deploy authorization requires a protected manual Developers production environment");
+  }
+  const mutation = required(options, "--mutation");
+  if (!["create-candidate", "promote-candidate"].includes(mutation)) {
+    fail("--mutation must be create-candidate or promote-candidate");
+  }
+  const source = checkedOutSource(options);
+  const contract = await exactDirectChainContract();
+  const workflow = workflowIdentity(options);
+  const authorizedAt = required(options, "--authorized-at");
+  const candidateOptions = [
+    "--candidate-deployment", "--candidate-protection-evidence", "--candidate-smoke",
+  ].map((name) => optional(options, name));
+  if (mutation === "create-candidate" && candidateOptions.some(Boolean)) {
+    fail("candidate evidence is forbidden before candidate creation");
+  }
+  if (mutation === "promote-candidate" && !candidateOptions.every(Boolean)) {
+    fail("candidate deployment, protection, and smoke evidence are required before promotion");
+  }
+  const ownerDispatchAuthorization = validateGitHubOwnerDispatchAuthorization({
+    workflowRun: await readJson(required(options, "--workflow-run"),
+      "GitHub owner-dispatch workflow run"),
+    environment: await readJson(required(options, "--environment"),
+      "GitHub production environment"),
+  }, { workflow, source, observedAt: authorizedAt });
+  const currentCapture = await readJson(
+    required(options, "--current-deployment"), "current public Vercel deployment",
+  );
+  const currentDeployment = currentCapture.deployment;
+  const authorization = createDirectChainDeployAuthorization({
+    mutation,
+    ...contract,
+    source,
+    target: protectedTarget(options),
+    currentDeployment,
+    currentProductionBinding: currentCapture.productionBinding,
+    ...(mutation === "promote-candidate" ? {
+      candidateDeployment: (await readJson(candidateOptions[0],
+        "direct-chain Vercel candidate deployment")).deployment,
+      candidateProtectionEvidence: await readJson(candidateOptions[1],
+        "direct-chain Vercel candidate protection evidence"),
+      candidateSmoke: await readJson(candidateOptions[2],
+        "direct-chain Vercel candidate smoke"),
+    } : {}),
+    ownerDispatchAuthorization,
+    workflow,
+    authorizedAt,
+  });
+  await writeJson(required(options, "--output"), authorization);
+}
+
+async function directChainMutationReadinessCommand(options) {
+  assertOnly(options, [
+    "--authorization", "--current-deployment", "--confirmed-at", "--intent",
+    "--intent-authorization", "--intent-selected-smoke", "--candidate-smoke",
+    "--mutation-control", "--output",
+  ]);
+  const currentCapture = await readJson(required(options, "--current-deployment"),
+    "final direct-chain current production deployment");
+  const readiness = validateDirectChainPublicMutationReadiness({
+    authorization: await readJson(required(options, "--authorization"),
+      "direct-chain public mutation authorization"),
+    intent: await readJson(required(options, "--intent"), "direct-chain public mutation intent"),
+    intentAuthorization: await readJson(required(options, "--intent-authorization"),
+      "intent direct-chain authorization"),
+    intentSelectedSmoke: await readJson(required(options, "--intent-selected-smoke"),
+      "intent direct-chain candidate smoke"),
+    candidateSmoke: await readJson(required(options, "--candidate-smoke"),
+      "final direct-chain candidate smoke"),
+    currentDeployment: currentCapture.deployment,
+    currentProductionBinding: currentCapture.productionBinding,
+    mutationControl: await readJson(required(options, "--mutation-control"),
+      "Vercel mutation control"),
+    confirmedAt: required(options, "--confirmed-at"),
+  });
+  await writeJson(required(options, "--output"), readiness);
+}
+
+async function directChainIntentCommand(options) {
+  assertOnly(options, ["--operation", "--authorization", "--selected-smoke", "--created-at", "--output"]);
+  const intent = createDirectChainMutationIntent({
+    operation: required(options, "--operation"),
+    authorization: await readJson(required(options, "--authorization")),
+    selectedSmoke: await readJson(required(options, "--selected-smoke")),
+    createdAt: required(options, "--created-at"),
+  });
+  await writeJson(required(options, "--output"), intent);
+}
+
+async function directChainReceiptCommand(options) {
+  assertOnly(options, ["--intent", "--authorization", "--mutation-readiness", "--production-deployment",
+    "--production-smoke", "--completed-at", "--output"]);
+  const capture = await readJson(required(options, "--production-deployment"));
+  const receipt = createDirectChainDeployReceipt({
+    intent: await readJson(required(options, "--intent")),
+    authorization: await readJson(required(options, "--authorization")),
+    mutationReadiness: await readJson(required(options, "--mutation-readiness")),
+    productionDeployment: capture.deployment,
+    productionBinding: capture.productionBinding,
+    productionSmoke: await readJson(required(options, "--production-smoke")),
+    completedAt: required(options, "--completed-at"),
+  });
+  await writeJson(required(options, "--output"), receipt);
+}
+
 const { command, options } = parseArguments(process.argv.slice(2));
 const commands = new Map([
+  ["validate-direct-chain", validateDirectChainCommand],
+  ["authorize-direct-chain-deploy", authorizeDirectChainDeployCommand],
+  ["create-direct-chain-mutation-intent", directChainIntentCommand],
+  ["validate-direct-chain-mutation-readiness", directChainMutationReadinessCommand],
+  ["create-direct-chain-deploy-receipt", directChainReceiptCommand],
   ["validate-bundle", validateBundleCommand],
   ["validate-planned", validatePlannedCommand],
   ["normalize-deployment", normalizeDeploymentCommand],

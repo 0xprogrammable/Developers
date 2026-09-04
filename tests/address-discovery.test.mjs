@@ -496,6 +496,8 @@ describe("documentation contract", () => {
         "robinhood-custom-launch-binding",
         "status",
         "token-list",
+        "direct-chain-integration",
+        "robinhood-direct-chain-evidence",
       ],
     );
     const v2Schemas = new Map(

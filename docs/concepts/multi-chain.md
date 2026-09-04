@@ -4,17 +4,22 @@ The integration is chain-aware and designed to add EVM networks without requirin
 
 ## Current status
 
-Ethereum Mainnet is the only `live` chain. Robinhood Chain Mainnet is listed as
-`planned` under chain ID `4663` / `eip155:4663`, with its own
-`/api/v2/manifests/4663` document. Its Programmable Router address, start block,
-runtime hash, deployment evidence and canary remain null, and its launch and
-token feeds return an explicit empty `unavailable` projection. That absence is
-not authoritative. `customRegistry.publicSubmissionsEnabled` is `false`, and
-the V4 API, CLI, public write path, and read model remain planned. Prepared
-addresses and bindings do not replace the null public deployment roots. Base,
-BNB Chain, Arbitrum, and other EVM networks are not published through this API.
+Ethereum Mainnet has live hosted and direct-chain discovery. Robinhood Chain
+Mainnet, chain ID `4663` / `eip155:4663`, publishes live direct-chain provenance
+through `/api/v2/manifests/4663`. Its `directChainIntegration` and
+`launchStampRouter` bind the canonical Router, start block, runtime identity,
+deployment proof, finality policy and an existing finalized launch. External
+terminals can verify and index stamps independently of the hosted read model.
 
-Architecture readiness is not production support. Do not preconfigure a planned chain as live.
+Robinhood's `programmable/read-model-v1` remains planned; its launch and token
+feeds are empty `unavailable` projections with non-authoritative absence.
+`customRegistry.publicSubmissionsEnabled` is `false`, and the V4 API, CLI and
+public write path remain planned. A live direct-chain release does not promote
+those surfaces. Base, BNB Chain, Arbitrum and other EVM networks are not
+published through this API.
+
+Read each capability's own status. A planned Router must never be scanned as
+live, and a live Router does not establish hosted feed completeness.
 
 The planned V4 machine contracts are available for review and client
 preparation:
@@ -54,7 +59,10 @@ The shared launch and token-list endpoints accept `chainId`. Omitting it keeps
 the existing Ethereum behavior. Supplying a planned chain never falls back to
 Ethereum, and supplying an unpublished chain returns `CHAIN_NOT_SUPPORTED`.
 
-Selected fields from the current planned Robinhood manifest look like this:
+Fetch the current manifest for live Router roots and
+`directChainIntegration.evidenceUrl`; do not copy them into consumer code.
+The following selected planned manifest is an illustrative negative example,
+not the current Robinhood response. Its null Router roots must fail closed:
 
 ```json
 {
@@ -134,15 +142,18 @@ only as part of a finalized Programmable resource stamped by the manifest-bound
 Router on a published chain. Arbitrary v4 hooks remain outside the Developer
 launch classification.
 
-Promotion is code-pinned, not shape-based. Robinhood binds foundation source
-commitment
-`0xe87f5edc2dc839bd87a26a80cb53f14b021e603a1753d27aae3a02862058d730`,
-the exact finality-policy digest, and the prepared Router, PermitAuthority,
-GraphFactory, and PoolManager address/runtime tuple. The canonical deployment
-descriptor digest, profile digest, finalized start block, complete deployment
-receipt, and canary object remain unresolved. Until a reviewed release pins
-every one of those values in code, changing a manifest to a syntactically
-valid `live` shape cannot activate the source and performs no backend read.
+Promotion is evidence-bound, not shape-based. The live Robinhood direct-chain
+release pins its Router, immutable bindings, runtime code, finalized deployment
+and existing finalized launch evidence. Clients verify those published roots
+through RPC under `directChainIntegration.finality`. Its `rpc-finalized` mode
+requires a canonical finalized boundary; an explicit block must be its
+finalized ancestor. This mode does not claim the hosted V4 adapter's separate
+L2-posting and two-provider Ethereum-checkpoint proof.
+
+Hosted V4 promotion still requires its exact deployment/profile/finality
+bindings and complete source/indexer release evidence. A syntactically valid
+`live` object cannot activate that source, and the direct-chain release does
+not inherit Envio promotion authority.
 
 ## Independent evidence axes
 
@@ -158,7 +169,7 @@ Treat these outcomes independently for each chain:
 A finalized transaction can remain pending source verification and absent from
 an incomplete index. An exact source match does not prove finality, indexing,
 or publication. Publication does not prove trading, liquidity, fee behavior,
-or safety. While Robinhood remains planned, none of these axes is claimed live.
+or safety. Robinhood publishes direct-chain deployment and finalized launch evidence; hosted indexing, public feed visibility and per-component source verification retain their own states.
 
 ## Safe client behavior
 
