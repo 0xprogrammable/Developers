@@ -21,6 +21,7 @@ const json = (value) => new Response(JSON.stringify(value), {
 async function fixture() {
   const manifest = JSON.parse(await readFile(new URL("../deployments/robinhood-v2.json",
     import.meta.url), "utf8"));
+  manifest.generatedAt = "2026-09-03T00:00:00.000Z";
   const integration = {
     schemaVersion: "programmable.direct-chain-integration.v1", status: "live",
     platformId: "programmable", category: "custom", publicLabel: "Programmable Custom",
@@ -42,7 +43,7 @@ async function fixture() {
   });
   const canary = router.canaryEvidence;
   const status = { chainId: 4663, caip2: "eip155:4663", service: "degraded",
-    checkedAt: new Date(now).toISOString(), custom: { status: "live" },
+    checkedAt: manifest.generatedAt, custom: { status: "live" },
     directChainIntegration: integration, feeds: { launches: "unavailable", tokenList: "unavailable" } };
   const feed = { schemaVersion: "programmable.custom-launch-list.v4", apiVersion: "v4",
     chainId: "4663", caip2: "eip155:4663", generatedAt: new Date(now).toISOString(),
@@ -100,7 +101,13 @@ async function fixture() {
     }
     if (url.includes("/manifests/4663")) return json(manifest);
     if (url.includes("/status?")) return json(status);
-    if (url.includes("/finalized-custom-launches")) return json(feed);
+    if (url.includes("/finalized-custom-launches")) {
+      const limit = Number(new URL(url).searchParams.get("limit"));
+      if (!Number.isInteger(limit) || limit < 1 || limit > 25) {
+        return new Response("Invalid pagination", { status: 400 });
+      }
+      return json(feed);
+    }
     if (url.endsWith("robinhood-direct-chain-evidence-v1.json")) return json(evidence);
     throw new Error("unexpected URL");
   };
@@ -131,6 +138,8 @@ test("rejects source substitution, hosted activation, stale or foreign finalized
   await assert.rejects(modifiedSource.run({ expectedEvidence: { replaced: true } }), /evidence differs/);
   await assert.rejects(modifiedSource.run({ expectedManifest: { replaced: true } }), /manifest differs/);
   for (const mutation of [
+    (input) => { input.status.checkedAt = new Date(now).toISOString(); },
+    (input) => { input.status.checkedAt = "invalid"; },
     (input) => { input.status.service = "operational"; },
     (input) => { input.status.feeds.launches = "ready"; },
     (input) => { input.feed.generatedAt = "2026-09-03T20:00:00.000Z"; },
