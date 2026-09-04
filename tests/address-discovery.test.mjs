@@ -28,7 +28,11 @@ describe("documentation contract", () => {
   });
 
   test("publishes the Router-first entry points, read-only endpoints, and fee disclosure", async () => {
-    const readme = await readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8");
+    const [readme, fees, routerReference] = await Promise.all([
+      readFile(path.join(REPOSITORY_ROOT, "README.md"), "utf8"),
+      readFile(path.join(REPOSITORY_ROOT, "docs/reference/fees.md"), "utf8"),
+      readFile(path.join(REPOSITORY_ROOT, "docs/reference/launch-stamp.md"), "utf8"),
+    ]);
     for (const endpoint of [
       "/api/v2/status",
       "/api/v2/manifest",
@@ -37,14 +41,18 @@ describe("documentation contract", () => {
     ]) {
       assert.ok(readme.includes(endpoint), `README is missing ${endpoint}`);
     }
-    assert.ok(readme.includes(FEE_RECIPIENT));
-    assert.match(readme, /10 basis points, or 0\.1%/);
+    assert.match(readme, /docs\/reference\/fees\.md/);
+    assert.ok(fees.includes(FEE_RECIPIENT));
+    assert.match(fees, /10 basis points/);
+    assert.match(fees, /0\.1 percent/);
+    assert.match(fees, /1,000 parts per million/);
     assert.match(readme, /v2 API is read-only/i);
     assert.match(readme, /programmable-launch-stamp-router-v1\.json/i);
     assert.match(readme, /docs\/reference\/launch-stamp\.md/i);
-    assert.match(readme, /Router-stamped Programmable Classic and Programmable Custom launches/i);
-    assert.match(readme, /Finalized PCAN vector/i);
-    assert.match(readme, /Historical launches are not backfilled/i);
+    assert.match(routerReference, /Programmable Classic/);
+    assert.match(routerReference, /Programmable Custom/);
+    assert.match(routerReference, /Finalized PCAN test vector/i);
+    assert.match(routerReference, /Historical launches are not backfilled/i);
     assert.doesNotMatch(readme, /Custom public intake/i);
     assert.doesNotMatch(readme, /self-service launch flow/i);
   });
@@ -92,8 +100,8 @@ describe("documentation contract", () => {
   });
 
   test("publishes one bounded ingestion reference and explicit manifest precedence", async () => {
-    const quickstart = await readFile(
-      path.join(REPOSITORY_ROOT, "docs/quickstart.md"),
+    const ingestion = await readFile(
+      path.join(REPOSITORY_ROOT, "docs/reference/hosted-feed.md"),
       "utf8",
     );
     const reference = await readFile(
@@ -112,7 +120,7 @@ describe("documentation contract", () => {
       /commitRecordsAndCursor\(backfill\)/,
       /ingestTraversal\(durableResumeCursor\)/,
     ]) {
-      assert.match(quickstart, contract);
+      assert.match(ingestion, contract);
     }
     assert.match(reference, /operational presentation mirror/i);
     assert.match(reference, /Developer manifest.*takes precedence/i);

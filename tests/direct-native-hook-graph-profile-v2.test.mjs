@@ -175,7 +175,9 @@ describe("Direct Native Hook Graph Profile V2 historical discovery", () => {
           name === "direct-native-hook-graph-profile-discovery-v2",
       ),
     );
-    for (const source of [guide, status, httpReference]) {
+    assert.match(status, /guides\/direct-native-hook-graph-profile-v2\.md/u);
+    assert.match(status, /Historical reads and exact-byte retries; no fresh requests/u);
+    for (const source of [guide, httpReference]) {
       assert.match(source, /3.?16/iu);
       assert.match(source, /wallet transaction value|wallet-transaction-value/iu);
       assert.match(source, /EIP-3009/iu);

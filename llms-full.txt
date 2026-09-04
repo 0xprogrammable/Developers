@@ -1,7 +1,10 @@
-# Programmable Developer Platform — complete agent context
+# Programmable developer documentation — full reference
 
 Canonical site: https://developers.programmable.family
 Source repository: https://github.com/programmablehq/Developers
+Documentation index: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/README.md
+Quickstart: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/quickstart.md
+Hosted feed reference: https://raw.githubusercontent.com/programmablehq/Developers/main/docs/reference/hosted-feed.md
 Read API base: https://developers.programmable.family/api/v2
 OpenAPI: https://raw.githubusercontent.com/programmablehq/Developers/main/openapi/programmable-v2.yaml
 Schemas: https://github.com/programmablehq/Developers/tree/main/schemas/v2
@@ -16,7 +19,7 @@ Custom Launch V1 compatibility OpenAPI: https://programmable.market/openapi/cust
 API key management: https://programmable.market/developers/api-keys
 Launch policy: https://github.com/programmablehq/Launch-Policy
 
-## Mission
+## Scope
 
 Public integration contract for Programmable launches.
 
